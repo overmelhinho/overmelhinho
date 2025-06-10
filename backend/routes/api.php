@@ -1,16 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\VerificationController;
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'requestLogin']);
+Route::post('/verify-login', [VerificationController::class, 'verifyAndLogin']);
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', [AuthController::class, 'user']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-
-    Route::middleware('role:admin')->group(function () {
-        Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);
-    });
-});
