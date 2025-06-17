@@ -2,25 +2,33 @@ services:
   - type: web
     name: overmelhinho-api-staging
     env: docker
-    repo: https://github.com/overmelhinho/overmelhinho.git
+    rootDir: backend
+    plan: free
     branch: develop
-    dockerfilePath: backend/Dockerfile
     buildCommand: ""
-    startCommand: "php artisan serve --host=0.0.0.0 --port=10000"
+    startCommand: php artisan serve --host=0.0.0.0 --port=8080
     envVars:
       - key: APP_ENV
         value: staging
+      - key: APP_DEBUG
+        value: true
       - key: APP_KEY
-        sync: false
+        generateValue: true
+      - key: APP_URL
+        value: https://overmelhinho-api-staging.onrender.com
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        value: spefwgjsltjryxcizype.supabase.co
+        value: db.spefwgjsltjryxcizype.supabase.co
       - key: DB_PORT
-        value: 5432
+        value: "5432"
       - key: DB_DATABASE
-        value: overmelhinho_staging
+        value: postgres
       - key: DB_USERNAME
         value: postgres
       - key: DB_PASSWORD
         sync: false
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: LOG_CHANNEL
+        value: stderr
