@@ -7,6 +7,7 @@ import RelatoriosAdmin from '@/pages/RelatoriosAdmin'
 import VerifyCodePage from '@/pages/VerifyCodePage'
 import ProtectedRoute from './ProtectedRoute'
 import { AuthProvider } from '@/contexts/AuthContext'
+import LeadForm from '@/components/LeadForm' // ✅ importação nova
 
 export const router = createBrowserRouter([
   {
@@ -19,6 +20,10 @@ export const router = createBrowserRouter([
       {
         path: '/login',
         element: <Login />
+      },
+      {
+        path: '/lead-form', // ✅ nova rota pública
+        element: <LeadForm />
       }
     ]
   },

@@ -1,0 +1,21 @@
+<?php
+
+
+// app/Models/Endereco.php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Endereco extends Model
+{
+    protected $table = 'enderecos';
+
+    protected $fillable = [
+        'cliente_id', 'cep', 'estado', 'cidade', 'bairro', 'rua',
+        'numero', 'complemento', 'caixa_postal', 'link_maps', 'link_waze', 'iframe_maps'
+    ];
+
+    public function cliente() {
+        return $this->belongsTo(Cliente::class);
+    }
+}
