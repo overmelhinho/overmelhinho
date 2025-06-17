@@ -9,6 +9,6 @@ services:
       - key: VITE_API_URL
         value: https://overmelhinho-api-prod.onrender.com/api/v1
     redirects:
-      - path: /*
-        status: 200
-        target: /index.html
+      - source: "/*"
+        destination: "/index.html"
+        statusCode: 200
