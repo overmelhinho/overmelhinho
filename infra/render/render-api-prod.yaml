@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: overmelhinho-api-prod
+    env: docker
+    repo: https://github.com/overmelhinho/overmelhinho.git
+    branch: main
+    dockerfilePath: backend/Dockerfile
+    buildCommand: ""
+    startCommand: "php artisan serve --host=0.0.0.0 --port=10000"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_KEY
+        sync: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        value: spefwgjsltjryxcizype.supabase.co
+      - key: DB_PORT
+        value: 5432
+      - key: DB_DATABASE
+        value: overmelhinho_prod
+      - key: DB_USERNAME
+        value: postgres
+      - key: DB_PASSWORD
+        sync: false

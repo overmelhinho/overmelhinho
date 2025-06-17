@@ -1,0 +1,10 @@
+services:
+  - type: static
+    name: overmelhinho-app-prod
+    repo: https://github.com/overmelhinho/overmelhinho.git
+    branch: main
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://overmelhinho-api-prod.onrender.com/api
