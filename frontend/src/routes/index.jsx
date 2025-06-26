@@ -7,7 +7,14 @@ import RelatoriosAdmin from '@/pages/RelatoriosAdmin'
 import VerifyCodePage from '@/pages/VerifyCodePage'
 import ProtectedRoute from './ProtectedRoute'
 import { AuthProvider } from '@/contexts/AuthContext'
-import LeadForm from '@/components/LeadForm' // ✅ importação nova
+
+// Páginas novas por função
+import LeadForm from '@/components/LeadForm'
+import LeadsList from '@/pages/LeadsList'
+import IAFeaturePage from '@/pages/IAFeaturePage'
+import ComercialKpisPage from '@/pages/ComercialKpisPage'
+import ValidacoesPage from '@/pages/ValidacoesPage'
+import CriativoDashboard from '@/pages/CriativoDashboard'
 
 export const router = createBrowserRouter([
   {
@@ -22,7 +29,7 @@ export const router = createBrowserRouter([
         element: <Login />
       },
       {
-        path: '/lead-form', // ✅ nova rota pública
+        path: '/lead-form',
         element: <LeadForm />
       }
     ]
@@ -43,6 +50,32 @@ export const router = createBrowserRouter([
         )
       },
       {
+        path: '/verify-code',
+        element: <VerifyCodePage />
+      },
+
+      // Diretoria Comercial
+      {
+        path: '/comercial-diretoria',
+        element: (
+          <ProtectedRoute requiredRole="diretora">
+            <ComercialKpisPage />
+          </ProtectedRoute>
+        )
+      },
+
+      // Time Comercial
+      {
+        path: '/leads',
+        element: (
+          <ProtectedRoute requiredRole="comercial">
+            <LeadsList />
+          </ProtectedRoute>
+        )
+      },
+
+      // Administrativo
+      {
         path: '/admin/relatorios',
         element: (
           <ProtectedRoute requiredRole="admin">
@@ -51,8 +84,32 @@ export const router = createBrowserRouter([
         )
       },
       {
-        path: '/verify-code',
-        element: <VerifyCodePage />
+        path: '/validacoes',
+        element: (
+          <ProtectedRoute requiredRole="admin">
+            <ValidacoesPage />
+          </ProtectedRoute>
+        )
+      },
+
+      // Time Criativo
+      {
+        path: '/criativo',
+        element: (
+          <ProtectedRoute requiredRole="criativo">
+            <CriativoDashboard />
+          </ProtectedRoute>
+        )
+      },
+
+      // IA e Automatizações
+      {
+        path: '/ia',
+        element: (
+          <ProtectedRoute requiredRole="admin">
+            <IAFeaturePage />
+          </ProtectedRoute>
+        )
       }
     ]
   }
