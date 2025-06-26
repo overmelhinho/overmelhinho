@@ -1,16 +1,11 @@
 <?php
 
 return [
-
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-'allowed_origins' => [
-    env('FRONTEND_URL', 'http://localhost:5173'),
-    'http://82.112.244.103:5173',
-],
-
+    'allowed_origins' => ['https://overmelhinho-app-staging.onrender.com'],
 
     'allowed_origins_patterns' => [],
 
@@ -21,5 +16,4 @@ return [
     'max_age' => 0,
 
     'supports_credentials' => true,
-
 ];
