@@ -6,10 +6,15 @@ use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\SegmentoController;
 use App\Models\Cliente;
+use Illuminate\Support\Facades\Response;
 
 // ✅ Suporte global a CORS: trata requisições OPTIONS (preflight)
 Route::options('{any}', function () {
-    return response()->json([], 204);
+    return Response::make('', 204)
+        ->header('Access-Control-Allow-Origin', 'https://overmelhinho-app-staging.onrender.com')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+        ->header('Access-Control-Allow-Credentials', 'true');
 })->where('any', '.*');
 
 Route::post('/login', [AuthController::class, 'requestLogin']);
