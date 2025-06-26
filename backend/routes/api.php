@@ -7,6 +7,11 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\SegmentoController;
 use App\Models\Cliente;
 
+// ✅ Suporte global a CORS: trata requisições OPTIONS (preflight)
+Route::options('{any}', function () {
+    return response()->json([], 204);
+})->where('any', '.*');
+
 Route::post('/login', [AuthController::class, 'requestLogin']);
 Route::post('/verify-login', [VerificationController::class, 'verifyAndLogin']);
 
