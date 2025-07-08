@@ -57,13 +57,23 @@ export default function LoginPage() {
 
               {error && <div className="text-red-600 text-sm text-center">{error}</div>}
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
-              >
-                {isSubmitting ? "Entrando..." : "Entrar"}
-              </button>
+
+
+<div className="space-y-2">
+  <button
+    type="submit"
+    disabled={isSubmitting}
+    className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
+  >
+    {isSubmitting ? "Entrando..." : "Entrar"}
+  </button>
+
+  <div className="text-center">
+    <a href="/forgot-password" className="text-sm text-red-600 hover:underline">
+      Esqueci minha senha
+    </a>
+  </div>
+</div>
             </Form>
           )}
         </Formik>
