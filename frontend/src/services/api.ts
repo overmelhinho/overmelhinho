@@ -1,12 +1,16 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || "http://82.112.244.103:8000/api";
-
-console.log("VITE_API_BASE_URL carregado:", baseURL);
-
 const api = axios.create({
-  baseURL,
-  withCredentials: true,
+  baseURL: import.meta.env.VITE_API_URL,
+});
+
+// Adiciona o token JWT nas requisições, se existir
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export default api;
