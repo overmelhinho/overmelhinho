@@ -22,7 +22,15 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return $request->user();
+        $user = $request->user();
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'roles' => $user->getRoleNames(),
+            'permissions' => $user->getAllPermissions()->pluck('name'),
+        ]);
     }
 
     public function logout(Request $request)
@@ -31,4 +39,3 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logout realizado com sucesso']);
     }
 }
-
