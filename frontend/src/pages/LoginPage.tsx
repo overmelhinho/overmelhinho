@@ -6,6 +6,7 @@ import axios from "@/services/api";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
+  const [rateLimited, setRateLimited] = useState(false);
   const navigate = useNavigate();
 
   const loginSchema = Yup.object().shape({
@@ -26,8 +27,17 @@ export default function LoginPage() {
               const { data } = await axios.post("/v1/login", values);
               localStorage.setItem("token", data.token);
               navigate("/dashboard");
+              setError(""); // Limpa erro anterior se login for OK
             } catch (err: any) {
-              setError(err.response?.data?.message || "Erro ao autenticar");
+              if (err.response?.status === 429) {
+                setError("Muitas tentativas de login. Aguarde 1 minuto para tentar novamente.");
+                setRateLimited(true);
+                setTimeout(() => setRateLimited(false), 60000); // 60s de bloqueio
+              } else if (err.response?.status === 401) {
+                setError("E-mail ou senha inválidos.");
+              } else {
+                setError(err.response?.data?.message || "Erro ao autenticar. Tente novamente.");
+              }
             } finally {
               setSubmitting(false);
             }
@@ -57,23 +67,21 @@ export default function LoginPage() {
 
               {error && <div className="text-red-600 text-sm text-center">{error}</div>}
 
+              <div className="space-y-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting || rateLimited}
+                  className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition disabled:opacity-60"
+                >
+                  {isSubmitting ? "Entrando..." : rateLimited ? "Aguardando liberação..." : "Entrar"}
+                </button>
 
-
-<div className="space-y-2">
-  <button
-    type="submit"
-    disabled={isSubmitting}
-    className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
-  >
-    {isSubmitting ? "Entrando..." : "Entrar"}
-  </button>
-
-  <div className="text-center">
-    <a href="/forgot-password" className="text-sm text-red-600 hover:underline">
-      Esqueci minha senha
-    </a>
-  </div>
-</div>
+                <div className="text-center">
+                  <a href="/forgot-password" className="text-sm text-red-600 hover:underline">
+                    Esqueci minha senha
+                  </a>
+                </div>
+              </div>
             </Form>
           )}
         </Formik>
