@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import api from "@/services/api";
+import api from '@/services/api';
+
 
 type UserType = {
   id: number;
@@ -28,10 +29,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Busca dados do usuário logado, incluindo roles/perms
   async function fetchUser() {
+    console.log("CHAMOU fetchUser!"); // <- Aqui!
     try {
       const { data } = await api.get("/v1/user");
+      console.log("RESPOSTA DO /v1/user:", data); // <- Aqui!
       setUser(data);
-    } catch {
+    } catch (err) {
+      console.log("ERRO ao buscar /v1/user:", err); // <- Aqui!
       setUser(null);
       localStorage.removeItem("token");
     }

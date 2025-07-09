@@ -18,13 +18,23 @@ export default function ResetPasswordPage() {
   });
 
   if (!token) {
-    return <p className="text-red-500 text-center mt-10">Token inválido.</p>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center text-red-600 text-lg font-semibold">
+          Token inválido ou expirado.
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Redefinir Senha</h2>
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
+        <div className="text-center mb-6">
+          <img src="/logo.svg" alt="Logo" className="h-10 mx-auto mb-2" />
+          <h1 className="text-2xl font-bold text-red-600">O Vermelhinho</h1>
+          <p className="text-sm text-gray-600">Redefinição de senha</p>
+        </div>
 
         <Formik
           initialValues={{ password: "", password_confirmation: "" }}
@@ -36,7 +46,7 @@ export default function ResetPasswordPage() {
                 token,
               });
               setSuccess("Senha redefinida com sucesso.");
-              setTimeout(() => navigate("/"), 2000);
+              setTimeout(() => navigate("/login"), 2000);
             } catch (err: any) {
               setError(err.response?.data?.message || "Erro ao redefinir senha.");
             } finally {
@@ -47,23 +57,31 @@ export default function ResetPasswordPage() {
           {({ isSubmitting }) => (
             <Form className="space-y-4">
               <div>
-                <label htmlFor="password" className="block mb-1">Nova Senha</label>
+                <label htmlFor="password" className="block text-sm text-gray-700 mb-1">
+                  Nova Senha
+                </label>
                 <Field
                   type="password"
                   name="password"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
                 <ErrorMessage name="password" component="div" className="text-red-600 text-sm" />
               </div>
 
               <div>
-                <label htmlFor="password_confirmation" className="block mb-1">Confirme a Senha</label>
+                <label htmlFor="password_confirmation" className="block text-sm text-gray-700 mb-1">
+                  Confirmar Senha
+                </label>
                 <Field
                   type="password"
                   name="password_confirmation"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
-                <ErrorMessage name="password_confirmation" component="div" className="text-red-600 text-sm" />
+                <ErrorMessage
+                  name="password_confirmation"
+                  component="div"
+                  className="text-red-600 text-sm"
+                />
               </div>
 
               {error && <div className="text-red-600 text-sm text-center">{error}</div>}
@@ -72,7 +90,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
+                className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition disabled:opacity-60"
               >
                 {isSubmitting ? "Salvando..." : "Redefinir Senha"}
               </button>
