@@ -17,6 +17,9 @@ import MinhaContaPage from "@/pages/MinhaContaPage";
 import UserList from "@/components/User/UserList";
 import UserListPage from "@/pages/UserListPage";
 
+// Import de Funções e Permissões
+import RoleList from "@/components/Role/RoleList";
+import PermissionList from "@/components/Permission/PermissionList";
 
 // Import do Dashboard
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -46,6 +49,31 @@ const router = createBrowserRouter([
     </ProtectedRoute>
   ),
 },
+
+
+{
+  path: "/funcoes",
+  element: (
+    <ProtectedRoute perms={["manage roles", "manage_roles"]}>
+      <DashboardLayout>
+        <RoleList />
+      </DashboardLayout>
+    </ProtectedRoute>
+  ),
+},
+{
+  path: "/permissoes",
+  element: (
+    <ProtectedRoute perms={["manage permissions", "manage_permissions"]}>
+      <DashboardLayout>
+        <PermissionList />
+      </DashboardLayout>
+    </ProtectedRoute>
+  ),
+},
+
+
+
 
   {
     path: "/leads",

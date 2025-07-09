@@ -19,8 +19,12 @@ class RoleController extends Controller
         $data = $request->validate([
             'name'        => 'required|string|unique:roles,name',
             'permissions' => 'array',
+            'permissions.*' => 'exists:permissions,id',
         ]);
-        $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
+        $role = Role::create([
+            'name' => $data['name'],
+            'guard_name' => 'web'
+        ]);
         if (!empty($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
         }
@@ -36,10 +40,14 @@ class RoleController extends Controller
     {
         $role = Role::findOrFail($id);
         $data = $request->validate([
-            'name'        => 'sometimes|string|unique:roles,name,'.$id,
+            'name'        => 'required|string|unique:roles,name,'.$id,
             'permissions' => 'array',
+            'permissions.*' => 'exists:permissions,id',
         ]);
-        $role->update($data);
+        $role->update([
+            'name' => $data['name'],
+            'guard_name' => 'web'
+        ]);
         if (isset($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
         }

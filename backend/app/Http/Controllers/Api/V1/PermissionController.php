@@ -10,6 +10,7 @@ class PermissionController extends Controller
 {
     public function index()
     {
+        // Lista todas as permissions
         return Permission::all();
     }
 
@@ -18,8 +19,11 @@ class PermissionController extends Controller
         $data = $request->validate([
             'name' => 'required|string|unique:permissions,name',
         ]);
-        $perm = Permission::create(['name' => $data['name'], 'guard_name' => 'web']);
-        return response()->json($perm, 201);
+        $permission = Permission::create([
+            'name' => $data['name'],
+            'guard_name' => 'web'
+        ]);
+        return response()->json($permission, 201);
     }
 
     public function show($id)
@@ -29,18 +33,21 @@ class PermissionController extends Controller
 
     public function update(Request $request, $id)
     {
-        $perm = Permission::findOrFail($id);
+        $permission = Permission::findOrFail($id);
         $data = $request->validate([
-            'name' => 'sometimes|string|unique:permissions,name,'.$id,
+            'name' => 'required|string|unique:permissions,name,'.$id,
         ]);
-        $perm->update($data);
-        return response()->json($perm);
+        $permission->update([
+            'name' => $data['name'],
+            'guard_name' => 'web'
+        ]);
+        return response()->json($permission);
     }
 
     public function destroy($id)
     {
-        $perm = Permission::findOrFail($id);
-        $perm->delete();
+        $permission = Permission::findOrFail($id);
+        $permission->delete();
         return response()->json(['success' => true]);
     }
 }
