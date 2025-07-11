@@ -1,10 +1,31 @@
 import { useEffect, useState } from "react";
+import Layout from "@/components/layout/Layout";
+import DashboardDiretoria from "./dashboard/DashboardDiretoria";
+import DashboardComercial from "./dashboard/DashboardComercial";
+import DashboardAdmin from "./dashboard/DashboardAdmin";
+import DashboardDefault from "./dashboard/DashboardDefault";
+import { Loader } from "lucide-react";
 import axios from "@/services/api";
 import { useNavigate } from "react-router-dom";
-import Layout from "@/components/layout/Layout";
+
+type User = {
+  id: number;
+  name: string;
+  roles: string[];
+  [key: string]: any; // outros campos se precisar
+};
+
+const dashboards: Record<string, React.FC<{ user: User }>> = {
+  admin: DashboardAdmin,
+  administrador: DashboardAdmin,
+  diretoria: DashboardDiretoria,
+  comercial: DashboardComercial,
+  default: DashboardDefault,
+};
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -15,35 +36,36 @@ export default function DashboardPage() {
       } catch (err) {
         localStorage.removeItem("token");
         navigate("/login");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchUser();
   }, [navigate]);
 
-  const handleLogout = async () => {
-    try {
-      await axios.post("/v1/logout");
-    } catch {}
-    localStorage.removeItem("token");
-    navigate("/login");
-  };
+  if (loading || !user) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-[60vh]">
+          <Loader className="animate-spin text-primary w-12 h-12" />
+        </div>
+      </Layout>
+    );
+  }
 
-  if (!user) return <p className="text-center mt-10">Carregando...</p>;
+  // Padronize a role para comparar sem acento/minúscula
+  const roleKey = (user.roles?.[0] || "default")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  console.log("roles do usuário:", user.roles, "| roleKey:", roleKey);
+
+  const DashboardComponent = dashboards[roleKey] || dashboards.default;
 
   return (
     <Layout>
-      <div className="bg-white rounded-2xl shadow p-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Bem-vindo, {user.name}!</h1>
-        <p className="text-gray-600 mb-4">Você está logado como <strong>{user.roles.join(", ")}</strong>.</p>
-
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-        >
-          Sair
-        </button>
-      </div>
+      <DashboardComponent user={user} />
     </Layout>
   );
 }

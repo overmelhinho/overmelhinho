@@ -79,8 +79,10 @@ const router = createBrowserRouter([
     path: "/leads",
     element: (
       <ProtectedRoute perms={["view_lead"]}>
-        <LeadsPage />
-      </ProtectedRoute>
+	<DashboardLayout>
+         <LeadsPage />
+ 	</DashboardLayout> 
+     </ProtectedRoute>
     ),
   },
   // {

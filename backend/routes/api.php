@@ -3,15 +3,33 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
-use App\Http\Controllers\Api\V1\UserController; // Caminho correto do UserController novo
-use App\Http\Controllers\Api\V1\RoleController; // Novo Controller
-use App\Http\Controllers\Api\V1\PermissionController; // Novo Controller
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\PermissionController;
 
+// 👉 Import do ClienteController novo
+use App\Http\Controllers\Api\V1\ClienteController;
+use App\Http\Controllers\Api\V1\EnderecoController;
+use App\Http\Controllers\Api\V1\ContatoController;
+use App\Http\Controllers\Api\V1\RedeSocialController;
+use App\Http\Controllers\Api\V1\GaleriaImagemController;
+
+// Import Leads
+use App\Http\Controllers\Api\V1\OportunidadeController;
+use App\Http\Controllers\Api\V1\LeadController;
 
 Route::get('/sanidade', function () {
     \Log::info('Sanidade OK');
     return response()->json(['ok' => true, 'msg' => 'Sanidade OK']);
 });
+
+
+Route::post('/v1/test-log', function () {
+    \Log::info('[DEBUG] test-log atingido');
+    return response()->json(['ok' => true]);
+});
+
+
 
 Route::prefix('v1')->group(function () {
     // 🔓 Rotas públicas (com rate limiting)
@@ -28,7 +46,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/user', [AuthController::class, 'user']);
         Route::post('/logout', [AuthController::class, 'logout']);
 
-        // --- CRUD de usuários (apenas admin/diretor) ---
+        // --- CRUD de usuários ---
         Route::get('/users', [UserController::class, 'index']);
         Route::post('/users', [UserController::class, 'store']);
         Route::put('/users/{id}', [UserController::class, 'update']);
@@ -51,6 +69,32 @@ Route::prefix('v1')->group(function () {
         Route::get('/permissions/{id}', [PermissionController::class, 'show']);
         Route::put('/permissions/{id}', [PermissionController::class, 'update']);
         Route::delete('/permissions/{id}', [PermissionController::class, 'destroy']);
+
+        // --- Histórico Clientes ---
+        Route::get('/clientes/{id}/historico', [ClienteController::class, 'historico']);
+
+        // --- CRUD de clientes ---
+      //  Route::apiResource('clientes', ClienteController::class);
+
+        // --- Endpoints expandidos de clientes ---
+        Route::apiResource('clientes.enderecos', EnderecoController::class);
+        Route::apiResource('clientes.contatos', ContatoController::class);
+        Route::apiResource('clientes.redes-sociais', RedeSocialController::class);
+        Route::apiResource('clientes.galeria', GaleriaImagemController::class);
+        Route::post('clientes/{cliente}/galeria/upload', [GaleriaImagemController::class, 'upload']);
+        Route::post('clientes/{cliente}/galeria/upload-multiplos', [GaleriaImagemController::class, 'uploadMultiple']);
+
+        // --- CRUD LEADS/OPORTUNIDADES ---
+        Route::get('oportunidades/kanban', [OportunidadeController::class, 'kanban']);
+        Route::patch('oportunidades/{id}/mover', [OportunidadeController::class, 'mover']);
+        Route::apiResource('oportunidades', OportunidadeController::class);
+        Route::apiResource('leads', LeadController::class);
+        Route::post('leads/{lead}/converter', [LeadController::class, 'converterOportunidade']);
+        Route::post('oportunidades/{oportunidade}/converter-cliente', [OportunidadeController::class, 'converterCliente']);
+
+        // --- Usuários do time Comercial ---
+        Route::get('/comerciais', function () {
+            return \App\Models\User::role('Comercial')->get(['id', 'name', 'email']);
+        });
     });
 });
-

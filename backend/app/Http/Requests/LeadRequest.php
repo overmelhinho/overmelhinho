@@ -1,0 +1,27 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class LeadRequest extends FormRequest
+{
+    public function authorize()
+    {
+        // Permite todas as requisições autenticadas
+        return true;
+    }
+
+    public function rules()
+    {
+        return [
+            'nome'         => 'required|string|max:255',
+            'email'        => 'nullable|email|max:255',
+            'telefone'     => 'nullable|string|max:20',
+            'origem'       => 'nullable|string|max:100',
+            'status'       => 'nullable|string|max:100',
+            'responsavel'  => 'nullable|string|max:255',
+            'observacoes'  => 'nullable|string',
+        ];
+    }
+}
