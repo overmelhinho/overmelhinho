@@ -29,7 +29,8 @@ export default function LeadsPage() {
       <h1 className="text-2xl font-bold mb-2 text-[#B70F0A]">Leads</h1>
       <div className="flex flex-wrap gap-4">
         <KpiCard icon={Users} label="Total" value={stats?.total ?? "..."} color="bg-[#B70F0A]" />
-        <KpiCard icon={PhoneCall} label="Em Contato" value={stats?.em_contato ?? "..."} color="bg-[#FDB913]" />
+        <KpiCard icon={Users} label="Novos" value={stats?.novo ?? "..."} color="bg-[#339AF0]" />
+	<KpiCard icon={PhoneCall} label="Em Contato" value={stats?.em_contato ?? "..."} color="bg-[#FDB913]" />
         <KpiCard icon={ArrowRight} label="Convertidos" value={stats?.convertido ?? "..."} color="bg-[#37B24D]" />
         <KpiCard icon={XCircle} label="Perdidos" value={stats?.perdido ?? "..."} color="bg-[#B70F0A]" />
       </div>

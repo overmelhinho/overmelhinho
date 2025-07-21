@@ -8,20 +8,27 @@ class LeadRequest extends FormRequest
 {
     public function authorize()
     {
-        // Permite todas as requisições autenticadas
         return true;
     }
 
     public function rules()
     {
-        return [
-            'nome'         => 'required|string|max:255',
-            'email'        => 'nullable|email|max:255',
-            'telefone'     => 'nullable|string|max:20',
-            'origem'       => 'nullable|string|max:100',
-            'status'       => 'nullable|string|max:100',
-            'responsavel'  => 'nullable|string|max:255',
-            'observacoes'  => 'nullable|string',
+        $rules = [
+            'email'         => 'nullable|email|max:255',
+            'telefone'      => 'nullable|string|max:20',
+            'origem'        => 'nullable|string|max:100',
+            'status'        => 'nullable|string|max:100',
+            'responsavel'   => 'nullable|string|max:255',
+            'observacoes'   => 'nullable|string',
+            'motivo_perda'  => 'nullable|string', // <- adicionado aqui
         ];
+
+        if ($this->isMethod('post')) {
+            $rules['nome'] = 'required|string|max:255';
+        } else {
+            $rules['nome'] = 'sometimes|required|string|max:255';
+        }
+
+        return $rules;
     }
 }

@@ -17,17 +17,9 @@ use App\Http\Controllers\Api\V1\GaleriaImagemController;
 // Import Leads
 use App\Http\Controllers\Api\V1\OportunidadeController;
 use App\Http\Controllers\Api\V1\LeadController;
-
-Route::get('/sanidade', function () {
-    \Log::info('Sanidade OK');
-    return response()->json(['ok' => true, 'msg' => 'Sanidade OK']);
-});
+use App\Http\Controllers\Api\V1\DashboardController;
 
 
-Route::post('/v1/test-log', function () {
-    \Log::info('[DEBUG] test-log atingido');
-    return response()->json(['ok' => true]);
-});
 
 
 
@@ -74,7 +66,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/clientes/{id}/historico', [ClienteController::class, 'historico']);
 
         // --- CRUD de clientes ---
-      //  Route::apiResource('clientes', ClienteController::class);
+        Route::apiResource('clientes', ClienteController::class);
 
         // --- Endpoints expandidos de clientes ---
         Route::apiResource('clientes.enderecos', EnderecoController::class);
@@ -91,6 +83,11 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('leads', LeadController::class);
         Route::post('leads/{lead}/converter', [LeadController::class, 'converterOportunidade']);
         Route::post('oportunidades/{oportunidade}/converter-cliente', [OportunidadeController::class, 'converterCliente']);
+	Route::get('/leads/stats', [LeadController::class, 'stats'])->middleware('permission:view_lead');
+	Route::get('/dashboard/kpis', [DashboardController::class, 'kpis']);
+	// dentro do Route::prefix('v1')->group
+	Route::get('/dashboard/test', [DashboardController::class, 'test']);
+
 
         // --- Usuários do time Comercial ---
         Route::get('/comerciais', function () {

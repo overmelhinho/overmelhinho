@@ -12,6 +12,9 @@ import UsuariosPage from "@/pages/UsuariosPage"; // NOVO IMPORT!
 import Unauthorized from "@/pages/Unauthorized";
 import ProtectedRoute from "./ProtectedRoute"; // seu wrapper de permissão
 import MinhaContaPage from "@/pages/MinhaContaPage";
+import LeadsKanbanPage from "@/pages/LeadsKanbanPage";
+import ClienteCadastroForm from '@/pages/clientes/ClienteCadastroForm';
+import ClienteCreateFromLead from '@/pages/clientes/ClienteCreateFromLead';
 
 // Import de Usuários
 import UserList from "@/components/User/UserList";
@@ -142,6 +145,29 @@ const router = createBrowserRouter([
   element: (
     <ProtectedRoute>
       <MinhaContaPage />
+    </ProtectedRoute>
+  ),
+},
+
+
+{
+  path: "/leads-kanban",
+  element: (
+    <ProtectedRoute perms={["view_lead"]}>
+      <DashboardLayout>
+        <LeadsKanbanPage />
+      </DashboardLayout>
+    </ProtectedRoute>
+  ),
+},
+
+{
+  path: '/clientes/novo/:leadId',
+  element: (
+    <ProtectedRoute perms={['create_cliente']}>
+      <DashboardLayout>
+        <ClienteCreateFromLead />
+      </DashboardLayout>
     </ProtectedRoute>
   ),
 },

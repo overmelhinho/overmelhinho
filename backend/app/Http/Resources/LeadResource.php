@@ -16,20 +16,19 @@ class LeadResource extends JsonResource
     public function toArray($request)
     {
         try {
-
-return [
-    'id'          => $this->id,
-    'nome'        => $this->nome,
-    'email'       => $this->email,
-    'telefone'    => $this->telefone,
-    'origem'      => $this->origem,
-    'status'      => $this->status,
-    'responsavel' => $this->responsavel,
-    'observacoes' => $this->observacoes,
-    'created_at'  => optional($this->created_at)->toDateTimeString(),
-    'updated_at'  => optional($this->updated_at)->toDateTimeString(),
-];
-
+            return [
+                'id'            => $this->id,
+                'nome'          => $this->nome,
+                'email'         => $this->email,
+                'telefone'      => $this->telefone,
+                'origem'        => $this->origem,
+                'status'        => $this->status,
+                'responsavel'   => $this->responsavel,
+                'observacoes'   => $this->observacoes,
+                'motivo_perda'  => $this->motivo_perda, // ✅ NOVO CAMPO
+                'created_at'    => optional($this->created_at)->toDateTimeString(),
+                'updated_at'    => optional($this->updated_at)->toDateTimeString(),
+            ];
         } catch (\Throwable $e) {
             Log::error('Erro na serialização do LeadResource: ' . $e->getMessage(), [
                 'lead' => $this->resource ?? null
@@ -42,4 +41,3 @@ return [
         }
     }
 }
-

@@ -41,10 +41,10 @@ class LeadController extends Controller
         return response()->json([
             'data' => $leads->items(),
             'meta' => [
-                'total'    => $leads->total(),
-                'page'     => $leads->currentPage(),
-                'per_page' => $leads->perPage(),
-                'last_page'=> $leads->lastPage(),
+                'total'     => $leads->total(),
+                'page'      => $leads->currentPage(),
+                'per_page'  => $leads->perPage(),
+                'last_page' => $leads->lastPage(),
             ],
         ]);
     }
@@ -55,23 +55,29 @@ class LeadController extends Controller
         return new LeadResource($lead);
     }
 
+    public function store(LeadRequest $request)
+    {
+        $data = $request->validated();
+        \Log::info('[LEAD][STORE][VALIDATED]', $data);
 
+        $lead = Lead::create($data)->fresh();
 
-public function store(LeadRequest $request)
-{
-    $data = $request->validated();
-    \Log::info('[LEAD][STORE][VALIDATED]', $data);
-
-    $lead = Lead::create($data)->fresh(); // <- 🔧 forçando o refresh do banco
-
-    return new LeadResource($lead);
-}
-
+        return new LeadResource($lead);
+    }
 
     public function update(LeadRequest $request, $id)
     {
         $lead = Lead::findOrFail($id);
-        $lead->update($request->validated());
+        $lead->update($request->only([
+            'nome',
+            'email',
+            'telefone',
+            'origem',
+            'status',
+            'responsavel',
+            'observacoes',
+            'motivo_perda'
+        ]));
         return new LeadResource($lead);
     }
 
@@ -107,6 +113,17 @@ public function store(LeadRequest $request)
         return response()->json([
             'success'      => true,
             'oportunidade' => new OportunidadeResource($oportunidade)
+        ]);
+    }
+
+    public function stats()
+    {
+        return response()->json([
+            'total'      => Lead::count(),
+            'novo'       => Lead::where('status', 'novo')->count(),
+            'em_contato' => Lead::where('status', 'em_contato')->count(),
+            'convertido' => Lead::where('status', 'convertido')->count(),
+            'perdido'    => Lead::where('status', 'perdido')->count(),
         ]);
     }
 }

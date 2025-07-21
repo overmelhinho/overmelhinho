@@ -1,0 +1,52 @@
+// src/components/kanban/LeadCard.tsx
+import { Phone, Edit } from 'lucide-react';
+import { useDraggable } from '@dnd-kit/core';
+import { useState } from 'react';
+import LeadEditModal from './LeadEditModal';
+
+export function LeadCard({ lead }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `lead-${lead.id}`
+  });
+
+  const [open, setOpen] = useState(false);
+
+  const style = {
+    transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
+    opacity: isDragging ? 0.5 : 1
+  };
+
+  const handleConvertToClient = () => {
+    window.location.href = `/clientes/cadastro/${lead.id}`;
+  };
+
+  return (
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="bg-white rounded-xl p-3 shadow flex flex-col gap-1 cursor-move"
+      >
+        <div className="flex justify-between items-center" {...listeners} {...attributes}>
+          <span className="font-bold text-sm">{lead.nome}</span>
+	        </div>
+        <p className="text-xs text-gray-500">{lead.origem} - {lead.responsavel}</p>
+        <div className="flex gap-2 mt-1">
+          <button className="text-green-600"><Phone size={16} /></button>
+          <button className="text-blue-600" onClick={() => setOpen(true)}><Edit size={16} /></button>
+        </div>
+
+        {lead.status === 'preparando_publicacao' && (
+          <button
+            onClick={handleConvertToClient}
+            className="mt-2 text-xs text-[#B70F0A] border border-[#B70F0A] px-2 py-1 rounded hover:bg-[#B70F0A] hover:text-white transition"
+          >
+            Converter para Cliente
+          </button>
+        )}
+      </div>
+
+      <LeadEditModal open={open} onClose={() => setOpen(false)} lead={lead} />
+    </>
+  );
+}

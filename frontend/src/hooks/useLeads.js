@@ -1,13 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "@/services/api"; // configure o axios com baseURL
 
-export function useLeads({ search, status, page, perPage }) {
+
+export function useLeads({ search, status, page, perPage, origem, responsavel }) {
   return useQuery({
-    queryKey: ['leads', { search, status, page, perPage }],
+    queryKey: ['leads', { search, status, page, perPage, origem, responsavel }],
     queryFn: async () => {
       const params = {};
       if (search) params.search = search;
       if (status && status !== "Todos") params.status = status;
+      if (origem) params.origem = origem;
+      if (responsavel) params.responsavel = responsavel;
       params.page = page;
       params.per_page = perPage;
 
@@ -17,6 +20,7 @@ export function useLeads({ search, status, page, perPage }) {
     keepPreviousData: true,
   });
 }
+
 
 export function useCreateLead() {
   const queryClient = useQueryClient();
@@ -38,6 +42,15 @@ export function useDeleteLead() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id) => axios.delete(`/v1/leads/${id}`),
+    onSuccess: () => queryClient.invalidateQueries(["leads"]),
+  });
+}
+
+// ✅ Novo hook para mover lead entre colunas do Kanban
+export function useMoveLead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }) => axios.patch(`/v1/leads/${id}`, { status }),
     onSuccess: () => queryClient.invalidateQueries(["leads"]),
   });
 }
