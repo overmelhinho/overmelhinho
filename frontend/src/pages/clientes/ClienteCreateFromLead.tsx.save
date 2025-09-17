@@ -1,0 +1,238 @@
+c nano src/pages/clientes/ClienteCreateFromLead.tsxfffimport { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import axios from '@/services/api';
+import Skeleton from '@/components/ui/skeleton';
+import { Formik, Form, Field } from 'formik';
+import { useState } from 'react';
+import { Tabs, Tab } from '@/components/ui/tabs';
+import toast from 'react-hot-toast';
+import * as Yup from 'yup';
+
+const inputClass = "w-full rounded-xl border border-gray-300 focus:border-[#B70F0A] focus:ring-2 focus:ring-[#B70F0A]/40 transition-all px-3 py-2 text-sm shadow-sm";
+
+export default function ClienteCreateFromLead() {
+  const { leadId } = useParams();
+  const [iaLoading, setIaLoading] = useState(false);
+  const [step, setStep] = useState(0);
+
+  const { data: lead, isLoading } = useQuery({
+    queryKey: ['lead', leadId],
+    queryFn: async () => {
+      const { data } = await axios.get(`/v1/leads/${leadId}`);
+      return data.data;
+    },
+    enabled: !!leadId,
+  });
+
+  const extractEndereco = (endereco = '') => {
+    const match = endereco.match(/^(?<rua>[^,]+), (?<numero>\d+)(?: - (?<complemento>.*?))?(?: - (?<bairro>.*?))?, (?<cidade>.*?)- (?<estado>\w{2})$/);
+    if (!match || !match.groups) return {};
+    return {
+      rua: match.groups.rua || '',
+      numero: match.groups.numero || '',
+      complemento: match.groups.complemento || '',
+      bairro: match.groups.bairro || '',
+      cidade: match.groups.cidade || '',
+      estado: match.groups.estado || '',
+    };
+  };
+
+  const buscarComIA = async (values: any, setFieldValue: any) => {
+    try {
+      setIaLoading(true);
+      const query = `${values.nome} Serra Gaúcha`;
+
+      const { data } = await axios.get(`/v1/lead-intel/fetch`, {
+        params: {
+          query,
+          location: '-29.2244,-51.3409',
+          radius: 80000,
+        },
+      });
+
+      if (data?.dados) {
+        const dados = data.dados;
+
+        Object.entries(dados).forEach(([key, value]) => {
+          if (['nome', 'email', 'telefone', 'instagram'].includes(key) && value) {
+            setFieldValue(key, value);
+          }
+        });
+
+        if (dados.endereco) {
+          const enderecoParts = extractEndereco(dados.endereco);
+          Object.entries(enderecoParts).forEach(([key, value]) => {
+            if (value) setFieldValue(key, value);
+          });
+        }
+
+        toast.success('Dados preenchidos com IA!');
+      } else {
+        toast.error('Nenhum resultado encontrado.');
+      }
+    } catch (err) {
+      toast.error('Erro ao buscar IA.');
+    } finally {
+      setIaLoading(false);
+    }
+  };
+
+  const validationSchema = Yup.object({
+    nome: Yup.string().required('Nome é obrigatório'),
+    email: Yup.string().email('Email inválido').required('Email é obrigatório'),
+    telefone: Yup.string().required('Telefone é obrigatório'),
+    origem: Yup.string().required('Origem é obrigatória'),
+    responsavel: Yup.string().required('Responsável é obrigatório'),
+    cep: Yup.string().matches(/^[0-9]{5}-?[0-9]{3}$/g, 'CEP inválido').required('CEP é obrigatório'),
+    estado: Yup.string().required('Estado é obrigatório'),
+    cidade: Yup.string().required('Cidade é obrigatória'),
+    bairro: Yup.string().required('Bairro é obrigatório'),
+    rua: Yup.string().required('Rua é obrigatória'),
+    numero: Yup.string().required('Número é obrigatório'),
+    complemento: Yup.string(),
+    instagram: Yup.string().url('URL inválida'),
+    facebook: Yup.string().url('URL inválida'),
+    linkedin: Yup.string().url('URL inválida'),
+    youtube: Yup.string().url('URL inválida'),
+    tiktok: Yup.string().url('URL inválida'),
+    x: Yup.string().url('URL inválida'),
+  });
+
+  if (isLoading || !lead) return <Skeleton className="h-32 w-full" />;
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto">
+      <Formik
+        initialValues={{
+          nome: lead.nome || '',
+          email: lead.email || '',
+          telefone: lead.telefone || '',
+          origem: lead.origem || '',
+          responsavel: lead.responsavel || '',
+          cep: '', estado: '', cidade: '', bairro: '', rua: '', numero: '', complemento: '',
+          facebook: '', instagram: '', linkedin: '', youtube: '', tiktok: '', x: '',
+        }}
+        enableReinitialize
+        validationSchema={validationSchema}
+        onSubmit={(values) => {
+          console.log('Salvar cliente com:', values);
+        }}
+      >
+        {({ values, setFieldValue, errors, touched }) => (
+          <Form className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-xl font-bold text-[#B70F0A]">Novo Cliente a partir de Lead</h1>
+              <button
+                type="button"
+                onClick={() => buscarComIA(values, setFieldValue)}
+                className="text-sm px-3 py-1 border rounded border-[#B70F0A] text-[#B70F0A] hover:bg-[#B70F0A] hover:text-white"
+                disabled={iaLoading}
+              >
+                {iaLoading ? 'Buscando...' : 'Buscar com IA'}
+              </button>
+            </div>
+
+            <Tabs selectedIndex={step} onChange={setStep}>
+              <Tab title="Identificação">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm">Nome</label>
+                    <Field name="nome" className={inputClass} />
+                    {touched.nome && errors.nome && <div className="text-red-500 text-sm">{errors.nome}</div>}
+                  </div>
+                  <div>
+                    <label className="block text-sm">Email</label>
+                    <Field name="email" className={inputClass} />
+                    {touched.email && errors.email && <div className="text-red-500 text-sm">{errors.email}</div>}
+                  </div>
+                  <div>
+                    <label className="block text-sm">Telefone</label>
+                    <Field name="telefone" className={inputClass} />
+                    {touched.telefone && errors.telefone && <div className="text-red-500 text-sm">{errors.telefone}</div>}
+                  </div>
+                </div>
+              </Tab>
+
+              <Tab title="Contato">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm">Origem</label>
+                    <Field name="origem" className={inputClass} />
+                    {touched.origem && errors.origem && <div className="text-red-500 text-sm">{errors.origem}</div>}
+                  </div>
+                  <div>
+                    <label className="block text-sm">Responsável</label>
+                    <Field name="responsavel" className={inputClass} />
+                    {touched.responsavel && errors.responsavel && <div className="text-red-500 text-sm">{errors.responsavel}</div>}
+                  </div>
+                </div>
+              </Tab>
+
+              <Tab title="Endereço">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm">CEP</label>
+                    <Field name="cep" className={inputClass} />
+                    {touched.cep && errors.cep && <div className="text-red-500 text-sm">{errors.cep}</div>}
+                  </div>
+                  <div>
+                    <label className="block text-sm">Estado</label>
+                    <Field name="estado" className={inputClass} />
+                    {touched.estado && errors.estado && <div className="text-red-500 text-sm">{errors.estado}</div>}
+                  </div>
+                  <div>
+                    <label className="block text-sm">Cidade</label>
+                    <Field name="cidade" className={inputClass} />
+                    {touched.cidade && errors.cidade && <div className="text-red-500 text-sm">{errors.cidade}</div>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm">Bairro</label>
+                    <Field name="bairro" className={inputClass} />
+                    {touched.bairro && errors.bairro && <div className="text-red-500 text-sm">{errors.bairro}</div>}
+                  </div>
+                  <div>
+                    <label className="block text-sm">Rua</label>
+                    <Field name="rua" className={inputClass} />
+                    {touched.rua && errors.rua && <div className="text-red-500 text-sm">{errors.rua}</div>}
+                  </div>
+                  <div>
+                    <label className="block text-sm">Número</label>
+                    <Field name="numero" className={inputClass} />
+                    {touched.numero && errors.numero && <div className="text-red-500 text-sm">{errors.numero}</div>}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm">Complemento</label>
+                  <Field name="complemento" className={inputClass} />
+                </div>
+              </Tab>
+
+              <Tab title="Redes Sociais">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {['instagram', 'facebook', 'linkedin', 'youtube', 'tiktok', 'x'].map((field) => (
+                    <div key={field}>
+                      <label className="block text-sm capitalize">{field}</label>
+                      <Field name={field} className={inputClass} />
+                      {touched[field] && errors[field] && <div className="text-red-500 text-sm">{errors[field]}</div>}
+                    </div>
+                  ))}
+                </div>
+              </Tab>
+            </Tabs>
+
+            <div className="flex justify-end gap-2">
+              {step > 0 && <button type="button" onClick={() => setStep(step - 1)} className="text-sm px-4 py-2 border rounded">Voltar</button>}
+              {step < 3 ? (
+                <button type="button" onClick={() => setStep(step + 1)} className="text-sm px-4 py-2 bg-[#B70F0A] text-white rounded">Avançar</button>
+              ) : (
+                <button type="submit" className="text-sm px-4 py-2 bg-[#B70F0A] text-white rounded">Salvar Cliente</button>
+              )}
+            </div>
+          </Form>
+        )}
+      </Formik>
+    </div>
+  );
+}

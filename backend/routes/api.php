@@ -19,7 +19,8 @@ use App\Http\Controllers\Api\V1\OportunidadeController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\DashboardController;
 
-
+// Busca por IA Clientes
+use App\Http\Controllers\LeadIntelController;
 
 
 
@@ -33,6 +34,8 @@ Route::prefix('v1')->group(function () {
 
     Route::post('/password/reset', [PasswordResetController::class, 'reset']);
 
+
+Route::get('/lead-intel/diagnostico', [LeadIntelController::class, 'diagnostico']);
     // 🔒 Rotas protegidas
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user', [AuthController::class, 'user']);
@@ -88,6 +91,9 @@ Route::prefix('v1')->group(function () {
 	// dentro do Route::prefix('v1')->group
 	Route::get('/dashboard/test', [DashboardController::class, 'test']);
 
+
+	// Route Busca Clientes por IA
+         Route::get('/lead-intel/fetch', [LeadIntelController::class, 'fetch']);
 
         // --- Usuários do time Comercial ---
         Route::get('/comerciais', function () {

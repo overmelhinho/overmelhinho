@@ -21,6 +21,7 @@ class LeadRequest extends FormRequest
             'responsavel'   => 'nullable|string|max:255',
             'observacoes'   => 'nullable|string',
             'motivo_perda'  => 'nullable|string', // <- adicionado aqui
+            'data_follow_up' => 'nullable|date',	
         ];
 
         if ($this->isMethod('post')) {

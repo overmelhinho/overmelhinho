@@ -76,7 +76,9 @@ class LeadController extends Controller
             'status',
             'responsavel',
             'observacoes',
-            'motivo_perda'
+            'motivo_perda',
+ 	    'data_follow_up'
+
         ]));
         return new LeadResource($lead);
     }

@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 // Menu principal
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: Home, perms: ["view_dashboard"] },
-  { to: "/leads", label: "Leads", icon: Users, perms: ["view_lead"] },
+  { to: "/leads-kanban", label: "Leads", icon: Users, perms: ["view_lead"] },
   { to: "/clientes", label: "Clientes", icon: Database, perms: ["view_client"] },
   { to: "/relatorios", label: "Relatórios", icon: FileText, perms: ["view_report"] },
   { to: "/criativo", label: "Criativo", icon: LayoutTemplate, perms: ["manage_creative"] },

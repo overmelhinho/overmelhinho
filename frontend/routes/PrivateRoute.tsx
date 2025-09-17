@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 
 type Props = {
   requiredRole?: string;
@@ -7,21 +8,27 @@ type Props = {
 };
 
 export default function PrivateRoute({ requiredRole, requiredPermission }: Props) {
-  const { user } = useAuth();
+  const { user, loading, fetchUser } = useAuth(); // vamos supor que seu contexto tenha isso
 
-  // 1. Se não estiver logado, redireciona
-  if (!user) return <Navigate to="/login" replace />;
+  // Se o contexto ainda estiver buscando os dados do usuário
+  if (loading) {
+    return <div className="p-4 text-center">Carregando...</div>;
+  }
 
-  // 2. Se exigir role e o user não tiver, bloqueia
-  if (requiredRole && !user.roles.includes(requiredRole)) {
+  // Se não estiver logado
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Role seguro
+  if (requiredRole && (!user.roles || !Array.isArray(user.roles) || !user.roles.includes(requiredRole))) {
     return <div className="p-4 text-center">Acesso negado (Role)</div>;
   }
 
-  // 3. Se exigir permissão e o user não tiver, bloqueia
-  if (requiredPermission && !user.permissions.includes(requiredPermission)) {
+  // Permissão segura
+  if (requiredPermission && (!user.permissions || !Array.isArray(user.permissions) || !user.permissions.includes(requiredPermission))) {
     return <div className="p-4 text-center">Acesso negado (Permission)</div>;
   }
 
-  // 4. Se passou, libera a rota interna
   return <Outlet />;
 }

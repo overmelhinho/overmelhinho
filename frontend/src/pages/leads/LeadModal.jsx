@@ -108,7 +108,43 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
         return (
           <>
             <Field label="Nome do lead" name="nome" value={formik.values.nome} onChange={formik.handleChange} onBlur={formik.handleBlur} error={formik.touched.nome && formik.errors.nome} required placeholder="Digite o nome completo" />
-            <Field label="Origem" name="origem" value={formik.values.origem} onChange={formik.handleChange} onBlur={formik.handleBlur} error={formik.touched.origem && formik.errors.origem} required placeholder="Ex: Instagram, Indicação, Site..." />
+          <div className="space-y-1">
+  <label htmlFor="origem" className="block text-sm font-medium text-gray-700">
+    Origem <span className="text-red-600 ml-1">*</span>
+  </label>
+  <select
+    id="origem"
+    name="origem"
+    value={formik.values.origem}
+    onChange={formik.handleChange}
+    onBlur={formik.handleBlur}
+    className={`w-full border rounded-md p-2 ${formik.touched.origem && formik.errors.origem ? "border-red-500" : ""}`}
+  >
+    <option value="">Selecione a origem</option>
+    <optgroup label="Digital">
+      <option value="site">Site</option>
+      <option value="instagram">Instagram</option>
+      <option value="facebook">Facebook</option>
+      <option value="google_ads">Google Ads</option>
+      <option value="landing_page">Landing Page</option>
+      <option value="whatsapp_web">WhatsApp (automático)</option>
+    </optgroup>
+    <optgroup label="Indicação / Manual">
+      <option value="telefone">Telefone</option>
+      <option value="indicacao_cliente">Indicação de cliente</option>
+      <option value="indicacao_parceiro">Indicação de parceiro</option>
+      <option value="insercao_manual">Inserção manual</option>
+    </optgroup>
+    <optgroup label="Outros">
+      <option value="evento_local">Evento ou feira</option>
+      <option value="midiakit">Mídia física (panfleto, outdoor)</option>
+      <option value="outro">Outro</option>
+    </optgroup>
+  </select>
+  {formik.touched.origem && formik.errors.origem && (
+    <span className="text-xs text-red-600">{formik.errors.origem}</span>
+  )}
+</div>
           </>
         );
       case 1:

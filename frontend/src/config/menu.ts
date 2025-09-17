@@ -9,7 +9,7 @@ export const menuItems = [
   {
     label: "Leads",
     icon: "UserPlus",
-    path: "/leads",
+    path: "/leads-kanban",
     perms: ["view_lead"], // ex: comercial/admin
   },
   {

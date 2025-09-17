@@ -13,7 +13,9 @@ class Lead extends Model
         'origem',
         'status',
         'responsavel',
-        'observacoes'
+        'observacoes',
+        'data_follow_up'
+
     ];
 
     // Relacionamento com oportunidades (lead pode ter várias)
