@@ -1,1 +1,12 @@
-backup-meu-projeto.zip
+# Node
+node_modules/
+**/node_modules/
+
+# Laravel
+backend/vendor/
+backend/.env
+
+# Frontend build
+frontend/dist/
+frontend/.env
+frontend/.env.*
