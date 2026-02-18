@@ -19,7 +19,6 @@ export default defineConfig({
     'process.env': {
       NODE_ENV: 'development',
     },
-    __REACT_DEVTOOLS_GLOBAL_HOOK__: true,
   },
   build: {
     minify: false, // ❗ desativa minificação do código

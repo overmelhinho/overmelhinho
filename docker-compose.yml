@@ -10,24 +10,36 @@ services:
     depends_on:
       - db
     environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_KEY=base64:YOUR_GENERATED_KEY_HERE_IF_NOT_IN_ENV
       - DB_HOST=db
       - DB_PORT=3306
       - DB_DATABASE=vermelhinho
       - DB_USERNAME=root
       - DB_PASSWORD=root
+      - OCTANE_SERVER=swoole
 
   frontend:
     build: ./frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     ports:
-      - "5173:80"
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
 
   db:
     image: mysql:8
+    command: --default-authentication-plugin=mysql_native_password
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: vermelhinho
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=vermelhinho
     volumes:
       - db_data:/var/lib/mysql
 

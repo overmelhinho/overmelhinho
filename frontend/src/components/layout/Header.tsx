@@ -43,7 +43,7 @@ export default function Header() {
       <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <div className="min-w-0">
           <div className="text-xs font-medium text-slate-500">
-            Plataforma administrativa
+            Plataforma administrativa <span className="ml-2 inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">v1.0.1 (DEV)</span>
           </div>
           <div className="truncate text-lg font-semibold text-slate-900">
             O Vermelhinho
