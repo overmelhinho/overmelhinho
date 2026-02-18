@@ -95,7 +95,8 @@ if $backend_changed; then
 
   # composer (sem dev)
   log "composer install..."
-  composer install --no-dev --optimize-autoloader
+  export COMPOSER_ALLOW_SUPERUSER=1
+  composer install --no-dev --optimize-autoloader --no-interaction
 
   # migrations
   log "php artisan migrate..."
