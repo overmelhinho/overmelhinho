@@ -1,38 +1,55 @@
+// /var/www/frontend/src/routes/index.tsx
 import { createBrowserRouter } from "react-router-dom";
+
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
+
 import LeadsPage from "@/pages/LeadsPage";
-// import ClientesPage from "@/pages/ClientesPage";
+import LeadsKanbanPage from "@/pages/LeadsKanbanPage";
+
 import RelatoriosPage from "@/pages/RelatoriosPage";
 import CriativoPage from "@/pages/CriativoPage";
 import ConfiguracoesPage from "@/pages/ConfiguracoesPage";
-import UsuariosPage from "@/pages/UsuariosPage"; // NOVO IMPORT!
-import Unauthorized from "@/pages/Unauthorized";
-import ProtectedRoute from "./ProtectedRoute"; // seu wrapper de permissão
-import MinhaContaPage from "@/pages/MinhaContaPage";
-import LeadsKanbanPage from "@/pages/LeadsKanbanPage";
-import ClienteCadastroForm from '@/pages/clientes/ClienteCadastroForm';
-import ClienteCreateFromLead from '@/pages/clientes/ClienteCreateFromLead';
 
-// Import de Usuários
-import UserList from "@/components/User/UserList";
+import Unauthorized from "@/pages/Unauthorized";
+import MinhaContaPage from "@/pages/MinhaContaPage";
+
+import ProtectedRoute from "./ProtectedRoute";
+
+// Layout
+import DashboardLayout from "@/components/layout/DashboardLayout";
+
+// Clientes
+import ClienteCreateFromLead from "@/pages/clientes/ClienteCreateFromLead";
+import ClienteEdit from "@/pages/clientes/ClienteEdit";
+import ClienteCadastroForm from "@/pages/clientes/ClienteCadastroForm";
+import ClientesList from "@/pages/clientes/ClientesList";
+
+// Usuários
 import UserListPage from "@/pages/UserListPage";
 
-// Import de Funções e Permissões
+// Funções e Permissões
 import RoleList from "@/components/Role/RoleList";
 import PermissionList from "@/components/Permission/PermissionList";
 
-// Import do Dashboard
-import DashboardLayout from "@/components/layout/DashboardLayout";
+// ✅ Tickets
+import TicketsPage from "@/pages/TicketsPage";
+import TicketDetailsPage from "@/pages/TicketDetailsPage";
 
+// ✅ Campanhas
+import CampanhasList from "@/pages/campanhas/CampanhasList";
+
+// ✅ IMPORT CORRIGIDO (evita loop com CampanhaCreate.tsx)
+import CampanhaCreate from "@/pages/campanhas/CampanhaCreate/index";
+
+import CampanhaDetails from "@/pages/campanhas/CampanhaDetails";
+import CampanhaEdit from "@/pages/campanhas/CampanhaWizard/CampanhaEditWizard";
 
 const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <LoginPage />,
-  },
+  { path: "/", element: <LoginPage /> },
+
   {
     path: "/dashboard",
     element: (
@@ -42,60 +59,231 @@ const router = createBrowserRouter([
     ),
   },
 
-{
-  path: "/usuarios",
-  element: (
-    <ProtectedRoute perms={["manage_users"]}>
-	 <DashboardLayout>
+  {
+    path: "/usuarios",
+    element: (
+      <ProtectedRoute perms={["manage_users"]}>
+        <DashboardLayout>
           <UserListPage />
         </DashboardLayout>
-    </ProtectedRoute>
-  ),
-},
+      </ProtectedRoute>
+    ),
+  },
 
+  {
+    path: "/funcoes",
+    element: (
+      <ProtectedRoute perms={["manage roles", "manage_roles"]}>
+        <DashboardLayout>
+          <RoleList />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
 
-{
-  path: "/funcoes",
-  element: (
-    <ProtectedRoute perms={["manage roles", "manage_roles"]}>
-      <DashboardLayout>
-        <RoleList />
-      </DashboardLayout>
-    </ProtectedRoute>
-  ),
-},
-{
-  path: "/permissoes",
-  element: (
-    <ProtectedRoute perms={["manage permissions", "manage_permissions"]}>
-      <DashboardLayout>
-        <PermissionList />
-      </DashboardLayout>
-    </ProtectedRoute>
-  ),
-},
-
-
-
+  {
+    path: "/permissoes",
+    element: (
+      <ProtectedRoute perms={["manage permissions", "manage_permissions"]}>
+        <DashboardLayout>
+          <PermissionList />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
 
   {
     path: "/leads",
     element: (
       <ProtectedRoute perms={["view_lead"]}>
-	<DashboardLayout>
-         <LeadsPage />
- 	</DashboardLayout> 
-     </ProtectedRoute>
+        <DashboardLayout>
+          <LeadsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
     ),
   },
-  // {
-  //  path: "/clientes",
-   //  element: (
-     //  <ProtectedRoute perms={["view_client"]}>
-       //  <ClientesPage />
-     //  </ProtectedRoute>
-   //  ),
- //  },
+
+  {
+    path: "/leads-kanban",
+    element: (
+      <ProtectedRoute perms={["view_lead"]}>
+        <DashboardLayout>
+          <LeadsKanbanPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CLIENTES (LISTAGEM)
+  {
+    path: "/clientes",
+    element: (
+      <ProtectedRoute perms={["view_client"]}>
+        <DashboardLayout>
+          <ClientesList />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CLIENTES (CRIAR COM LEAD)
+  {
+    path: "/clientes/novo/:leadId",
+    element: (
+      <ProtectedRoute perms={["create_cliente"]}>
+        <DashboardLayout>
+          <ClienteCreateFromLead />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CLIENTES (CRIAR SEM LEAD)
+  {
+    path: "/clientes/novo",
+    element: (
+      <ProtectedRoute perms={["create_cliente"]}>
+        <DashboardLayout>
+          <ClienteCreateFromLead />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CLIENTES (EDITAR)
+  {
+    path: "/clientes/:id/editar",
+    element: (
+      <ProtectedRoute
+        perms={[
+          "view_client",
+          "edit_cliente",
+          "update_cliente",
+          "manage_client",
+          "manage_clients",
+          "manage clients",
+          "manage clients",
+        ]}
+      >
+        <DashboardLayout>
+          <ClienteEdit />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CAMPANHAS (LISTA)
+  {
+    path: "/campanhas",
+    element: (
+      <ProtectedRoute
+        perms={[
+          "view_campaign",
+          "view_campaigns",
+          "view_campanha",
+          "view_campanhas",
+          "manage_campaigns",
+          "manage_campaign",
+          "manage campanhas",
+          "manage_campanhas",
+        ]}
+      >
+        <DashboardLayout>
+          <CampanhasList />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CAMPANHAS (CRIAR)
+  {
+    path: "/campanhas/nova",
+    element: (
+      <ProtectedRoute
+        perms={[
+          "create_campaign",
+          "create_campaigns",
+          "create_campanha",
+          "create_campanhas",
+          "manage_campaigns",
+          "manage_campanhas",
+        ]}
+      >
+        <DashboardLayout>
+          <CampanhaCreate />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CAMPANHAS (DETALHE)
+  {
+    path: "/campanhas/:id",
+    element: (
+      <ProtectedRoute
+        perms={[
+          "view_campaign",
+          "view_campaigns",
+          "view_campanha",
+          "view_campanhas",
+          "manage_campaigns",
+          "manage_campanhas",
+        ]}
+      >
+        <DashboardLayout>
+          <CampanhaDetails />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CAMPANHAS (EDITAR)
+  {
+    path: "/campanhas/:id/editar",
+    element: (
+      <ProtectedRoute
+        perms={[
+          "update_campaign",
+          "edit_campaign",
+          "update_campanha",
+          "edit_campanha",
+          "manage_campaigns",
+          "manage_campanhas",
+          "view_campaign",
+          "view_campanha",
+        ]}
+      >
+        <DashboardLayout>
+          <CampanhaEdit />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ TICKETS (CENTRAL)
+  {
+    path: "/tickets",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <TicketsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ TICKETS (DETALHE)
+  {
+    path: "/tickets/:id",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <TicketDetailsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
   {
     path: "/relatorios",
     element: (
@@ -104,6 +292,7 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
   {
     path: "/criativo",
     element: (
@@ -112,6 +301,7 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
   {
     path: "/configuracoes",
     element: (
@@ -120,18 +310,21 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
   {
-    path: "/unauthorized",
-    element: <Unauthorized />,
+    path: "/minha-conta",
+    element: (
+      <ProtectedRoute>
+        <MinhaContaPage />
+      </ProtectedRoute>
+    ),
   },
-  {
-    path: "/forgot-password",
-    element: <ForgotPasswordPage />,
-  },
-  {
-    path: "/reset-password/:token",
-    element: <ResetPasswordPage />,
-  },
+
+  { path: "/unauthorized", element: <Unauthorized /> },
+  { path: "/forgot-password", element: <ForgotPasswordPage /> },
+  { path: "/reset-password/:token", element: <ResetPasswordPage /> },
+
+  // ✅ SEMPRE POR ÚLTIMO
   {
     path: "*",
     element: (
@@ -140,39 +333,6 @@ const router = createBrowserRouter([
       </div>
     ),
   },
-{
-  path: "/minha-conta",
-  element: (
-    <ProtectedRoute>
-      <MinhaContaPage />
-    </ProtectedRoute>
-  ),
-},
-
-
-{
-  path: "/leads-kanban",
-  element: (
-    <ProtectedRoute perms={["view_lead"]}>
-      <DashboardLayout>
-        <LeadsKanbanPage />
-      </DashboardLayout>
-    </ProtectedRoute>
-  ),
-},
-
-{
-  path: '/clientes/novo/:leadId',
-  element: (
-    <ProtectedRoute perms={['create_cliente']}>
-      <DashboardLayout>
-        <ClienteCreateFromLead />
-      </DashboardLayout>
-    </ProtectedRoute>
-  ),
-},
-
-
 ]);
 
 export default router;

@@ -144,3 +144,11 @@
   background: hsl(var(--primary));
   color: #fff;
 }
+/* Oculta a barra de rolagem das tabs em navegadores modernos */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

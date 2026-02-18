@@ -17,12 +17,23 @@ class RedeSocialController extends Controller
         return RedeSocialResource::collection($redes);
     }
 
-    public function store(RedeSocialRequest $request, $clienteId)
-    {
-        $cliente = Cliente::findOrFail($clienteId);
-        $rede = $cliente->redesSociais()->create($request->validated());
-        return new RedeSocialResource($rede);
-    }
+
+   public function store(RedeSocialRequest $request, $clienteId)
+{
+    $cliente = Cliente::findOrFail($clienteId);
+    $data = $request->validated();
+
+    $data['tipo'] = strtolower(trim($data['tipo']));
+
+    $rede = RedeSocial::updateOrCreate(
+        ['cliente_id' => $cliente->id, 'tipo' => $data['tipo']],
+        ['url' => $data['url'] ?? null]
+    );
+
+    return new RedeSocialResource($rede);
+}
+
+
 
     public function show($clienteId, $redeId)
     {

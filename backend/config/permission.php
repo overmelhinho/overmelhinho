@@ -2,6 +2,15 @@
 
 return [
 
+    /*
+     * ✅ Defaults
+     * Seus roles existentes no banco estão com guard_name = 'web'.
+     * Logo, o default deve ser 'web' para o Spatie resolver corretamente.
+     */
+    'defaults' => [
+        'guard' => 'web',
+    ],
+
     'models' => [
 
         /*
@@ -13,7 +22,8 @@ return [
          * `Spatie\Permission\Contracts\Permission` contract.
          */
 
-'permission' => App\Models\Permission::class,
+        'permission' => App\Models\Permission::class,
+
         /*
          * When using the "HasRoles" trait from this package, we need to know which
          * Eloquent model should be used to retrieve your roles. Of course, it
@@ -39,8 +49,8 @@ return [
 
         /*
          * When using the "HasPermissions" trait from this package, we need to know which
-         * table should be used to retrieve your permissions. We have chosen a basic
-         * default value but you may easily change it to any table you like.
+         * table should be used to retrieve your permissions. We have chosen a
+         * basic default value but you may easily change it to any table you like.
          */
 
         'permissions' => 'permissions',

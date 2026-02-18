@@ -6,11 +6,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles; // <--- ADICIONE ESTA LINHA
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles; // <--- ADICIONE HasRoles AQUI
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+
+    /**
+     * ✅ Importante:
+     * Seus roles no banco estão com guard_name = 'web'.
+     * Fixar isso aqui impede o Spatie de tentar resolver roles via 'sanctum' por padrão.
+     * Isso NÃO quebra o login via Sanctum (autenticação continua normal),
+     * apenas alinha a camada de roles/permissões com o que existe no banco hoje.
+     */
+    protected string $guard_name = 'web';
 
     /**
      * The attributes that are mass assignable.

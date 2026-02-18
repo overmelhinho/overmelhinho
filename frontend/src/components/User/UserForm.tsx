@@ -23,11 +23,13 @@ interface Props {
 }
 
 export function UserForm({ initialValues, roles, onSubmit, loading }: Props) {
-  // Monta as opções para react-select
-  const roleOptions = roles.map((role) => ({
-    value: String(role.id),
-    label: role.name,
-  }));
+  // 🔒 Monta as opções de forma segura
+  const roleOptions = Array.isArray(roles)
+    ? roles.map((role) => ({
+        value: String(role.id),
+        label: role.name,
+      }))
+    : [];
 
   const formik = useFormik<UserFormValues>({
     initialValues: initialValues || {
@@ -56,13 +58,21 @@ export function UserForm({ initialValues, roles, onSubmit, loading }: Props) {
     }
   }, [formik.status]);
 
+  // 🔒 Evita falha ao montar value do react-select
+  const safeSelected =
+    Array.isArray(roleOptions) && Array.isArray(formik.values.roles)
+      ? roleOptions.filter((opt) => formik.values.roles.includes(opt.value))
+      : [];
+
   return (
     <form
       onSubmit={formik.handleSubmit}
       className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl shadow-lg"
     >
       <div>
-        <Label htmlFor="name" className="text-[#212529]">Nome completo</Label>
+        <Label htmlFor="name" className="text-[#212529]">
+          Nome completo
+        </Label>
         <Input
           id="name"
           name="name"
@@ -78,7 +88,9 @@ export function UserForm({ initialValues, roles, onSubmit, loading }: Props) {
       </div>
 
       <div>
-        <Label htmlFor="email" className="text-[#212529]">Email</Label>
+        <Label htmlFor="email" className="text-[#212529]">
+          Email
+        </Label>
         <Input
           id="email"
           name="email"
@@ -96,7 +108,9 @@ export function UserForm({ initialValues, roles, onSubmit, loading }: Props) {
 
       {!initialValues && (
         <div className="md:col-span-2">
-          <Label htmlFor="password" className="text-[#212529]">Senha de acesso</Label>
+          <Label htmlFor="password" className="text-[#212529]">
+            Senha de acesso
+          </Label>
           <Input
             id="password"
             name="password"
@@ -114,23 +128,29 @@ export function UserForm({ initialValues, roles, onSubmit, loading }: Props) {
       )}
 
       <div className="md:col-span-2">
-        <Label htmlFor="roles" className="text-[#212529]">Funções do usuário</Label>
+        <Label htmlFor="roles" className="text-[#212529]">
+          Funções do usuário
+        </Label>
         <Select
           id="roles"
           isMulti
           options={roleOptions}
-          value={roleOptions.filter(opt => formik.values.roles.includes(opt.value))}
+          value={safeSelected}
           onChange={(selected) => {
-            const values = selected.map((opt) => opt.value);
+            const values = Array.isArray(selected)
+              ? selected.map((opt) => opt.value)
+              : [];
             formik.setFieldValue("roles", values);
           }}
-          className="mt-1"
+          className="mt-1 text-sm"
           classNamePrefix="react-select"
           placeholder="Selecione uma ou mais funções"
-          isDisabled={loading}
+          isDisabled={!!loading}
         />
         {formik.touched.roles && formik.errors.roles && (
-          <p className="text-red-500 text-sm mt-1">{formik.errors.roles as string}</p>
+          <p className="text-red-500 text-sm mt-1">
+            {formik.errors.roles as string}
+          </p>
         )}
       </div>
 
@@ -138,7 +158,7 @@ export function UserForm({ initialValues, roles, onSubmit, loading }: Props) {
         <Button
           type="submit"
           className="bg-[#D62828] hover:bg-[#8B0000] text-white font-semibold px-6 rounded-full"
-          disabled={loading}
+          disabled={!!loading}
         >
           {loading ? "Salvando..." : "Salvar Usuário"}
         </Button>

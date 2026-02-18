@@ -1,23 +1,82 @@
-// app/Models/Cliente.php
+<?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\Auditable;
 
 class Cliente extends Model
 {
+    use Auditable;
+
+    protected string $auditEntityType = 'cliente';
+
+    // opcional (recomendado)
+    protected array $auditIgnore = [
+        'seo_keywords_updated_at',
+    ];
+
     protected $table = 'clientes';
 
     protected $fillable = [
-        'nome_fantasia', 'razao_social', 'nome_alternativo', 'cpf_cnpj',
-        'inscricao_estadual', 'inscricao_municipal', 'registro_profissional',
-        'descricao', 'observacoes', 'video', 'portfolio_url', 'logo_url', 'possui_publicidade'
+        'nome_fantasia',
+        'razao_social',
+        'nome_alternativo',
+        'cpf_cnpj',
+        'inscricao_estadual',
+        'inscricao_municipal',
+        'registro_profissional',
+        'descricao',
+        'observacoes',
+        'video',
+        'portfolio_url',
+        'logo_url',
+        'possui_publicidade',
+        'seo_keywords',
+        'seo_keywords_source',
+        'seo_keywords_updated_at',
+        'status_assinatura',
+        'tipo_cliente',
     ];
 
-    // Relacionamentos
-    public function enderecos() { return $this->hasMany(Endereco::class, 'cliente_id'); }
-    public function contatos() { return $this->hasMany(Contato::class, 'cliente_id'); }
-    public function redesSociais() { return $this->hasMany(RedeSocial::class, 'cliente_id'); }
-    public function segmentos() { return $this->belongsToMany(Segmento::class, 'cliente_segmento', 'cliente_id', 'segmento_id'); }
-    public function galeriaImagens() { return $this->hasMany(GaleriaImagem::class, 'cliente_id'); }
-    public function historicoAlteracoes() { return $this->hasMany(HistoricoAlteracao::class, 'cliente_id'); }
+    protected $casts = [
+        'possui_publicidade' => 'boolean',
+        'seo_keywords' => 'array',
+        'seo_keywords_updated_at' => 'datetime',
+    ];
+
+    public function setCpfCnpjAttribute($value): void
+    {
+        $this->attributes['cpf_cnpj'] = preg_replace('/\D+/', '', (string) $value) ?? '';
+    }
+
+    public function enderecos()
+    {
+        return $this->hasMany(Endereco::class, 'cliente_id');
+    }
+
+    public function contatos()
+    {
+        return $this->hasMany(Contato::class, 'cliente_id');
+    }
+
+    public function redesSociais()
+    {
+        return $this->hasMany(RedeSocial::class, 'cliente_id');
+    }
+
+    public function segmentos()
+    {
+        return $this->belongsToMany(Segmento::class, 'cliente_segmento', 'cliente_id', 'segmento_id');
+    }
+
+    public function cidadesAtendidas()
+    {
+        return $this->belongsToMany(Cidade::class, 'cliente_cidade', 'cliente_id', 'cidade_id');
+    }
+
+    public function galeriaImagens()
+    {
+        return $this->hasMany(GaleriaImagem::class, 'cliente_id');
+    }
 }

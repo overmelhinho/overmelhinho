@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class LeadIntelController extends Controller
 {
-    protected $leadIntelService;
+    protected LeadIntelService $leadIntelService;
 
     public function __construct(LeadIntelService $leadIntelService)
     {
@@ -18,18 +18,38 @@ class LeadIntelController extends Controller
     public function fetch(Request $request)
     {
         try {
-            $query = $request->query('query');
+            $query = (string) $request->query('query', '');
+            $cnpj  = (string) $request->query('cnpj', '');
+            $cidade = (string) $request->query('cidade', '');
 
-            if (!$query) {
+            $query = trim($query);
+            $cidade = trim($cidade);
+
+            if ($query === '') {
                 return response()->json(['error' => 'Parâmetro "query" é obrigatório'], 400);
             }
 
-            $dados = $this->leadIntelService->buscarDados($query);
+            // ✅ sanitiza CNPJ (opcional)
+            $cnpjDigits = preg_replace('/\D/', '', $cnpj);
+            if ($cnpjDigits !== '' && strlen($cnpjDigits) !== 14) {
+                return response()->json(['error' => 'CNPJ inválido'], 400);
+            }
+
+            $resultado = $this->leadIntelService->buscarDados(
+                query: $query,
+                cnpj: $cnpjDigits ?: null,
+                cidadePreferida: $cidade ?: null
+            );
+
+            $dados = isset($resultado['dados']) && is_array($resultado['dados'])
+                ? $resultado['dados']
+                : (is_array($resultado) ? $resultado : []);
 
             return response()->json([
                 'status' => 'ok',
-                'dados' => $dados,
-            ]);
+                'dados' => (object) $dados,
+            ], 200, [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
         } catch (\Throwable $e) {
             Log::error('[LEAD INTEL] ERRO: '.$e->getMessage(), [
                 'trace' => $e->getTraceAsString(),

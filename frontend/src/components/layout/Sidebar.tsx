@@ -1,75 +1,139 @@
+// /var/www/frontend/src/components/layout/Sidebar.tsx
 import { NavLink } from "react-router-dom";
-import { Home, Users, FileText, Settings, LayoutTemplate, Database, Shield, KeyRound } from "lucide-react";
-import clsx from "clsx";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  LayoutDashboard,
+  Users,
+  UserCog,
+  ShieldCheck,
+  KeyRound,
+  FileText,
+  Palette,
+  Ticket,
+  Settings,
+  Megaphone,
+  UserPlus,
+} from "lucide-react";
 
-// Menu principal
-const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: Home, perms: ["view_dashboard"] },
-  { to: "/leads-kanban", label: "Leads", icon: Users, perms: ["view_lead"] },
-  { to: "/clientes", label: "Clientes", icon: Database, perms: ["view_client"] },
-  { to: "/relatorios", label: "Relatórios", icon: FileText, perms: ["view_report"] },
-  { to: "/criativo", label: "Criativo", icon: LayoutTemplate, perms: ["manage_creative"] },
-];
+type Item = {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  perms?: string[];
+};
 
-// Menu de configuração/admin
-const adminItems = [
-  { to: "/configuracoes", label: "Configurações", icon: Settings, perms: ["manage_settings"] },
-  { to: "/usuarios", label: "Usuários", icon: Users, perms: ["manage_users", "view users"] }, // ajuste para suas perms reais
-  { to: "/funcoes", label: "Funções", icon: Shield, perms: ["manage roles", "manage_roles"] },
-  { to: "/permissoes", label: "Permissões", icon: KeyRound, perms: ["manage permissions", "manage_permissions"] },
-];
+function hasAnyPerm(userPerms: string[], perms?: string[]) {
+  if (!perms || perms.length === 0) return true;
+  return userPerms.some((p) => perms.includes(p));
+}
 
 export default function Sidebar() {
   const { user } = useAuth();
 
-  const hasPerm = (itemPerms: string[]) =>
-    user?.permissions?.some((perm: string) => itemPerms.includes(perm)) ||
-    user?.roles?.includes("admin");
+  const userPermissions: string[] = Array.isArray(user?.permissions)
+    ? user!.permissions
+    : [];
+  const userRoles: string[] = Array.isArray(user?.roles) ? user!.roles : [];
+  const isAdmin = userRoles.includes("admin");
+
+  const itemsTop: Item[] = [
+    {
+      to: "/dashboard",
+      label: "Dashboard",
+      icon: <LayoutDashboard size={18} />,
+      perms: ["view_dashboard"],
+    },
+
+   { to: "/leads-kanban", label: "Leads", icon: <UserPlus size={18} />, perms: ["view_lead"] },
+
+    { to: "/clientes", label: "Clientes", icon: <Users size={18} />, perms: ["view_client"] },
+    {
+      to: "/campanhas",
+      label: "Campanhas",
+      icon: <Megaphone size={18} />,
+      perms: [
+        "view_campaign",
+        "view_campaigns",
+        "view_campanha",
+        "view_campanhas",
+        "manage_campaigns",
+        "manage_campanhas",
+      ],
+    },
+    { to: "/relatorios", label: "Relatórios", icon: <FileText size={18} />, perms: ["view_report"] },
+    { to: "/criativo", label: "Criativo", icon: <Palette size={18} />, perms: ["manage_creative"] },
+    { to: "/tickets", label: "Tickets", icon: <Ticket size={18} /> },
+  ];
+
+  const itemsBottom: Item[] = [
+    { to: "/configuracoes", label: "Configurações", icon: <Settings size={18} />, perms: ["manage_settings"] },
+    { to: "/usuarios", label: "Usuários", icon: <UserCog size={18} />, perms: ["manage_users"] },
+    { to: "/funcoes", label: "Funções", icon: <ShieldCheck size={18} />, perms: ["manage roles", "manage_roles"] },
+    { to: "/permissoes", label: "Permissões", icon: <KeyRound size={18} />, perms: ["manage permissions", "manage_permissions"] },
+  ];
+
+
+  const renderItem = (it: Item) => {
+    const allowed = isAdmin || hasAnyPerm(userPermissions, it.perms);
+    if (!allowed) return null;
+
+    return (
+      <NavLink key={it.to} to={it.to} className="block">
+        {({ isActive }) => (
+          <div
+            className={[
+              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+              "border border-transparent",
+              isActive
+                ? "bg-white text-slate-900 border-white/60 shadow-sm"
+                : "text-white/85 hover:bg-white/10 hover:text-white",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "shrink-0 rounded-lg p-1.5 transition",
+                isActive ? "bg-slate-900/5" : "bg-white/0 group-hover:bg-white/10",
+              ].join(" ")}
+            >
+              {it.icon}
+            </span>
+            <span className="truncate">{it.label}</span>
+          </div>
+        )}
+      </NavLink>
+    );
+  };
+
 
   return (
-    <aside className="bg-red-700 text-white w-64 min-h-screen px-4 py-6">
-      <div className="text-2xl font-bold mb-8 pl-2">O Vermelhinho</div>
-      <nav className="space-y-2">
-        {navItems
-          .filter((item) => hasPerm(item.perms))
-          .map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                clsx(
-                  "flex items-center gap-3 px-4 py-2 rounded-md font-medium transition-colors",
-                  isActive ? "bg-red-800" : "hover:bg-red-600"
-                )
-              }
-            >
-              <Icon size={18} />
-              {label}
-            </NavLink>
-          ))}
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#B70F0A] to-[#8A0B07] text-white lg:block">
+      <div className="px-6 py-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+            <span className="text-lg font-black">V</span>
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-base font-extrabold tracking-tight">
+              O Vermelhinho
+            </div>
+            <div className="text-xs text-white/70">Admin • SaaS</div>
+          </div>
+        </div>
+      </div>
+
+      <nav className="px-4">
+        <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
+          Operação
+        </div>
+        <div className="space-y-1">{itemsTop.map(renderItem)}</div>
       </nav>
-      {/* Separador visual para área admin/config */}
-      <div className="mt-8 mb-2 border-t border-red-600"></div>
-      <nav className="space-y-2">
-        {adminItems
-          .filter((item) => hasPerm(item.perms))
-          .map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                clsx(
-                  "flex items-center gap-3 px-4 py-2 rounded-md font-medium transition-colors",
-                  isActive ? "bg-red-800" : "hover:bg-red-600"
-                )
-              }
-            >
-              <Icon size={18} />
-              {label}
-            </NavLink>
-          ))}
-      </nav>
+
+      <div className="mt-6 border-t border-white/15 px-4 pt-4">
+        <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
+          Administração
+        </div>
+        <div className="space-y-1 pb-6">{itemsBottom.map(renderItem)}</div>
+      </div>
     </aside>
   );
 }

@@ -1,3 +1,5 @@
+<?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -5,16 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 class GaleriaImagem extends Model
 {
     protected $table = 'galerias_imagens';
+    public $timestamps = false; // pq só tem created_at, não tem updated_at
 
     protected $fillable = [
         'cliente_id',
         'url',
+        'thumb_url',
         'legenda',
-        'ordem'
+        'ordem',
+        'created_at',
     ];
 
-    public function cliente()
-    {
-        return $this->belongsTo(Cliente::class, 'cliente_id');
-    }
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
 }

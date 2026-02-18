@@ -1,5 +1,5 @@
+// src/components/ui/tabs.tsx
 import { ReactNode } from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface TabsProps {
@@ -33,15 +33,9 @@ export function Tabs({ selectedIndex, onChange, children }: TabsProps) {
           </button>
         ))}
       </div>
-      <motion.div
-        key={selectedIndex}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {children[selectedIndex]}
-      </motion.div>
+
+      {/* Exibe apenas a aba ativa sem qualquer efeito */}
+      <div>{children[selectedIndex]}</div>
     </div>
   );
 }

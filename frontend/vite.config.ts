@@ -13,4 +13,16 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
   },
+
+  // 🧠 Diagnóstico ativado — React não minifica mensagens de erro
+  define: {
+    'process.env': {
+      NODE_ENV: 'development',
+    },
+    __REACT_DEVTOOLS_GLOBAL_HOOK__: true,
+  },
+  build: {
+    minify: false, // ❗ desativa minificação do código
+    sourcemap: true, // gera mapa de origem pra stack real
+  },
 });

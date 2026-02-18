@@ -1,590 +1,853 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import axios from '@/services/api';
-import Skeleton from '@/components/ui/skeleton';
-import { Formik, Form, Field } from 'formik';
-import { useState } from 'react';
-import { Tabs, Tab } from '@/components/ui/tabs';
-import toast from 'react-hot-toast';
-import * as Yup from 'yup';
-import UploadArea from '@/components/custom/UploadArea';
-import InputMask from 'react-input-mask';
-import PreFetchModal from '@/components/modals/PreFetchModal';
-import React, { useState } from 'react';
-import {
-  FaFacebook,
-  FaInstagram,
-  FaLinkedin,
-  FaYoutube,
-  FaTiktok,
-  FaXTwitter,
-  FaPhone,
-  FaMobile, // ← Use esse
-  FaEnvelope,
-  FaUser
-} from "react-icons/fa6";
+// /var/www/frontend/src/pages/clientes/ClienteCreateFromLead.tsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Formik, Form } from "formik";
+import * as Yup from "yup";
+import toast from "react-hot-toast";
 
-import { FaExternalLinkAlt } from "react-icons/fa";
-import { Field } from "formik";
-import MaskedField from '@/components/form/MaskedField';
+import axios from "@/services/api";
+import Skeleton from "@/components/ui/skeleton";
+import TabsUI from "@/components/TabsUI";
 
-const inputClass =
-  "w-full rounded-xl border border-gray-300 focus:border-[#B70F0A] focus:ring-2 focus:ring-[#B70F0A]/40 transition-all px-3 py-2 text-sm shadow-sm";
+import TabIdentificacao from "./create/steps/TabIdentificacao";
+import TabEndereco from "./create/steps/TabEndereco";
+import TabContato from "./create/steps/TabContato";
+import TabRedesSociais from "./create/steps/TabRedesSociais";
+import TabSegmentos from "./create/steps/TabSegmentos";
+import TabBeneficios from "./create/steps/TabBeneficios";
+import TabHorarios from "./create/steps/TabHorarios";
+import TabLogotipo from "./create/steps/TabLogotipo";
+import TabGaleria from "./create/steps/TabGaleria";
+import TabMidia from "./create/steps/TabMidia";
+import TabCidadesAtendidas from "./create/steps/TabCidadesAtendidas";
 
-const MaskedInput = ({ field, form, ...props }) => (
-  <InputMask {...field} {...props}>
-    {(inputProps) => <input {...inputProps} className={inputClass} />}
-  </InputMask>
-);
+import ClienteTicketsModal from "@/components/modals/ClienteTicketsModal";
+
+// ✅ Modal IA (PreFetch)
+import PreFetchModal from "@/components/modals/PreFetchModal";
+
+type TipoCliente = "gratuito" | "pagante";
+
+function extractTempPathFromPublicUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const idx = u.pathname.indexOf("/object/public/");
+    if (idx === -1) return null;
+
+    const after = u.pathname.substring(idx + "/object/public/".length); // bucket/path
+    const parts = after.split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+
+    const rest = parts.slice(1).join("/"); // path dentro do bucket
+    if (!rest.startsWith("temp/")) return null;
+
+    return rest;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeTempPath(p: any): string | null {
+  if (typeof p !== "string") return null;
+  const v = p.trim().replace(/^\/+/, "");
+  if (!v) return null;
+  if (v.startsWith("temp/")) return v;
+  return `temp/${v}`;
+}
+
+/**
+ * Achata o objeto "errors" do Formik em uma lista de { path, message }.
+ */
+function flattenFormikErrors(
+  errors: any,
+  prefix = ""
+): Array<{ path: string; message: string }> {
+  const out: Array<{ path: string; message: string }> = [];
+  if (!errors) return out;
+
+  const isString = (v: any) => typeof v === "string";
+  const isObject = (v: any) => v && typeof v === "object";
+
+  if (isString(errors)) {
+    out.push({ path: prefix || "form", message: errors });
+    return out;
+  }
+
+  if (Array.isArray(errors)) {
+    errors.forEach((item, i) => {
+      const nextPrefix = prefix ? `${prefix}[${i}]` : `[${i}]`;
+      out.push(...flattenFormikErrors(item, nextPrefix));
+    });
+    return out;
+  }
+
+  if (isObject(errors)) {
+    Object.keys(errors).forEach((k) => {
+      const v = errors[k];
+      const nextPrefix = prefix ? `${prefix}.${k}` : k;
+      out.push(...flattenFormikErrors(v, nextPrefix));
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Converte errors -> touched recursivo (para marcar campos como tocados)
+ */
+function errorsToTouched(errors: any): any {
+  if (!errors) return undefined;
+  if (typeof errors === "string") return true;
+  if (Array.isArray(errors)) return errors.map((e) => errorsToTouched(e));
+  if (typeof errors === "object") {
+    const obj: any = {};
+    Object.keys(errors).forEach((k) => {
+      obj[k] = errorsToTouched(errors[k]);
+    });
+    return obj;
+  }
+  return true;
+}
+
+type ValidationIssue = {
+  path: string;
+  message: string;
+  step: number;
+  label: string;
+};
 
 export default function ClienteCreateFromLead() {
   const { leadId } = useParams();
   const navigate = useNavigate();
+
   const [step, setStep] = useState(0);
-  const [showPreModal, setShowPreModal] = useState(true);
-  const [dadosIA, setDadosIA] = useState({});
-const [iaLoading, setIaLoading] = useState(false); // <-- Aqui
+
+  // ✅ seletor no topo
+  const [tipoCliente, setTipoCliente] = useState<TipoCliente>("pagante");
+
+  const formikRef = useRef<any>(null);
+
+  const allowSubmitRef = useRef(false);
+  const [saving, setSaving] = useState(false);
+
+  const [issues, setIssues] = useState<ValidationIssue[]>([]);
+
+  // ✅ modal pós-cadastro (somente pagante)
+  const [ticketsModalOpen, setTicketsModalOpen] = useState(false);
+  const [ticketsClienteId, setTicketsClienteId] = useState<number | null>(null);
+  const [missingLogo, setMissingLogo] = useState(false);
+  const [missingGaleria, setMissingGaleria] = useState(false);
+
+  const isFromLead = !!leadId;
+
+  // ✅ Modal IA: deve abrir em /clientes/novo E em /clientes/novo/:leadId
+  const [prefetchOpen, setPrefetchOpen] = useState(false);
+  const openedPrefetchRef = useRef(false);
+
+  useEffect(() => {
+    if (!openedPrefetchRef.current) {
+      openedPrefetchRef.current = true;
+      setPrefetchOpen(true);
+    }
+  }, []);
+
+  // ✅ ao mudar para "gratuito", garante que nada do fluxo pagante fica pendurado
+  useEffect(() => {
+    if (tipoCliente === "gratuito") {
+      setTicketsModalOpen(false);
+      setTicketsClienteId(null);
+      setMissingLogo(false);
+      setMissingGaleria(false);
+      // step segura (gratuito só tem 0..2)
+      if (step > 2) setStep(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoCliente]);
 
   const { data: lead, isLoading } = useQuery({
-    queryKey: ['lead', leadId],
+    queryKey: ["lead", leadId],
     queryFn: async () => {
       const { data } = await axios.get(`/v1/leads/${leadId}`);
-      return data.data;
+      return data?.data;
     },
     enabled: !!leadId,
-  });
-
-  const { data: users } = useQuery({
-    queryKey: ['usuarios', 'comercial'],
-    queryFn: async () => {
-      const { data } = await axios.get('/v1/usuarios?role=Comercial');
-      return data.data;
-    },
-  });
-
-  const { data: segmentos } = useQuery({
-    queryKey: ['segmentos'],
-    queryFn: async () => {
-      const { data } = await axios.get('/v1/segmentos');
-      return data.data;
-    },
+    staleTime: 60_000,
   });
 
   const validationSchema = Yup.object({
-    nome: Yup.string().required('Nome é obrigatório'),
-    razao_social: Yup.string().required('Razão social é obrigatória'),
-    cnpj: Yup.string()
-      .matches(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/, 'CNPJ inválido')
-      .required('CNPJ é obrigatório'),
-    email: Yup.string().email('Email inválido').required('Email é obrigatório'),
-    telefone_principal: Yup.string().required('Telefone principal é obrigatório'),
-    responsavel: Yup.string().required('Responsável é obrigatório'),
-    cep: Yup.string().required('CEP é obrigatório'),
-    estado: Yup.string().required('Estado é obrigatório'),
-    cidade: Yup.string().required('Cidade é obrigatória'),
-    bairro: Yup.string().required('Bairro é obrigatório'),
-    rua: Yup.string().required('Rua é obrigatória'),
-    numero: Yup.string().required('Número é obrigatório'),
-    segmentos: Yup.array().min(1, 'Selecione pelo menos um segmento'),
+    nome_fantasia: Yup.string().required("Nome fantasia é obrigatório"),
+    cnpj: Yup.string().required("CPF/CNPJ é obrigatório"),
+    email: Yup.string().email("Email inválido").required("Email é obrigatório"),
+    telefone_principal: Yup.string().required("Telefone principal é obrigatório"),
+    responsavel: Yup.string().required("Responsável é obrigatório"),
   });
 
-  if (isLoading || !lead) return <Skeleton className="h-32 w-full" />;
+  // ✅ tabs dependem do tipoCliente (pagante mostra tudo)
+  const tabs = useMemo(() => {
+    const base = [
+      { id: 0, label: "Identificação" },
+      { id: 1, label: "Endereço" },
+      { id: 2, label: "Contato" },
+    ];
 
-  const beneficios = [
-    "24 horas", "Tele-entrega", "Aberto ao meio-dia", "Crédito", "Débito",
-    "Crediário", "Boleto Bancário", "Cheque", "Dinheiro", "Pix", "PicPay",
-    "Banricompras", "Hipercard", "VR Alimentação"
-  ];
+    if (tipoCliente === "pagante") {
+      base.push(
+        { id: 3, label: "Cidades" },
+        { id: 4, label: "Redes Sociais" },
+        { id: 5, label: "Segmentos" },
+        { id: 6, label: "Benefícios" },
+        { id: 7, label: "Horário" },
+        { id: 8, label: "Logotipo" },
+        { id: 9, label: "Mídia" },
+        { id: 10, label: "Galeria" }
+      );
+    }
+
+    return base;
+  }, [tipoCliente]);
+
+  const isLastStep = step >= tabs.length - 1;
+
+  // ✅ mapa: campo -> step
+  const stepByField = useMemo<Record<string, number>>(
+    () => ({
+      nome_fantasia: 0,
+      cnpj: 0,
+      razao_social: 0,
+      descricao: 0,
+      inscricao_estadual: 0,
+      inscricao_municipal: 0,
+      registro_profissional: 0,
+
+      cep: 1,
+      estado: 1,
+      cidade: 1,
+      bairro: 1,
+      rua: 1,
+      numero: 1,
+      complemento: 1,
+
+      email: 2,
+      telefone_principal: 2,
+      telefone_secundario: 2,
+      celular: 2,
+      responsavel: 2,
+
+      redes_sociais: 4,
+
+      video_link: 9,
+      arquivo_midia: 9,
+      arquivo_midia_path: 9,
+      tipo_arquivo_midia: 9,
+
+      logotipo: 8,
+      logotipo_path: 8,
+
+      galeria: 10,
+    }),
+    []
+  );
+
+  // ✅ labels bonitos para UX
+  const labelByField = useMemo<Record<string, string>>(
+    () => ({
+      nome_fantasia: "Nome fantasia",
+      cnpj: "CPF/CNPJ",
+      email: "Email",
+      telefone_principal: "Telefone principal",
+      responsavel: "Responsável",
+      cep: "CEP",
+      estado: "Estado",
+      cidade: "Cidade",
+      bairro: "Bairro",
+      rua: "Rua",
+      numero: "Número",
+      inscricao_estadual: "Inscrição estadual",
+      inscricao_municipal: "Inscrição municipal",
+      registro_profissional: "Registro profissional",
+      video_link: "Vídeo (YouTube)",
+      arquivo_midia: "Arquivo (Cardápio/Portfólio/Catálogo)",
+      tipo_arquivo_midia: "Tipo do arquivo",
+      redes_sociais: "Redes sociais",
+    }),
+    []
+  );
+
+  const handleNext = () => setStep((s) => Math.min(tabs.length - 1, s + 1));
+  const handlePrev = () => setStep((s) => Math.max(0, s - 1));
+
+  const focusFieldByPath = (path: string) => {
+    const selector = `[name="${path}"], [name="${path.replace(/\./g, "\\.")}"]`;
+    const el = document.querySelector(selector) as HTMLElement | null;
+
+    if (el && typeof (el as any).focus === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      (el as any).focus();
+      return;
+    }
+
+    const root = path.split(".")[0];
+    const el2 = document.querySelector(`[name="${root}"]`) as HTMLElement | null;
+    if (el2 && typeof (el2 as any).focus === "function") {
+      el2.scrollIntoView({ behavior: "smooth", block: "center" });
+      (el2 as any).focus();
+    }
+  };
+
+  const goToIssue = (issue: ValidationIssue) => {
+    setStep(issue.step);
+    setTimeout(() => focusFieldByPath(issue.path), 250);
+  };
+
+  const buildIssuesFromErrors = (formikErrors: any): ValidationIssue[] => {
+    const flat = flattenFormikErrors(formikErrors);
+
+    const priority = ["nome_fantasia", "cnpj", "email", "telefone_principal", "responsavel"];
+    flat.sort((a, b) => {
+      const ap = priority.indexOf(a.path);
+      const bp = priority.indexOf(b.path);
+      const av = ap === -1 ? 999 : ap;
+      const bv = bp === -1 ? 999 : bp;
+      return av - bv;
+    });
+
+    return flat.map((e) => {
+      const root = e.path.split(".")[0];
+      const s = stepByField[e.path] ?? stepByField[root] ?? 0;
+      const label = labelByField[e.path] ?? labelByField[root] ?? e.path;
+      return { path: e.path, message: e.message, step: s, label };
+    });
+  };
+
+  const handleSave = async () => {
+    const f = formikRef.current;
+    if (!f) return;
+    if (saving) return;
+
+    const formErrors = await f.validateForm();
+
+    if (formErrors && Object.keys(formErrors).length > 0) {
+      allowSubmitRef.current = false;
+
+      f.setTouched(errorsToTouched(formErrors), true);
+
+      const nextIssues = buildIssuesFromErrors(formErrors);
+      setIssues(nextIssues);
+
+      const first = nextIssues[0];
+      if (first) {
+        toast.error(`Corrija: ${first.label}`);
+        goToIssue(first);
+      } else {
+        toast.error("Revise os campos obrigatórios antes de salvar.");
+      }
+
+      return;
+    }
+
+    setIssues([]);
+
+    allowSubmitRef.current = true;
+    setSaving(true);
+
+    const savingToast = toast.loading("Salvando cliente...");
+
+    try {
+      await f.submitForm();
+    } finally {
+      toast.dismiss(savingToast);
+      setTimeout(() => {
+        allowSubmitRef.current = false;
+        setSaving(false);
+      }, 0);
+    }
+  };
+
+  // ✅ NÃO fazer early-return que muda fluxo de hooks em produção
+  const showLeadSkeleton = isFromLead && (isLoading || !lead);
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
-      <PreFetchModal
-        nomeInicial={lead?.nome || ""}
-        isOpen={showPreModal}
-        onClose={() => setShowPreModal(false)}
-       onConfirm={(dados) => {
-            // Parse endereço se vier em dados.endereco ou dados.address
-            const enderecoCompleto = dados.endereco || dados.address || "";
-            const partes = enderecoCompleto.split(",");
+    <div className="p-4 max-w-6xl mx-auto">
+      {showLeadSkeleton ? (
+        <Skeleton className="h-32 w-full" />
+      ) : (
+        <>
+          {/* ✅ Modal pós-cadastro (somente pagante) */}
+          {ticketsClienteId && tipoCliente === "pagante" && (
+            <ClienteTicketsModal
+              open={ticketsModalOpen}
+              onClose={() => setTicketsModalOpen(false)}
+              clienteId={ticketsClienteId}
+              missingLogo={missingLogo}
+              missingGaleria={missingGaleria}
+              onDone={() => {
+                setTicketsModalOpen(false);
+                navigate("/clientes", { replace: true });
+              }}
+            />
+          )}
 
-            const ruaNumero = partes[0]?.trim() || "";
-            const complemento = partes[1]?.includes("sala") ? partes[1]?.trim() : "";
-            const bairro = partes[2]?.trim() || "";
-            const cidade = partes[3]?.split("-")[0]?.trim() || "";
-            const estado = partes[3]?.split("-")[1]?.trim() || "";
-            const cep = partes[4]?.trim() || "";
+          <Formik
+            innerRef={formikRef}
+            enableReinitialize
+            initialValues={{
+              // interno (front)
+              tipoCliente,
 
-            const novo = {
-              nome: dados.nome || "",
-              telefone_principal: dados.telefone || "",
-              descricao: dados.descricao || "",
-              facebook: dados.facebook || "",
-              instagram: dados.instagram || "",
-              cep,
-              estado,
-              cidade,
-              bairro,
-              rua: ruaNumero,
-              numero: ruaNumero.match(/\d+/)?.[0] || "",
-              complemento
-            };
+              nome_fantasia: lead?.nome || "",
+              razao_social: "",
+              cnpj: "",
+              descricao: "",
 
-            setDadosIA(novo);
-          }}
-      />
+              inscricao_estadual: "",
+              inscricao_municipal: "",
+              registro_profissional: "",
 
-      <Formik
-        initialValues={{
-          nome: dadosIA.nome || lead.nome || '',
-          razao_social: dadosIA.razao_social || '',
-          cnpj: dadosIA.cnpj || '',
-          inscricao_estadual: '',
-          inscricao_municipal: '',
-          registro_profissional: '',
-          palavras_chave: '',
-          email: dadosIA.email || lead.email || '',
-          telefone_principal: dadosIA.telefone || lead.telefone || '',
-          telefone_secundario: '',
-          celular: '',
-          origem: lead.origem || '',
-          responsavel: lead.responsavel || '',
-          cep: dadosIA.cep || '', estado: dadosIA.estado || '', cidade: dadosIA.cidade || '', bairro: dadosIA.bairro || '', rua: dadosIA.rua || '', numero: dadosIA.numero || '', complemento: '',
-          facebook: dadosIA.facebook || '', instagram: dadosIA.instagram || '', linkedin: '', youtube: '', tiktok: '', x: '',
-          descricao: dadosIA.descricao || '', segmentos: [], logotipo: null,
-          beneficios: [], horario_atendimento: ''
-        }}
-        enableReinitialize
-        validationSchema={validationSchema}
-        onSubmit={async (values) => {
-          try {
-            await axios.post('/v1/clientes', values);
-            toast.success('Cliente criado com sucesso!');
-            navigate('/clientes');
-          } catch (err) {
-            toast.error('Erro ao salvar cliente');
-          }
-        }}
-      >
-    {({ values, setFieldValue, errors, touched }) => (
-  <Form className="space-y-6">
-    <PreFetchModal
-      nomeInicial={lead?.nome || ""}
-      isOpen={showPreModal}
-      onClose={() => setShowPreModal(false)}
-    onConfirm={(dados) => {
-  const enderecoCompleto = dados.endereco || dados.address || "";
-  let rua = "", numero = "", complemento = "", bairro = "", cidade = "", estado = "", cep = "";
+              email: lead?.email || "",
+              telefone_principal: lead?.telefone || "",
+              telefone_secundario: "",
+              celular: "",
+              responsavel: lead?.responsavel || "",
 
-  try {
-    const partes = enderecoCompleto.split(",");
+              cep: "",
+              estado: "",
+              cidade: "",
+              bairro: "",
+              rua: "",
+              numero: "",
+              complemento: "",
 
-    // Rua
-    rua = partes[0]?.trim() || "";
+              segmentos: [],
+              cidades_atendidas: [],
+              beneficios: [],
+              horario_atendimento: "",
 
-    // Número + complemento + bairro
-    const numCompBairro = partes[1]?.trim() || "";
-    const [num, ...resto] = numCompBairro.split("-");
-    numero = num?.trim() || "";
-    complemento = resto.join("-").trim();
+              logotipo: null,
+              logotipo_path: null,
+              logotipo_mime: null,
 
-    // Cidade + estado
-    const cidadeEstado = partes[2]?.trim() || "";
-    cidade = cidadeEstado.split("-")[0]?.trim() || "";
-    estado = cidadeEstado.split("-")[1]?.trim() || "";
+              video_link: "",
 
-    // CEP
-    cep = partes[3]?.trim() || "";
+              arquivo_midia: null,
+              arquivo_midia_path: null,
+              arquivo_midia_mime: null,
+              tipo_arquivo_midia: "cardapio",
 
-    // País ignorado (partes[4])
-  } catch (e) {
-    console.warn("Falha ao parsear endereço:", enderecoCompleto);
-  }
+              redes_sociais: [{}],
 
-  setFieldValue("nome", dados.nome_fantasia || dados.nome || "");
-  setFieldValue("telefone_principal", dados.telefone || "");
-  setFieldValue("descricao", dados.descricao || "");
-  setFieldValue("facebook", dados.facebook || "");
-  setFieldValue("instagram", dados.instagram || "");
-  setFieldValue("linkedin", dados.linkedin || "");
-  setFieldValue("youtube", dados.youtube || "");
-  setFieldValue("tiktok", dados.tiktok || "");
-  setFieldValue("x", dados.x || "");
+              generate_seo_keywords: true,
+              seo_keywords_text: "",
 
-  setFieldValue("cep", cep);
-  setFieldValue("estado", estado);
-  setFieldValue("cidade", cidade);
-  setFieldValue("bairro", complemento.includes("Centro") ? "Centro" : "");
-  setFieldValue("rua", rua);
-  setFieldValue("numero", numero);
-  setFieldValue("complemento", complemento);
-}}
-    />
+              galeria: [],
+            }}
+            validationSchema={validationSchema}
+            onSubmit={async (values) => {
+              if (!allowSubmitRef.current) return;
 
-    <div className="flex justify-between items-center mb-4">
-      <h1 className="text-xl font-bold text-[#B70F0A]">Novo Cliente a partir de Lead</h1>
-    </div>
+              const loadingToast = toast.loading("Finalizando...");
 
+              try {
+                const redesSociais =
+                  Array.isArray(values.redes_sociais) && values.redes_sociais.length
+                    ? values.redes_sociais
+                    : [];
 
-            <Tabs selectedIndex={step} onChange={setStep}>
-              {/* Identificação */}
-              <Tab title="Identificação">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label>Nome Fantasia</label><Field name="nome" className={inputClass} /></div>
-                  <div><label>Razão Social</label><Field name="razao_social" className={inputClass} /></div>
-                  <div><label>CNPJ</label><Field name="cnpj" className={inputClass} placeholder="00.000.000/0000-00" /></div>
-                  <div><label>Inscrição Estadual</label><Field name="inscricao_estadual" className={inputClass} /></div>
-                  <div><label>Inscrição Municipal</label><Field name="inscricao_municipal" className={inputClass} /></div>
-                  <div><label>Registro Profissional</label><Field name="registro_profissional" className={inputClass} /></div>
-                  <div className="col-span-2"><label>Palavras-chave (SEO)</label><Field name="palavras_chave" className={inputClass} /></div>
-                  <div className="col-span-2"><label>Descrição</label><Field name="descricao" as="textarea" className={inputClass} /></div>
-                </div>
-              </Tab>
+                const isGratuito = values.tipoCliente === "gratuito";
 
-             {/* Endereço */}
-              <Tab title="Endereço">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                const payload: any = {
+                  nome_fantasia: values.nome_fantasia,
+                  cpf_cnpj: values.cnpj,
+                  razao_social: values.razao_social || null,
+                  descricao: values.descricao || null,
 
-                  {/* CEP */}
-                  <div className="flex items-center gap-2 border rounded-xl px-3 py-2 bg-white shadow-sm">
-                    <span className="text-gray-500">📍</span>
-                    <Field
-                      name="cep"
-                      placeholder="CEP"
-                      className="flex-1 outline-none"
-                      onBlur={async (e: any) => {
-                        const cep = e.target.value.replace(/\D/g, "");
-                        if (cep.length === 8) {
-                          try {
-                            const { data } = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
-                            if (!data.erro) {
-                              setFieldValue("rua", data.logradouro || "");
-                              setFieldValue("bairro", data.bairro || "");
-                              setFieldValue("cidade", data.localidade || "");
-                              setFieldValue("estado", data.uf || "");
-                            }
-                          } catch {
-                            toast.error("Não foi possível buscar o CEP");
-                          }
+                  inscricao_estadual: values.inscricao_estadual || null,
+                  inscricao_municipal: values.inscricao_municipal || null,
+                  registro_profissional: values.registro_profissional || null,
+
+                  segmentos: values.segmentos,
+                  cidades_atendidas: values.cidades_atendidas,
+
+                  endereco: {
+                    cep: values.cep,
+                    estado: values.estado,
+                    cidade: values.cidade,
+                    bairro: values.bairro,
+                    rua: values.rua,
+                    numero: values.numero,
+                    complemento: values.complemento || null,
+                  },
+
+                  contatos: [
+                    {
+                      telefone_principal: values.telefone_principal,
+                      telefone_secundario: values.telefone_secundario || null,
+                      celular: values.celular || null,
+                      email_principal: values.email,
+                      nome_contato: values.responsavel,
+                    },
+                  ],
+
+                  redes_sociais: redesSociais,
+
+                  tipo_cliente: values.tipoCliente,
+                  status_assinatura: isGratuito ? "cancelada" : "pendente",
+
+                  logotipo: typeof values.logotipo === "string" ? values.logotipo : null,
+
+                  video: values.video_link || null,
+
+                  portfolio_url: typeof values.arquivo_midia === "string" ? values.arquivo_midia : null,
+
+                  generate_seo_keywords: values.generate_seo_keywords,
+                  seo_keywords_text:
+                    values.generate_seo_keywords === false ? values.seo_keywords_text : undefined,
+                };
+
+                // 1) cria cliente
+                const resp = await axios.post("/v1/clientes", payload);
+                const clienteId = resp?.data?.data?.id;
+                if (!clienteId) throw new Error("Cliente criado, mas não retornou ID.");
+
+                // ✅ GRATUITO: não faz commits e não abre modal
+                if (isGratuito) {
+                  toast.dismiss(loadingToast);
+                  toast.success("Cliente gratuito criado com sucesso!");
+                  navigate("/clientes", { replace: true });
+                  return;
+                }
+
+                // 2) COMMIT LOGO
+                const logoTempPath =
+                  normalizeTempPath(values.logotipo_path) ||
+                  normalizeTempPath(
+                    typeof values.logotipo === "string"
+                      ? extractTempPathFromPublicUrl(values.logotipo)
+                      : null
+                  );
+
+                if (logoTempPath) {
+                  try {
+                    await axios.post(`/v1/clientes/${clienteId}/logo/commit-temp`, {
+                      temp_path: logoTempPath,
+                    });
+                  } catch (e) {
+                    console.error("Falha ao commit do logo:", e);
+                    toast.error("Cliente salvo, mas falhou ao publicar o logo.");
+                  }
+                }
+
+                // 2.1) COMMIT MÍDIA
+                const midiaTempPath =
+                  normalizeTempPath(values.arquivo_midia_path) ||
+                  normalizeTempPath(
+                    typeof values.arquivo_midia === "string"
+                      ? extractTempPathFromPublicUrl(values.arquivo_midia)
+                      : null
+                  );
+
+                if (midiaTempPath) {
+                  try {
+                    await axios.post(`/v1/clientes/${clienteId}/midia/commit-temp`, {
+                      temp_path: midiaTempPath,
+                      tipo: values.tipo_arquivo_midia || "portfolio",
+                    });
+                  } catch (e) {
+                    console.error("Falha ao commit da mídia:", e);
+                    toast.error("Cliente salvo, mas falhou ao publicar o arquivo de mídia.");
+                  }
+                }
+
+                // 3) GALERIA (cria registros + commit)
+                const galeria = Array.isArray((values as any).galeria) ? (values as any).galeria : [];
+
+                if (galeria.length) {
+                  const created: Array<{ id: number; temp_path: string }> = [];
+
+                  for (let i = 0; i < galeria.length; i++) {
+                    const img = galeria[i];
+                    const url = img?.url;
+                    const legenda = img?.legenda ?? null;
+                    const ordem = i;
+
+                    if (!url || typeof url !== "string") continue;
+
+                    try {
+                      const r = await axios.post(`/v1/clientes/${clienteId}/galeria`, {
+                        url,
+                        legenda,
+                        ordem,
+                        thumb_url: img?.thumb_url ?? null,
+                      });
+
+                      const galeriaId = r?.data?.data?.id;
+
+                      const tempPath =
+                        normalizeTempPath(img?.path) ||
+                        normalizeTempPath(extractTempPathFromPublicUrl(img?.url));
+
+                      if (galeriaId && tempPath) created.push({ id: galeriaId, temp_path: tempPath });
+                    } catch (e) {
+                      console.error("Falha criando item galeria:", e);
+                    }
+                  }
+
+                  if (created.length) {
+                    try {
+                      await axios.post(`/v1/clientes/${clienteId}/galeria/commit-temp`, {
+                        items: created,
+                      });
+                    } catch (e) {
+                      console.error("Falha commit galeria:", e);
+                      toast.error("Cliente salvo, mas falhou ao publicar a galeria.");
+                    }
+                  }
+                }
+
+                toast.dismiss(loadingToast);
+
+                const hasLogo = !!logoTempPath || !!values.logotipo;
+                const hasGaleria =
+                  Array.isArray((values as any).galeria) && (values as any).galeria.length > 0;
+
+                const needLogo = !hasLogo;
+                const needGaleria = !hasGaleria;
+
+                if (needLogo || needGaleria) {
+                  toast.success("Cliente criado! Vamos finalizar os pendentes?");
+                  setTicketsClienteId(clienteId);
+                  setMissingLogo(needLogo);
+                  setMissingGaleria(needGaleria);
+                  setTicketsModalOpen(true);
+                  return;
+                }
+
+                toast.success("Cliente criado com sucesso!");
+                navigate("/clientes", { replace: true });
+              } catch (err: any) {
+                toast.dismiss(loadingToast);
+                console.error("❌ ERRO NO SUBMIT:", err?.response?.data || err);
+                toast.error(err?.response?.data?.message || "Erro ao salvar cliente.");
+              } finally {
+                allowSubmitRef.current = false;
+                setSaving(false);
+              }
+            }}
+          >
+            {({ values, setFieldValue }) => {
+              const applyPrefetch = (dados: Record<string, any>, tipo: TipoCliente) => {
+                // ✅ atualiza tipo no state e no form
+                setTipoCliente(tipo);
+                setFieldValue("tipoCliente", tipo);
+
+                // Identificação
+                if (dados.nome_fantasia) setFieldValue("nome_fantasia", String(dados.nome_fantasia));
+                if (dados.razao_social) setFieldValue("razao_social", String(dados.razao_social));
+
+                // PreFetchModal retorna `cnpj` (digits) — nosso form usa `cnpj`
+                if (dados.cnpj) setFieldValue("cnpj", String(dados.cnpj));
+
+                if (dados.inscricao_estadual)
+                  setFieldValue("inscricao_estadual", String(dados.inscricao_estadual));
+                if (dados.inscricao_municipal)
+                  setFieldValue("inscricao_municipal", String(dados.inscricao_municipal));
+
+                // Contato
+                if (dados.email) setFieldValue("email", String(dados.email));
+                if (dados.telefone) setFieldValue("telefone_principal", String(dados.telefone));
+                if (dados.responsavel) setFieldValue("responsavel", String(dados.responsavel));
+
+                // Endereço
+                if (dados.cep) setFieldValue("cep", String(dados.cep));
+                if (dados.estado) setFieldValue("estado", String(dados.estado));
+                if (dados.cidade) setFieldValue("cidade", String(dados.cidade));
+                if (dados.bairro) setFieldValue("bairro", String(dados.bairro));
+                if (dados.rua) setFieldValue("rua", String(dados.rua));
+                if (dados.numero) setFieldValue("numero", String(dados.numero)); // ✅ FIX: aqui estava corrompido
+                if (dados.complemento) setFieldValue("complemento", String(dados.complemento));
+
+                // Redes sociais (quando vier)
+                const redes: any[] = [];
+                const map = ["instagram", "facebook", "linkedin", "youtube", "tiktok", "x"] as const;
+                for (const k of map) {
+                  const v = dados[k];
+                  if (v && typeof v === "string") redes.push({ tipo: k, url: v });
+                }
+                if (redes.length) setFieldValue("redes_sociais", redes);
+
+                if (dados.descricao) setFieldValue("descricao", String(dados.descricao));
+
+                toast.success("Dados aplicados ao cadastro.");
+              };
+
+              return (
+                <Form
+                  className="space-y-6"
+                  onSubmitCapture={(e) => {
+                    if (!allowSubmitRef.current) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isLastStep) {
+                      const el = e.target as HTMLElement;
+                      if (el?.tagName !== "TEXTAREA") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }
+                  }}
+                >
+                  {/* ✅ Modal IA */}
+                  <PreFetchModal
+                    nomeInicial={values.nome_fantasia || ""}
+                    tipoCliente={tipoCliente}
+                    isOpen={prefetchOpen}
+                    onClose={() => setPrefetchOpen(false)}
+                    onConfirm={(dados, tipo) => applyPrefetch(dados, tipo)}
+                  />
+
+                  {/* ✅ cabeçalho contextual */}
+                  <div className="mb-4">
+                    <div className="text-lg font-semibold text-gray-900">
+                      {isFromLead ? `Novo cliente a partir do Lead #${leadId}` : "Novo cliente"}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {isFromLead
+                        ? "Os dados do lead são usados como base. Revise e complete as informações. Você pode usar IA para complementar."
+                        : "Preencha os dados e finalize o cadastro. Você pode usar IA para pré-preencher."}
+                    </div>
+                  </div>
+
+                  {/* ✅ Painel de erros */}
+                  {issues.length > 0 && (
+                    <div className="border border-red-200 bg-red-50 rounded-xl p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-red-700">
+                            Corrija os campos abaixo antes de salvar
+                          </div>
+                          <div className="text-sm text-red-700/80">
+                            Clique em um item para ir direto ao campo.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIssues([])}
+                          className="text-sm text-red-700 underline"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+
+                      <ul className="mt-3 space-y-2">
+                        {issues.slice(0, 12).map((it, idx) => (
+                          <li key={`${it.path}-${idx}`}>
+                            <button
+                              type="button"
+                              onClick={() => goToIssue(it)}
+                              className="w-full text-left px-3 py-2 rounded-lg border border-red-200 bg-white hover:bg-red-50 transition"
+                            >
+                              <div className="text-sm font-medium text-gray-900">
+                                {it.label}{" "}
+                                <span className="text-xs text-gray-500">
+                                  (Aba: {tabs[it.step]?.label ?? `#${it.step}`})
+                                </span>
+                              </div>
+                              <div className="text-xs text-red-700">{it.message}</div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+
+                      {issues.length > 12 && (
+                        <div className="mt-2 text-xs text-red-700/80">
+                          + {issues.length - 12} outros erros…
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ✅ Seletor Pagante/Gratuito */}
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="text-sm text-gray-700 font-medium">Tipo do cliente</div>
+
+                    <select
+                      value={tipoCliente}
+                      onChange={(e) => {
+                        const next = e.target.value as TipoCliente;
+
+                        setTipoCliente(next);
+                        setFieldValue("tipoCliente", next);
+
+                        if (next === "gratuito" && step > 2) {
+                          setStep(0);
+                        }
+
+                        if (next === "gratuito") {
+                          setTicketsModalOpen(false);
+                          setTicketsClienteId(null);
+                          setMissingLogo(false);
+                          setMissingGaleria(false);
                         }
                       }}
-                    />
+                      className="border rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="pagante">Cliente Pagante 💰</option>
+                      <option value="gratuito">Cliente Gratuito 🧾</option>
+                    </select>
                   </div>
 
-                  {/* Estado */}
-                  <div className="flex items-center gap-2 border rounded-xl px-3 py-2 bg-white shadow-sm">
-                    <span className="text-gray-500">🗺️</span>
-                    <Field name="estado" placeholder="Estado" className="flex-1 outline-none" />
+                  <TabsUI tabs={tabs} currentStep={step} setCurrentStep={setStep} />
+
+                  <div className="mt-2 p-6 bg-white shadow rounded-xl border min-h-[420px]">
+                    {step === 0 && <TabIdentificacao />}
+                    {step === 1 && <TabEndereco />}
+                    {step === 2 && <TabContato />}
+
+                    {step === 3 && tipoCliente === "pagante" && <TabCidadesAtendidas />}
+                    {step === 4 && tipoCliente === "pagante" && <TabRedesSociais />}
+                    {step === 5 && tipoCliente === "pagante" && <TabSegmentos />}
+                    {step === 6 && tipoCliente === "pagante" && <TabBeneficios />}
+                    {step === 7 && tipoCliente === "pagante" && <TabHorarios />}
+                    {step === 8 && tipoCliente === "pagante" && <TabLogotipo />}
+                    {step === 9 && tipoCliente === "pagante" && <TabMidia />}
+                    {step === 10 && tipoCliente === "pagante" && <TabGaleria />}
                   </div>
 
-                  {/* Cidade */}
-                  <div className="flex items-center gap-2 border rounded-xl px-3 py-2 bg-white shadow-sm">
-                    <span className="text-gray-500">🌆</span>
-                    <Field as="select" name="cidade" className="flex-1 outline-none">
-                      <option value="">Selecione a cidade</option>
-                      {[
-                        "Bento Gonçalves", "Caxias do Sul", "Farroupilha", "Garibaldi", "Gramado",
-                        "Canela", "Nova Petrópolis", "Carlos Barbosa", "Flores da Cunha",
-                        "São Marcos", "Veranópolis", "Torres", "Antônio Prado"
-                      ]
-                        .sort()
-                        .map((cidade) => (
-                          <option key={cidade} value={cidade}>
-                            {cidade}
-                          </option>
-                        ))}
-                    </Field>
-                  </div>
+                  <div className="flex justify-between">
+                    <button type="button" onClick={handlePrev} className="px-4 py-2 border rounded">
+                      Voltar
+                    </button>
 
-                  {/* Bairro */}
-                  <div className="flex items-center gap-2 border rounded-xl px-3 py-2 bg-white shadow-sm">
-                    <span className="text-gray-500">🏘️</span>
-                    <Field name="bairro" placeholder="Bairro" className="flex-1 outline-none" />
-                  </div>
-
-                  {/* Rua */}
-                  <div className="flex items-center gap-2 border rounded-xl px-3 py-2 bg-white shadow-sm">
-                    <span className="text-gray-500">🏠</span>
-                    <Field name="rua" placeholder="Rua" className="flex-1 outline-none" />
-                  </div>
-
-                  {/* Número */}
-                  <div className="flex items-center gap-2 border rounded-xl px-3 py-2 bg-white shadow-sm">
-                    <span className="text-gray-500">🏢</span>
-                    <Field name="numero" placeholder="Número" className="flex-1 outline-none" />
-                  </div>
-                </div>
-
-                {/* Complemento */}
-                <div className="mt-4 flex items-center gap-2 border rounded-xl px-3 py-2 bg-white shadow-sm">
-                  <span className="text-gray-500">🏷️</span>
-                  <Field name="complemento" placeholder="Complemento" className="flex-1 outline-none" />
-                </div>
-              </Tab>
-        
-
-      <Tab title="Contato">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-    {/* Telefone Principal */}
-    <div>
-      <label className="flex items-center gap-2">
-        <FaPhone className="text-gray-500" />
-        Telefone Principal
-      </label>
-      <Field name="telefone_principal">
-        {({ field }) => (
-          <input {...field} className={inputClass} placeholder="(99) 9999-9999" />
-        )}
-      </Field>
-      <label><Field type="checkbox" name="telefone_principal_whatsapp" /> WhatsApp</label>
-      <label><Field type="checkbox" name="telefone_principal_exibir" /> Exibir no site</label>
-    </div>
-
-    {/* Telefone Secundário */}
-    <div>
-      <label className="flex items-center gap-2">
-        <FaPhone className="text-gray-500" />
-        Telefone Secundário
-      </label>
-      <Field name="telefone_secundario">
-        {({ field }) => (
-          <input {...field} className={inputClass} placeholder="(99) 9999-9999" />
-        )}
-      </Field>
-      <label><Field type="checkbox" name="telefone_secundario_whatsapp" /> WhatsApp</label>
-      <label><Field type="checkbox" name="telefone_secundario_exibir" /> Exibir no site</label>
-    </div>
-
-    {/* Celular */}
-    <div>
-      <label className="flex items-center gap-2">
-        <FaMobile className="text-gray-500" />
-        Celular
-      </label>
-      <Field name="celular">
-        {({ field }) => (
-          <input {...field} className={inputClass} placeholder="(99) 9 9999-9999" />
-        )}
-      </Field>
-      <label><Field type="checkbox" name="celular_whatsapp" /> WhatsApp</label>
-      <label><Field type="checkbox" name="celular_exibir" /> Exibir no site</label>
-    </div>
-
-    {/* Email */}
-    <div>
-      <label className="flex items-center gap-2">
-        <FaEnvelope className="text-gray-500" />
-        Email
-      </label>
-      <Field name="email" className={inputClass} />
-      <label><Field type="checkbox" name="email_exibir" /> Exibir no site</label>
-    </div>
-
-    {/* Responsável */}
-    <div>
-      <label className="flex items-center gap-2">
-        <FaUser className="text-gray-500" />
-        Responsável
-      </label>
-      <Field name="responsavel">
-        {({ field }) => (
-          <select {...field} className={inputClass}>
-            <option value="">Selecione</option>
-            {Array.isArray(users) &&
-              users
-                .filter((u): u is { id: string | number; name: string } => !!u && !!u.id && !!u.name)
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-          </select>
-        )}
-      </Field>
-    </div>
-
-  </div>
-</Tab>
-
-                              
-              {/* Redes Sociais */}
-              <Tab title="Redes Sociais">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                {/* Instagram */}
-                <div className="flex items-center gap-3 border rounded-xl px-3 py-2 bg-white shadow-sm focus-within:border-pink-500">
-                  <FaInstagram className="text-pink-500 w-5 h-5" />
-                  <Field
-                    name="instagram"
-                    className="flex-1 outline-none"
-                    placeholder="https://instagram.com/empresa"
-                  />
-                  {values.instagram && (
-                    <a href={values.instagram} target="_blank" rel="noopener noreferrer">
-                      <FaExternalLinkAlt className="text-gray-400 hover:text-pink-500 w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-
-                {/* Facebook */}
-                <div className="flex items-center gap-3 border rounded-xl px-3 py-2 bg-white shadow-sm focus-within:border-blue-600">
-                  <FaFacebook className="text-blue-600 w-5 h-5" />
-                  <Field
-                    name="facebook"
-                    className="flex-1 outline-none"
-                    placeholder="https://facebook.com/empresa"
-                  />
-                  {values.facebook && (
-                    <a href={values.facebook} target="_blank" rel="noopener noreferrer">
-                      <FaExternalLinkAlt className="text-gray-400 hover:text-blue-600 w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-
-                {/* LinkedIn */}
-                <div className="flex items-center gap-3 border rounded-xl px-3 py-2 bg-white shadow-sm focus-within:border-blue-700">
-                  <FaLinkedin className="text-blue-700 w-5 h-5" />
-                  <Field
-                    name="linkedin"
-                    className="flex-1 outline-none"
-                    placeholder="https://linkedin.com/company/empresa"
-                  />
-                  {values.linkedin && (
-                    <a href={values.linkedin} target="_blank" rel="noopener noreferrer">
-                      <FaExternalLinkAlt className="text-gray-400 hover:text-blue-700 w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-
-                {/* YouTube */}
-                <div className="flex items-center gap-3 border rounded-xl px-3 py-2 bg-white shadow-sm focus-within:border-red-600">
-                  <FaYoutube className="text-red-600 w-5 h-5" />
-                  <Field
-                    name="youtube"
-                    className="flex-1 outline-none"
-                    placeholder="https://youtube.com/empresa"
-                  />
-                  {values.youtube && (
-                    <a href={values.youtube} target="_blank" rel="noopener noreferrer">
-                      <FaExternalLinkAlt className="text-gray-400 hover:text-red-600 w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-
-                {/* TikTok */}
-                <div className="flex items-center gap-3 border rounded-xl px-3 py-2 bg-white shadow-sm focus-within:border-black">
-                  <FaTiktok className="text-black w-5 h-5" />
-                  <Field
-                    name="tiktok"
-                    className="flex-1 outline-none"
-                    placeholder="https://tiktok.com/@empresa"
-                  />
-                  {values.tiktok && (
-                    <a href={values.tiktok} target="_blank" rel="noopener noreferrer">
-                      <FaExternalLinkAlt className="text-gray-400 hover:text-black w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-
-                {/* X (Twitter) */}
-                <div className="flex items-center gap-3 border rounded-xl px-3 py-2 bg-white shadow-sm focus-within:border-gray-800">
-                  <FaXTwitter className="text-gray-800 w-5 h-5" />
-                  <Field
-                    name="x"
-                    className="flex-1 outline-none"
-                    placeholder="https://x.com/empresa"
-                  />
-                  {values.x && (
-                    <a href={values.x} target="_blank" rel="noopener noreferrer">
-                      <FaExternalLinkAlt className="text-gray-400 hover:text-gray-800 w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-
-              </div>
-            </Tab>
-
-
-
-              {/* Segmentos */}
-              <Tab title="Segmentos">
-                {segmentos?.map(seg => (
-                  <label key={seg.id} className="block">
-                    <Field type="checkbox" name="segmentos" value={seg.id} /> {seg.nome}
-                  </label>
-                ))}
-                {touched.segmentos && errors.segmentos && <div className="text-red-500">{errors.segmentos}</div>}
-              </Tab>
-
-             {/* Benefícios */}
-              <Tab title="Benefícios">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {beneficios.map((b) => {
-                    // Mapeamento de ícones (Lucide) para cada benefício
-                    const icons: Record<string, JSX.Element> = {
-                      "24 horas": <span>⏰</span>,
-                      "Tele-entrega": <span>🚚</span>,
-                      "Aberto ao meio-dia": <span>🌞</span>,
-                      "Crédito": <span>💳</span>,
-                      "Débito": <span>💳</span>,
-                      "Crediário": <span>📝</span>,
-                      "Boleto Bancário": <span>🏦</span>,
-                      "Cheque": <span>✍️</span>,
-                      "Dinheiro": <span>💵</span>,
-                      "Pix": <span>⚡</span>,
-                      "PicPay": <span>📱</span>,
-                      "Banricompras": <span>🏧</span>,
-                      "Hipercard": <span>💳</span>,
-                      "VR Alimentação": <span>🍽️</span>,
-                    };
-
-                    console.log('users:', users);
-
-                    return (
-                      <label
-                        key={b}
-                        className={`flex flex-col items-center justify-center p-4 rounded-xl border cursor-pointer transition-all shadow-sm text-center
-                          ${
-                            values.beneficios.includes(b)
-                              ? "border-[#B70F0A] bg-[#B70F0A]/10 text-[#B70F0A] font-semibold"
-                              : "border-gray-300 bg-white hover:border-[#B70F0A]/40"
-                          }`}
+                    {!isLastStep ? (
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        className="px-4 py-2 bg-red-600 text-white rounded"
                       >
-                        <Field type="checkbox" name="beneficios" value={b} className="hidden" />
-                        <div className="text-2xl mb-2">{icons[b] || "✨"}</div>
-                        <span>{b}</span>
-                        {values.beneficios.includes(b) && (
-                          <div className="absolute top-2 right-2 text-[#B70F0A] font-bold">✔</div>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              </Tab>
-
-              {/* Informações Gerais */}
-              <Tab title="Informações Gerais">
-                <label>Horário de Atendimento</label>
-                <Field name="horario_atendimento" className={inputClass} placeholder="Ex: Segunda à sexta: 07:00 às 19:00 | Sábado: 07:00 às 18:30" />
-              </Tab>
-
-              {/* Logotipo */}
-              <Tab title="Logotipo">
-                <UploadArea name="logotipo" onChange={(file) => setFieldValue('logotipo', file)} />
-              </Tab>
-            </Tabs>
-
-            <div className="flex justify-end gap-2">
-              {step > 0 && <button type="button" onClick={() => setStep(step - 1)} className="px-4 py-2 border rounded">Voltar</button>}
-              {step < 7 ? (
-                <button type="button" onClick={() => setStep(step + 1)} className="px-4 py-2 bg-[#B70F0A] text-white rounded">Avançar</button>
-              ) : (
-                <button type="submit" className="px-4 py-2 bg-[#B70F0A] text-white rounded">Salvar Cliente</button>
-              )}
-            </div>
-          </Form>
-        )}
-      </Formik>
+                        Avançar
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className={`px-6 py-2 rounded text-white ${
+                          saving ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+                        }`}
+                      >
+                        {saving ? "Salvando..." : "Salvar Cliente"}
+                      </button>
+                    )}
+                  </div>
+                </Form>
+              );
+            }}
+          </Formik>
+        </>
+      )}
     </div>
   );
 }

@@ -1,7 +1,12 @@
 import axios from "axios";
 
+const baseURL =
+  (import.meta.env.VITE_API_URL as string | undefined)?.trim() ||
+  "https://api.overmelhinho.com.br/api";
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL,
+  timeout: 60000,
 });
 
 // Adiciona o token JWT nas requisições, se existir

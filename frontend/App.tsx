@@ -5,14 +5,16 @@ import AdminPage from "@/pages/AdminPage";
 import EditarUsuarioPage from "@/pages/EditarUsuarioPage";
 import PrivateRoute from "@/routes/PrivateRoute";
 
-// IMPORTS dos novos CRUDs:
+// IMPORTS dos CRUDs:
 import UserList from "@/components/User/UserList";
 import RoleList from "@/components/Role/RoleList";
 import PermissionList from "@/components/Permission/PermissionList";
 
+// ✅ Clientes
+import ClientesList from "@/pages/clientes/ClientesList";
+import ClienteCreateFromLead from "@/pages/clientes/ClienteCreateFromLead";
 
-console.log(RoleList, PermissionList); // deve mostrar funções/componentes, não undefined
-
+console.log(RoleList, PermissionList);
 
 function App() {
   return (
@@ -41,16 +43,22 @@ function App() {
           <Route path="/usuarios/editar" element={<EditarUsuarioPage />} />
         </Route>
 
+        {/* ✅ CLIENTES */}
+        <Route element={<PrivateRoute requiredPermission="manage clients" />}>
+          {/* ✅ agora /clientes mostra a LISTAGEM */}
+          <Route path="/clientes" element={<ClientesList />} />
 
-<Route element={<PrivateRoute requiredPermission="manage roles" />}>
-  <Route path="/funcoes" element={<RoleList />} />
-</Route>
+          {/* ✅ criar cliente a partir do lead */}
+          <Route path="/clientes/novo/:leadId" element={<ClienteCreateFromLead />} />
+        </Route>
 
-<Route element={<PrivateRoute requiredPermission="manage permissions" />}>
-  <Route path="/permissoes" element={<PermissionList />} />
-</Route>
+        <Route element={<PrivateRoute requiredPermission="manage roles" />}>
+          <Route path="/funcoes" element={<RoleList />} />
+        </Route>
 
-
+        <Route element={<PrivateRoute requiredPermission="manage permissions" />}>
+          <Route path="/permissoes" element={<PermissionList />} />
+        </Route>
       </Routes>
     </Router>
   );

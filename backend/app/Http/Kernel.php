@@ -12,6 +12,9 @@ class Kernel extends HttpKernel
      * @var array
      */
     protected $middleware = [
+        // ✅ CORS precisa estar ativo
+        \Illuminate\Http\Middleware\HandleCors::class,
+
         // Adapte conforme seus middlewares globais necessários
         \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
@@ -37,7 +40,7 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class, // Se usar Sanctum!
+            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
