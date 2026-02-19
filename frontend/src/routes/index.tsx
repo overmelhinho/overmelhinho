@@ -47,6 +47,14 @@ import CampanhaCreate from "@/pages/campanhas/CampanhaCreate/index";
 import CampanhaDetails from "@/pages/campanhas/CampanhaDetails";
 import CampanhaEdit from "@/pages/campanhas/CampanhaWizard/CampanhaEditWizard";
 
+// ✅ Vagas PRO
+import JobManagerPage from "@/pages/vagas/JobManagerPage";
+import JobCreatePage from "@/pages/vagas/JobCreatePage";
+import JobEditPage from "@/pages/vagas/JobEditPage";
+import CandidatesPage from "@/pages/vagas/CandidatesPage";
+import PublicJobList from "@/pages/vagas/PublicJobList";
+import PublicJobDetail from "@/pages/vagas/PublicJobDetail";
+
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
 
@@ -320,9 +328,59 @@ const router = createBrowserRouter([
     ),
   },
 
+  // ✅ Vagas PRO - Público (sem auth e sem layout)
+  { path: "/oportunidades", element: <PublicJobList /> },
+  { path: "/oportunidades/:id", element: <PublicJobDetail /> },
+
   { path: "/unauthorized", element: <Unauthorized /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password/:token", element: <ResetPasswordPage /> },
+
+  // ✅ Vagas PRO - Público (sem autenticação)
+  // NOTA: O site público (overmelhinho.com.br) é um frontend separado.
+  // Aqui ficam apenas as rotas do painel admin (dash.overmelhinho.com.br).
+
+  // ✅ Vagas PRO - Admin
+  {
+    path: "/vagas",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <JobManagerPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/vagas/nova",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <JobCreatePage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/vagas/:jobId/editar",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <JobEditPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/vagas/:jobId/candidatos",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <CandidatesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
 
   // ✅ SEMPRE POR ÚLTIMO
   {

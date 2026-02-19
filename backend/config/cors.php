@@ -9,6 +9,8 @@ return [
     // ✅ mantém dash e adiciona localhost (não quebra produção)
     'allowed_origins' => [
         'https://dash.overmelhinho.com.br',
+        'https://overmelhinho.com.br',
+        'https://www.overmelhinho.com.br',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
     ],

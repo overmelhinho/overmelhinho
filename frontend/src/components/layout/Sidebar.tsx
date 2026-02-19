@@ -13,6 +13,7 @@ import {
   Settings,
   Megaphone,
   UserPlus,
+  Briefcase,
 } from "lucide-react";
 
 type Item = {
@@ -44,7 +45,7 @@ export default function Sidebar() {
       perms: ["view_dashboard"],
     },
 
-   { to: "/leads-kanban", label: "Leads", icon: <UserPlus size={18} />, perms: ["view_lead"] },
+    { to: "/leads-kanban", label: "Leads", icon: <UserPlus size={18} />, perms: ["view_lead"] },
 
     { to: "/clientes", label: "Clientes", icon: <Users size={18} />, perms: ["view_client"] },
     {
@@ -63,6 +64,7 @@ export default function Sidebar() {
     { to: "/relatorios", label: "Relatórios", icon: <FileText size={18} />, perms: ["view_report"] },
     { to: "/criativo", label: "Criativo", icon: <Palette size={18} />, perms: ["manage_creative"] },
     { to: "/tickets", label: "Tickets", icon: <Ticket size={18} /> },
+    { to: "/vagas", label: "Vagas PRO", icon: <Briefcase size={18} /> },
   ];
 
   const itemsBottom: Item[] = [
