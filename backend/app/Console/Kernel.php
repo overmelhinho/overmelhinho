@@ -11,7 +11,8 @@ class Kernel extends ConsoleKernel
      * Registrar comandos personalizados.
      */
     protected $commands = [
-        \App\Console\Commands\CleanTempSupabase::class,
+        \App\Console\Commands\CleanTempSupabase::class ,
+        \App\Console\Commands\GenerateRecurringInvoices::class ,
     ];
 
     /**
@@ -21,6 +22,9 @@ class Kernel extends ConsoleKernel
     {
         // 🕓 Executa todos os dias às 03:00 da manhã
         $schedule->command('supabase:clean-temp')->dailyAt('03:00');
+
+        // 💰 Gera faturas recorrentes todos os dias às 06:00 da manhã
+        $schedule->command('financial:generate-recurring')->dailyAt('06:00');
     }
 
     /**
@@ -28,7 +32,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

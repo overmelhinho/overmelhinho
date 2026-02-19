@@ -14,6 +14,7 @@ import {
   Megaphone,
   UserPlus,
   Briefcase,
+  CreditCard,
 } from "lucide-react";
 
 type Item = {
@@ -72,6 +73,7 @@ export default function Sidebar() {
     { to: "/usuarios", label: "Usuários", icon: <UserCog size={18} />, perms: ["manage_users"] },
     { to: "/funcoes", label: "Funções", icon: <ShieldCheck size={18} />, perms: ["manage roles", "manage_roles"] },
     { to: "/permissoes", label: "Permissões", icon: <KeyRound size={18} />, perms: ["manage permissions", "manage_permissions"] },
+    { to: "/planos", label: "Planos", icon: <CreditCard size={18} /> },
   ];
 
 

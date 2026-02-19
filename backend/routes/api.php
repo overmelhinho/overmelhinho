@@ -43,6 +43,8 @@ Route::get('/v1/jobs/public', [JobOpportunityController::class , 'indexPublic'])
 Route::get('/v1/jobs/public/{id}', [JobOpportunityController::class , 'showPublic']);
 Route::post('/v1/jobs/{id}/apply', [JobOpportunityController::class , 'apply']);
 
+// ✅ Webhook Tiny (Desprotegido)
+Route::post('/v1/webhooks/tiny', [\App\Http\Controllers\Api\V1\FinancialController::class , 'handleWebhook']);
 
 Route::get('/v1/teste-segmento', fn() => response()->json(['msg' => 'rota simples ok']));
 Route::get('/v1/segmentos', [SegmentoController::class , 'index']);
@@ -139,4 +141,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::patch('candidates/{id}/status', [CandidateController::class , 'updateStatus']);
     Route::get('candidates/{id}/resume', [CandidateController::class , 'downloadResume']);
     Route::delete('candidates/{id}', [CandidateController::class , 'destroy']);
+
+    // ✅ Financeiro
+    Route::get('/plans', [\App\Http\Controllers\Api\V1\PlanController::class , 'index']);
+    Route::post('/plans', [\App\Http\Controllers\Api\V1\PlanController::class , 'store']);
+    Route::get('/plans/{id}', [\App\Http\Controllers\Api\V1\PlanController::class , 'show']);
+    Route::put('/plans/{id}', [\App\Http\Controllers\Api\V1\PlanController::class , 'update']);
+    Route::post('/plans/{id}/sync', [\App\Http\Controllers\Api\V1\PlanController::class , 'sync']);
+    Route::delete('/plans/{id}', [\App\Http\Controllers\Api\V1\PlanController::class , 'destroy']);
+
+    Route::get('/clientes/{id}/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'indexClientInvoices']);
+    Route::post('/clientes/{id}/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'storeInvoice']);
 });

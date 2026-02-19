@@ -35,9 +35,22 @@ class Cliente extends Model
         'seo_keywords',
         'seo_keywords_source',
         'seo_keywords_updated_at',
+        'tiny_id',
         'status_assinatura',
         'tipo_cliente',
+        'plan_id',
+        'recurrence_day',
+        'last_invoice_generated_at',
     ];
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class);
+    }
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class , 'client_id');
+    }
 
     protected $casts = [
         'possui_publicidade' => 'boolean',
@@ -47,36 +60,36 @@ class Cliente extends Model
 
     public function setCpfCnpjAttribute($value): void
     {
-        $this->attributes['cpf_cnpj'] = preg_replace('/\D+/', '', (string) $value) ?? '';
+        $this->attributes['cpf_cnpj'] = preg_replace('/\D+/', '', (string)$value) ?? '';
     }
 
     public function enderecos()
     {
-        return $this->hasMany(Endereco::class, 'cliente_id');
+        return $this->hasMany(Endereco::class , 'cliente_id');
     }
 
     public function contatos()
     {
-        return $this->hasMany(Contato::class, 'cliente_id');
+        return $this->hasMany(Contato::class , 'cliente_id');
     }
 
     public function redesSociais()
     {
-        return $this->hasMany(RedeSocial::class, 'cliente_id');
+        return $this->hasMany(RedeSocial::class , 'cliente_id');
     }
 
     public function segmentos()
     {
-        return $this->belongsToMany(Segmento::class, 'cliente_segmento', 'cliente_id', 'segmento_id');
+        return $this->belongsToMany(Segmento::class , 'cliente_segmento', 'cliente_id', 'segmento_id');
     }
 
     public function cidadesAtendidas()
     {
-        return $this->belongsToMany(Cidade::class, 'cliente_cidade', 'cliente_id', 'cidade_id');
+        return $this->belongsToMany(Cidade::class , 'cliente_cidade', 'cliente_id', 'cidade_id');
     }
 
     public function galeriaImagens()
     {
-        return $this->hasMany(GaleriaImagem::class, 'cliente_id');
+        return $this->hasMany(GaleriaImagem::class , 'cliente_id');
     }
 }

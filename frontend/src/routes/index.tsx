@@ -55,6 +55,9 @@ import CandidatesPage from "@/pages/vagas/CandidatesPage";
 import PublicJobList from "@/pages/vagas/PublicJobList";
 import PublicJobDetail from "@/pages/vagas/PublicJobDetail";
 
+// ✅ Financeiro
+import PlansPage from "@/pages/financeiro/PlansPage";
+
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
 
@@ -377,6 +380,18 @@ const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <CandidatesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ Financeiro
+  {
+    path: "/planos",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <PlansPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

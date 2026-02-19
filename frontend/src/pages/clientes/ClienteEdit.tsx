@@ -21,6 +21,7 @@ import TabLogotipo from "./create/steps/TabLogotipo";
 import TabGaleria from "./create/steps/TabGaleria";
 import TabMidia from "./create/steps/TabMidia";
 import TabCidadesAtendidas from "./create/steps/TabCidadesAtendidas";
+import TabFinanceiro from "./create/steps/TabFinanceiro";
 
 type TipoCliente = "gratuito" | "pagante";
 
@@ -131,7 +132,8 @@ export default function ClienteEdit() {
         { id: 7, label: "Horário" },
         { id: 8, label: "Logotipo" },
         { id: 9, label: "Mídia" },
-        { id: 10, label: "Galeria" }
+        { id: 10, label: "Galeria" },
+        { id: 11, label: "Financeiro" }
       );
     }
 
@@ -160,9 +162,9 @@ export default function ClienteEdit() {
     // galeria (se backend retornar algo como galeria/galeria_imagens/galerias)
     const galeriaRaw =
       Array.isArray(c?.galeria) ? c.galeria :
-      Array.isArray(c?.galeria_imagens) ? c.galeria_imagens :
-      Array.isArray(c?.galerias) ? c.galerias :
-      [];
+        Array.isArray(c?.galeria_imagens) ? c.galeria_imagens :
+          Array.isArray(c?.galerias) ? c.galerias :
+            [];
 
     const galeria = (galeriaRaw || []).map((g: any, idx: number) => ({
       id: g?.id ? String(g.id) : crypto.randomUUID(),
@@ -471,10 +473,10 @@ export default function ClienteEdit() {
           >
             <div className="mb-4">
               <div className="text-lg font-semibold text-gray-900">
-		{values.nome_fantasia || "Editar cliente"}
+                {values.nome_fantasia || "Editar cliente"}
               </div>
               <div className="text-sm text-gray-500">
-		    Editar cadastro do cliente
+                Editar cadastro do cliente
               </div>
             </div>
 
@@ -512,6 +514,7 @@ export default function ClienteEdit() {
               {step === 8 && tipoCliente === "pagante" && <TabLogotipo />}
               {step === 9 && tipoCliente === "pagante" && <TabMidia />}
               {step === 10 && tipoCliente === "pagante" && <TabGaleria />}
+              {step === 11 && tipoCliente === "pagante" && <TabFinanceiro />}
             </div>
 
             <div className="flex justify-between">
@@ -532,9 +535,8 @@ export default function ClienteEdit() {
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className={`px-6 py-2 rounded text-white ${
-                    saving ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
-                  }`}
+                  className={`px-6 py-2 rounded text-white ${saving ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+                    }`}
                 >
                   {saving ? "Salvando..." : "Salvar alterações"}
                 </button>
