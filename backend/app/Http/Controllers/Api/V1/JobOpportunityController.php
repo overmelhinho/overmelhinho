@@ -63,12 +63,19 @@ class JobOpportunityController extends Controller
      */
     public function index(Request $request)
     {
-        $clientId = $request->query('client_id');
+        $query = JobOpportunity::with('client:id,nome_fantasia')
+            ->withCount('candidates');
 
-        $query = JobOpportunity::withCount('candidates');
+        if ($request->client_id) {
+            $query->where('client_id', $request->client_id);
+        }
 
-        if ($clientId) {
-            $query->where('client_id', $clientId);
+        if ($request->search) {
+            $query->where('title', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->status) {
+            $query->where('status', $request->status);
         }
 
         $jobs = $query->orderBy('created_at', 'desc')->paginate(15);
