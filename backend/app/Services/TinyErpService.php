@@ -155,6 +155,34 @@ class TinyErpService
     }
 
     /**
+     * Obtém os dados de uma conta a receber no Tiny para conferir o status.
+     * Método: conta.receber.obter.php
+     */
+    public function getReceivableStatus(string $tinyAccountId): ?array
+    {
+        try {
+            $response = Http::asForm()->post("{$this->baseUrl}/conta.receber.obter.php", [
+                'token' => $this->token,
+                'formato' => 'json',
+                'id' => (int)$tinyAccountId,
+            ]);
+
+            $json = $response->json();
+
+            if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
+                return null;
+            }
+
+            // O Tiny retorna a situação (1 = Aberto, 2 = Recebido, 3 = Cancelado)
+            return $json['retorno']['conta'] ?? null;
+        }
+        catch (\Exception $e) {
+            Log::error("Erro ao obter status da conta {$tinyAccountId} no Tiny: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Sincroniza um Plano (Serviço) com o Tiny.
      */
     public function syncPlan(\App\Models\Plan $plan): bool

@@ -14,11 +14,14 @@ class Invoice extends Model
         'status',
         'tiny_account_id',
         'payment_url',
+        'justification',
+        'action_date',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'due_date' => 'date',
+        'action_date' => 'datetime',
     ];
 
     public function client()

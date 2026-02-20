@@ -15,6 +15,7 @@ import {
   UserPlus,
   Briefcase,
   CreditCard,
+  DollarSign, // Financeiro
 } from "lucide-react";
 
 type Item = {
@@ -61,6 +62,12 @@ export default function Sidebar() {
         "manage_campaigns",
         "manage_campanhas",
       ],
+    },
+    {
+      to: "/financeiro",
+      label: "Financeiro",
+      icon: <DollarSign size={18} />,
+      perms: ["manage_financial", "view_financial"],
     },
     { to: "/relatorios", label: "Relatórios", icon: <FileText size={18} />, perms: ["view_report"] },
     { to: "/criativo", label: "Criativo", icon: <Palette size={18} />, perms: ["manage_creative"] },

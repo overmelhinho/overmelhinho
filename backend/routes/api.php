@@ -152,4 +152,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/clientes/{id}/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'indexClientInvoices']);
     Route::post('/clientes/{id}/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'storeInvoice']);
+
+    // Listagem Geral de Faturas
+    Route::get('/financial/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'indexAllInvoices']);
+    Route::get('/financial/export-pdf', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportReport']);
+    Route::post('/financial/invoices/sync', [\App\Http\Controllers\Api\V1\FinancialController::class , 'syncInvoices']);
+    Route::patch('/financial/invoices/{id}/status', [\App\Http\Controllers\Api\V1\FinancialController::class , 'updateStatus']);
 });

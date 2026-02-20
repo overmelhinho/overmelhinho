@@ -56,6 +56,7 @@ import PublicJobList from "@/pages/vagas/PublicJobList";
 import PublicJobDetail from "@/pages/vagas/PublicJobDetail";
 
 // ✅ Financeiro
+import FinanceiroPage from "@/pages/financeiro/FinanceiroPage";
 import PlansPage from "@/pages/financeiro/PlansPage";
 
 const router = createBrowserRouter([
@@ -393,6 +394,15 @@ const router = createBrowserRouter([
         <DashboardLayout>
           <PlansPage />
         </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  {
+    path: "/financeiro",
+    element: (
+      <ProtectedRoute>
+        <FinanceiroPage />
       </ProtectedRoute>
     ),
   },

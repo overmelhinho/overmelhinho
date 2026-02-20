@@ -1,54 +1,57 @@
-# Documentação Técnica: Módulo Financeiro (Integração Tiny ERP)
+# Documentação Técnica: Módulo Financeiro (Integração Tiny ERP & SaaS Metrics)
 
 ## 1. Visão Geral
-O Módulo Financeiro do sistema "O Vermelhinho" foi projetado para externalizar toda a gestão fiscal e de cobrança para o **Tiny ERP**. O sistema funciona como um disparador de ordens e monitor de pagamento, enquanto o Tiny ERP lida com a geração de boletos, PIX e controle bancário.
+O Módulo Financeiro do sistema "O Vermelhinho" foi projetado para externalizar toda a gestão fiscal e de cobrança para o **Tiny ERP**. Além da integração, o módulo evoluiu para uma central de **SaaS Metrics**, fornecendo indicadores em tempo real (MRR, LTV, Churn) e ferramentas de cobrança ativa via WhatsApp.
 
 ## 2. Arquitetura Técnica
 
 ### 2.1 Banco de Dados (Schema)
-Foram implementadas novas estruturas para suportar o fluxo financeiro:
+Estruturas para suporte financeiro e auditoria:
 
-*   **Tabela `plans`**: Armazena os produtos/serviços oferecidos.
-    *   `name`: Nome comercial do plano.
-    *   `price`: Valor base.
-    *   `billing_cycle`: Ciclo (mensal, anual, avulso).
-    *   `tiny_product_id`: Mapeamento do código do produto dentro do Tiny ERP.
-*   **Tabela `invoices`**: Registro local das cobranças geradas.
-    *   `tiny_account_id`: ID da "Conta a Receber" no Tiny.
-    *   `payment_url`: Link direto para o pagamento (boleto/PIX).
-    *   `status`: Controle local (pending, paid, canceled).
+*   **Tabela `plans`**: Produtos/serviços oferecidos.
+    *   `name`, `price`, `billing_cycle`, `tiny_product_id`.
+*   **Tabela `invoices`**: Registro local das cobranças.
+    *   `tiny_account_id`: ID da conta no Tiny.
+    *   `payment_url`: Link de pagamento (boleto/PIX).
+    *   `status`: Status (pending, paid, canceled).
+    *   `justification` (Novo): Texto obrigatório para baixas/cancelamentos manuais.
+    *   `action_date` (Novo): Timestamp do momento da ação manual.
 *   **Alteração em `clientes`**:
-    *   `tiny_id`: ID único do contato no Tiny, usado para vincular cobranças.
-    *   `status_assinatura`: Controla o acesso do cliente aos serviços do portal.
+    *   `tiny_id`: ID para vínculo no ERP.
+    *   `status_assinatura`: Controle de acesso (ativo, inadimplente).
 
-### 2.2 Camada de Serviço (`TinyErpService`)
-Localizada em `app/Services/TinyErpService.php`, esta classe isola toda a complexidade da API do Tiny ERP (v2).
+### 2.2 Dashboard de Métricas (SaaS Metrics)
+Localizado em `MetricsTab.tsx`, o sistema calcula indicadores reais:
+*   **MRR (Monthly Recurring Revenue):** Soma de faturas pagas no mês corrente.
+*   **LTV (Lifetime Value):** Faturamento Total Pago ÷ Total de Clientes Únicos.
+*   **Churn Rate:** Proporção de faturas canceladas nos últimos 30 dias em relação ao total de faturas do período.
+*   **Inadimplência:** Soma de faturas `pending` com `due_date` expirado.
 
-*   **`syncClient()`**: Verifica se o cliente já existe no Tiny via `tiny_id`. Caso contrário, envia os dados (Razão Social, CNPJ, Endereço, Contato) para o endpoint `contato.incluir.php`.
-*   **`createReceivable()`**: Envia uma instrução de "Conta a Receber" para o Tiny. Utiliza os dados do plano e do cliente para gerar a fatura.
-
-### 2.3 Webhooks
-O sistema expõe um endpoint público em `/api/v1/webhooks/tiny` para receber notificações de baixa automática.
-*   **Fluxo**: Tiny (Pagamento confirmado) -> Webhook POST -> Laravel -> Atualiza Invoice -> Ativa Cliente.
+### 2.3 Camada de Serviço & Auditoria
+*   **`TinyErpService`**: Isola a comunicação via API em REST (v2).
+*   **Auditoria Manual**: Todas as alterações manuais de status (Financeiro Geral) exigem uma justificativa de no mínimo 5 caracteres, gravada no banco para histórico.
 
 ## 3. Endpoints da API (V1)
 
 | Método | Rota | Descrição | Autenticação |
 | :--- | :--- | :--- | :--- |
 | GET | `/v1/plans` | Lista os planos disponíveis | Sim |
+| GET | `/v1/financial/invoices` | Lista TODAS as faturas (Financeiro Geral) | Sim |
 | GET | `/v1/clientes/{id}/invoices` | Lista faturas de um cliente específico | Sim |
+| PATCH | `/v1/financial/invoices/{id}/status` | Baixa ou Cancelamento manual com justificativa | Sim |
+| POST | `/v1/financial/invoices/sync` | Sincroniza faturas pendentes com o Tiny ERP | Sim |
 | POST | `/v1/clientes/{id}/invoices` | Gera uma nova cobrança no sistema e no Tiny | Sim |
-| POST | `/v1/webhooks/tiny` | Recebe notificações de pagamento do Tiny | Não |
+| POST | `/v1/webhooks/tiny` | Recebe notificações de pagamento do Tiny (Resiliente a status numérico ou string) | Não |
 
-## 4. Integração Frontend (React)
+## 4. Interface e UX Premium
 
-A interface foi integrada nativamente na tela de **Edição de Clientes** (`ClienteEdit.tsx`), utilizando o padrão de design "Nature Distilled".
+A interface utiliza componentes modernos (Radix UI / Shadcn) para uma experiência de alta performance:
 
-*   **Componente `TabFinanceiro.tsx`**: 
-    *   Exibe o histórico de faturas em uma tabela responsiva.
-    *   Permite a cópia rápida do link de pagamento para envio via WhatsApp.
-    *   Garante feedback visual via Badges (Verde para Pago, Amarelo para Pendente).
-*   **Modal de Cobrança**: Interface amigável para seleção de planos e datas de vencimento, com integração assíncrona via `React Query`.
+*   **Botão de Sincronia Inteligente**: Localizado no topo da lista de faturas, permite buscar o status real de todas as contas pendentes no Tiny com um clique, bypassando falhas de webhook.
+*   **Ficha de Cobrança (Popover)**: Ao interagir com o nome do cliente na lista, uma ficha flutuante exibe contatos rápidos (Email, Tel, WhatsApp) permitindo a cobrança com um clique.
+*   **Sistema de Filtros**: Seletores avançados por Status (incluindo "Atrasados ⚠️") e Período (7, 15, 30 dias ou range personalizado).
+*   **Modais de Ação**: Diálogos confirmadores para Pagamento/Cancelamento com validação de campo obrigatório.
+*   **Visual Dinâmico**: Badges coloridos, animações de entrada e design "clean" focado em dados legíveis.
 
 ## 5. Configuração de Ambiente
 
@@ -61,12 +64,23 @@ TINY_ERP_TOKEN=seu_token_api_aqui
 ### Configuração no Tiny ERP:
 1.  Obtenha o token em **Configurações > Ecossistema > API**.
 2.  Configure o Webhook no Tiny apontando para a URL da sua API + `/api/v1/webhooks/tiny`.
-3.  Certifique-se de que os produtos no Tiny tenham códigos compatíveis com os `tiny_product_id` cadastrados na tabela `plans`.
 
-## 6. Fluxo de Uso (Processo de Venda)
-1.  Admin acessa o cadastro do cliente.
-2.  Vai até a aba **Financeiro** e clica em **Gerar Cobrança**.
-3.  Seleciona o plano e o vencimento.
-4.  O sistema sincroniza o cliente com o Tiny (se necessário), gera a conta e recebe o link.
-5.  O Admin clica em "Copiar Link" e envia para o cliente.
-6.  Assim que o cliente paga, o portal é ativado automaticamente via Webhook.
+## 6. Fluxos Operacionais
+
+### 6.1 Fluxo de Cobrança Ativa
+1.  Admin acessa **Financeiro** > **Faturas**.
+2.  Aplica o filtro de status **"Atrasados ⚠️"**.
+3.  Identifica o cliente, usa a **Ficha de Cobrança** para abrir o WhatsApp.
+4.  Após o cliente confirmar o pagamento (ex: via PIX por fora), o Admin clica no botão "Check", insere a justificativa ("Recebido via PIX") e confirma.
+5.  O sistema liquida a fatura e ativa a assinatura do cliente instantaneamente.
+
+### 6.2 Fluxo de Gráficos
+Os gráficos de **Evolução de Faturamento** são gerados automaticamente baseando-se apenas em faturas com status `paid`, agrupadas por mês de vencimento (últimos 6 meses).
+
+### 6.3 Fluxo de Sincronização em Lote
+1.  Admin acessa **Financeiro** > **Faturas**.
+2.  Clica em **"Sincronizar Tiny"**.
+3.  O sistema varre todas as faturas `pending` que possuem um `tiny_account_id`.
+4.  Para cada fatura, consulta a API do Tiny (`conta.receber.obter`).
+5.  Se o Tiny retornar situação "2", "pago" ou "recebido", a fatura é liquidada localmente e o cliente é ativado.
+6.  Se o Tiny retornar situação "3" ou "cancelado", a fatura é marcada como cancelada.
