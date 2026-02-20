@@ -155,6 +155,42 @@ class TinyErpService
     }
 
     /**
+     * Efetua a baixa (liquidação) de uma conta a receber no Tiny.
+     * Método: conta.receber.baixar.php
+     */
+    public function payReceivable(string $tinyAccountId, float $amount = null): bool
+    {
+        try {
+            $conta = [
+                'id' => (int)$tinyAccountId,
+                'data' => now()->format('d/m/Y'),
+            ];
+
+            if ($amount) {
+                // O Tiny v2 espera o valor com vírgula para centavos se enviado como string formatada
+                $conta['valor'] = number_format($amount, 2, ',', '');
+            }
+
+            Log::info("Baixando conta no Tiny: {$tinyAccountId}", $conta);
+
+            $response = Http::asForm()->post("{$this->baseUrl}/conta.receber.baixar.php", [
+                'token' => $this->token,
+                'formato' => 'json',
+                'conta' => json_encode(['conta' => $conta]),
+            ]);
+
+            $json = $response->json();
+            Log::info('Resposta Tiny payReceivable:', ['tiny_id' => $tinyAccountId, 'response' => $json]);
+
+            return ($json['retorno']['status'] ?? '') === 'OK';
+        }
+        catch (\Exception $e) {
+            Log::error("Erro ao baixar conta {$tinyAccountId} no Tiny: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Obtém os dados de uma conta a receber no Tiny para conferir o status.
      * Método: conta.receber.obter.php
      */

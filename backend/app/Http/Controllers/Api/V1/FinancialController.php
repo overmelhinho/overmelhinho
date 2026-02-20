@@ -190,15 +190,26 @@ class FinancialController extends Controller
             'action_date' => now(),
         ]);
 
-        // Se marcou como pago, ativa a assinatura do cliente
+        // Se marcou como pago, ativa a assinatura do cliente e sincroniza com o Tiny
         if ($validated['status'] === 'paid') {
             $invoice->client->update(['status_assinatura' => 'ativo']);
+
+            // Sincronizar baixa com o Tiny se a fatura tiver um ID lá
+            if ($invoice->tiny_account_id) {
+                try {
+                    $this->tinyService->payReceivable($invoice->tiny_account_id, $invoice->amount);
+                    Log::info("Baixa da fatura #{$invoice->id} sincronizada com sucesso no Tiny ERP.");
+                }
+                catch (\Exception $e) {
+                    Log::error("Erro ao sincronizar baixa da fatura #{$invoice->id} no Tiny: " . $e->getMessage());
+                }
+            }
         }
 
         Log::info("Fatura #{$invoice->id} atualizada manualmente para {$validated['status']} por usuário autenticado. Justificativa: {$validated['justification']}");
 
         return response()->json([
-            'message' => 'Fatura atualizada com sucesso.',
+            'message' => 'Fatura atualizada com sucesso e sincronizada com o Tiny.',
             'invoice' => $invoice->load(['client', 'plan']),
         ]);
     }
