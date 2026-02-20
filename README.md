@@ -1,4 +1,4 @@
-# Vermelhinho - Plataforma de Turismo
+# Vermelhinho - Plataforma de Inteligência de Negócios
 
 Bem-vindo ao repositório do projeto **Vermelhinho**. Este sistema é uma plataforma de turismo composta por uma API Backend em Laravel e um Frontend em React.
 
