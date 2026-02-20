@@ -90,6 +90,36 @@ class FinancialController extends Controller
         return $pdf->download('Relatorio_Gestao_PRO_' . $now->format('d-m-Y') . '.pdf');
     }
 
+    /**
+     * Exportar Carnê de Parcelas (PDF Único)
+     */
+    public function exportCarnet($groupId)
+    {
+        $invoices = Invoice::where('group_id', $groupId)
+            ->with(['client', 'plan'])
+            ->orderBy('parcel_number', 'asc')
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return response()->json(['message' => 'Lote de cobranças não encontrado.'], 404);
+        }
+
+        $client = $invoices->first()->client;
+        $totalAmount = $invoices->sum('amount');
+
+        $data = [
+            'client' => $client,
+            'invoices' => $invoices,
+            'totalAmount' => $totalAmount,
+            'installmentsCount' => $invoices->count(),
+            'generatedAt' => now()->format('d/m/Y H:i'),
+        ];
+
+        $pdf = Pdf::loadView('reports.carnet', $data);
+
+        return $pdf->download('Carne_O_Vermelhinho_' . $client->id . '_' . now()->format('d-m-Y') . '.pdf');
+    }
+
 
     /**
      * Listar planos disponíveis
@@ -135,41 +165,76 @@ class FinancialController extends Controller
         $validated = $request->validate([
             'plan_id' => 'required|exists:plans,id',
             'due_date' => 'required|date|after_or_equal:today',
-            'amount' => 'nullable|numeric|min:0', // Se nulo, pega do plano
+            'amount' => 'nullable|numeric|min:0',
+            'installments' => 'nullable|integer|min:1|max:60',
+            'payment_method' => 'nullable|string|in:boleto,pix,cartao,dinheiro',
+            'discount_value' => 'nullable|numeric|min:0',
+            'discount_type' => 'nullable|string|in:fixed,percent'
         ]);
 
         $plan = Plan::find($validated['plan_id']);
-        $amount = $validated['amount'] ?? $plan->price;
+        $totalBase = $validated['amount'] ?? $plan->price;
+        $installments = $validated['installments'] ?? 1;
+        $paymentMethod = $validated['payment_method'] ?? 'boleto';
 
-        $invoice = Invoice::create([
-            'client_id' => $client->id,
-            'plan_id' => $plan->id,
-            'amount' => $amount,
-            'due_date' => $validated['due_date'],
-            'status' => 'pending',
-        ]);
+        // Cálculo de desconto
+        $discount = 0;
+        if (!empty($validated['discount_value'])) {
+            if (($validated['discount_type'] ?? 'fixed') === 'percent') {
+                $discount = ($totalBase * $validated['discount_value']) / 100;
+            }
+            else {
+                $discount = $validated['discount_value'];
+            }
+        }
 
-        try {
-            // Sincroniza com o Tiny
-            $tinyData = $this->tinyService->createReceivable($invoice);
+        $finalTotal = max(0, $totalBase - $discount);
+        $parcelAmount = round($finalTotal / $installments, 2);
 
-            $invoice->update([
-                'tiny_account_id' => $tinyData['tiny_account_id'],
-                'payment_url' => $tinyData['payment_url'],
+        // Ajuste de centavos: a última parcela absorve a diferença
+        $lastParcelAmount = round($finalTotal - ($parcelAmount * ($installments - 1)), 2);
+
+        $groupId = (string)\Illuminate\Support\Str::uuid();
+        $invoicesCreated = [];
+        $dueDate = \Carbon\Carbon::parse($validated['due_date']);
+
+        for ($i = 1; $i <= $installments; $i++) {
+            $currentDueDate = $dueDate->copy()->addMonths($i - 1);
+            $currentAmount = ($i === $installments) ? $lastParcelAmount : $parcelAmount;
+
+            $invoice = Invoice::create([
+                'client_id' => $client->id,
+                'plan_id' => $plan->id,
+                'amount' => $currentAmount,
+                'due_date' => $currentDueDate,
+                'status' => 'pending',
+                'payment_method' => $paymentMethod,
+                'parcel_number' => $i,
+                'total_parcels' => $installments,
+                'group_id' => $groupId
             ]);
 
-            return response()->json([
-                'message' => 'Cobrança gerada e enviada ao Tiny ERP com sucesso.',
-                'invoice' => $invoice->load('plan'),
-            ], 201);
+            try {
+                // Sincroniza cada parcela com o Tiny
+                $tinyData = $this->tinyService->createReceivable($invoice);
+                $invoice->update([
+                    'tiny_account_id' => $tinyData['tiny_account_id'],
+                    'payment_url' => $tinyData['payment_url'],
+                ]);
+            }
+            catch (\Exception $e) {
+                Log::error("Erro ao sincronizar parcela $i da fatura {$invoice->id} com Tiny: " . $e->getMessage());
+            }
 
+            $invoicesCreated[] = $invoice;
         }
-        catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Fatura criada localmente, mas houve erro ao enviar para o Tiny ERP: ' . $e->getMessage(),
-                'invoice' => $invoice->load('plan'),
-            ], 201); // Retorna 201 pois o registro local foi feito
-        }
+
+        return response()->json([
+            'message' => 'Cobrança(s) gerada(s) e enviada(s) ao Tiny ERP com sucesso.',
+            'group_id' => $groupId,
+            'count' => count($invoicesCreated),
+            'invoices' => $invoicesCreated
+        ], 201);
     }
 
     /**

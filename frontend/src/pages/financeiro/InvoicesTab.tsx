@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/services/api";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,7 @@ interface Invoice {
 }
 
 export default function InvoicesTab() {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [dateRange, setDateRange] = useState("all"); // all, 7, 15, 30, custom
@@ -114,6 +116,31 @@ export default function InvoicesTab() {
             return response.data;
         },
     });
+
+    const getWhatsAppLink = (invoice: Invoice, withText: boolean = false) => {
+        // Tenta pegar o whatsapp direto, depois o celular do primeiro contato, depois o telefone principal
+        const rawNumber = invoice.client.whatsapp ||
+            invoice.client.contatos?.[0]?.celular ||
+            invoice.client.contatos?.[0]?.telefone_principal ||
+            '';
+
+        // Remove tudo que não for número
+        const cleaned = rawNumber.replace(/\D/g, '');
+
+        if (!cleaned) return '#';
+
+        // Garante o código do país (55 para Brasil) se tiver 10 ou 11 dígitos
+        const phone = (cleaned.length <= 11 && !cleaned.startsWith('55')) ? `55${cleaned}` : cleaned;
+
+        const baseUrl = `https://wa.me/${phone}`;
+
+        if (withText) {
+            const text = encodeURIComponent(`Olá ${invoice.client.nome_fantasia}, notamos que sua fatura de R$ ${Number(invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} está disponível. Você pode acessar o boleto aqui: ${invoice.payment_url}`);
+            return `${baseUrl}?text=${text}`;
+        }
+
+        return baseUrl;
+    };
 
     const filteredInvoices = invoices?.filter((invoice) => {
         const matchesSearch =
@@ -351,8 +378,9 @@ export default function InvoicesTab() {
                                                                     {invoice.client.contatos?.[0]?.telefone_principal || 'Tel não cadastrado'}
                                                                 </a>
                                                                 <a
-                                                                    href={`https://wa.me/${invoice.client.whatsapp || ''}`}
+                                                                    href={getWhatsAppLink(invoice)}
                                                                     target="_blank"
+                                                                    rel="noopener noreferrer"
                                                                     className="flex items-center gap-3 p-2 rounded-xl hover:bg-green-50 transition-colors text-sm text-green-700 border border-transparent hover:border-green-100 font-medium"
                                                                 >
                                                                     <div className="bg-green-100 p-1.5 rounded-lg text-green-600"><MessageCircle size={14} /></div>
@@ -361,7 +389,12 @@ export default function InvoicesTab() {
                                                             </div>
                                                         </div>
                                                         <div className="pt-2 border-t border-gray-50 flex justify-between">
-                                                            <Button variant="ghost" size="sm" className="text-xs font-bold text-gray-400 hover:text-gray-900">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-xs font-bold text-gray-400 hover:text-gray-900"
+                                                                onClick={() => navigate(`/clientes/${invoice.client.id}/editar`)}
+                                                            >
                                                                 Ver Histórico Completo
                                                             </Button>
                                                         </div>
@@ -403,7 +436,7 @@ export default function InvoicesTab() {
                                                         </button>
 
                                                         <a
-                                                            href={`https://wa.me/${invoice.client.whatsapp || ''}?text=${encodeURIComponent(`Olá ${invoice.client.nome_fantasia}, notamos que sua fatura de R$ ${Number(invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} está disponível: ${invoice.payment_url}`)}`}
+                                                            href={getWhatsAppLink(invoice, true)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"

@@ -170,7 +170,7 @@ public function historico(Request $request, int $id)
         $cursorId = is_numeric($cursorId) ? (int) $cursorId : null;
     }
 
-    $q = AuditLog::query()
+    $q = \App\Models\AuditLog::query()
         ->where('cliente_id', $id)
         ->orderByDesc('created_at')
         ->orderByDesc('id');

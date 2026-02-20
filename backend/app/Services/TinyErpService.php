@@ -109,7 +109,8 @@ class TinyErpService
                 'cidade' => $invoice->client->enderecos()->first()->cidade ?? '',
                 'uf' => $invoice->client->enderecos()->first()->estado ?? '',
             ],
-            // Opcional: Adicionar "boleto" ou "pix" nas obs
+            'meio_pagamento' => $this->mapPaymentMethod($invoice->payment_method),
+            'observacoes' => "Parcela {$invoice->parcel_number}/{$invoice->total_parcels}. " . ($invoice->total_parcels > 1 ? "Grupo: {$invoice->group_id}" : ""),
         ];
 
         try {
@@ -350,5 +351,20 @@ class TinyErpService
         $data['sequencia'] = '1';
 
         return $data;
+    }
+
+    /**
+     * Mapeia o método de pagamento interno para o formato do Tiny.
+     */
+    protected function mapPaymentMethod(?string $method): string
+    {
+        $map = [
+            'boleto' => 'Boleto Bancário',
+            'pix' => 'Pix',
+            'cartao' => 'Cartão de Crédito',
+            'dinheiro' => 'Dinheiro',
+        ];
+
+        return $map[$method] ?? 'Boleto Bancário';
     }
 }

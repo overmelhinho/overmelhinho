@@ -16,6 +16,10 @@ class Invoice extends Model
         'payment_url',
         'justification',
         'action_date',
+        'payment_method',
+        'parcel_number',
+        'total_parcels',
+        'group_id',
     ];
 
     protected $casts = [

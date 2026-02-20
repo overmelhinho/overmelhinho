@@ -22,6 +22,7 @@ import TabGaleria from "./create/steps/TabGaleria";
 import TabMidia from "./create/steps/TabMidia";
 import TabCidadesAtendidas from "./create/steps/TabCidadesAtendidas";
 import TabFinanceiro from "./create/steps/TabFinanceiro";
+import TabAuditoria from "./create/steps/TabAuditoria";
 
 type TipoCliente = "gratuito" | "pagante";
 
@@ -136,6 +137,9 @@ export default function ClienteEdit() {
         { id: 11, label: "Financeiro" }
       );
     }
+
+    // Add "Histórico" as the last tab for both pagante and gratuito clients
+    base.push({ id: base.length, label: "Histórico" });
 
     return base;
   }, [tipoCliente]);
@@ -515,6 +519,7 @@ export default function ClienteEdit() {
               {step === 9 && tipoCliente === "pagante" && <TabMidia />}
               {step === 10 && tipoCliente === "pagante" && <TabGaleria />}
               {step === 11 && tipoCliente === "pagante" && <TabFinanceiro />}
+              {step === 12 && <TabAuditoria />}
             </div>
 
             <div className="flex justify-between">
