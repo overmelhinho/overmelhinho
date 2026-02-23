@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
+
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
@@ -56,10 +59,17 @@ Route::post('/v1/password/reset', [PasswordResetController::class , 'reset']);
 
 Route::get('/v1/lead-intel/diagnostico', [LeadIntelController::class , 'diagnostico']);
 
+use App\Http\Controllers\Api\V1\NotificationController;
+
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', [AuthController::class , 'user']);
     Route::post('/logout', [AuthController::class , 'logout']);
+
+    // Notificações
+    Route::get('/notifications', [NotificationController::class , 'index']);
+    Route::post('/notifications/read-all', [NotificationController::class , 'markAllAsRead']);
+    Route::post('/notifications/{id}/read', [NotificationController::class , 'markAsRead']);
 
     Route::apiResource('users', UserController::class);
     Route::apiResource('roles', RoleController::class);
@@ -90,6 +100,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ✅ Ticket (IMPORTANTE: rotas específicas antes do resource)
     Route::get('tickets/assignees', [TicketController::class , 'assignees']);
+    Route::post('tickets/{id}/subtasks', [TicketController::class , 'storeSubtask']);
+    Route::patch('tickets/{id}/subtasks/{subtaskId}/toggle', [TicketController::class , 'toggleSubtask']);
+    Route::delete('tickets/{id}/subtasks/{subtaskId}', [TicketController::class , 'destroySubtask']);
     Route::apiResource('tickets', TicketController::class)->only(['index', 'store', 'show', 'update']);
 
     // ✅ NOVO: Mídia (portfolio/cardápio/catálogo)

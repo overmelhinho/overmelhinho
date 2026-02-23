@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         \App\Console\Commands\CleanTempSupabase::class ,
         \App\Console\Commands\GenerateRecurringInvoices::class ,
+        \App\Console\Commands\CheckOverdueInvoicesAndCreateTickets::class ,
     ];
 
     /**
@@ -25,6 +26,9 @@ class Kernel extends ConsoleKernel
 
         // 💰 Gera faturas recorrentes todos os dias às 06:00 da manhã
         $schedule->command('financial:generate-recurring')->dailyAt('06:00');
+
+        // 🎫 Verifica faturas vencidas e cria tickets às 07:00 da manhã
+        $schedule->command('app:check-overdue-invoices-tickets')->dailyAt('07:00');
     }
 
     /**

@@ -28,16 +28,23 @@ class TicketController extends Controller
      */
     public function index(Request $request)
     {
-        $perPage = (int) ($request->input('per_page', 20));
-        if ($perPage <= 0) $perPage = 20;
-        if ($perPage > 100) $perPage = 100;
+        $perPage = (int)($request->input('per_page', 20));
+        if ($perPage <= 0)
+            $perPage = 20;
+        if ($perPage > 100)
+            $perPage = 100;
 
         $q = Ticket::query()
             ->with([
-                'cliente:id,nome_fantasia,razao_social,cpf_cnpj,logo_url',
-                'createdBy:id,name,email',
-                'assignee:id,name,email',
-            ])
+            'cliente:id,nome_fantasia,razao_social,cpf_cnpj,logo_url',
+            'createdBy:id,name,email',
+            'assignee:id,name,email',
+            'subtasks',
+        ])
+            ->withCount(['subtasks as completed_subtasks_count' => function ($query) {
+            $query->where('is_completed', true);
+        }])
+            ->withCount('subtasks')
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('cliente_id')) {
@@ -57,7 +64,8 @@ class TicketController extends Controller
                 'aguardando_cliente',
                 'aguardando_interno',
             ]);
-        } elseif ($request->filled('status')) {
+        }
+        elseif ($request->filled('status')) {
             $q->where('status', $request->input('status'));
         }
 
@@ -68,15 +76,16 @@ class TicketController extends Controller
         // Minha fila
         if ($request->boolean('my')) {
             $q->where('assignee_id', auth()->id());
-        } elseif ($request->filled('assignee_id')) {
+        }
+        elseif ($request->filled('assignee_id')) {
             $q->where('assignee_id', $request->input('assignee_id'));
         }
 
         // Vencidos
         if ($request->boolean('overdue')) {
             $q->whereNotNull('due_at')
-              ->where('due_at', '<', now())
-              ->whereNotIn('status', ['fechado', 'closed', 'cancelado', 'canceled']);
+                ->where('due_at', '<', now())
+                ->whereNotIn('status', ['fechado', 'closed', 'cancelado', 'canceled']);
         }
 
         return response()->json([
@@ -92,11 +101,12 @@ class TicketController extends Controller
     public function show($id)
     {
         $ticket = Ticket::with([
-                'cliente:id,nome_fantasia,razao_social,cpf_cnpj,logo_url',
-                'createdBy:id,name,email',
-                'assignee:id,name,email',
-                'logs.user:id,name,email',
-            ])
+            'cliente:id,nome_fantasia,razao_social,cpf_cnpj,logo_url',
+            'createdBy:id,name,email',
+            'assignee:id,name,email',
+            'logs.user:id,name,email',
+            'subtasks.completedBy:id,name',
+        ])
             ->findOrFail($id);
 
         return response()->json([
@@ -131,9 +141,9 @@ class TicketController extends Controller
 
         $data = $eligible->map(function ($u) {
             return [
-                'id' => (int) $u->id,
-                'name' => (string) $u->name,
-                'email' => $u->email ?? null,
+            'id' => (int)$u->id,
+            'name' => (string)$u->name,
+            'email' => $u->email ?? null,
             ];
         })->values();
 
@@ -171,12 +181,12 @@ class TicketController extends Controller
         if (!$assigneeId) {
             $eligible = $this->eligibleUsersForSetor($validated['setor']);
             if ($eligible->count() === 1) {
-                $assigneeId = (int) $eligible->first()->id;
+                $assigneeId = (int)$eligible->first()->id;
             }
         }
 
         $ticket = Ticket::create([
-            'cliente_id' => (int) $validated['cliente_id'],
+            'cliente_id' => (int)$validated['cliente_id'],
             'created_by' => auth()->id(),
             'assignee_id' => $assigneeId,
             'setor' => $validated['setor'],
@@ -193,6 +203,22 @@ class TicketController extends Controller
 
         if (!empty($assigneeId)) {
             $this->logAction($ticket->id, auth()->id(), 'assigned', "Ticket atribuído (assignee_id={$assigneeId})");
+        }
+
+        // DISPARA A NOTIFICAÇÃO DO NOVO TICKET PARA A FILA "ASSIGNEE" OU "SETOR"
+        $usersToNotify = null;
+        if ($assigneeId) {
+            $usersToNotify = \App\Models\User::where('id', $assigneeId)->get();
+        }
+        else {
+            $usersToNotify = $this->eligibleUsersForSetor($ticket->setor);
+        }
+
+        if ($usersToNotify && $usersToNotify->isNotEmpty()) {
+            \Illuminate\Support\Facades\Notification::send(
+                $usersToNotify,
+                new \App\Notifications\TicketAssignedNotification($ticket, 'Novo Ticket Criado', 'created')
+            );
         }
 
         return response()->json([
@@ -245,7 +271,7 @@ class TicketController extends Controller
             $requestedAssignee = $validated['assignee_id']; // pode ser null
             $authId = auth()->id();
 
-            $isSelfAssign = !empty($requestedAssignee) && (int) $requestedAssignee === (int) $authId;
+            $isSelfAssign = !empty($requestedAssignee) && (int)$requestedAssignee === (int)$authId;
             $isRemove = empty($requestedAssignee);
 
             if (!$isSelfAssign) {
@@ -253,8 +279,8 @@ class TicketController extends Controller
                     return response()->json([
                         'success' => false,
                         'message' => $isRemove
-                            ? 'Sem permissão para remover responsável do ticket.'
-                            : 'Sem permissão para delegar ticket para outro usuário.',
+                        ? 'Sem permissão para remover responsável do ticket.'
+                        : 'Sem permissão para delegar ticket para outro usuário.',
                     ], 403);
                 }
             }
@@ -269,7 +295,7 @@ class TicketController extends Controller
             $isResolving = in_array($target, ['resolvido', 'concluido', 'fechado', 'closed'], true);
 
             if ($isResolving) {
-                $clienteId = (int) ($ticket->cliente_id ?? 0);
+                $clienteId = (int)($ticket->cliente_id ?? 0);
 
                 if ($clienteId <= 0) {
                     return response()->json([
@@ -395,7 +421,7 @@ class TicketController extends Controller
             }
 
             $logoOk = !empty($cliente->logo_url);
-            $imgsOk = ((int) ($cliente->galeria_imagens_count ?? 0)) > 0;
+            $imgsOk = ((int)($cliente->galeria_imagens_count ?? 0)) > 0;
 
             if ($logoOk && $imgsOk) {
                 return ['ok' => true, 'message' => 'ok'];
@@ -410,7 +436,8 @@ class TicketController extends Controller
             }
 
             return ['ok' => false, 'message' => 'Não foi possível resolver: não foram encontradas IMAGENS cadastradas na galeria do cliente.'];
-        } catch (\Throwable $e) {
+        }
+        catch (\Throwable $e) {
             Log::warning('creativeAssetsCheck failed', ['cliente_id' => $clienteId, 'error' => $e->getMessage()]);
             return ['ok' => false, 'message' => 'Não foi possível validar os materiais do cliente no momento. Tente novamente.'];
         }
@@ -422,7 +449,8 @@ class TicketController extends Controller
      */
     private function canManageTickets($user): bool
     {
-        if (!$user) return false;
+        if (!$user)
+            return false;
 
         try {
             if (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Administrador', 'Diretor'])) {
@@ -432,8 +460,9 @@ class TicketController extends Controller
             if (method_exists($user, 'can') && $user->can('manage_tickets')) {
                 return true;
             }
-        } catch (\Throwable $e) {
-            // ignore
+        }
+        catch (\Throwable $e) {
+        // ignore
         }
 
         return false;
@@ -448,7 +477,7 @@ class TicketController extends Controller
             'criativo' => ['Criativo'],
             'admin' => ['Administrador', 'Diretor'],
             'financeiro' => [], // quando criar role "Financeiro", coloque aqui
-            'suporte' => [],    // quando criar role "Suporte", coloque aqui
+            'suporte' => [], // quando criar role "Suporte", coloque aqui
         ];
 
         $roles = $map[$setor] ?? [];
@@ -459,9 +488,63 @@ class TicketController extends Controller
 
         try {
             return User::query()->role($roles)->get(['id', 'name', 'email']);
-        } catch (\Throwable $e) {
+        }
+        catch (\Throwable $e) {
             return collect();
         }
+    }
+
+    public function storeSubtask(Request $request, $ticketId)
+    {
+        $ticket = Ticket::findOrFail($ticketId);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255'
+        ]);
+
+        $subtask = $ticket->subtasks()->create([
+            'title' => $validated['title'],
+            'is_completed' => false
+        ]);
+
+        $this->logAction($ticket->id, auth()->id(), 'subtask_created', "Subtarefa adicionada: {$subtask->title}");
+
+        return response()->json([
+            'success' => true,
+            'data' => $subtask
+        ], 201);
+    }
+
+    public function toggleSubtask(Request $request, $ticketId, $subtaskId)
+    {
+        $subtask = \App\Models\TicketSubtask::where('ticket_id', $ticketId)->findOrFail($subtaskId);
+
+        $subtask->is_completed = !$subtask->is_completed;
+        $subtask->completed_at = $subtask->is_completed ? now() : null;
+        $subtask->completed_by = $subtask->is_completed ? auth()->id() : null;
+        $subtask->save();
+
+        $status = $subtask->is_completed ? 'concluída' : 'reaberta';
+        $this->logAction($ticketId, auth()->id(), 'subtask_toggled', "Subtarefa {$status}: {$subtask->title}");
+
+        return response()->json([
+            'success' => true,
+            'data' => $subtask->load('completedBy:id,name')
+        ]);
+    }
+
+    public function destroySubtask($ticketId, $subtaskId)
+    {
+        $subtask = \App\Models\TicketSubtask::where('ticket_id', $ticketId)->findOrFail($subtaskId);
+        $title = $subtask->title;
+        $subtask->delete();
+
+        $this->logAction($ticketId, auth()->id(), 'subtask_deleted', "Subtarefa removida: {$title}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Subtarefa removida.'
+        ]);
     }
 
     private function logAction(int $ticketId, ?int $userId, string $action, ?string $message = null): void
@@ -473,7 +556,8 @@ class TicketController extends Controller
                 'action' => $action,
                 'message' => $message,
             ]);
-        } catch (\Throwable $e) {
+        }
+        catch (\Throwable $e) {
             Log::warning('TicketLog create failed', [
                 'ticket_id' => $ticketId,
                 'user_id' => $userId,

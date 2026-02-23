@@ -47,6 +47,7 @@ export type Ticket = {
   closed_at?: string | null;
 
   meta?: any;
+  sla_status?: "normal" | "warning" | "overdue" | "completed";
 
   created_at?: string | null;
   updated_at?: string | null;
@@ -56,12 +57,27 @@ export type Ticket = {
     nome_fantasia?: string | null;
     razao_social?: string | null;
     cpf_cnpj?: string | null;
+    logo_url?: string | null;
   };
 
   createdBy?: { id: number; name: string; email?: string | null } | null;
   assignee?: { id: number; name: string; email?: string | null } | null;
 
   logs?: TicketLog[];
+  subtasks?: TicketSubtask[];
+  subtasks_count?: number;
+  completed_subtasks_count?: number;
+};
+
+export type TicketSubtask = {
+  id: number;
+  ticket_id: number;
+  title: string;
+  is_completed: boolean;
+  completed_at?: string | null;
+  completed_by?: number | null;
+  completedBy?: { id: number; name: string } | null;
+  created_at: string;
 };
 
 export type Paginated<T> = {
@@ -193,5 +209,50 @@ export function useTicketAssignees(setor?: string) {
       return data.data as AssigneeOption[];
     },
     staleTime: 1000 * 60 * 2,
+  });
+}
+
+// ✅ NOVO: Hooks de subtarefas
+export type CreateSubtaskInput = { title: string };
+
+export function useCreateSubtask(ticketId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateSubtaskInput) => {
+      const { data } = await api.post(`/v1/tickets/${ticketId}/subtasks`, payload);
+      return data.data;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      await qc.invalidateQueries({ queryKey: ["tickets"] });
+    }
+  });
+}
+
+export function useToggleSubtask(ticketId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (subtaskId: number) => {
+      const { data } = await api.patch(`/v1/tickets/${ticketId}/subtasks/${subtaskId}/toggle`);
+      return data.data;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      await qc.invalidateQueries({ queryKey: ["tickets"] });
+    }
+  });
+}
+
+export function useDeleteSubtask(ticketId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (subtaskId: number) => {
+      const { data } = await api.delete(`/v1/tickets/${ticketId}/subtasks/${subtaskId}`);
+      return data.data;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      await qc.invalidateQueries({ queryKey: ["tickets"] });
+    }
   });
 }

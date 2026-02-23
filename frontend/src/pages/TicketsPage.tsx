@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTickets, useTicketAssignees, Ticket } from "@/hooks/useTickets";
+import { useTickets, useTicketAssignees, Ticket, TicketStatus } from "@/hooks/useTickets";
+import TicketKanbanView from "@/components/TicketKanbanView";
 
 type TabKey = "open_all" | "my_open" | "overdue" | "all";
 
@@ -21,12 +22,12 @@ function Badge({
     tone === "danger"
       ? "border-red-200 bg-red-50 text-red-700"
       : tone === "warn"
-      ? "border-yellow-200 bg-yellow-50 text-yellow-800"
-      : tone === "success"
-      ? "border-green-200 bg-green-50 text-green-700"
-      : tone === "info"
-      ? "border-blue-200 bg-blue-50 text-blue-700"
-      : "border-gray-200 bg-white text-gray-700";
+        ? "border-yellow-200 bg-yellow-50 text-yellow-800"
+        : tone === "success"
+          ? "border-green-200 bg-green-50 text-green-700"
+          : tone === "info"
+            ? "border-blue-200 bg-blue-50 text-blue-700"
+            : "border-gray-200 bg-white text-gray-700";
 
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${cls}`}>
@@ -46,11 +47,10 @@ function Toast({
 }) {
   return (
     <div
-      className={`mb-4 flex items-start justify-between gap-4 rounded-2xl border p-4 text-sm shadow-sm ${
-        type === "success"
-          ? "border-green-200 bg-green-50 text-green-800"
-          : "border-red-200 bg-red-50 text-red-800"
-      }`}
+      className={`mb-4 flex items-start justify-between gap-4 rounded-2xl border p-4 text-sm shadow-sm ${type === "success"
+        ? "border-green-200 bg-green-50 text-green-800"
+        : "border-red-200 bg-red-50 text-red-800"
+        }`}
     >
       <div className="leading-relaxed whitespace-pre-line">{message}</div>
       <button onClick={onClose} className="rounded-lg px-2 py-1 text-xs font-semibold hover:bg-black/5">
@@ -66,13 +66,13 @@ function Toast({
 type ConfirmState =
   | null
   | {
-      title: string;
-      description?: string;
-      confirmText?: string;
-      cancelText?: string;
-      tone?: "default" | "danger";
-      onConfirm: () => Promise<void> | void;
-    };
+    title: string;
+    description?: string;
+    confirmText?: string;
+    cancelText?: string;
+    tone?: "default" | "danger";
+    onConfirm: () => Promise<void> | void;
+  };
 
 function ConfirmDialog({
   open,
@@ -118,9 +118,8 @@ function ConfirmDialog({
             <button
               onClick={onConfirm}
               disabled={!!loading}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50 ${
-                tone === "danger" ? "bg-red-600 hover:opacity-95" : "bg-gray-900 hover:opacity-95"
-              }`}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50 ${tone === "danger" ? "bg-red-600 hover:opacity-95" : "bg-gray-900 hover:opacity-95"
+                }`}
             >
               {loading ? "Processando..." : confirmText}
             </button>
@@ -165,9 +164,8 @@ function RowMenu({
                   setOpen(false);
                   it.onClick();
                 }}
-                className={`w-full px-4 py-3 text-left text-sm font-medium hover:bg-gray-50 ${
-                  it.danger ? "text-red-700" : "text-gray-800"
-                }`}
+                className={`w-full px-4 py-3 text-left text-sm font-medium hover:bg-gray-50 ${it.danger ? "text-red-700" : "text-gray-800"
+                  }`}
               >
                 {it.label}
               </button>
@@ -325,12 +323,13 @@ export default function TicketsPage() {
 
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
 
   const queryParams = useMemo(() => {
     const base: any = {
       setor: filters.setor || undefined,
       prioridade: filters.prioridade || undefined,
-      per_page: filters.per_page,
+      per_page: viewMode === "kanban" ? 100 : filters.per_page, // No kanban pegamos mais itens
       page: filters.page,
     };
 
@@ -443,16 +442,35 @@ export default function TicketsPage() {
           <p className="text-sm text-gray-600">Central operacional (Criativo, Financeiro, etc.)</p>
         </div>
 
-        <div className="inline-flex flex-wrap gap-2">
+        <div className="inline-flex flex-wrap gap-2 items-center">
+          <div className="inline-flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm mr-2">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold transition-all ${viewMode === "list" ? "bg-gray-100 text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                }`}
+            >
+              Lista
+            </button>
+            <button
+              onClick={() => {
+                setViewMode("kanban");
+                setTab("open_all");
+              }}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold transition-all ${viewMode === "kanban" ? "bg-gray-100 text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                }`}
+            >
+              Kanban
+            </button>
+          </div>
+
           <div className="inline-flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm">
             <button
               onClick={() => {
                 setTab("open_all");
                 setFilters((f) => ({ ...f, page: 1 }));
               }}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                tab === "open_all" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold ${tab === "open_all" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50"
+                }`}
             >
               Abertos
             </button>
@@ -462,9 +480,8 @@ export default function TicketsPage() {
                 setTab("my_open");
                 setFilters((f) => ({ ...f, page: 1 }));
               }}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                tab === "my_open" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold ${tab === "my_open" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50"
+                }`}
             >
               Minha fila
             </button>
@@ -474,9 +491,8 @@ export default function TicketsPage() {
                 setTab("overdue");
                 setFilters((f) => ({ ...f, page: 1 }));
               }}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                tab === "overdue" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold ${tab === "overdue" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50"
+                }`}
             >
               Vencidos
             </button>
@@ -486,9 +502,8 @@ export default function TicketsPage() {
                 setTab("all");
                 setFilters((f) => ({ ...f, page: 1 }));
               }}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                tab === "all" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold ${tab === "all" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50"
+                }`}
               title="Inclui resolvidos/fechados/cancelados"
             >
               Todos
@@ -556,8 +571,8 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      {/* Lista */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      {/* Lista / Kanban */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm min-h-[400px]">
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <div className="text-sm text-gray-700">
             {isLoading
@@ -565,11 +580,24 @@ export default function TicketsPage() {
               : `Total: ${total}${filters.search.trim() ? ` (filtrado: ${filteredRows.length})` : ""}`}
           </div>
 
-          {tab === "my_open" && (
-            <div className="text-xs text-gray-500">
-              Dica: tickets só aparecem aqui quando você <span className="font-semibold">assume</span> ou alguém atribui.
+          <div className="flex items-center gap-4">
+            {tab === "my_open" && (
+              <div className="text-xs text-gray-500 border-r pr-4 border-gray-200">
+                Dica: tickets só aparecem aqui quando você <span className="font-semibold">assume</span> ou alguém atribui.
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Atrasado</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 rounded-full bg-yellow-400" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Crítico</span>
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         {isError && <div className="p-6 text-sm text-red-600">Erro ao carregar tickets. Verifique token/permissões.</div>}
@@ -585,176 +613,126 @@ export default function TicketsPage() {
         )}
 
         {!isLoading && !isError && filteredRows.length === 0 && (
-          <div className="p-8 text-center">
-            <div className="mx-auto mb-2 text-sm font-semibold text-gray-900">Nada por aqui</div>
-            <div className="mx-auto max-w-lg text-sm text-gray-600">
-              {tab === "my_open"
-                ? "Você não tem tickets atribuídos. Vá em “Abertos” e clique em “Assumir”."
-                : "Nenhum ticket encontrado com esses filtros."}
-            </div>
-            {tab === "my_open" && (
-              <button
-                className="mt-4 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
-                onClick={() => setTab("open_all")}
-              >
-                Ver abertos
-              </button>
-            )}
+          <div className="p-8 text-center text-gray-500">
+            Nenhum ticket encontrado nesta visualização.
           </div>
         )}
 
-        {!isLoading && filteredRows.length > 0 && (
-          <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[1150px] text-left text-sm">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-600">
-                <tr>
-                  <th className="px-4 py-3">ID</th>
-                  <th className="px-4 py-3">Cliente</th>
-                  <th className="px-4 py-3">Setor</th>
-                  <th className="px-4 py-3">Responsável</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Prioridade</th>
-                  <th className="px-4 py-3">Prazo</th>
-                  <th className="px-4 py-3">Criado</th>
-                  <th className="px-4 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
+        {!isLoading && !isError && filteredRows.length > 0 && (
+          viewMode === "list" ? (
+            <div className="w-full overflow-x-auto">
+              <table className="w-full min-w-[1150px] text-left text-sm">
+                <thead className="bg-gray-50 text-xs uppercase text-gray-600">
+                  <tr>
+                    <th className="px-4 py-3">ID</th>
+                    <th className="px-4 py-3">Cliente</th>
+                    <th className="px-4 py-3">Setor</th>
+                    <th className="px-4 py-3">Responsável</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                    <th className="px-4 py-3 text-center">Prioridade</th>
+                    <th className="px-4 py-3 text-center">Prazo</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
 
-              <tbody className="divide-y divide-gray-100">
-                {filteredRows.map((t) => {
-                  const isUnassigned = !t.assignee_id;
+                <tbody className="divide-y divide-gray-100">
+                  {filteredRows.map((t) => {
+                    const isUnassigned = !t.assignee_id;
+                    const clienteNome = t.cliente?.nome_fantasia || t.cliente?.razao_social || "—";
+                    const clienteId = t.cliente?.id ?? t.cliente_id ?? null;
 
-                  const clienteNome = t.cliente?.nome_fantasia || t.cliente?.razao_social || "—";
-                  const clienteId = t.cliente?.id ?? t.cliente_id ?? null;
+                    return (
+                      <tr key={t.id} className="hover:bg-gray-50 h-16">
+                        <td className="px-4 py-3 font-medium text-gray-900 border-l-4" style={{
+                          borderLeftColor: t.sla_status === 'overdue' ? '#ef4444' : t.sla_status === 'warning' ? '#facc15' : 'transparent'
+                        }}>
+                          #{t.id}
+                        </td>
 
-                  return (
-                    <tr key={t.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900">#{t.id}</td>
-
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="font-medium text-gray-900">{clienteNome}</div>
-
-                          {clienteId && (
-                            <a
-                              href={`/clientes/${clienteId}/editar`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
-                              title="Abrir cliente em nova aba"
-                            >
-                              Abrir cliente ↗
-                            </a>
-                          )}
-                        </div>
-
-                        {t.titulo && <div className="text-xs text-gray-500 line-clamp-1">{t.titulo}</div>}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <Badge>{t.setor}</Badge>
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {t.assignee?.name ? (
-                          <span className="text-gray-900 font-medium">{t.assignee.name}</span>
-                        ) : (
-                          <span className="text-gray-500">—</span>
-                        )}
-
-                        {canDelegate && (
-                          <div className="mt-2">
-                            <DelegarSelect
-                              setor={t.setor}
-                              currentAssigneeId={t.assignee_id}
-                              disabled={quickMutation.isPending}
-                              onDelegate={(assigneeId, label) => delegate(t, assigneeId, label)}
-                            />
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold text-gray-900 max-w-[200px] truncate">{clienteNome}</div>
+                            {clienteId && (
+                              <Link to={`/clientes/${clienteId}/editar`} className="text-[9px] font-bold bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 hover:bg-gray-200">ABRIR</Link>
+                            )}
                           </div>
-                        )}
-                      </td>
+                          <div className="text-[11px] text-gray-500 line-clamp-1 max-w-[250px]">{t.titulo}</div>
+                        </td>
 
-                      <td className="px-4 py-3">
-                        <Badge tone={statusTone(t.status)}>{statusLabelPt(t.status)}</Badge>
-                      </td>
+                        <td className="px-4 py-3">
+                          <Badge>{t.setor}</Badge>
+                        </td>
 
-                      <td className="px-4 py-3">
-                        <Badge tone={prioridadeTone(t.prioridade)}>{prioridadeLabelPt(t.prioridade)}</Badge>
-                      </td>
-
-                      <td className="px-4 py-3">{fmtDate(t.due_at)}</td>
-                      <td className="px-4 py-3">{fmtDate(t.created_at)}</td>
-
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Primária: assumir (com modal) */}
-                          {isUnassigned && tab !== "overdue" && (
-                            <button
-                              disabled={quickMutation.isPending}
-                              onClick={() => confirmAssume(t)}
-                              className="rounded-xl bg-gray-900 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
-                              title="Assumir este ticket"
-                            >
-                              Assumir
-                            </button>
+                        <td className="px-4 py-3">
+                          {t.assignee?.name ? (
+                            <div className="flex items-center gap-1.5">
+                              <div className="h-6 w-6 rounded-full bg-gray-900 flex items-center justify-center text-[10px] text-white font-bold">
+                                {t.assignee.name.substring(0, 1)}
+                              </div>
+                              <span className="text-gray-900 font-medium text-xs">{t.assignee.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">Sem responsável</span>
                           )}
 
-                          {/* Primária: ver */}
-                          <Link
-                            to={`/tickets/${t.id}`}
-                            className="rounded-xl bg-[#B70F0A] px-3 py-2 text-xs font-semibold text-white shadow-sm hover:opacity-95"
-                          >
-                            Ver
-                          </Link>
+                          {canDelegate && (
+                            <div className="mt-1">
+                              <DelegarSelect
+                                setor={t.setor}
+                                currentAssigneeId={t.assignee_id}
+                                disabled={quickMutation.isPending}
+                                onDelegate={(assigneeId, label) => delegate(t, assigneeId, label)}
+                              />
+                            </div>
+                          )}
+                        </td>
 
-                          {/* Secundárias: dropdown (sem ações rápidas de status) */}
-                          <RowMenu
-                            disabled={quickMutation.isPending}
-                            items={[
-                              ...(clienteId
-                                ? [
-                                    {
-                                      label: "Abrir cliente em nova aba",
-                                      onClick: () => window.open(`/clientes/${clienteId}/editar`, "_blank", "noreferrer"),
-                                    },
-                                  ]
-                                : []),
-                              {
-                                label: "Abrir ticket em nova aba",
-                                onClick: () => window.open(`/tickets/${t.id}`, "_blank", "noreferrer"),
-                              },
-                              {
-                                label: "Copiar ID do ticket",
-                                onClick: async () => {
-                                  try {
-                                    await navigator.clipboard.writeText(String(t.id));
-                                    setToast({ type: "success", msg: `ID #${t.id} copiado.` });
-                                  } catch {
-                                    setToast({ type: "error", msg: "Não foi possível copiar." });
-                                  }
-                                },
-                              },
-                            ]}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <td className="px-4 py-3 text-center text-xs">
+                          <Badge tone={statusTone(t.status)}>{statusLabelPt(t.status)}</Badge>
+                        </td>
+
+                        <td className="px-4 py-3 text-center text-xs">
+                          <Badge tone={prioridadeTone(t.prioridade)}>{prioridadeLabelPt(t.prioridade)}</Badge>
+                        </td>
+
+                        <td className="px-4 py-3 text-center">
+                          <div className={`text-xs font-semibold ${t.sla_status === 'overdue' ? 'text-red-600' : t.sla_status === 'warning' ? 'text-yellow-600' : 'text-gray-600'}`}>
+                            {fmtDate(t.due_at)}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {isUnassigned && tab !== "overdue" && (
+                              <button onClick={() => confirmAssume(t)} className="bg-gray-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm hover:opacity-90">Assumir</button>
+                            )}
+                            <Link to={`/tickets/${t.id}`} className="bg-[#B70F0A] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm hover:opacity-90">Ver</Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <TicketKanbanView
+              tickets={filteredRows}
+              onAssume={confirmAssume}
+              onMove={(t, s) => quickMutation.mutate({ id: t.id, data: { status: s }, successMsg: "Status atualizado" })}
+            />
+          )
         )}
 
-        {!isLoading && data && data.last_page > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-            <div className="text-sm text-gray-600">
+        {!isLoading && data && data.last_page > 1 && viewMode === 'list' && (
+          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 bg-gray-50/50">
+            <div className="text-xs text-gray-500 font-medium">
               Página {data.current_page} de {data.last_page}
             </div>
 
             <div className="flex items-center gap-2">
               <button
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
                 disabled={filters.page <= 1}
                 onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, f.page - 1) }))}
               >
@@ -762,7 +740,7 @@ export default function TicketsPage() {
               </button>
 
               <button
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
                 disabled={filters.page >= data.last_page}
                 onClick={() => setFilters((f) => ({ ...f, page: Math.min(data.last_page, f.page + 1) }))}
               >

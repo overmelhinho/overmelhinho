@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTicket, useUpdateTicket, TicketStatus, TicketPrioridade } from "@/hooks/useTickets";
+import { useTicket, useUpdateTicket, TicketStatus, TicketPrioridade, useCreateSubtask, useToggleSubtask, useDeleteSubtask } from "@/hooks/useTickets";
 
 /** ---------------------------
  * Utils
@@ -100,12 +100,12 @@ function Badge({
     tone === "danger"
       ? "border-red-200 bg-red-50 text-red-700"
       : tone === "warn"
-      ? "border-yellow-200 bg-yellow-50 text-yellow-800"
-      : tone === "success"
-      ? "border-green-200 bg-green-50 text-green-700"
-      : tone === "info"
-      ? "border-blue-200 bg-blue-50 text-blue-700"
-      : "border-gray-200 bg-white text-gray-700";
+        ? "border-yellow-200 bg-yellow-50 text-yellow-800"
+        : tone === "success"
+          ? "border-green-200 bg-green-50 text-green-700"
+          : tone === "info"
+            ? "border-blue-200 bg-blue-50 text-blue-700"
+            : "border-gray-200 bg-white text-gray-700";
 
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${cls}`}>
@@ -125,11 +125,10 @@ function Toast({
 }) {
   return (
     <div
-      className={`mb-4 flex items-start justify-between gap-4 rounded-2xl border p-4 text-sm shadow-sm ${
-        type === "success"
-          ? "border-green-200 bg-green-50 text-green-800"
-          : "border-red-200 bg-red-50 text-red-800"
-      }`}
+      className={`mb-4 flex items-start justify-between gap-4 rounded-2xl border p-4 text-sm shadow-sm ${type === "success"
+        ? "border-green-200 bg-green-50 text-green-800"
+        : "border-red-200 bg-red-50 text-red-800"
+        }`}
     >
       <div className="leading-relaxed whitespace-pre-line">{message}</div>
       <button onClick={onClose} className="rounded-lg px-2 py-1 text-xs font-semibold hover:bg-black/5">
@@ -145,13 +144,13 @@ function Toast({
 type ConfirmState =
   | null
   | {
-      title: string;
-      description?: string;
-      confirmText?: string;
-      cancelText?: string;
-      tone?: "default" | "danger";
-      onConfirm: () => Promise<void> | void;
-    };
+    title: string;
+    description?: string;
+    confirmText?: string;
+    cancelText?: string;
+    tone?: "default" | "danger";
+    onConfirm: () => Promise<void> | void;
+  };
 
 function ConfirmDialog({
   open,
@@ -197,9 +196,8 @@ function ConfirmDialog({
             <button
               onClick={onConfirm}
               disabled={!!loading}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50 ${
-                tone === "danger" ? "bg-red-600 hover:opacity-95" : "bg-gray-900 hover:opacity-95"
-              }`}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50 ${tone === "danger" ? "bg-red-600 hover:opacity-95" : "bg-gray-900 hover:opacity-95"
+                }`}
             >
               {loading ? "Processando..." : confirmText}
             </button>
@@ -248,9 +246,8 @@ function ActionMenu({
                   setOpen(false);
                   it.onClick();
                 }}
-                className={`w-full px-4 py-3 text-left text-sm font-medium hover:bg-gray-50 ${
-                  it.danger ? "text-red-700" : "text-gray-800"
-                }`}
+                className={`w-full px-4 py-3 text-left text-sm font-medium hover:bg-gray-50 ${it.danger ? "text-red-700" : "text-gray-800"
+                  }`}
               >
                 {it.label}
               </button>
@@ -300,6 +297,11 @@ export default function TicketDetailsPage() {
 
   const update = useUpdateTicket(ticketId || 0);
 
+  const [newSubtask, setNewSubtask] = useState("");
+  const createSubtask = useCreateSubtask(ticketId || 0);
+  const toggleSubtask = useToggleSubtask(ticketId || 0);
+  const deleteSubtask = useDeleteSubtask(ticketId || 0);
+
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const [comment, setComment] = useState("");
@@ -331,6 +333,17 @@ export default function TicketDetailsPage() {
     if (!ticketId || !msg) return;
     await quickUpdate({ comment: msg }, "Comentário adicionado e registrado na timeline.");
     setComment("");
+  }
+
+  async function onAddSubtask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newSubtask.trim()) return;
+    try {
+      await createSubtask.mutateAsync({ title: newSubtask });
+      setNewSubtask("");
+    } catch {
+      setToast({ type: "error", msg: "Erro ao criar subtarefa." });
+    }
   }
 
   function openConfirm(cfg: Omit<NonNullable<ConfirmState>, "onConfirm"> & { onConfirm: NonNullable<ConfirmState>["onConfirm"] }) {
@@ -519,6 +532,72 @@ export default function TicketDetailsPage() {
               ) : (
                 <div className="mt-2 text-sm text-gray-500">Sem descrição.</div>
               )}
+            </div>
+
+            {/* Subtarefas */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-semibold text-gray-900">Checklist (Subtarefas)</div>
+                <div className="text-xs text-gray-500 font-medium">
+                  {ticket.completed_subtasks_count || 0}/{ticket.subtasks_count || 0}
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                {ticket.subtasks?.map(st => (
+                  <div key={st.id} className="flex items-start gap-3 group">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
+                      checked={st.is_completed}
+                      onChange={() => toggleSubtask.mutate(st.id)}
+                      disabled={toggleSubtask.isPending || deleteSubtask.isPending}
+                    />
+                    <div className="flex-1">
+                      <div className={`text-sm ${st.is_completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                        {st.title}
+                      </div>
+                      {st.is_completed && st.completedBy && (
+                        <div className="text-[10px] text-gray-500 mt-0.5">
+                          Concluído por {st.completedBy.name} em {fmtDate(st.completed_at)}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Tem certeza que deseja remover esta subtarefa?")) {
+                          deleteSubtask.mutate(st.id);
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 transition-opacity"
+                      title="Excluir"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                {(!ticket.subtasks || ticket.subtasks.length === 0) && (
+                  <div className="text-sm text-gray-500 italic">Nenhuma subtarefa.</div>
+                )}
+              </div>
+
+              <form onSubmit={onAddSubtask} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nova subtarefa..."
+                  className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:bg-white"
+                  value={newSubtask}
+                  onChange={e => setNewSubtask(e.target.value)}
+                  disabled={createSubtask.isPending}
+                />
+                <button
+                  type="submit"
+                  disabled={!newSubtask.trim() || createSubtask.isPending}
+                  className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
+                >
+                  Adicionar
+                </button>
+              </form>
             </div>
 
             {/* Meta cards */}
