@@ -59,6 +59,10 @@ import PublicJobDetail from "@/pages/vagas/PublicJobDetail";
 import FinanceiroPage from "@/pages/financeiro/FinanceiroPage";
 import PlansPage from "@/pages/financeiro/PlansPage";
 
+// ✅ Fila de Foco
+import FocusDashboard from "@/pages/dashboard/FocusDashboard";
+
+
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
 
@@ -67,6 +71,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute perms={["view_dashboard"]}>
         <DashboardPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/dashboard/foco",
+    element: (
+      <ProtectedRoute>
+        <FocusDashboard />
       </ProtectedRoute>
     ),
   },

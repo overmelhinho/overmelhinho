@@ -99,6 +99,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('clientes/{cliente}/logo/commit-temp', [ClienteController::class , 'commitLogoTemp']);
 
     // ✅ Ticket (IMPORTANTE: rotas específicas antes do resource)
+    Route::get('tickets/my-focus', [TicketController::class , 'myFocusQueue']);
     Route::get('tickets/assignees', [TicketController::class , 'assignees']);
     Route::post('tickets/{id}/subtasks', [TicketController::class , 'storeSubtask']);
     Route::patch('tickets/{id}/subtasks/{subtaskId}/toggle', [TicketController::class , 'toggleSubtask']);

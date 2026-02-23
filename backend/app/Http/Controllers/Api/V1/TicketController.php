@@ -547,6 +547,41 @@ class TicketController extends Controller
         ]);
     }
 
+    public function myFocusQueue(Request $request)
+    {
+        $user = auth()->user();
+
+        $query = Ticket::query()
+            ->with(['cliente:id,nome_fantasia,razao_social,logo_url,status_assinatura'])
+            ->where('assignee_id', $user->id)
+            ->whereNotIn('status', ['fechado', 'closed', 'cancelado', 'canceled', 'concluido', 'resolvido']);
+
+        // Algoritmo de Priorização
+        // 1. SLA (due_at) ASC - Nulls last
+        // 2. Prioridade (Urgent > Alta > Media > Baixa)
+        // 3. Status Cliente (Premium > Normal)
+
+        $query->leftJoin('clientes', 'tickets.cliente_id', '=', 'clientes.id')
+            ->select('tickets.*') // Evita colisão de IDs com o join
+            ->orderByRaw('CASE WHEN tickets.due_at IS NULL THEN 1 ELSE 0 END ASC')
+            ->orderBy('tickets.due_at', 'asc')
+            ->orderByRaw("CASE 
+                WHEN tickets.prioridade = 'urgente' THEN 4 
+                WHEN tickets.prioridade = 'alta' THEN 3 
+                WHEN tickets.prioridade = 'media' THEN 2 
+                ELSE 1 
+            END DESC")
+            ->orderByRaw("CASE WHEN clientes.status_assinatura = 'premium' THEN 1 ELSE 0 END DESC")
+            ->orderBy('tickets.created_at', 'asc');
+
+        $tickets = $query->paginate(10);
+
+        return response()->json([
+            'success' => true,
+            'data' => $tickets
+        ]);
+    }
+
     private function logAction(int $ticketId, ?int $userId, string $action, ?string $message = null): void
     {
         try {

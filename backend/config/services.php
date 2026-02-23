@@ -3,16 +3,16 @@
 return [
 
     /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
+     |--------------------------------------------------------------------------
+     | Third Party Services
+     |--------------------------------------------------------------------------
+     |
+     | This file is for storing the credentials for third party services such
+     | as Mailgun, Postmark, AWS and more. This file provides the de facto
+     | location for this type of information, allowing packages to have
+     | a conventional file to locate the various service credentials.
+     |
+     */
 
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
@@ -35,21 +35,23 @@ return [
         ],
     ],
 
-
-'google' => [
-    'places_key' => env('GOOGLE_PLACES_KEY'),
-],
-'openai' => [
-    'key' => env('OPENAI_API_KEY'),
-],
+    'google' => [
+        'places_key' => env('GOOGLE_PLACES_KEY'),    ],    'openai' => [
+        'key' => env('OPENAI_API_KEY'),    ],
 
 
 
- // 🗄️ Supabase
+    // 🗄️ Supabase
     'supabase' => [
         'url' => env('SUPABASE_URL'),
         'key' => env('SUPABASE_KEY'),
         'bucket' => env('SUPABASE_BUCKET', 'clientes-media'),
+    ],
+
+
+    // 🪝 External Webhooks (WhatsApp/Generic)
+    'webhook' => [
+        'url' => env('WEBHOOK_NOTIFICATION_URL'),
     ],
 
 
