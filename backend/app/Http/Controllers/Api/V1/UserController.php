@@ -6,13 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Hash;
 
-class UserController extends Controller
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+
+class UserController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    public static function middleware(): array
     {
-        \Log::info('UserController CONSTRUTOR chamado!');
-        // $this->middleware(['role:Admin|Diretor']);
+        return [
+            new Middleware('role:Admin|Administrador|Diretor', except: ['updateSelf']),
+        ];
     }
 
     public function index()
@@ -101,5 +106,39 @@ class UserController extends Controller
         $user->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Atualiza os dados do próprio usuário logado.
+     */
+    public function updateSelf(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'name'             => 'sometimes|string|max:255',
+            'email'            => 'sometimes|email|unique:users,email,' . $user->id,
+            'current_password' => 'required_with:password|string',
+            'password'         => 'nullable|string|min:6',
+        ]);
+
+        if ($request->filled('name')) {
+            $user->name = $request->name;
+        }
+        if ($request->filled('email')) {
+            $user->email = $request->email;
+        }
+        if ($request->filled('password')) {
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json(['message' => 'Senha atual incorreta.'], 422);
+            }
+            $user->password = bcrypt($request->password);
+        }
+        $user->save();
+
+        return response()->json([
+            'message' => 'Perfil atualizado com sucesso.',
+            'user'    => $user->load('roles', 'permissions'),
+        ]);
     }
 }

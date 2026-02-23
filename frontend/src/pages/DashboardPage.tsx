@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
+// @ts-expect-error jsx component
 import DashboardDiretoria from "./dashboard/DashboardDiretoria";
-import DashboardComercial from "./dashboard/DashboardComercial";
+// @ts-expect-error jsx component
 import DashboardAdmin from "./dashboard/DashboardAdmin";
+// @ts-expect-error jsx component
 import DashboardDefault from "./dashboard/DashboardDefault";
+import FocusDashboard from "./dashboard/FocusDashboard";
 import { Loader } from "lucide-react";
 import axios from "@/services/api";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +22,10 @@ const dashboards: Record<string, React.FC<{ user: User }>> = {
   admin: DashboardAdmin,
   administrador: DashboardAdmin,
   diretoria: DashboardDiretoria,
-  comercial: DashboardComercial,
+  diretor: DashboardDiretoria,
+  comercial: FocusDashboard,
+  marketing: FocusDashboard,
+  operacional: FocusDashboard,
   default: DashboardDefault,
 };
 

@@ -72,7 +72,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class , 'markAllAsRead']);
     Route::post('/notifications/{id}/read', [NotificationController::class , 'markAsRead']);
 
-    Route::apiResource('users', UserController::class);
+    // Route::apiResource('users', UserController::class);
     Route::apiResource('roles', RoleController::class);
     Route::apiResource('permissions', PermissionController::class);
 
@@ -143,8 +143,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('leads/{lead}/converter', [LeadController::class , 'converterOportunidade']);
     Route::post('oportunidades/{oportunidade}/converter-cliente', [OportunidadeController::class , 'converterCliente']);
 
-    Route::get('/leads/stats', [LeadController::class , 'stats'])->middleware('permission:view_lead');
+    Route::apiResource('users', UserController::class);
     Route::get('/dashboard/kpis', [DashboardController::class , 'kpis']);
+
+    Route::get('/leads/stats', [LeadController::class , 'stats'])->middleware('permission:view_lead');
     Route::get('/dashboard/test', [DashboardController::class , 'test']);
 
     Route::get('/lead-intel/fetch', [LeadIntelController::class , 'fetch']);

@@ -16,6 +16,7 @@ import {
   Briefcase,
   CreditCard,
   DollarSign, // Financeiro
+  Target,
 } from "lucide-react";
 
 type Item = {
@@ -46,6 +47,11 @@ export default function Sidebar() {
       icon: <LayoutDashboard size={18} />,
       perms: ["view_dashboard"],
     },
+    {
+      to: "/dashboard/foco",
+      label: "Fila de Foco",
+      icon: <Target size={18} />,
+    },
 
     { to: "/leads-kanban", label: "Leads", icon: <UserPlus size={18} />, perms: ["view_lead"] },
 
@@ -54,23 +60,16 @@ export default function Sidebar() {
       to: "/campanhas",
       label: "Campanhas",
       icon: <Megaphone size={18} />,
-      perms: [
-        "view_campaign",
-        "view_campaigns",
-        "view_campanha",
-        "view_campanhas",
-        "manage_campaigns",
-        "manage_campanhas",
-      ],
+      perms: ["view_campanha"],
     },
     {
       to: "/financeiro",
       label: "Financeiro",
       icon: <DollarSign size={18} />,
-      perms: ["manage_financial", "view_financial"],
+      perms: ["view_financial"],
     },
     { to: "/relatorios", label: "Relatórios", icon: <FileText size={18} />, perms: ["view_report"] },
-    { to: "/criativo", label: "Criativo", icon: <Palette size={18} />, perms: ["manage_creative"] },
+    { to: "/criativo", label: "Criativo", icon: <Palette size={18} />, perms: ["manage_creative", "view_dashboard"] }, // Ajustado para acesso básico se tiver dashboard
     { to: "/tickets", label: "Tickets", icon: <Ticket size={18} /> },
     { to: "/vagas", label: "Vagas PRO", icon: <Briefcase size={18} /> },
   ];

@@ -78,7 +78,9 @@ const router = createBrowserRouter([
     path: "/dashboard/foco",
     element: (
       <ProtectedRoute>
-        <FocusDashboard />
+        <DashboardLayout>
+          <FocusDashboard />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },
@@ -312,7 +314,9 @@ const router = createBrowserRouter([
     path: "/relatorios",
     element: (
       <ProtectedRoute perms={["view_report"]}>
-        <RelatoriosPage />
+        <DashboardLayout>
+          <RelatoriosPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },
@@ -320,8 +324,10 @@ const router = createBrowserRouter([
   {
     path: "/criativo",
     element: (
-      <ProtectedRoute perms={["manage_creative"]}>
-        <CriativoPage />
+      <ProtectedRoute perms={["view_dashboard"]}>
+        <DashboardLayout>
+          <CriativoPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },
@@ -330,7 +336,9 @@ const router = createBrowserRouter([
     path: "/configuracoes",
     element: (
       <ProtectedRoute perms={["manage_settings"]}>
-        <ConfiguracoesPage />
+        <DashboardLayout>
+          <ConfiguracoesPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },

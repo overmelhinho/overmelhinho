@@ -8,28 +8,36 @@ type ProtectedRouteProps = {
 };
 
 export default function ProtectedRoute({ perms = [], children }: ProtectedRouteProps) {
-  const { user } = useAuth();
+  // ✅ CORRIGIDO: usa isLoading para distinguir "ainda buscando" de "não autenticado"
+  const { user, isLoading } = useAuth();
 
-  // Se ainda está carregando o usuário, exibe um loading ou spinner
-  // (mantive sua lógica, só deixei mais explícito e seguro)
-  if (user === null) {
-    return <div>Carregando...</div>;
+  // Enquanto ainda está buscando o usuário, exibe spinner
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-950">
+        <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  // Se não tem usuário autenticado, vai pro login
+  // Carregamento concluído e não há usuário → redirect para login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
   // Garante arrays válidos
   const userPermissions: string[] = Array.isArray(user?.permissions) ? user.permissions : [];
-  const userRoles: string[] = Array.isArray(user?.roles) ? user.roles : [];
+  // ✅ CORRIGIDO: comparação case-insensitive para o role Admin
+  const userRoles: string[] = Array.isArray(user?.roles)
+    ? user.roles.map((r) => r.toLowerCase())
+    : [];
 
-  // Libera acesso se: não exige perms OU user tem perms OU user é admin
+  // Libera acesso se: não exige perms OU user tem a perm OU user é Admin (qualquer capitalização)
   const hasPermission =
     perms.length === 0 ||
     userPermissions.some((perm) => perms.includes(perm)) ||
-    userRoles.includes("admin");
+    userRoles.includes("admin") ||
+    userRoles.includes("administrador");
 
   // Sem permissão: unauthorized
   if (!hasPermission) {
