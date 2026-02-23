@@ -134,7 +134,7 @@ class TicketController extends Controller
             ], 403);
         }
 
-        $allowedSetores = ['criativo', 'financeiro', 'admin', 'suporte'];
+        $allowedSetores = ['criativo', 'financeiro', 'admin', 'suporte', 'marketing', 'comercial'];
 
         $validated = $request->validate([
             'setor' => ['required', 'string', Rule::in($allowedSetores)],
@@ -164,7 +164,7 @@ class TicketController extends Controller
      */
     public function store(Request $request)
     {
-        $allowedSetores = ['criativo', 'financeiro', 'admin', 'suporte'];
+        $allowedSetores = ['criativo', 'financeiro', 'admin', 'suporte', 'marketing', 'comercial'];
         $allowedPrioridades = ['baixa', 'media', 'alta', 'urgente'];
 
         $validated = $request->validate([
@@ -483,8 +483,10 @@ class TicketController extends Controller
         $map = [
             'criativo' => ['Criativo'],
             'admin' => ['Administrador', 'Diretor'],
-            'financeiro' => [], // quando criar role "Financeiro", coloque aqui
-            'suporte' => [], // quando criar role "Suporte", coloque aqui
+            'marketing' => ['Administrador', 'Diretor'],
+            'comercial' => ['Comercial'],
+            'financeiro' => [],
+            'suporte' => [],
         ];
 
         $roles = $map[$setor] ?? [];

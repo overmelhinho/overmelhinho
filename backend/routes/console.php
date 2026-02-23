@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // Roda todos os dias às 10 da manhã para verificar quais leads completam o ciclo naquele dia
 use Illuminate\Support\Facades\Schedule;
 Schedule::command('leads:process-lost-followup')->dailyAt('10:00');
+
+// Checagem quinzenal do SEO (Google Search Console) - a cada 14 dias
+Schedule::command('seo:check-rankings')->cron('0 2 */14 * *');

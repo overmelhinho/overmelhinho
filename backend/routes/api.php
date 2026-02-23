@@ -23,6 +23,7 @@ use App\Http\Controllers\UploadTempController;
 use App\Http\Controllers\Api\V1\OportunidadeController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\SeoRankingController;
 
 use App\Http\Controllers\LeadIntelController;
 use App\Http\Controllers\Api\V1\SegmentoController;
@@ -78,6 +79,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::match (['patch', 'put'], '/user', [UserController::class , 'updateSelf']);
 
     Route::get('/clientes/{id}/historico', [ClienteController::class , 'historico']);
+    Route::get('/clientes/{id}/seo-rankings', [SeoRankingController::class , 'getClientRankings']);
     Route::apiResource('clientes', ClienteController::class);
 
     Route::get('/job-roles', [JobRoleController::class , 'index']);

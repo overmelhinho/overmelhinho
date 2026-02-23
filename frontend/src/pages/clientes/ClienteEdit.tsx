@@ -23,6 +23,7 @@ import TabMidia from "./create/steps/TabMidia";
 import TabCidadesAtendidas from "./create/steps/TabCidadesAtendidas";
 import TabFinanceiro from "./create/steps/TabFinanceiro";
 import TabAuditoria from "./create/steps/TabAuditoria";
+import SeoPerformanceWidget from "@/components/seo/SeoPerformanceWidget";
 
 type TipoCliente = "gratuito" | "pagante";
 
@@ -138,7 +139,10 @@ export default function ClienteEdit() {
       );
     }
 
-    // Add "Histórico" as the last tab for both pagante and gratuito clients
+    // New SEO Performance Tab
+    base.push({ id: base.length, label: "Performance" });
+
+    // Add "Histórico" as the last tab
     base.push({ id: base.length, label: "Histórico" });
 
     return base;
@@ -231,7 +235,7 @@ export default function ClienteEdit() {
       arquivo_midia_mime: null,
       tipo_arquivo_midia: c?.tipo_arquivo_midia || "cardapio",
 
-      // redes sociais: TabRedesSociais usa redes_sociais[0].facebook...
+      // redes sociais: TabRedesSociais espera SEMPRE redes_sociais[0].facebook...
       redes_sociais: [{ ...redesObj }],
 
       // seo
@@ -506,20 +510,20 @@ export default function ClienteEdit() {
             <TabsUI tabs={tabs} currentStep={step} setCurrentStep={setStep} />
 
             <div className="mt-2 p-6 bg-white shadow rounded-xl border min-h-[420px]">
-              {step === 0 && <TabIdentificacao />}
-              {step === 1 && <TabEndereco />}
-              {step === 2 && <TabContato />}
-
-              {step === 3 && tipoCliente === "pagante" && <TabCidadesAtendidas />}
-              {step === 4 && tipoCliente === "pagante" && <TabRedesSociais />}
-              {step === 5 && tipoCliente === "pagante" && <TabSegmentos />}
-              {step === 6 && tipoCliente === "pagante" && <TabBeneficios />}
-              {step === 7 && tipoCliente === "pagante" && <TabHorarios />}
-              {step === 8 && tipoCliente === "pagante" && <TabLogotipo />}
-              {step === 9 && tipoCliente === "pagante" && <TabMidia />}
-              {step === 10 && tipoCliente === "pagante" && <TabGaleria />}
-              {step === 11 && tipoCliente === "pagante" && <TabFinanceiro />}
-              {step === 12 && <TabAuditoria />}
+              {tabs[step]?.label === "Identificação" && <TabIdentificacao />}
+              {tabs[step]?.label === "Endereço" && <TabEndereco />}
+              {tabs[step]?.label === "Contato" && <TabContato />}
+              {tabs[step]?.label === "Cidades" && <TabCidadesAtendidas />}
+              {tabs[step]?.label === "Redes Sociais" && <TabRedesSociais />}
+              {tabs[step]?.label === "Segmentos" && <TabSegmentos />}
+              {tabs[step]?.label === "Benefícios" && <TabBeneficios />}
+              {tabs[step]?.label === "Horário" && <TabHorarios />}
+              {tabs[step]?.label === "Logotipo" && <TabLogotipo />}
+              {tabs[step]?.label === "Mídia" && <TabMidia />}
+              {tabs[step]?.label === "Galeria" && <TabGaleria />}
+              {tabs[step]?.label === "Financeiro" && <TabFinanceiro />}
+              {tabs[step]?.label === "Performance" && <SeoPerformanceWidget clientId={clienteId} />}
+              {tabs[step]?.label === "Histórico" && <TabAuditoria />}
             </div>
 
             <div className="flex justify-between">
