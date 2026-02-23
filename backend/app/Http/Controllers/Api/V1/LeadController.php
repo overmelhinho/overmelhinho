@@ -31,7 +31,14 @@ class LeadController extends Controller
         }
 
         if ($status && $status !== 'Todos') {
-            $query->where('status', $status);
+            if ($status === 'recuperaveis') {
+                $query->where('status', 'perdido')
+                      ->whereNotNull('lost_at')
+                      ->whereRaw("TIMESTAMPDIFF(MONTH, lost_at, NOW()) % 3 = 0")
+                      ->whereRaw("TIMESTAMPDIFF(MONTH, lost_at, NOW()) > 0");
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         $query->orderBy('created_at', 'desc');
@@ -68,7 +75,7 @@ class LeadController extends Controller
     public function update(LeadRequest $request, $id)
     {
         $lead = Lead::findOrFail($id);
-        $lead->update($request->only([
+        $data = $request->only([
             'nome',
             'email',
             'telefone',
@@ -78,8 +85,18 @@ class LeadController extends Controller
             'observacoes',
             'motivo_perda',
             'data_follow_up'
+        ]);
 
-        ]));
+        if (array_key_exists('status', $data)) {
+            if ($data['status'] === 'perdido' && $lead->status !== 'perdido') {
+                $data['lost_at'] = now();
+            }
+            elseif ($data['status'] !== 'perdido' && $lead->status === 'perdido') {
+                $data['lost_at'] = null;
+            }
+        }
+
+        $lead->update($data);
         return new LeadResource($lead);
     }
 
@@ -122,12 +139,47 @@ class LeadController extends Controller
 
     public function stats()
     {
+        $now = now();
+        $tomorrow = now()->addDay();
+        
+        $leadsPerdidos = Lead::where('status', 'perdido')->whereNotNull('lost_at')->get();
+        
+        $recuperaveisHoje = 0;
+        $recuperaveisAmanha = 0;
+        $recuperaveisMes = 0;
+
+        foreach ($leadsPerdidos as $lead) {
+            $lostAt = $lead->lost_at;
+            $diffInMonths = $lostAt->diffInMonths($now);
+            
+            // Lógica de 3 meses: (3, 6, 9, 12...)
+            if ($diffInMonths > 0 && $diffInMonths % 3 === 0) {
+                if ($lostAt->day === $now->day) $recuperaveisHoje++;
+                if ($lostAt->day === $tomorrow->day) $recuperaveisAmanha++;
+                
+                // Para o mês: se o dia da perda já passou ou é hoje, e estamos no mês múltiplo de 3
+                // Ou se o próximo ciclo cai neste mês
+                $recuperaveisMes++; 
+            }
+        }
+
         return response()->json([
             'total' => Lead::count(),
             'novo' => Lead::where('status', 'novo')->count(),
             'em_contato' => Lead::where('status', 'em_contato')->count(),
             'convertido' => Lead::where('status', 'convertido')->count(),
             'perdido' => Lead::where('status', 'perdido')->count(),
+            'recuperaveis_hoje' => $recuperaveisHoje,
+            'recuperaveis_amanha' => $recuperaveisAmanha,
+            'recuperaveis_mes' => $recuperaveisMes,
         ]);
+    }
+
+    public function sendFollowup($id)
+    {
+        $lead = Lead::findOrFail($id);
+        $lead->notify(new \App\Notifications\LostLeadFollowupNotification($lead));
+        
+        return response()->json(['success' => true, 'message' => 'Follow-up enviado via API.']);
     }
 }

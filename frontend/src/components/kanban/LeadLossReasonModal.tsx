@@ -15,7 +15,7 @@ export default function LeadLossReasonModal({ open, onClose, lead }) {
 
     await updateLead.mutateAsync({
       ...lead,
-      status: "leads_perdidos",
+      status: "perdido",
       motivo_perda: motivo,
       data_follow_up: dataFollowUp || null
     });

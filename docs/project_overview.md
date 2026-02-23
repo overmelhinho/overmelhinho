@@ -39,7 +39,7 @@ A aplicação atua como um ERP/CRM/Gestão completa para o negócio, sendo compo
 1. **Gestão de Clientes e CRM**
    - Cadastro de Clientes (`Cliente`).
    - Gestão de Contatos e Endereços (`Contato`, `Endereco`, `Cidade`).
-   - Módulo de Leads e Oportunidades comerciais (`Lead`, `Oportunidade`), incluindo controle de follow-up e motivos de perda.
+   - Módulo de Leads e CRM comercial (`Lead`, `Oportunidade`), incluindo esteira automática de recuperação e integração com Tickets. *(Veja `docs/leads_module.md` para detalhes)*.
 
 2. **Atendimento e Suporte (Tickets)**
    - Kanban de tickets (`Ticket`, `TicketLog`, `TicketSubtask`) permitindo assinalar atendentes, trocar status, definir subtarefas.

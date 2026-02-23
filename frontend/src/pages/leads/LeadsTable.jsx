@@ -1,21 +1,31 @@
 import { useState } from "react";
-import { Pencil, Trash2, UserPlus, Loader2, Search, ArrowRight, User } from "lucide-react";
-import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from "@/hooks/useLeads";
-import { useQuery } from "@tanstack/react-query";
-import  api from "@/services/api";
+import { Pencil, Trash2, UserPlus, Loader2, Search, ArrowRight, User, MessageCircle, Send, ClipboardList } from "lucide-react";
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useSendFollowup } from "@/hooks/useLeads";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/services/api";
 import LeadModal from "./LeadModal";
 import { toast } from "sonner";
 
 // Badge visual para status
 function StatusBadge({ status }) {
+  const s = status?.toLowerCase();
   let style = "bg-gray-200 text-[#474747]";
-  if (status === "Novo") style = "bg-[#FDB913]/20 text-[#B70F0A]";
-  if (status === "Em Contato") style = "bg-[#474747]/10 text-[#474747]";
-  if (status === "Convertido") style = "bg-[#37B24D]/20 text-[#37B24D]";
-  if (status === "Perdido") style = "bg-[#B70F0A]/10 text-[#B70F0A]";
+  if (s === "novo") style = "bg-[#FDB913]/20 text-[#B70F0A]";
+  if (s === "em_contato") style = "bg-[#474747]/10 text-[#474747]";
+  if (s === "qualificado" || s === "convertido") style = "bg-[#37B24D]/20 text-[#37B24D]";
+  if (s === "perdido") style = "bg-[#B70F0A]/10 text-[#B70F0A]";
+
+  const labels = {
+    novo: "Novo",
+    em_contato: "Em Contato",
+    qualificado: "Qualificado",
+    convertido: "Convertido",
+    perdido: "Perdido"
+  };
+
   return (
     <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow ${style}`}>
-      {status}
+      {labels[s] || status}
     </span>
   );
 }
@@ -40,11 +50,23 @@ const formatDateBR = (isoDate) => {
 };
 
 
-const statusOptions = ["Todos", "Novo", "Em Contato", "Convertido", "Perdido"];
+const statusOptions = [
+  { value: "Todos", label: "Todos" },
+  { value: "novo", label: "Novo" },
+  { value: "em_contato", label: "Em Contato" },
+  { value: "qualificado", label: "Qualificado" },
+  { value: "convertido", label: "Convertido" },
+  { value: "perdido", label: "Perdido" },
+  { value: "recuperaveis", label: "Recuperáveis (Ciclo 3 meses)" },
+];
 
 export default function LeadsTable({ user }) {
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("Todos");
+  const [status, setStatus] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const statusParam = params.get("status");
+    return statusParam || "Todos";
+  });
   const [page, setPage] = useState(1);
   const perPage = 10;
 
@@ -56,6 +78,7 @@ export default function LeadsTable({ user }) {
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
+  const sendFollowup = useSendFollowup();
 
   const [open, setOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
@@ -66,6 +89,26 @@ export default function LeadsTable({ user }) {
       const { data } = await api.get('/v1/comerciais');
       return data;
     },
+  });
+
+  function handleSendFollowup(id) {
+    sendFollowup.mutate(id, {
+      onSuccess: () => toast.success("Follow-up enviado via sistema!"),
+      onError: () => toast.error("Erro ao enviar follow-up.")
+    });
+  }
+
+  const createTask = useMutation({
+    mutationFn: (leadId) => api.post('/v1/tickets', {
+      lead_id: leadId,
+      titulo: `Tarefa Manual: Lead #${leadId}`,
+      setor: 'comercial',
+      descricao: 'Tarefa criada manualmente para acompanhamento deste lead.',
+      prioridade: 'media',
+      tipo: 'tarefa'
+    }),
+    onSuccess: () => toast.success("Tarefa (Ticket) criada com sucesso!"),
+    onError: () => toast.error("Erro ao criar tarefa.")
   });
 
   function handleNew() {
@@ -132,7 +175,7 @@ export default function LeadsTable({ user }) {
               onChange={e => { setStatus(e.target.value); setPage(1); }}
             >
               {statusOptions.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           </div>
@@ -176,19 +219,48 @@ export default function LeadsTable({ user }) {
                       <StatusBadge status={lead.status} />
                     </td>
                     <td className="px-4 py-2">{lead.responsavel}</td>
-    	            <td className="px-4 py-2">{formatDateBR(lead.created_at)}</td>
+                    <td className="px-4 py-2">{formatDateBR(lead.created_at)}</td>
                     <td className="px-4 py-2 flex gap-2 justify-center">
                       {[
-                        "Novo",
-                        "Em Contato"
-                      ].includes(lead.status) && (
-                        <button
-                          onClick={() => handleConvert(lead)}
-                          className="p-1 rounded hover:bg-[#FAFAFA]"
-                          title="Converter em Oportunidade"
-                        >
-                          <ArrowRight className="w-5 h-5 text-[#FDB913]" />
-                        </button>
+                        "novo",
+                        "em_contato"
+                      ].includes(lead.status?.toLowerCase()) && (
+                          <button
+                            onClick={() => handleConvert(lead)}
+                            className="p-1 rounded hover:bg-[#FAFAFA]"
+                            title="Converter em Oportunidade"
+                          >
+                            <ArrowRight className="w-5 h-5 text-[#FDB913]" />
+                          </button>
+                        )}
+                      {lead.status?.toLowerCase() === "perdido" && lead.telefone && (
+                        <div className="flex gap-1">
+                          <a
+                            href={`https://api.whatsapp.com/send?phone=${lead.telefone.replace(/\D/g, '')}&text=${encodeURIComponent(`Olá ${lead.nome}, tudo bem? Aqui é do O Vermelhinho. Estivemos pensando em você e queríamos saber se mudou de ideia sobre a nossa proposta. Como podemos te ajudar hoje?`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded flex items-center justify-center hover:bg-green-50"
+                            title="WhatsApp Web (Manual)"
+                          >
+                            <MessageCircle className="w-5 h-5 text-green-600" />
+                          </a>
+                          <button
+                            onClick={() => handleSendFollowup(lead.id)}
+                            className="p-1 rounded flex items-center justify-center hover:bg-blue-50"
+                            disabled={sendFollowup.isLoading}
+                            title="Disparar API WhatsApp (Sistema)"
+                          >
+                            {sendFollowup.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Send className="w-5 h-5 text-blue-600" />}
+                          </button>
+                          <button
+                            onClick={() => createTask.mutate(lead.id)}
+                            className="p-1 rounded flex items-center justify-center hover:bg-purple-50"
+                            disabled={createTask.isLoading}
+                            title="Agendar Tarefa (Ticket)"
+                          >
+                            {createTask.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-purple-600" /> : <ClipboardList className="w-5 h-5 text-purple-600" />}
+                          </button>
+                        </div>
                       )}
                       {canEdit && (
                         <button onClick={() => handleEdit(lead)} className="p-1 rounded hover:bg-[#F2F2F2]" title="Editar">
@@ -219,11 +291,10 @@ export default function LeadsTable({ user }) {
             {[...Array(totalPages)].map((_, idx) => (
               <button
                 key={idx}
-                className={`w-8 h-8 rounded-xl font-bold text-sm border transition ${
-                  page === idx + 1
-                    ? "bg-[#B70F0A] text-white"
-                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
-                }`}
+                className={`w-8 h-8 rounded-xl font-bold text-sm border transition ${page === idx + 1
+                  ? "bg-[#B70F0A] text-white"
+                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
                 onClick={() => setPage(idx + 1)}
               >
                 {idx + 1}

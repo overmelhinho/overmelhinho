@@ -18,7 +18,7 @@ Baseado nas migrations e models presentes no `backend/`, esta é a estrutura das
 - `contatos` / `enderecos` / `redes_sociais`: *(Tabelas identificadas via Models relacionais aos clientes)*.
 
 ## 3. Gestão e Suporte (Tickets)
-- `tickets`: Entidades centrais do helpdesk (assunto, cliente vinculado, responsável, status de kanban).
+- `tickets`: Entidades centrais do helpdesk (assunto, cliente ou lead vinculado, responsável, status de kanban).
 - `ticket_logs`: Histórico de interações nos tickets.
 - `ticket_subtasks`: Subtarefas/checklists dentro de um ticket de atendimento.
 

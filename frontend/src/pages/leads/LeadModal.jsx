@@ -60,21 +60,28 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
       email: "",
       telefone: "",
       responsavel: isComercial ? user?.name : "",
-      status: "novo"
+      status: "novo",
+      motivo_perda: ""
     },
     validationSchema: Yup.object({
       nome: Yup.string().required("Obrigatório"),
       origem: Yup.string().required("Obrigatório"),
       email: Yup.string().email("E-mail inválido").nullable(),
       telefone: Yup.string().nullable(),
-      responsavel: Yup.string().nullable()
+      responsavel: Yup.string().nullable(),
+      status: Yup.string().required("Obrigatório"),
+      motivo_perda: Yup.string().when("status", {
+        is: (val) => val === "perdido",
+        then: () => Yup.string().required("Obrigatório ao marcar como perdido"),
+        otherwise: () => Yup.string().nullable()
+      })
     }),
     onSubmit: (values) => onSubmit(values),
     enableReinitialize: true
   });
 
   const nextStep = () => {
-    if (step < steps.length - (isComercial ? 2 : 1)) setStep(step + 1);
+    if (step < steps.length - 1) setStep(step + 1);
     else formik.handleSubmit();
   };
 
@@ -90,9 +97,8 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
           className={`flex flex-col items-center ${i === step ? "font-bold text-[#B70F0A]" : "text-gray-400"}`}
         >
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-              i === step ? "border-[#B70F0A] bg-[#B70F0A] text-white" : "border-gray-300 bg-white"
-            }`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${i === step ? "border-[#B70F0A] bg-[#B70F0A] text-white" : "border-gray-300 bg-white"
+              }`}
           >
             {i + 1}
           </div>
@@ -108,43 +114,71 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
         return (
           <>
             <Field label="Nome do lead" name="nome" value={formik.values.nome} onChange={formik.handleChange} onBlur={formik.handleBlur} error={formik.touched.nome && formik.errors.nome} required placeholder="Digite o nome completo" />
-          <div className="space-y-1">
-  <label htmlFor="origem" className="block text-sm font-medium text-gray-700">
-    Origem <span className="text-red-600 ml-1">*</span>
-  </label>
-  <select
-    id="origem"
-    name="origem"
-    value={formik.values.origem}
-    onChange={formik.handleChange}
-    onBlur={formik.handleBlur}
-    className={`w-full border rounded-md p-2 ${formik.touched.origem && formik.errors.origem ? "border-red-500" : ""}`}
-  >
-    <option value="">Selecione a origem</option>
-    <optgroup label="Digital">
-      <option value="site">Site</option>
-      <option value="instagram">Instagram</option>
-      <option value="facebook">Facebook</option>
-      <option value="google_ads">Google Ads</option>
-      <option value="landing_page">Landing Page</option>
-      <option value="whatsapp_web">WhatsApp (automático)</option>
-    </optgroup>
-    <optgroup label="Indicação / Manual">
-      <option value="telefone">Telefone</option>
-      <option value="indicacao_cliente">Indicação de cliente</option>
-      <option value="indicacao_parceiro">Indicação de parceiro</option>
-      <option value="insercao_manual">Inserção manual</option>
-    </optgroup>
-    <optgroup label="Outros">
-      <option value="evento_local">Evento ou feira</option>
-      <option value="midiakit">Mídia física (panfleto, outdoor)</option>
-      <option value="outro">Outro</option>
-    </optgroup>
-  </select>
-  {formik.touched.origem && formik.errors.origem && (
-    <span className="text-xs text-red-600">{formik.errors.origem}</span>
-  )}
-</div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label htmlFor="origem" className="block text-sm font-medium text-gray-700">
+                  Origem <span className="text-red-600 ml-1">*</span>
+                </label>
+                <select
+                  id="origem"
+                  name="origem"
+                  value={formik.values.origem}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`w-full border rounded-md p-2 text-sm ${formik.touched.origem && formik.errors.origem ? "border-red-500" : ""}`}
+                >
+                  <option value="">Selecione</option>
+                  <optgroup label="Digital">
+                    <option value="site">Site</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="google_ads">Google Ads</option>
+                    <option value="landing_page">Landing Page</option>
+                    <option value="whatsapp_web">WhatsApp</option>
+                  </optgroup>
+                  <optgroup label="Manual">
+                    <option value="telefone">Telefone</option>
+                    <option value="indicacao_cliente">Indicação</option>
+                    <option value="insercao_manual">Manual</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                  Status <span className="text-red-600 ml-1">*</span>
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formik.values.status}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className="w-full border rounded-md p-2 text-sm"
+                >
+                  <option value="novo">Novo</option>
+                  <option value="em_contato">Em Contato</option>
+                  <option value="qualificado">Qualificado</option>
+                  <option value="perdido">Perdido</option>
+                </select>
+              </div>
+            </div>
+
+            {formik.values.status === "perdido" && (
+              <div className="mt-2">
+                <Field
+                  label="Motivo da Perda"
+                  name="motivo_perda"
+                  value={formik.values.motivo_perda}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.motivo_perda && formik.errors.motivo_perda}
+                  required
+                  placeholder="Por que este lead não avançou?"
+                />
+              </div>
+            )}
           </>
         );
       case 1:
@@ -166,20 +200,35 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
           </>
         );
       case 2:
-        return !isComercial && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Responsável pelo lead</label>
-            <select
-              name="responsavel"
-              value={formik.values.responsavel}
-              onChange={formik.handleChange}
-              className="w-full border rounded-md p-2"
-            >
-              <option value="">Selecione</option>
-              {comercialUsers.map((u) => (
-                <option key={u.id} value={u.name}>{u.name}</option>
-              ))}
-            </select>
+        return (
+          <div className="space-y-4">
+            {!isComercial && (
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">Responsável pelo lead</label>
+                <select
+                  name="responsavel"
+                  value={formik.values.responsavel}
+                  onChange={formik.handleChange}
+                  className="w-full border rounded-md p-2 text-sm"
+                >
+                  <option value="">Selecione</option>
+                  {comercialUsers.map((u) => (
+                    <option key={u.id} value={u.name}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Observações</label>
+              <textarea
+                name="observacoes"
+                value={formik.values.observacoes}
+                onChange={formik.handleChange}
+                rows={4}
+                className="w-full border rounded-md p-2 text-sm bg-gray-50 focus:bg-white transition-colors"
+                placeholder="Detalhes adicionais sobre o lead..."
+              />
+            </div>
           </div>
         );
       default:

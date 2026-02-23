@@ -25,6 +25,8 @@ class Lead extends Model
         'responsavel',
         'observacoes',
         'data_follow_up',
+        'lost_at',
+        'motivo_perda',
     ];
 
     protected $fillable = [
@@ -35,12 +37,18 @@ class Lead extends Model
         'status',
         'responsavel',
         'observacoes',
-        'data_follow_up'
+        'data_follow_up',
+        'lost_at',
+        'motivo_perda'
+    ];
+
+    protected $casts = [
+        'lost_at' => 'datetime',
     ];
 
     // Relacionamento com oportunidades (lead pode ter várias)
     public function oportunidades()
     {
-        return $this->hasMany(Oportunidade::class, 'lead_id');
+        return $this->hasMany(Oportunidade::class , 'lead_id');
     }
 }

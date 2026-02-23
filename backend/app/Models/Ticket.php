@@ -10,6 +10,7 @@ class Ticket extends Model
 
     protected $fillable = [
         'cliente_id',
+        'lead_id',
         'created_by',
         'assignee_id',
         'setor',
@@ -54,6 +55,11 @@ class Ticket extends Model
     public function cliente()
     {
         return $this->belongsTo(Cliente::class , 'cliente_id');
+    }
+
+    public function lead()
+    {
+        return $this->belongsTo(Lead::class , 'lead_id');
     }
 
     public function createdBy()

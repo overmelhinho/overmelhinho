@@ -20,7 +20,7 @@ class LeadRequest extends FormRequest
             'status'        => 'nullable|string|max:100',
             'responsavel'   => 'nullable|string|max:255',
             'observacoes'   => 'nullable|string',
-            'motivo_perda'  => 'nullable|string', // <- adicionado aqui
+            'motivo_perda'  => 'required_if:status,perdido|string|nullable',
             'data_follow_up' => 'nullable|date',	
         ];
 

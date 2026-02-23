@@ -37,6 +37,7 @@ class TicketController extends Controller
         $q = Ticket::query()
             ->with([
             'cliente:id,nome_fantasia,razao_social,cpf_cnpj,logo_url',
+            'lead:id,nome,email,telefone',
             'createdBy:id,name,email',
             'assignee:id,name,email',
             'subtasks',
@@ -49,6 +50,10 @@ class TicketController extends Controller
 
         if ($request->filled('cliente_id')) {
             $q->where('cliente_id', $request->input('cliente_id'));
+        }
+
+        if ($request->filled('lead_id')) {
+            $q->where('lead_id', $request->input('lead_id'));
         }
 
         if ($request->filled('setor')) {
@@ -163,7 +168,8 @@ class TicketController extends Controller
         $allowedPrioridades = ['baixa', 'media', 'alta', 'urgente'];
 
         $validated = $request->validate([
-            'cliente_id' => 'required|integer|exists:clientes,id',
+            'cliente_id' => 'nullable|integer|exists:clientes,id',
+            'lead_id' => 'nullable|integer|exists:leads,id',
             'setor' => ['required', 'string', 'max:30', Rule::in($allowedSetores)],
             'titulo' => 'required|string|max:191',
             'descricao' => 'nullable|string',
@@ -186,7 +192,8 @@ class TicketController extends Controller
         }
 
         $ticket = Ticket::create([
-            'cliente_id' => (int)$validated['cliente_id'],
+            'cliente_id' => $validated['cliente_id'] ?? null,
+            'lead_id' => $validated['lead_id'] ?? null,
             'created_by' => auth()->id(),
             'assignee_id' => $assigneeId,
             'setor' => $validated['setor'],

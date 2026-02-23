@@ -136,6 +136,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::patch('oportunidades/{id}/mover', [OportunidadeController::class , 'mover']);
     Route::apiResource('oportunidades', OportunidadeController::class);
     Route::apiResource('leads', LeadController::class);
+    Route::post('leads/{lead}/send-followup', [LeadController::class , 'sendFollowup']);
 
     Route::post('leads/{lead}/converter', [LeadController::class , 'converterOportunidade']);
     Route::post('oportunidades/{oportunidade}/converter-cliente', [OportunidadeController::class , 'converterCliente']);

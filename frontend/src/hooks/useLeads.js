@@ -54,3 +54,9 @@ export function useMoveLead() {
     onSuccess: () => queryClient.invalidateQueries(["leads"]),
   });
 }
+
+export function useSendFollowup() {
+  return useMutation({
+    mutationFn: (id) => axios.post(`/v1/leads/${id}/send-followup`),
+  });
+}
