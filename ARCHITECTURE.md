@@ -15,12 +15,13 @@ graph TD
 
 O backend serve como uma API RESTful para o frontend.
 
-- **Framework**: Laravel 11.
+- **Framework**: Laravel 12.
 - **Servidor**: Laravel Octane (Swoole/RoadRunner) para alta performance.
 - **Banco de Dados**: MySQL 8.
 - **Autenticação**: Laravel Sanctum (Token-based) para API.
 - **Permissões**: `spatie/laravel-permission` para controle de acesso (Roles/Permissions).
 - **Recursos**: Uso de API Resources para transformação de dados.
+- **Redirecionamento Inteligente**: O sistema detecta o cargo do usuário no login e o direciona para o Dashboard administrativo (Diretores/Admin) ou para a **Fila de Foco** (Operacional/Comercial/Marketing).
 
 ### Principais Diretórios
 - `app/Models`: Modelos Eloquent.

@@ -67,6 +67,14 @@ Os hooks (`useTickets.ts`) invocam com paginação infinita (`@tanstack/react-qu
 - **`TicketDetailsPage.tsx`**: Tela minudada. Permite injetar metadados, listar Logs temporalmente e englobar uma funcionalidade nova de deleção, transição e adição de subtarefas (*optimistic updates* em conjunto com React Query).
 - **`TicketKanbanView.tsx` e `TicketsPage.tsx`**: Tela com dupla arquitetura. Usuário seleciona se prefere o modo de Visualização por "Tabela Tradicional" ou painel "Kanban" (quadro de status) usando React States simples para a sobreposição renderizada. 
 
+### 2.1 A Fila de Foco (Focus Dashboard)
+Localizada em `src/pages/dashboard/FocusDashboard.tsx`, esta é a interface principal para a equipe operacional.
+- **Foco Único**: Exibe o ticket mais urgente (ou o último trabalhado) em destaque.
+- **Próximas Demandas**: Lista os 3 tickets seguintes na fila de prioridade.
+- **Micro-gestão**: Permite marcar subtarefas e transicionar status sem sair da visão simplificada.
+- **Acesso Rápido**: Disponível no menu lateral via ícone de alvo (`Target`).
+- **Redirecionamento Inteligente**: O sistema detecta o cargo do usuário no login e o direciona para o Dashboard administrativo (Diretores/Admin) ou para a **Fila de Foco** (Operacional/Comercial/Marketing).
+
 ---
 
 ## 3. Notificações, Avisos e Alertas

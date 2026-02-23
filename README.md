@@ -6,12 +6,12 @@ Bem-vindo ao repositório do projeto **Vermelhinho**. Este sistema é uma plataf
 
 O projeto foi migrado para um fluxo de desenvolvimento profissional, utilizando:
 - **Docker**: Para orquestração de containers de desenvolvimento.
-- **Laravel 11**: Como API Backend robusta.
+- **Laravel 12**: Como API Backend robusta.
 - **React + Vite**: Para uma interface de usuário rápida e moderna.
 
 ## 🛠️ Tecnologias Principais
 
-- **Backend**: PHP 8.2+, Laravel 11, Laravel Octane, MySQL 8.
+- **Backend**: PHP 8.2+, Laravel 12, Laravel Octane, MySQL 8.
 - **Frontend**: Node.js, React 18, Vite, TailwindCSS, TypeScript.
 - **Infraestrutura**: Docker Compose.
 
