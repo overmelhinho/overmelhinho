@@ -62,6 +62,9 @@ import PlansPage from "@/pages/financeiro/PlansPage";
 // ✅ Fila de Foco
 import FocusDashboard from "@/pages/dashboard/FocusDashboard";
 
+// ✅ Público
+import RenewalMagicLinkPage from "@/pages/public/RenewalMagicLinkPage";
+
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -355,6 +358,9 @@ const router = createBrowserRouter([
   // ✅ Vagas PRO - Público (sem auth e sem layout)
   { path: "/oportunidades", element: <PublicJobList /> },
   { path: "/oportunidades/:id", element: <PublicJobDetail /> },
+
+  // ✅ Renovação - Público
+  { path: "/renovar/:token", element: <RenewalMagicLinkPage /> },
 
   { path: "/unauthorized", element: <Unauthorized /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },

@@ -41,7 +41,17 @@ class Cliente extends Model
         'plan_id',
         'recurrence_day',
         'last_invoice_generated_at',
+        'contact_preference',
+        'best_contact_shift',
+        'contract_ends_at',
+        'beneficios',
+        'horario_atendimento',
     ];
+
+    public function renewals()
+    {
+        return $this->hasMany(Renewal::class, 'cliente_id');
+    }
 
     public function plan()
     {
@@ -55,7 +65,9 @@ class Cliente extends Model
     protected $casts = [
         'possui_publicidade' => 'boolean',
         'seo_keywords' => 'array',
+        'beneficios' => 'array',
         'seo_keywords_updated_at' => 'datetime',
+        'contract_ends_at' => 'date',
     ];
 
     public function setCpfCnpjAttribute($value): void

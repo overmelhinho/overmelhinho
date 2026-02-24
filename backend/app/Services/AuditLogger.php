@@ -20,14 +20,9 @@ class AuditLogger
         array $fieldChanges = null,
         array $context = []
     ): AuditLog {
-        $actorId = auth()->id();
-        if (!$actorId) {
-            // Se não tiver usuário autenticado (jobs/rotinas), você pode:
-            // 1) lançar exceção
-            // 2) usar um "system user"
-            // Mantive sua decisão original (sem alucinar comportamento):
-            throw new \RuntimeException('AuditLogger: actor_user_id não encontrado (usuário não autenticado).');
-        }
+        $actorId = $context['actor_id'] ?? auth()->id() ?? null;
+        
+        // Se não tiver usuário autenticado nem ator no contexto, permitimos null (ações anônimas/sistema)
 
         // ✅ Metadata automática do request (quando existir e não vier via context)
         $metadata = $context['metadata'] ?? null;

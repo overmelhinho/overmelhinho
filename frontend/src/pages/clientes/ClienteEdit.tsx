@@ -245,6 +245,11 @@ export default function ClienteEdit() {
 
       // galeria
       galeria,
+
+      // renovação e contatos
+      contact_preference: c?.contact_preference || "",
+      best_contact_shift: c?.best_contact_shift || "",
+      contract_ends_at: c?.contract_ends_at ? c.contract_ends_at.split('T')[0] : "",
     };
   }, [data]);
 
@@ -352,6 +357,10 @@ export default function ClienteEdit() {
               logotipo: typeof values.logotipo === "string" ? values.logotipo : null,
               video: values.video_link || null,
               portfolio_url: typeof values.arquivo_midia === "string" ? values.arquivo_midia : null,
+
+              contact_preference: values.contact_preference,
+              best_contact_shift: values.best_contact_shift,
+              contract_ends_at: values.contract_ends_at || null,
 
               generate_seo_keywords: values.generate_seo_keywords,
               seo_keywords_text:

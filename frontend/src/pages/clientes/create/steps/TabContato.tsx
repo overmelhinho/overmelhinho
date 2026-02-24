@@ -26,7 +26,7 @@ export default function TabContato() {
             maskChar=""
             name="telefone_principal"
             value={values.telefone_principal || ""}
-            onChange={(e) => setFieldValue("telefone_principal", e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFieldValue("telefone_principal", e.target.value)}
             placeholder="(00) 0000-0000"
             className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
           />
@@ -63,7 +63,7 @@ export default function TabContato() {
             maskChar=""
             name="celular"
             value={values.celular || ""}
-            onChange={(e) => setFieldValue("celular", e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFieldValue("celular", e.target.value)}
             placeholder="(00) 00000-0000"
             className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
           />
@@ -118,7 +118,7 @@ export default function TabContato() {
         </div>
 
         {/* Responsável */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-1">
           <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
             <User className="w-4 h-4 text-[#B70F0A]" /> Responsável
           </label>
@@ -130,6 +130,38 @@ export default function TabContato() {
             placeholder="Nome do responsável"
             className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
           />
+        </div>
+
+        {/* Preferência de Contato */}
+        <div>
+          <label className="text-sm font-medium text-gray-600 mb-1">Preferência de Contato</label>
+          <select
+            name="contact_preference"
+            value={values.contact_preference || ""}
+            onChange={handleChange}
+            className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
+          >
+            <option value="">Selecione...</option>
+            <option value="presential">Presencial 🏢</option>
+            <option value="call">Ligação 📞</option>
+            <option value="email">E-mail 📧</option>
+            <option value="whatsapp">WhatsApp 💬</option>
+          </select>
+        </div>
+
+        {/* Melhor Turno */}
+        <div>
+          <label className="text-sm font-medium text-gray-600 mb-1">Melhor Turno para Contato</label>
+          <select
+            name="best_contact_shift"
+            value={values.best_contact_shift || ""}
+            onChange={handleChange}
+            className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
+          >
+            <option value="">Selecione...</option>
+            <option value="morning">Manhã 🌅</option>
+            <option value="afternoon">Tarde ☀️</option>
+          </select>
         </div>
       </div>
     </div>

@@ -436,6 +436,10 @@ export default function ClienteCreateFromLead() {
 
               redes_sociais: [{}],
 
+              contact_preference: "",
+              best_contact_shift: "",
+              contract_ends_at: "",
+
               generate_seo_keywords: true,
               seo_keywords_text: "",
 
@@ -498,6 +502,10 @@ export default function ClienteCreateFromLead() {
                   video: values.video_link || null,
 
                   portfolio_url: typeof values.arquivo_midia === "string" ? values.arquivo_midia : null,
+
+                  contact_preference: values.contact_preference,
+                  best_contact_shift: values.best_contact_shift,
+                  contract_ends_at: values.contract_ends_at || null,
 
                   generate_seo_keywords: values.generate_seo_keywords,
                   seo_keywords_text:
@@ -834,9 +842,8 @@ export default function ClienteCreateFromLead() {
                         type="button"
                         onClick={handleSave}
                         disabled={saving}
-                        className={`px-6 py-2 rounded text-white ${
-                          saving ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
-                        }`}
+                        className={`px-6 py-2 rounded text-white ${saving ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+                          }`}
                       >
                         {saving ? "Salvando..." : "Salvar Cliente"}
                       </button>

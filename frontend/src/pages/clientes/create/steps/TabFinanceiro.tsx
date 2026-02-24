@@ -17,8 +17,13 @@ import {
     Printer,
     Tag,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    RefreshCw,
+    Link as LinkIcon,
+    Calendar,
+    Smartphone
 } from "lucide-react";
+import { useFormikContext } from "formik";
 import { cn } from "@/lib/utils";
 
 interface Plan {
@@ -182,9 +187,117 @@ export default function TabFinanceiro() {
     };
 
     const totals = calculateTotals();
+    const { values, setFieldValue } = useFormikContext<any>();
+    const [magicLink, setMagicLink] = useState("");
+    const generateRenewalLinkMutation = useMutation({
+        mutationFn: async () => {
+            const resp = await axios.post(`/v1/renewals/generate-link`, {
+                cliente_id: id,
+                expiration_date: values.contract_ends_at
+            });
+            return resp.data;
+        },
+        onSuccess: (data) => {
+            setMagicLink(data.magic_link);
+            copyToClipboard(data.magic_link);
+            toast.success("Link de renovação gerado e copiado!");
+        },
+        onError: (error: any) => {
+            toast.error("Erro ao gerar link de renovação.");
+        }
+    });
+
+    const openWhatsApp = (link: string) => {
+        const nome = values.nome_fantasia || "Cliente";
+        const msg = `Olá ${nome}, identificamos que seu contrato está próximo do vencimento. Para sua comodidade, você pode confirmar seus dados e renovar por este link seguro: ${link}`;
+
+        // Prioridade para o celular, depois telefone principal
+        const foneRaw = values.celular || values.telefone_principal || "";
+        const fone = foneRaw.replace(/\D/g, "");
+
+        if (!fone) {
+            toast.error("Cliente sem telefone ou celular cadastrado.");
+            return;
+        }
+
+        const url = `https://wa.me/55${fone}?text=${encodeURIComponent(msg)}`;
+        window.open(url, "_blank");
+    };
 
     return (
         <div className="space-y-6">
+            {/* Seção de Renovação */}
+            <div className="bg-red-50/50 border border-red-100 rounded-2xl p-6 mb-6">
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-red-100 p-2 rounded-xl text-red-600">
+                                <RefreshCw size={24} />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-gray-900">Renovação de Contrato</h4>
+                                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Configure o vencimento e envie o link ao cliente</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-48">
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <input
+                                    type="date"
+                                    value={values.contract_ends_at || ""}
+                                    onChange={(e) => setFieldValue("contract_ends_at", e.target.value)}
+                                    className="w-full pl-10 pr-3 py-2 bg-white border-gray-200 rounded-xl text-sm font-semibold focus:ring-red-500 focus:border-red-500 transition-all"
+                                />
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => generateRenewalLinkMutation.mutate()}
+                                disabled={generateRenewalLinkMutation.isPending}
+                                className="flex items-center justify-center gap-2 px-6 py-2 bg-[#B70F0A] text-white rounded-xl hover:bg-[#8e0c08] transition-all font-bold text-sm shadow-sm whitespace-nowrap"
+                            >
+                                {generateRenewalLinkMutation.isPending ? (
+                                    <RefreshCw className="animate-spin" size={16} />
+                                ) : (
+                                    <LinkIcon size={16} />
+                                )}
+                                {magicLink ? "Regerar Link" : "Gerar Link"}
+                            </button>
+                        </div>
+                    </div>
+
+                    {magicLink && (
+                        <div className="flex items-center gap-2 p-1.5 bg-white border border-red-100 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300">
+                            <div className="flex-1 px-3 py-1.5 bg-gray-50 rounded-lg overflow-hidden flex items-center">
+                                <LinkIcon size={14} className="text-gray-400 mr-2 shrink-0" />
+                                <input
+                                    readOnly
+                                    value={magicLink}
+                                    className="w-full bg-transparent border-none text-[11px] font-medium text-gray-500 focus:ring-0 cursor-default"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => openWhatsApp(magicLink)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors font-bold text-[10px] uppercase"
+                            >
+                                <Smartphone size={13} />
+                                Enviar Whats
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => copyToClipboard(magicLink)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-bold text-[10px] uppercase"
+                            >
+                                <Copy size={13} />
+                                Copiar Link
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div className="flex justify-between items-center">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">

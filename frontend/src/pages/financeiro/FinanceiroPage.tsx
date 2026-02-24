@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs-r
 import PlansPage from "./PlansPage";
 import InvoicesTab from "./InvoicesTab";
 import MetricsTab from "./MetricsTab";
+import RenewalsTab from "./RenewalsTab";
 import {
     LayoutDashboard,
     FileText,
@@ -10,7 +11,8 @@ import {
     TrendingUp,
     AlertCircle,
     Users,
-    DollarSign
+    DollarSign,
+    RefreshCw
 } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query";
@@ -125,6 +127,9 @@ export default function FinanceiroPage() {
                     <TabsTrigger value="invoices" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
                         <FileText size={16} /> Faturas
                     </TabsTrigger>
+                    <TabsTrigger value="renewals" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
+                        <RefreshCw size={16} /> Renovações
+                    </TabsTrigger>
                     <TabsTrigger value="plans" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
                         <CreditCard size={16} /> Planos de Assinatura
                     </TabsTrigger>
@@ -135,6 +140,10 @@ export default function FinanceiroPage() {
 
                 <TabsContent value="invoices" className="focus-visible:outline-none">
                     <InvoicesTab />
+                </TabsContent>
+
+                <TabsContent value="renewals" className="focus-visible:outline-none">
+                    <RenewalsTab />
                 </TabsContent>
 
                 <TabsContent value="plans" className="focus-visible:outline-none">

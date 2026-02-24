@@ -40,12 +40,19 @@ use App\Http\Controllers\Api\V1\CampanhaMidiaController;
 use App\Http\Controllers\Api\V1\JobOpportunityController;
 use App\Http\Controllers\Api\V1\CandidateController;
 
+use App\Http\Controllers\Api\V1\RenewalController;
+
 Route::post('/v1/upload-temp', [UploadTempController::class , 'uploadTemp']);
 
 // ✅ Vagas PRO - Rotas Públicas (sem autenticação)
 Route::get('/v1/jobs/public', [JobOpportunityController::class , 'indexPublic']);
 Route::get('/v1/jobs/public/{id}', [JobOpportunityController::class , 'showPublic']);
 Route::post('/v1/jobs/{id}/apply', [JobOpportunityController::class , 'apply']);
+
+// ✅ Módulo de Renovação - Rotas Públicas
+Route::get('/v1/renewals/magic-link/{token}', [RenewalController::class , 'showByToken']);
+Route::post('/v1/renewals/magic-link/{token}/approve', [RenewalController::class , 'approve']);
+Route::post('/v1/renewals/magic-link/{token}/update-data', [RenewalController::class , 'updateData']);
 
 // ✅ Webhook Tiny (Desprotegido)
 Route::post('/v1/webhooks/tiny', [\App\Http\Controllers\Api\V1\FinancialController::class , 'handleWebhook']);
@@ -178,4 +185,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/financial/group/{groupId}/carnet', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportCarnet']);
     Route::post('/financial/invoices/sync', [\App\Http\Controllers\Api\V1\FinancialController::class , 'syncInvoices']);
     Route::patch('/financial/invoices/{id}/status', [\App\Http\Controllers\Api\V1\FinancialController::class , 'updateStatus']);
+
+    // ✅ Renovações (Admin)
+    Route::get('/renewals', [RenewalController::class , 'index']);
+    Route::post('/renewals/generate-link', [RenewalController::class , 'generateLink']);
 });
