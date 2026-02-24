@@ -76,6 +76,8 @@ class ReportController extends Controller
             ->join('plans', 'clientes.plan_id', '=', 'plans.id')
             ->sum('plans.price_monthly');
 
+        $revenue = \App\Models\Invoice::where('status', 'paid')->sum('amount');
+
         $pendente = \App\Models\Invoice::where('status', 'pending')->sum('amount');
         $totalClientesAtivos = \App\Models\Cliente::where('status_assinatura', 'ativo')->count();
 
@@ -103,6 +105,7 @@ class ReportController extends Controller
         return response()->json([
             'financeiro' => [
                 'mrr' => (float)$mrr,
+                'revenue' => (float)$revenue,
                 'pending_invoices' => (float)$pendente,
                 'default_rate' => $mrr > 0 ? round(($pendente / $mrr) * 100, 2) : 0,
                 'ticket_medio' => $totalClientesAtivos > 0 ? round($mrr / $totalClientesAtivos, 2) : 0

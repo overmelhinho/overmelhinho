@@ -18,8 +18,7 @@ import {
     ArrowUpRight,
     CheckCircle2,
     Clock,
-    Medal,
-    Users
+    Medal
 } from "lucide-react";
 
 export default function AdminReportDashboard() {
@@ -36,7 +35,7 @@ export default function AdminReportDashboard() {
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
     if (isLoading) {
-        return <div className="p-6 bg-[#F2F2F2] min-h-screen">Carregando Dashboard Admin...</div>;
+        return <div className="p-6 bg-[#F2F2F2] min-h-screen font-black tracking-tighter text-gray-400">Carregando Cockpit...</div>;
     }
 
     return (
@@ -58,36 +57,42 @@ export default function AdminReportDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-6 gap-6 auto-rows-[220px]">
 
-                {/* CARD FINANCEIRO: MRR */}
+                {/* CARD FINANCEIRO: REVENUE HERO */}
                 <div className="md:col-span-4 md:row-span-2 bg-white rounded-[48px] p-12 border border-gray-100 shadow-sm flex flex-col justify-between overflow-hidden relative">
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-[#C00000]">
-                                <DollarSign size={24} />
+                    <div className="relative z-10 h-full flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 mb-6">
+                                <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-[#C00000]">
+                                    <DollarSign size={24} />
+                                </div>
+                                <div>
+                                    <span className="text-xs font-black uppercase tracking-widest text-gray-400 block">Faturamento Real (30d)</span>
+                                    <span className="text-[9px] font-bold text-gray-300 uppercase tracking-tighter">Faturas pagas no período</span>
+                                </div>
                             </div>
-                            <span className="text-xs font-black uppercase tracking-widest text-gray-400">Receita Recorrente (MRR)</span>
+                            <h2 className="text-8xl font-black text-gray-900 tracking-tighter mb-4">
+                                {formatCurrency(report?.financeiro?.revenue || 0)}
+                            </h2>
                         </div>
-                        <h2 className="text-8xl font-black text-gray-900 tracking-tighter mb-4">
-                            {formatCurrency(report?.financeiro?.mrr || 0)}
-                        </h2>
-                        <div className="flex gap-10">
+
+                        <div className="flex gap-10 items-end">
                             <div>
-                                <span className="text-xs font-black text-gray-400 uppercase block mb-1">Inadimplência</span>
-                                <span className="text-2xl font-black text-red-600">{report?.financeiro?.default_rate || 0}%</span>
+                                <span className="text-[10px] font-black text-gray-400 uppercase block mb-1 tracking-widest">MRR Contratado</span>
+                                <span className="text-2xl font-black text-blue-600 tracking-tighter">{formatCurrency(report?.financeiro?.mrr || 0)}</span>
                             </div>
                             <div>
-                                <span className="text-xs font-black text-gray-400 uppercase block mb-1">Ticket Médio</span>
-                                <span className="text-2xl font-black text-gray-900">{formatCurrency(report?.financeiro?.ticket_medio || 0)}</span>
+                                <span className="text-[10px] font-black text-gray-400 uppercase block mb-1 tracking-widest">Inadimplência</span>
+                                <span className="text-2xl font-black text-red-600 tracking-tighter">{report?.financeiro?.default_rate || 0}%</span>
                             </div>
                             <div>
-                                <span className="text-xs font-black text-gray-400 uppercase block mb-1">Faturas Pendentes</span>
-                                <span className="text-2xl font-black text-gray-900">{formatCurrency(report?.financeiro?.pending_invoices || 0)}</span>
+                                <span className="text-[10px] font-black text-gray-400 uppercase block mb-1 tracking-widest">Ticket Médio</span>
+                                <span className="text-2xl font-black text-gray-900 tracking-tighter">{formatCurrency(report?.financeiro?.ticket_medio || 0)}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Background Decor */}
-                    <div className="absolute top-[-10%] right-[-10%] scale-150 opacity-[0.03] pointer-events-none">
+                    <div className="absolute top-[-10%] right-[-10%] scale-150 opacity-[0.03] pointer-events-none text-gray-900">
                         <TrendingUp size={400} />
                     </div>
                 </div>
@@ -105,13 +110,13 @@ export default function AdminReportDashboard() {
                         </div>
 
                         <div className="space-y-4">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 text-gray-300">
                                 <CheckCircle2 className="text-green-500" size={18} />
                                 <span className="text-xs font-bold">{report?.operacao?.quotes_total} Orçamentos Captados</span>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 text-gray-300">
                                 <Clock className="text-blue-400" size={18} />
-                                <span className="text-xs font-bold">{report?.operacao?.avg_response_minutes}m Tempo Médio Resposta</span>
+                                <span className="text-xs font-bold">{report?.operacao?.avg_response_minutes}m Tempo Médio</span>
                             </div>
                         </div>
                     </div>
@@ -191,7 +196,7 @@ export default function AdminReportDashboard() {
 
                     <button
                         onClick={() => navigate('/clientes')}
-                        className="w-full py-4 bg-black/20 hover:bg-black/30 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                        className="w-full py-4 bg-black/20 hover:bg-black/30 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all text-white"
                     >
                         Ver Ranking Completo
                     </button>

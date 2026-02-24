@@ -20,9 +20,9 @@ class DashboardController extends Controller
         $conversionRate = $leadsTotal > 0 ? round(($leadsConverted / $leadsTotal) * 100, 1) : 0;
 
         // 2. Financeiro
-        $activeClients = \App\Models\Cliente::where('status_assinatura', 'active')->count();
-        // Soma simples de planos para MRR (Exemplo)
-        $mrr = \App\Models\Invoice::where('status', 'paid')
+        $activeClients = \App\Models\Cliente::where('status_assinatura', 'ativo')->count();
+        // Faturamento Real (Faturas pagas nos últimos 30 dias)
+        $revenue = \App\Models\Invoice::where('status', 'paid')
             ->whereBetween('created_at', [$thirtyDaysAgo, $now])
             ->sum('amount');
         
@@ -52,7 +52,7 @@ class DashboardController extends Controller
             ],
             'financial' => [
                 'active_clients' => $activeClients,
-                'mrr' => (float)$mrr,
+                'mrr' => (float)$revenue,
                 'upcoming_renewals' => $upcomingRenewals,
             ],
             'operational' => [
