@@ -55,4 +55,12 @@ return [
     ],
 
 
+    // 📲 Z-API (WhatsApp)
+    'zapi' => [
+        'instance_id' => env('ZAPI_INSTANCE_ID'),
+        'token' => env('ZAPI_TOKEN'),
+        'client_id' => env('ZAPI_CLIENT_ID'),
+    ],
+
+
 ];

@@ -62,6 +62,9 @@ import PlansPage from "@/pages/financeiro/PlansPage";
 // ✅ Fila de Foco
 import FocusDashboard from "@/pages/dashboard/FocusDashboard";
 
+// ✅ Orçamentos
+import QuotesPage from "@/pages/quotes/QuotesPage";
+
 // ✅ Público
 import RenewalMagicLinkPage from "@/pages/public/RenewalMagicLinkPage";
 
@@ -408,6 +411,16 @@ const router = createBrowserRouter([
         <DashboardLayout>
           <CandidatesPage />
         </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ Orçamentos
+  {
+    path: "/orcamentos",
+    element: (
+      <ProtectedRoute>
+        <QuotesPage />
       </ProtectedRoute>
     ),
   },

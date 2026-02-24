@@ -189,4 +189,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ✅ Renovações (Admin)
     Route::get('/renewals', [RenewalController::class , 'index']);
     Route::post('/renewals/generate-link', [RenewalController::class , 'generateLink']);
+
+    // ✅ Orçamentos com IA
+    Route::get('/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'index']);
+    Route::get('/clients/{id}/quotes-focus', [\App\Http\Controllers\Api\V1\QuoteController::class, 'indexFocus']);
+    Route::patch('/quotes/{id}/status', [\App\Http\Controllers\Api\V1\QuoteController::class, 'updateStatus']);
 });
+
+// ✅ Rotas Públicas de Orçamentos
+Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);

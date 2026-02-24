@@ -36,4 +36,6 @@ Baseado nas migrations e models presentes no `backend/`, esta é a estrutura das
 
 ## 7. Logs e Sistema
 - `audit_logs`: Tabela polimórfica/geral para rastrear que usuário fez qual alteração (auditoria).
-- `notifications`: Tabela nativa do Laravel (database notifications) utilizada junto ao pusher/websockets para salvar notificações não lidas dos usuários.
+## 8. Orçamentos e IA
+- `quotes`: Solicitações de orçamentos via site público. Armazena `service_requested`, `urgency` e `ai_draft_response` (gerado por IA para WhatsApp).
+- `renewals`: Controle de links mágicos para renovação de anúncios e dados cadastrais.

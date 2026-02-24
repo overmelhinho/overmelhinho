@@ -50,6 +50,10 @@ class ClienteResource extends JsonResource
             'seo_keywords_source' => $hasSeoSource ? ($this->seo_keywords_source ?? 'generated') : null,
             'seo_keywords_updated_at' => $hasSeoUpdatedAt ? ($this->seo_keywords_updated_at?->toISOString() ?? null) : null,
 
+            'quotes_enabled' => $this->relationLoaded('contatos') 
+                ? $this->contatos->whereNotNull('celular')->count() > 0 
+                : false,
+
             'segmentos' => SegmentoResource::collection($this->whenLoaded('segmentos')),
             'enderecos' => EnderecoResource::collection($this->whenLoaded('enderecos')),
             'contatos' => ContatoResource::collection($this->whenLoaded('contatos')),

@@ -58,3 +58,6 @@ A aplicação atua como um ERP/CRM/Gestão completa para o negócio, sendo compo
 
 7. **Arquivos e Mídia**
    - Gerenciamento de mídias (`GaleriaImagem`) com suporte a URLs de thumb (miniatura).
+
+8. **Orçamentos com IA**
+   - Captura de orçamentos via site público com redação automática de respostas para WhatsApp usando GPT-4 e Torre de Controle administrativo para monitoramento de agilidade. *(Veja `docs/ai_quotes_module.md` para detalhes)*.

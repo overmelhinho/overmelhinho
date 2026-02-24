@@ -57,7 +57,7 @@ class ClienteController extends Controller
                       ->limit(1);
                 },
                 'contatos' => function ($q) {
-                    $q->select(['id', 'cliente_id', 'email_principal', 'telefone_principal', 'nome_contato'])
+                    $q->select(['id', 'cliente_id', 'email_principal', 'telefone_principal', 'celular', 'nome_contato'])
                       ->orderBy('id', 'asc')
                       ->limit(1);
                 },

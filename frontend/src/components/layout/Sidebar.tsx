@@ -17,6 +17,7 @@ import {
   CreditCard,
   DollarSign, // Financeiro
   Target,
+  MessageCircle,
 } from "lucide-react";
 
 type Item = {
@@ -61,6 +62,12 @@ export default function Sidebar() {
       label: "Campanhas",
       icon: <Megaphone size={18} />,
       perms: ["view_campanha"],
+    },
+    {
+      to: "/orcamentos",
+      label: "Orçamentos IA",
+      icon: <MessageCircle size={18} />,
+      perms: ["view_dashboard"],
     },
     {
       to: "/financeiro",
