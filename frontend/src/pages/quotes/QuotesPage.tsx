@@ -14,7 +14,8 @@ import {
     Briefcase,
     TrendingUp,
     Timer,
-    Zap
+    Zap,
+    Calendar
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -43,12 +44,22 @@ interface Quote {
 export default function QuotesPage() {
     const [page, setPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState("");
+    const [period, setPeriod] = useState("all");
+    const [customDates, setCustomDates] = useState({ start: "", end: "" });
 
     const { data: responseData, isLoading } = useQuery({
-        queryKey: ["admin-quotes", page, statusFilter],
+        queryKey: ["admin-quotes", page, statusFilter, period, customDates],
         queryFn: async () => {
             const params: any = { page };
             if (statusFilter) params.status = statusFilter;
+
+            if (period !== "all" && period !== "custom") {
+                params.period = period;
+            } else if (period === "custom" && customDates.start && customDates.end) {
+                params.start_date = customDates.start;
+                params.end_date = customDates.end;
+            }
+
             const resp = await axios.get("/v1/quotes", { params });
             return resp.data;
         }
@@ -113,19 +124,68 @@ export default function QuotesPage() {
                     <p className="text-gray-500 font-medium text-lg">Monitoramento de agilidade e conversão da rede.</p>
                 </div>
 
-                <div className="flex bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm">
-                    {['', 'new', 'replied'].map((s) => (
-                        <button
-                            key={s}
-                            onClick={() => setStatusFilter(s)}
-                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
-                                ? 'bg-gray-900 text-white shadow-lg'
-                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-                                }`}
-                        >
-                            {s === '' ? 'Todos' : s === 'new' ? 'Pendentes' : 'Respondidos'}
-                        </button>
-                    ))}
+                <div className="flex flex-wrap gap-3 items-center">
+                    {/* Filtro Status */}
+                    <div className="flex bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm">
+                        {['', 'new', 'replied'].map((s) => (
+                            <button
+                                key={s}
+                                onClick={() => {
+                                    setStatusFilter(s);
+                                    setPage(1);
+                                }}
+                                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
+                                    ? 'bg-gray-900 text-white shadow-lg'
+                                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                                    }`}
+                            >
+                                {s === '' ? 'Todos' : s === 'new' ? 'Pendentes' : 'Respondidos'}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Filtro Período */}
+                    <div className="flex bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm">
+                        {[
+                            { id: 'all', label: 'Sempre' },
+                            { id: '24h', label: '24h' },
+                            { id: '7d', label: '7d' },
+                            { id: 'custom', label: 'Custom' }
+                        ].map((p) => (
+                            <button
+                                key={p.id}
+                                onClick={() => {
+                                    setPeriod(p.id);
+                                    setPage(1);
+                                }}
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${period === p.id
+                                    ? 'bg-red-600 text-white shadow-lg'
+                                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                                    }`}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Calendários (se custom) */}
+                    {period === 'custom' && (
+                        <div className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300">
+                            <input
+                                type="date"
+                                value={customDates.start}
+                                onChange={(e) => setCustomDates({ ...customDates, start: e.target.value })}
+                                className="p-2 border border-gray-100 rounded-xl text-[10px] font-bold outline-none focus:border-red-500"
+                            />
+                            <span className="text-gray-400 font-bold">~</span>
+                            <input
+                                type="date"
+                                value={customDates.end}
+                                onChange={(e) => setCustomDates({ ...customDates, end: e.target.value })}
+                                className="p-2 border border-gray-100 rounded-xl text-[10px] font-bold outline-none focus:border-red-500"
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -260,8 +320,8 @@ export default function QuotesPage() {
                                                         <button
                                                             onClick={() => notifyLojista(quote)}
                                                             className={`h-12 px-6 rounded-[20px] text-[10px] font-black uppercase transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-lg ${alreadyNotified
-                                                                    ? 'bg-white border-2 border-gray-100 text-gray-500 hover:bg-gray-50'
-                                                                    : 'bg-[#C00000] text-white hover:bg-black shadow-red-100'
+                                                                ? 'bg-white border-2 border-gray-100 text-gray-500 hover:bg-gray-50'
+                                                                : 'bg-[#C00000] text-white hover:bg-black shadow-red-100'
                                                                 }`}
                                                         >
                                                             <Smartphone size={16} />

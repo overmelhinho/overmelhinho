@@ -33,6 +33,26 @@ class QuoteController extends Controller
             $query->where('urgency', $request->urgency);
         }
 
+        // Filtro de Data
+        if ($request->has('period')) {
+            switch ($request->period) {
+                case '24h':
+                    $query->where('created_at', '>=', now()->subDay());
+                    break;
+                case '7d':
+                    $query->where('created_at', '>=', now()->subDays(7));
+                    break;
+                case '30d':
+                    $query->where('created_at', '>=', now()->subDays(30));
+                    break;
+            }
+        } elseif ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('created_at', [
+                $request->start_date . ' 00:00:00',
+                $request->end_date . ' 23:59:59'
+            ]);
+        }
+
         $quotes = $query->orderBy('created_at', 'desc')->paginate(20);
 
         return response()->json([
