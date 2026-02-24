@@ -104,4 +104,9 @@ class Cliente extends Model
     {
         return $this->hasMany(GaleriaImagem::class , 'cliente_id');
     }
+
+    public function interacoes()
+    {
+        return $this->hasMany(ClientInteraction::class, 'cliente_id');
+    }
 }

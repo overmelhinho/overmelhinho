@@ -74,7 +74,7 @@ class ReportController extends Controller
         // 1. Financeiro (MRR e Inadimplência)
         $mrr = \App\Models\Cliente::where('status_assinatura', 'ativo')
             ->join('plans', 'clientes.plan_id', '=', 'plans.id')
-            ->sum('plans.price_monthly');
+            ->sum('plans.price');
 
         $revenue = \App\Models\Invoice::where('status', 'paid')->sum('amount');
 
