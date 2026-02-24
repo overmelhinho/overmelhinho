@@ -65,6 +65,9 @@ import FocusDashboard from "@/pages/dashboard/FocusDashboard";
 // ✅ Orçamentos
 import QuotesPage from "@/pages/quotes/QuotesPage";
 
+// ✅ Relatórios
+import ClientReportDashboard from "@/pages/reports/ClientReportDashboard";
+
 // ✅ Público
 import RenewalMagicLinkPage from "@/pages/public/RenewalMagicLinkPage";
 
@@ -199,6 +202,17 @@ const router = createBrowserRouter([
       >
         <DashboardLayout>
           <ClienteEdit />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  {
+    path: "/clientes/:id/performance",
+    element: (
+      <ProtectedRoute perms={["view_client"]}>
+        <DashboardLayout>
+          <ClientReportDashboard />
         </DashboardLayout>
       </ProtectedRoute>
     ),

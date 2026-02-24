@@ -14,6 +14,7 @@ interface Job {
     salary_range: string;
     published_at: string;
     client: { nome_fantasia: string };
+    cliente_id: number;
 }
 
 export default function PublicJobDetail() {
@@ -35,7 +36,17 @@ export default function PublicJobDetail() {
     useEffect(() => {
         fetch(`${API_BASE}/v1/jobs/public/${id}`)
             .then((r) => r.json())
-            .then((data) => { setJob(data); setLoading(false); })
+            .then((data) => {
+                setJob(data);
+                setLoading(false);
+
+                // Registro de Tracking (Page View)
+                if (data.cliente_id) {
+                    import("@/lib/tracking").then(({ trackInteraction }) => {
+                        trackInteraction(data.cliente_id, 'page_view');
+                    });
+                }
+            })
             .catch(() => setLoading(false));
     }, [id]);
 

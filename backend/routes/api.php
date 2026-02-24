@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\CampanhaMidiaController;
 
 use App\Http\Controllers\Api\V1\JobOpportunityController;
 use App\Http\Controllers\Api\V1\CandidateController;
+use App\Http\Controllers\Api\V1\ReportController;
 
 use App\Http\Controllers\Api\V1\RenewalController;
 
@@ -194,7 +195,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'index']);
     Route::get('/clients/{id}/quotes-focus', [\App\Http\Controllers\Api\V1\QuoteController::class, 'indexFocus']);
     Route::patch('/quotes/{id}/status', [\App\Http\Controllers\Api\V1\QuoteController::class, 'updateStatus']);
+
+    // Dashboards e Relatórios
+    Route::get('/clients/{id}/reports/dashboard', [ReportController::class, 'clientDashboard']);
+    Route::get('/admin/reports/dashboard', [ReportController::class, 'adminDashboard']);
 });
 
-// ✅ Rotas Públicas de Orçamentos
+// ✅ Rotas Públicas de Orçamentos e Tracking
 Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);
+Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
