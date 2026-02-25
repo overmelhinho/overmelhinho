@@ -86,8 +86,14 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::match (['patch', 'put'], '/user', [UserController::class , 'updateSelf']);
 
+    // ⚠️ Rotas estáticas de clientes ANTES do apiResource (evita conflito com {id})
+    Route::post('/clientes/ai-description', [ClienteController::class, 'generateAiDescription']);
+    Route::get('/clientes/google-hours', [ClienteController::class, 'getGoogleHours']);
+
     Route::get('/clientes/{id}/historico', [ClienteController::class , 'historico']);
     Route::get('/clientes/{id}/seo-rankings', [SeoRankingController::class , 'getClientRankings']);
+    Route::post('/clientes/{id}/seo/keywords/generate', [ClienteController::class , 'generateSeoKeywords']);
+    Route::patch('/clientes/{id}/seo/keywords', [ClienteController::class , 'updateSeoKeywords']);
     Route::apiResource('clientes', ClienteController::class);
 
     Route::get('/job-roles', [JobRoleController::class , 'index']);
@@ -97,9 +103,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('clientes.contatos', ContatoController::class);
     Route::apiResource('clientes.redes-sociais', RedeSocialController::class);
     Route::apiResource('clientes.galeria', GaleriaImagemController::class);
-
-    Route::post('/clientes/{id}/seo/keywords/generate', [ClienteController::class , 'generateSeoKeywords']);
-    Route::patch('/clientes/{id}/seo/keywords', [ClienteController::class , 'updateSeoKeywords']);
 
     Route::post('clientes/{cliente}/galeria/upload', [GaleriaImagemController::class , 'upload']);
     Route::post('clientes/{cliente}/galeria/upload-multiplos', [GaleriaImagemController::class , 'uploadMultiple']);

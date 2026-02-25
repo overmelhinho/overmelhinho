@@ -117,11 +117,13 @@ export default function TabGaleria() {
         setImagens((prev) => [...prev, ...novas]);
         toast.success("Upload concluído!");
       } else {
-        toast.error(data?.message || "Erro ao enviar imagens");
+        const errorMsg = data?.message || "Erro inesperado do servidor ao processar imagens.";
+        toast.error(errorMsg);
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Falha no upload das imagens.");
+    } catch (err: any) {
+      console.error("[TabGaleria] Upload error:", err);
+      const errMsg = err.response?.data?.message || err.message || "Falha técnica no upload. Verifique sua conexão ou tamanho dos arquivos.";
+      toast.error(errMsg);
     } finally {
       setUploading(false);
       setProgress(0);

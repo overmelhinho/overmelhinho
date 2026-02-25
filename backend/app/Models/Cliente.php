@@ -66,6 +66,7 @@ class Cliente extends Model
         'possui_publicidade' => 'boolean',
         'seo_keywords' => 'array',
         'beneficios' => 'array',
+        'horario_atendimento' => 'array',
         'seo_keywords_updated_at' => 'datetime',
         'contract_ends_at' => 'date',
     ];

@@ -2,6 +2,8 @@ import { useFormikContext } from "formik";
 import { useMemo, useRef, useState } from "react";
 import { Building2, FileText, Hash, Briefcase, Tag, Eye, EyeOff, Sparkles, X } from "lucide-react";
 import MaskedInput from "@/components/ui/masked-input";
+import axios from "@/services/api";
+import toast from "react-hot-toast";
 
 const splitKeywords = (text: string): string[] => {
   if (!text) return [];
@@ -33,6 +35,7 @@ export default function TabIdentificacao() {
   const { values, handleChange, setFieldValue } = useFormikContext<any>();
   const [cnpjError, setCnpjError] = useState("");
   const [showPreviewDescricao, setShowPreviewDescricao] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
 
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -175,9 +178,8 @@ export default function TabIdentificacao() {
             }}
             placeholder="00.000.000/0000-00"
             maxLength={18}
-            className={`border rounded-md px-3 py-2 w-full focus:ring-2 ${
-              cnpjError ? "border-red-500 focus:ring-red-500" : "focus:ring-[#B70F0A]"
-            }`}
+            className={`border rounded-md px-3 py-2 w-full focus:ring-2 ${cnpjError ? "border-red-500 focus:ring-red-500" : "focus:ring-[#B70F0A]"
+              }`}
           />
 
           {cnpjError && (
@@ -358,6 +360,33 @@ export default function TabIdentificacao() {
               <span className={`text-xs ${hintColor}`}>
                 {descricaoLen} caracteres • {descricaoHint}
               </span>
+
+              <button
+                type="button"
+                className="text-xs px-3 py-1 rounded-md border border-[#B70F0A] text-[#B70F0A] hover:bg-[#B70F0A] hover:text-white inline-flex items-center gap-2 transition-all disabled:opacity-50"
+                disabled={!values.nome_fantasia || isGeneratingDesc}
+                onClick={async () => {
+                  if (!values.nome_fantasia) return;
+                  setIsGeneratingDesc(true);
+                  try {
+                    const { data } = await axios.post("/v1/clientes/ai-description", {
+                      nome: values.nome_fantasia,
+                      cidade: values.cidade || values.cidade_preferida || ""
+                    });
+                    if (data.description) {
+                      setFieldValue("descricao", data.description);
+                      toast.success("Descrição gerada!");
+                    }
+                  } catch (err) {
+                    toast.error("Erro ao gerar descrição");
+                  } finally {
+                    setIsGeneratingDesc(false);
+                  }
+                }}
+              >
+                <Sparkles className={`w-3 h-3 ${isGeneratingDesc ? 'animate-spin' : ''}`} />
+                {isGeneratingDesc ? "Gerando..." : "Gerar com IA"}
+              </button>
 
               <button
                 type="button"

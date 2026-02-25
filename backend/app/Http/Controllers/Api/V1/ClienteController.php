@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\ClientAiService;
+use App\Services\GooglePlacesService;
 
 
 class ClienteController extends Controller
@@ -356,8 +358,13 @@ public function historico(Request $request, int $id)
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
                 'contatos.*.telefone_secundario' => 'nullable|string|max:50',
                 'contatos.*.celular'             => 'nullable|string|max:50',
-                'contatos.*.whatsapp_principal'  => 'nullable|boolean',
-                'contatos.*.whatsapp_secundario' => 'nullable|boolean',
+                'contatos.*.telefone_outro'      => 'nullable|string|max:50',
+                'contatos.*.whatsapp_selected'   => 'nullable|string|max:50',
+                'contatos.*.exibir_tel_principal' => 'nullable|boolean',
+                'contatos.*.exibir_tel_secundario' => 'nullable|boolean',
+                'contatos.*.exibir_celular'      => 'nullable|boolean',
+                'contatos.*.exibir_tel_outro'    => 'nullable|boolean',
+                'contatos.*.exibir_email'        => 'nullable|boolean',
                 'contatos.*.email_principal'     => 'nullable|email|max:255',
                 'contatos.*.email_cobranca'      => 'nullable|email|max:255',
                 'contatos.*.site'                => 'nullable|string|max:255',
@@ -368,6 +375,7 @@ public function historico(Request $request, int $id)
                 'redes_sociais.*.url'  => 'nullable|string|max:500',
 
                 'logo_url' => 'nullable|string|max:255',
+                'horario_atendimento' => 'nullable',
 
                 'generate_seo_keywords' => 'nullable|boolean',
                 'seo_keywords_text'     => 'nullable|string',
@@ -397,6 +405,7 @@ public function historico(Request $request, int $id)
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
                 'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
+                'horario_atendimento'   => $validated['horario_atendimento'] ?? null,
             ];
 
             if (Schema::hasColumn('clientes', 'seo_keywords_source')) {
@@ -656,8 +665,13 @@ public function historico(Request $request, int $id)
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
                 'contatos.*.telefone_secundario' => 'nullable|string|max:50',
                 'contatos.*.celular'             => 'nullable|string|max:50',
-                'contatos.*.whatsapp_principal'  => 'nullable|boolean',
-                'contatos.*.whatsapp_secundario' => 'nullable|boolean',
+                'contatos.*.telefone_outro'      => 'nullable|string|max:50',
+                'contatos.*.whatsapp_selected'   => 'nullable|string|max:50',
+                'contatos.*.exibir_tel_principal' => 'nullable|boolean',
+                'contatos.*.exibir_tel_secundario' => 'nullable|boolean',
+                'contatos.*.exibir_celular'      => 'nullable|boolean',
+                'contatos.*.exibir_tel_outro'    => 'nullable|boolean',
+                'contatos.*.exibir_email'        => 'nullable|boolean',
                 'contatos.*.email_principal'     => 'nullable|email|max:255',
                 'contatos.*.email_cobranca'      => 'nullable|email|max:255',
                 'contatos.*.site'                => 'nullable|string|max:255',
@@ -668,6 +682,7 @@ public function historico(Request $request, int $id)
                 'redes_sociais.*.url'  => 'nullable|string|max:500',
 
                 'logo_url' => 'nullable|string|max:255',
+                'horario_atendimento' => 'nullable',
 
                 'generate_seo_keywords' => 'nullable|boolean',
                 'seo_keywords_text'     => 'nullable|string',
@@ -696,6 +711,7 @@ public function historico(Request $request, int $id)
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
                 'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
+                'horario_atendimento'   => $validated['horario_atendimento'] ?? null,
             ];
 
             if (Schema::hasColumn('clientes', 'seo_keywords_source')) {
@@ -1105,6 +1121,54 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         }
     }
 
+
+    /**
+     * Gera uma descrição automática para o cliente usando IA.
+     */
+    public function generateAiDescription(Request $request, ClientAiService $aiService)
+    {
+        $request->validate([
+            'nome' => 'required|string',
+            'cidade' => 'required|string',
+        ]);
+
+        $description = $aiService->generateDescription(
+            $request->input('nome'),
+            $request->input('cidade')
+        );
+
+        return response()->json([
+            'success' => true,
+            'description' => $description
+        ]);
+    }
+
+    /**
+     * Busca horários de funcionamento no Google Places.
+     */
+    public function getGoogleHours(Request $request, GooglePlacesService $googleService)
+    {
+        $request->validate([
+            'nome' => 'required|string',
+            'cidade' => 'required|string',
+        ]);
+
+        $details = $googleService->getDetailsByQuery($request->input('nome') . ' ' . $request->input('cidade'));
+
+        if (!$details || !isset($details['opening_hours'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Horários não encontrados no Google Maps.'
+            ], 404);
+        }
+
+        $horarios = $googleService->mapOpeningHoursToSystem($details['opening_hours']);
+
+        return response()->json([
+            'success' => true,
+            'horarios' => $horarios
+        ]);
+    }
 
 private function audit(
     string $action,

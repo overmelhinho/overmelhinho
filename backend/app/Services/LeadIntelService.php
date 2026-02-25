@@ -52,7 +52,7 @@ class LeadIntelService
             $places = $this->consultarGooglePlaces($query);
             if (!empty($places)) {
                 // Campos “vitrine” que costumam estar mais vivos no Google
-                foreach (['nome_fantasia', 'telefone', 'endereco', 'website'] as $k) {
+                foreach (['nome_fantasia', 'telefone', 'endereco', 'website', 'horario_atendimento'] as $k) {
                     if (!empty($places[$k])) {
                         $dados[$k] = $places[$k];
                     }
@@ -232,7 +232,7 @@ class LeadIntelService
                 [
                     'place_id' => $placeId,
                     'key' => $googleApiKey,
-                    'fields' => 'name,formatted_address,formatted_phone_number,website'
+                    'fields' => 'name,formatted_address,formatted_phone_number,website,opening_hours'
                 ]
             );
 
@@ -246,6 +246,12 @@ class LeadIntelService
                 'endereco' => $r['formatted_address'] ?? '',
                 'website' => $r['website'] ?? '',
             ];
+
+            // Mapear Horários
+            if (isset($r['opening_hours'])) {
+                $googleService = app(GooglePlacesService::class);
+                $dados['horario_atendimento'] = $googleService->mapOpeningHoursToSystem($r['opening_hours']);
+            }
 
             Log::info("🌍 [LeadIntel][GooglePlaces] OK", [
                 'nome_fantasia' => $dados['nome_fantasia'],

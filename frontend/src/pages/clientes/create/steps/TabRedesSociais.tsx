@@ -29,16 +29,29 @@ export default function TabRedesSociais() {
     { id: "x", label: "X (Twitter)", placeholder: "https://x.com/empresa", icon: Twitter },
   ];
 
-  // ✅ garante que redes_sociais[0] exista sempre
+  // ✅ garante que redes_sociais[0] exista sempre e captura dados da IA no root
   useEffect(() => {
-    const arr = Array.isArray(values.redes_sociais) ? values.redes_sociais : [];
+    const ids = ['facebook', 'instagram', 'linkedin', 'youtube', 'tiktok', 'x'];
+    const arr = Array.isArray(values.redes_sociais) ? [...values.redes_sociais] : [];
+
     if (!arr[0] || typeof arr[0] !== "object") {
-      setFieldValue("redes_sociais", [
-        { facebook: "", instagram: "", linkedin: "", youtube: "", tiktok: "", x: "" },
-      ]);
+      arr[0] = { facebook: "", instagram: "", linkedin: "", youtube: "", tiktok: "", x: "" };
+    }
+
+    // Se houver dados da IA no root, move para o primeiro objeto do array
+    let changed = false;
+    ids.forEach(id => {
+      if (values[id] && values[id] !== arr[0][id]) {
+        arr[0][id] = values[id];
+        changed = true;
+      }
+    });
+
+    if (changed || !values.redes_sociais) {
+      setFieldValue("redes_sociais", arr);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [values.facebook, values.instagram, values.linkedin, values.youtube, values.tiktok, values.x]);
 
   const handleOpenLink = (url: string) => {
     if (!url) return;
