@@ -50,6 +50,7 @@ export default function TabFinanceiro() {
     const { id } = useParams();
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    // Form States
     const [selectedPlan, setSelectedPlan] = useState("");
     const [paymentMethod, setPaymentMethod] = useState("boleto");
     const [installments, setInstallments] = useState(1);
@@ -59,6 +60,11 @@ export default function TabFinanceiro() {
     const [showDiscount, setShowDiscount] = useState(false);
     const [discountValue, setDiscountValue] = useState(0);
     const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
+
+    // Permuta States
+    const [isPermuta, setIsPermuta] = useState(false);
+    const [permutaAmount, setPermutaAmount] = useState<number>(0);
+    const [permutaDescription, setPermutaDescription] = useState("");
 
     // Fetch Invoices
     const { data: invoices, isLoading: isLoadingInvoices } = useQuery<Invoice[]>({
@@ -87,6 +93,9 @@ export default function TabFinanceiro() {
             payment_method: string;
             discount_value?: number;
             discount_type?: string;
+            is_permuta?: boolean;
+            permuta_amount?: number;
+            permuta_description?: string;
         }) => {
             const resp = await axios.post(`/v1/clientes/${id}/invoices`, payload);
             return resp.data;
@@ -96,6 +105,9 @@ export default function TabFinanceiro() {
             queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
             setIsModalOpen(false);
             setInstallments(1);
+            setIsPermuta(false);
+            setPermutaAmount(0);
+            setPermutaDescription("");
         },
         onError: (error: any) => {
             toast.error(error?.response?.data?.message || "Erro ao gerar cobrança.");
@@ -114,7 +126,10 @@ export default function TabFinanceiro() {
             installments: installments,
             payment_method: paymentMethod,
             discount_value: discountValue,
-            discount_type: discountType
+            discount_type: discountType,
+            is_permuta: isPermuta,
+            permuta_amount: isPermuta ? permutaAmount : undefined,
+            permuta_description: isPermuta ? permutaDescription : undefined
         });
     };
 
@@ -168,20 +183,24 @@ export default function TabFinanceiro() {
     const selectedPlanData = plans?.find(p => String(p.id) === selectedPlan);
 
     const calculateTotals = () => {
-        if (!selectedPlanData) return { total: 0, discount: 0, final: 0, parcel: 0 };
+        if (!selectedPlanData) return { total: 0, discount: 0, finalBase: 0, permuta: 0, finalPayable: 0, parcel: 0 };
 
         const basePrice = Number(selectedPlanData.price);
         const discount = discountType === "fixed"
             ? discountValue
             : (basePrice * discountValue) / 100;
 
-        const final = Math.max(0, basePrice - discount);
-        const parcel = final / installments;
+        const finalBase = Math.max(0, basePrice - discount);
+        const permuta = isPermuta ? Number(permutaAmount || 0) : 0;
+        const finalPayable = Math.max(0, finalBase - permuta);
+        const parcel = finalPayable / installments;
 
         return {
             total: basePrice,
             discount,
-            final,
+            finalBase, // Valor após desconto, mas antes da permuta
+            permuta,
+            finalPayable, // Valor real que será cobrado (pode ser 0 se for 100% permuta)
             parcel
         };
     };
@@ -576,46 +595,118 @@ export default function TabFinanceiro() {
                                 </div>
                             </div>
 
-                            {selectedPlanData && (
-                                <div className="bg-slate-50 p-5 rounded-[32px] border border-slate-100 mt-2">
-                                    <div className="flex justify-between items-center text-slate-400 text-[10px] font-black uppercase tracking-tighter mb-2">
-                                        <span>Resumo da Cobrança</span>
-                                        <span className="text-[#B70F0A]">Valor Individual</span>
+                            {/* Permuta Section */}
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                        Pagamento com Permuta?
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPermuta(!isPermuta)}
+                                        className={cn(
+                                            "w-11 h-6 rounded-full transition-colors relative",
+                                            isPermuta ? "bg-[#B70F0A]" : "bg-gray-200"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform",
+                                                isPermuta ? "translate-x-5" : "translate-x-0"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+
+                                {isPermuta && (
+                                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                                        <div>
+                                            <div className="flex bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden">
+                                                <span className="flex items-center justify-center px-4 bg-gray-100 text-gray-400 text-sm font-bold border-r border-gray-100">
+                                                    R$
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    value={permutaAmount || ""}
+                                                    onChange={(e) => setPermutaAmount(Number(e.target.value))}
+                                                    placeholder="Valor em permuta"
+                                                    className="w-full h-12 bg-transparent border-none focus:ring-0 text-sm font-bold px-3"
+                                                    min={0}
+                                                    max={totals.finalBase} // Não pode ser maior que o valor total após desconto
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <textarea
+                                                value={permutaDescription}
+                                                onChange={(e) => setPermutaDescription(e.target.value)}
+                                                placeholder="Descreva o que foi permutado. Ex: 2 vouchers de jantar"
+                                                className="w-full min-h-[80px] bg-gray-50 border border-gray-100 rounded-2xl focus:ring-[#B70F0A] focus:border-[#B70F0A] text-sm font-medium px-4 py-3"
+                                                required={isPermuta}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {selectedPlanData && (
+                            <div className="bg-slate-50 p-5 rounded-[32px] border border-slate-100 mt-2">
+                                <div className="flex justify-between items-center text-slate-400 text-[10px] font-black uppercase tracking-tighter mb-2">
+                                    <span>Resumo da Cobrança</span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="pt-2 space-y-2">
+                                        <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                                            <span>Subtotal (Plano)</span>
+                                            <span>R$ {totals.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+
+                                        {totals.discount > 0 && (
+                                            <div className="flex justify-between text-[11px] font-bold text-green-500">
+                                                <span>Desconto</span>
+                                                <span>- R$ {totals.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        )}
+
+                                        {isPermuta && totals.permuta > 0 && (
+                                            <div className="flex justify-between text-[11px] font-bold text-orange-500">
+                                                <span>Permuta (Abatido)</span>
+                                                <span>- R$ {totals.permuta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-baseline">
-                                            <div>
-                                                <p className="text-2xl font-black text-slate-800">
-                                                    {installments}x R$ {totals.parcel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase">
-                                                    {paymentMethod === 'cartao' ? 'Cartão' : paymentMethod} • 1º Venc. {format(new Date(dueDate), "dd/MM")}
-                                                </p>
-                                            </div>
+                                    <div className="pt-3 border-t border-slate-200/50">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[12px] font-black uppercase text-slate-500 tracking-tighter">Liquidado via Permuta</span>
+                                            <span className="text-sm font-black text-orange-600">R$ {totals.permuta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
+                                    </div>
 
-                                        <div className="pt-3 border-t border-slate-200/50 space-y-1">
-                                            <div className="flex justify-between text-[11px] font-bold text-slate-400">
-                                                <span>Subtotal</span>
-                                                <span>R$ {totals.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                            </div>
-                                            {totals.discount > 0 && (
-                                                <div className="flex justify-between text-[11px] font-bold text-green-500">
-                                                    <span>Desconto</span>
-                                                    <span>- R$ {totals.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between text-sm font-black text-slate-700">
-                                                <span>Total Final</span>
-                                                <span>R$ {totals.final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                            </div>
+                                    <div className="p-3 bg-red-50 rounded-2xl border border-red-100/50">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[12px] font-black text-red-800 uppercase tracking-tighter">A Receber (Dinheiro)</span>
+                                            <span className="text-xl font-black text-[#B70F0A]">R$ {totals.finalPayable.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
+                                        {totals.finalPayable > 0 && installments > 1 && (
+                                            <p className="text-[10px] font-bold text-red-600/70 text-right">
+                                                Em {installments}x de R$ {totals.parcel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </p>
+                                        )}
+                                        {totals.finalPayable === 0 && isPermuta && (
+                                            <div className="mt-2 flex items-center justify-center gap-1.5 p-2 bg-green-100 text-green-800 rounded-xl text-[10px] font-black uppercase">
+                                                <CheckCircle2 size={12} />
+                                                Plano pago 100% em Permuta
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            )}
-
-                            <div className="flex gap-3 pt-4">
+                            </div>
+                        )}
+                        <div className="px-8 pb-8 pt-4">
+                            <div className="flex gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
@@ -626,10 +717,14 @@ export default function TabFinanceiro() {
                                 <button
                                     type="button"
                                     onClick={handleGenerateInvoice}
-                                    disabled={createInvoiceMutation.isPending || !selectedPlan}
-                                    className="flex-[2] h-14 bg-[#B70F0A] text-white rounded-2xl hover:bg-[#8e0c08] font-black uppercase text-xs transition-all disabled:opacity-50 shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+                                    disabled={createInvoiceMutation.isPending || !selectedPlan || (isPermuta && permutaDescription.trim().length === 0)}
+                                    className="flex-[2] h-14 bg-[#B70F0A] text-white rounded-2xl hover:bg-[#8e0c08] font-black uppercase text-[10px] sm:text-xs transition-all disabled:opacity-50 shadow-lg shadow-red-200 flex items-center justify-center gap-1.5"
                                 >
-                                    {createInvoiceMutation.isPending ? "Processando..." : "Gerar Cobrança"}
+                                    {createInvoiceMutation.isPending
+                                        ? "Processando..."
+                                        : (totals.finalPayable === 0 && isPermuta)
+                                            ? "Confirmar Permuta e Ativar"
+                                            : "Gerar Link de Pagamento"}
                                 </button>
                             </div>
                         </div>

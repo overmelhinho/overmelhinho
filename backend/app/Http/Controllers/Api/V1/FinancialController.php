@@ -156,84 +156,136 @@ class FinancialController extends Controller
     }
 
     /**
-     * Gerar nova cobrança
+     * Gerar nova cobrança (com suporte a Permuta Total ou Parcial)
      */
     public function storeInvoice(Request $request, $clientId)
     {
         $client = Cliente::findOrFail($clientId);
 
         $validated = $request->validate([
-            'plan_id' => 'required|exists:plans,id',
-            'due_date' => 'required|date|after_or_equal:today',
-            'amount' => 'nullable|numeric|min:0',
-            'installments' => 'nullable|integer|min:1|max:60',
-            'payment_method' => 'nullable|string|in:boleto,pix,cartao,dinheiro',
-            'discount_value' => 'nullable|numeric|min:0',
-            'discount_type' => 'nullable|string|in:fixed,percent'
+            'plan_id'              => 'required|exists:plans,id',
+            'due_date'             => 'required|date|after_or_equal:today',
+            'amount'               => 'nullable|numeric|min:0',
+            'installments'         => 'nullable|integer|min:1|max:60',
+            'payment_method'       => 'nullable|string|in:boleto,pix,cartao,dinheiro',
+            'discount_value'       => 'nullable|numeric|min:0',
+            'discount_type'        => 'nullable|string|in:fixed,percent',
+            // Permuta
+            'is_permuta'           => 'nullable|boolean',
+            'permuta_amount'       => 'nullable|numeric|min:0',
+            'permuta_description'  => 'required_if:is_permuta,true|nullable|string|max:1000',
         ]);
 
-        $plan = Plan::find($validated['plan_id']);
-        $totalBase = $validated['amount'] ?? $plan->price;
+        $plan         = Plan::find($validated['plan_id']);
+        $totalBase    = $validated['amount'] ?? $plan->price;
         $installments = $validated['installments'] ?? 1;
         $paymentMethod = $validated['payment_method'] ?? 'boleto';
 
-        // Cálculo de desconto
+        // ── Desconto ────────────────────────────────
         $discount = 0;
         if (!empty($validated['discount_value'])) {
             if (($validated['discount_type'] ?? 'fixed') === 'percent') {
                 $discount = ($totalBase * $validated['discount_value']) / 100;
-            }
-            else {
+            } else {
                 $discount = $validated['discount_value'];
             }
         }
-
         $finalTotal = max(0, $totalBase - $discount);
-        $parcelAmount = round($finalTotal / $installments, 2);
 
-        // Ajuste de centavos: a última parcela absorve a diferença
-        $lastParcelAmount = round($finalTotal - ($parcelAmount * ($installments - 1)), 2);
+        // ── Permuta ──────────────────────────────────
+        $isPermuta       = (bool) ($validated['is_permuta'] ?? false);
+        $permutaAmount   = $isPermuta ? (float) ($validated['permuta_amount'] ?? 0) : 0;
+        $payableAmount   = max(0, $finalTotal - $permutaAmount);
+        $permutaDesc     = $validated['permuta_description'] ?? null;
 
-        $groupId = (string)\Illuminate\Support\Str::uuid();
+        // ── Parcelamento ─────────────────────────────
+        $parcelAmount     = round($payableAmount / $installments, 2);
+        $lastParcelAmount = round($payableAmount - ($parcelAmount * ($installments - 1)), 2);
+
+        $groupId       = (string) \Illuminate\Support\Str::uuid();
         $invoicesCreated = [];
-        $dueDate = \Carbon\Carbon::parse($validated['due_date']);
+        $dueDate       = \Carbon\Carbon::parse($validated['due_date']);
 
-        for ($i = 1; $i <= $installments; $i++) {
-            $currentDueDate = $dueDate->copy()->addMonths($i - 1);
-            $currentAmount = ($i === $installments) ? $lastParcelAmount : $parcelAmount;
-
+        // ── Permuta 100% (sem cobrança em dinheiro) ─
+        if ($isPermuta && $payableAmount == 0) {
+            // Cria apenas 1 invoice (permuta total não gera parcelas)
             $invoice = Invoice::create([
-                'client_id' => $client->id,
-                'plan_id' => $plan->id,
-                'amount' => $currentAmount,
-                'due_date' => $currentDueDate,
-                'status' => 'pending',
-                'payment_method' => $paymentMethod,
-                'parcel_number' => $i,
-                'total_parcels' => $installments,
-                'group_id' => $groupId
+                'client_id'           => $client->id,
+                'plan_id'             => $plan->id,
+                'amount'              => $finalTotal,
+                'due_date'            => $dueDate,
+                'status'              => 'paid',           // já ativo
+                'payment_method'      => 'permuta',
+                'parcel_number'       => 1,
+                'total_parcels'       => 1,
+                'group_id'            => $groupId,
+                'is_permuta'          => true,
+                'permuta_amount'      => $permutaAmount,
+                'payable_amount'      => 0,
+                'permuta_description' => $permutaDesc,
+                'justification'       => "Liquidado por permuta total. " . ($permutaDesc ?? ''),
+                'action_date'         => now(),
             ]);
 
-            try {
-                // Sincroniza cada parcela com o Tiny
-                $tinyData = $this->tinyService->createReceivable($invoice);
-                $invoice->update([
-                    'tiny_account_id' => $tinyData['tiny_account_id'],
-                    'payment_url' => $tinyData['payment_url'],
-                ]);
-            }
-            catch (\Exception $e) {
-                Log::error("Erro ao sincronizar parcela $i da fatura {$invoice->id} com Tiny: " . $e->getMessage());
+            // Ativa assinatura diretamente
+            $client->update(['status_assinatura' => 'ativa']);
+
+            Log::info("Fatura #{$invoice->id} — Permuta 100% confirmada. Cliente #{$client->id} ativado.");
+
+            return response()->json([
+                'message'   => 'Permuta total confirmada. Plano ativado imediatamente.',
+                'group_id'  => $groupId,
+                'count'     => 1,
+                'invoices'  => [$invoice],
+                'is_permuta_total' => true,
+            ], 201);
+        }
+
+        // ── Permuta Parcial ou Cobrança Normal ───────
+        for ($i = 1; $i <= $installments; $i++) {
+            $currentDueDate   = $dueDate->copy()->addMonths($i - 1);
+            $currentAmount    = ($i === $installments) ? $lastParcelAmount : $parcelAmount;
+
+            $invoice = Invoice::create([
+                'client_id'           => $client->id,
+                'plan_id'             => $plan->id,
+                'amount'              => $finalTotal / $installments, // valor nominal da parcela
+                'due_date'            => $currentDueDate,
+                'status'              => 'pending',
+                'payment_method'      => $paymentMethod,
+                'parcel_number'       => $i,
+                'total_parcels'       => $installments,
+                'group_id'            => $groupId,
+                'is_permuta'          => $isPermuta,
+                'permuta_amount'      => $isPermuta ? round($permutaAmount / $installments, 2) : null,
+                'payable_amount'      => $currentAmount,
+                'permuta_description' => $permutaDesc,
+            ]);
+
+            // Só envia ao Tiny se houver valor a cobrar
+            if ($currentAmount > 0) {
+                try {
+                    $tinyData = $this->tinyService->createReceivable($invoice, $currentAmount);
+                    $invoice->update([
+                        'tiny_account_id' => $tinyData['tiny_account_id'],
+                        'payment_url'     => $tinyData['payment_url'],
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error("Erro ao sincronizar parcela $i da fatura {$invoice->id} com Tiny: " . $e->getMessage());
+                }
             }
 
             $invoicesCreated[] = $invoice;
         }
 
+        $label = $isPermuta ? 'Permuta parcial + cobrança gerada com sucesso.' : 'Cobrança(s) gerada(s) e enviada(s) ao Tiny ERP com sucesso.';
+
         return response()->json([
-            'message' => 'Cobrança(s) gerada(s) e enviada(s) ao Tiny ERP com sucesso.',
-            'group_id' => $groupId,
-            'count' => count($invoicesCreated),
-            'invoices' => $invoicesCreated
+            'message'          => $label,
+            'group_id'         => $groupId,
+            'count'            => count($invoicesCreated),
+            'invoices'         => $invoicesCreated,
+            'is_permuta_total' => false,
         ], 201);
     }
 

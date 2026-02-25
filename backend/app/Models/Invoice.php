@@ -20,12 +20,20 @@ class Invoice extends Model
         'parcel_number',
         'total_parcels',
         'group_id',
+        // Permuta (Barter/Trade)
+        'is_permuta',
+        'permuta_amount',
+        'payable_amount',
+        'permuta_description',
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'due_date' => 'date',
-        'action_date' => 'datetime',
+        'amount'          => 'decimal:2',
+        'permuta_amount'  => 'decimal:2',
+        'payable_amount'  => 'decimal:2',
+        'is_permuta'      => 'boolean',
+        'due_date'        => 'date',
+        'action_date'     => 'datetime',
     ];
 
     public function client()
