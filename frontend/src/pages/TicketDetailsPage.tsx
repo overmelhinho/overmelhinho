@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Clock, Settings2, UserCircle, Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTicket, useUpdateTicket, TicketStatus, TicketPrioridade, useCreateSubtask, useToggleSubtask, useDeleteSubtask } from "@/hooks/useTickets";
+import { useTicket, useUpdateTicket, TicketStatus, TicketPrioridade } from "@/hooks/useTickets";
 
 /** ---------------------------
  * Utils
@@ -298,11 +298,6 @@ export default function TicketDetailsPage() {
 
   const update = useUpdateTicket(ticketId || 0);
 
-  const [newSubtask, setNewSubtask] = useState("");
-  const createSubtask = useCreateSubtask(ticketId || 0);
-  const toggleSubtask = useToggleSubtask(ticketId || 0);
-  const deleteSubtask = useDeleteSubtask(ticketId || 0);
-
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const [comment, setComment] = useState("");
@@ -334,17 +329,6 @@ export default function TicketDetailsPage() {
     if (!ticketId || !msg) return;
     await quickUpdate({ comment: msg }, "Comentário adicionado e registrado na timeline.");
     setComment("");
-  }
-
-  async function onAddSubtask(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newSubtask.trim()) return;
-    try {
-      await createSubtask.mutateAsync({ title: newSubtask });
-      setNewSubtask("");
-    } catch {
-      setToast({ type: "error", msg: "Erro ao criar subtarefa." });
-    }
   }
 
   function openConfirm(cfg: Omit<NonNullable<ConfirmState>, "onConfirm"> & { onConfirm: NonNullable<ConfirmState>["onConfirm"] }) {
@@ -599,152 +583,49 @@ export default function TicketDetailsPage() {
                 </div>
               </div>
 
-              {/* Bloco 2: O Trabalho (Checklist Dinâmico) */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <CheckCircle2 size={20} className="text-gray-400" /> O Trabalho
-                  </h2>
-                  <span className="text-xs font-black text-gray-500 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider">
-                    {_completedLocalSubtasks}/{_totalLocalSubtasks}
-                  </span>
+              {/* Bloco 2: Instruções a serem verificadas */}
+              {ticket.subtasks && ticket.subtasks.length > 0 && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+                  <div className="mb-4">
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <CheckCircle2 size={20} className="text-gray-400" /> Instruções a serem verificadas
+                    </h2>
+                  </div>
+
+                  <ul className="space-y-3 mb-2">
+                    {ticket.subtasks.map(st => (
+                      <li key={st.id} className="flex items-start gap-3 p-2 border border-transparent hover:bg-gray-50 rounded-xl transition-all">
+                        <span className="mt-2 w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
+                        <p className="text-sm font-medium text-gray-700 leading-relaxed uppercase tracking-wide">
+                          {st.title}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+              )}
 
-                {/* Barra de Progresso Visual */}
-                <div className="w-full bg-gray-100 rounded-full h-2 mb-6 overflow-hidden">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-500 ease-out ${(_completedLocalSubtasks === _totalLocalSubtasks && _totalLocalSubtasks > 0)
-                      ? 'bg-[#37B24D]'
-                      : 'bg-yellow-400'
-                      }`}
-                    style={{ width: `${_totalLocalSubtasks ? (_completedLocalSubtasks / _totalLocalSubtasks) * 100 : 0}%` }}
-                  ></div>
+              {/* Call to Action: Resolver Ticket */}
+              <button
+                disabled={!canSubmit || update.isPending}
+                onClick={() => {
+                  confirmStatusChange("resolvido", {
+                    comment: "O Ticket foi marcado como Resolvido.",
+                    title: "Encerrar O Vermelhinho?",
+                    description: "Deseja encerrar o ticket no sistema?",
+                    onSuccess: () => {
+                      setToast({ type: "success", msg: "Ticket finalizado com sucesso! Redirecionando..." });
+                      setTimeout(() => navigate("/tickets"), 1500);
+                    }
+                  });
+                }}
+                className="w-full h-16 rounded-[16px] text-lg font-black tracking-wide shadow-xl transition-all flex flex-col items-center justify-center relative overflow-hidden group bg-[#C00000] text-white shadow-red-900/10 hover:bg-[#A30D09] hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={24} className="text-white" />
+                  {update.isPending ? "ENCERRANDO..." : "RESOLVER TICKET"}
                 </div>
-
-                <div className="space-y-3 mb-6">
-                  {ticket.subtasks?.map(st => {
-                    // Micro heurística para Action Pills na UX
-                    const needsClientLink = st.title.toLowerCase().includes('cadastro') || st.title.toLowerCase().includes('perfil');
-
-                    return (
-                      <div key={st.id} className="group flex items-start gap-4 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all">
-                        <input
-                          type="checkbox"
-                          className="mt-1 flex-shrink-0 h-5 w-5 rounded-md border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer transition-all"
-                          checked={st.is_completed}
-                          onChange={async () => {
-                            await toggleSubtask.mutateAsync(st.id);
-                            if (!st.is_completed) {
-                              setToast({ type: "success", msg: "Etapa concluída! 🚀" });
-                            }
-                          }}
-                          disabled={toggleSubtask.isPending || deleteSubtask.isPending}
-                        />
-                        <div className="flex-1 min-w-0 flex items-center gap-3">
-                          <p className={`text-sm font-medium transition-all ${st.is_completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                            {st.title}
-                          </p>
-
-                          {/* UX de Ação: Botão Dinâmico de Atalho */}
-                          {!st.is_completed && needsClientLink && ticket.cliente_id && (
-                            <a
-                              href={`/clientes/${ticket.cliente_id}/editar`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] uppercase font-bold tracking-widest bg-blue-50 text-blue-600 px-2 py-1 rounded-md hover:bg-blue-100 transition-colors shrink-0"
-                            >
-                              Abrir Cadastro ↗
-                            </a>
-                          )}
-
-                          {st.is_completed && st.completedBy && (
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden sm:block">
-                              ✓ {st.completedBy.name.split(' ')[0]} em {fmtDate(st.completed_at)}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (window.confirm("Remover esta subtarefa?")) deleteSubtask.mutate(st.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Remover Tarefa"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    );
-                  })}
-                  {(!ticket.subtasks || ticket.subtasks.length === 0) && (
-                    <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-100 rounded-xl">
-                      <p className="text-sm font-medium text-gray-400">Nenhuma subtarefa criada.</p>
-                      <p className="text-xs text-gray-400 mt-1">Divida a entrega para organizar o andamento.</p>
-                    </div>
-                  )}
-                </div>
-
-                <form onSubmit={onAddSubtask} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Adicionar nova subtarefa..."
-                    className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold focus:bg-white focus:ring-0 focus:border-gray-300 transition-colors"
-                    value={newSubtask}
-                    onChange={e => setNewSubtask(e.target.value)}
-                    disabled={createSubtask.isPending}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newSubtask.trim() || createSubtask.isPending}
-                    className="rounded-xl bg-gray-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                  >
-                    Add
-                  </button>
-                </form>
-              </div>
-
-              {/* Call to Action: O Botão Mágico (Resolução Condicional) */}
-              {(() => {
-                const total = _totalLocalSubtasks;
-                const completed = _completedLocalSubtasks;
-                const progress100 = total > 0 && completed === total;
-                const disableResolveAction = !progress100 || !canSubmit;
-
-                return (
-                  <button
-                    disabled={disableResolveAction || update.isPending}
-                    onClick={() => {
-                      confirmStatusChange("resolvido", {
-                        comment: "Checklist 100% finalizado! O Ticket foi marcado como Resolvido.",
-                        title: "Encerrar O Vermelhinho?",
-                        description: "Parabéns, você completou todas as subtarefas.\nDeseja encerrar o ticket no sistema?",
-                        onSuccess: () => {
-                          setToast({ type: "success", msg: "Ticket finalizado com sucesso! Redirecionando..." });
-                          setTimeout(() => navigate("/tickets"), 1500);
-                        }
-                      });
-                    }}
-                    className={`w-full h-16 rounded-[16px] text-lg font-black tracking-wide shadow-xl transition-all flex flex-col items-center justify-center disabled:hover:translate-y-0 relative overflow-hidden group ${progress100
-                      ? "bg-[#C00000] text-white shadow-red-900/10 hover:bg-[#A30D09] hover:-translate-y-0.5 cursor-pointer"
-                      : "bg-gray-100 text-gray-400 opacity-80 cursor-not-allowed shadow-none"
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 size={24} className={progress100 ? "text-white" : "text-gray-400"} />
-                      {update.isPending && progress100 ? "ENCERRANDO..." : progress100 ? "TUDO PRONTO! ENCERRAR TICKET." : "RESOLVER TICKET"}
-                    </div>
-                    {!progress100 && total > 0 && (
-                      <span className="text-[10px] uppercase font-bold tracking-widest mt-1 opacity-70">
-                        Complete o checklist para finalizar
-                      </span>
-                    )}
-                    {!progress100 && total === 0 && (
-                      <span className="text-[10px] uppercase font-bold tracking-widest mt-1 text-red-800/60">
-                        Crie ao menos uma subtarefa para preencher a régua
-                      </span>
-                    )}
-                  </button>
-                );
-              })()}
+              </button>
 
             </div>
 
@@ -769,15 +650,29 @@ export default function TicketDetailsPage() {
                 </div>
 
                 <div className="space-y-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold shrink-0">
-                      {clienteNome.substring(0, 2).toUpperCase()}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold shrink-0">
+                        {clienteNome.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Cliente</p>
+                        <p className="text-sm font-bold text-gray-900 truncate" title={clienteNome}>{clienteNome}</p>
+                        {ticket.cliente?.cpf_cnpj && <p className="text-xs text-gray-500 truncate">{ticket.cliente.cpf_cnpj}</p>}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Cliente</p>
-                      <p className="text-sm font-bold text-gray-900 truncate" title={clienteNome}>{clienteNome}</p>
-                      {ticket.cliente?.cpf_cnpj && <p className="text-xs text-gray-500 truncate">{ticket.cliente.cpf_cnpj}</p>}
-                    </div>
+                    {clienteId && (
+                      <div className="pl-[52px]">
+                        <a
+                          href={`/clientes/${clienteId}/editar`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center w-full gap-1.5 text-[10px] uppercase font-bold tracking-widest bg-blue-50 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                          Visualizar/Editar Cadastro ↗
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3 pt-4 border-t border-gray-50/80">
