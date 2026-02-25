@@ -58,6 +58,9 @@ interface Invoice {
     status: "pending" | "paid" | "canceled";
     payment_url: string | null;
     created_at: string;
+    is_permuta?: boolean;
+    permuta_amount?: number;
+    payable_amount?: number;
     client: {
         id: number;
         nome_fantasia: string;
@@ -402,8 +405,17 @@ export default function InvoicesTab() {
                                                 </PopoverContent>
                                             </Popover>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-gray-900">
-                                            R$ {Number(invoice.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                        <td className="whitespace-nowrap px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-semibold text-gray-900">
+                                                    R$ {Number(invoice.payable_amount ?? invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                                {invoice.is_permuta && (
+                                                    <span className="text-[9px] text-orange-600 font-bold uppercase tracking-tight bg-orange-50 px-1.5 py-0.5 rounded w-fit mt-1 border border-orange-100/50">
+                                                        + Permuta R$ {Number(invoice.permuta_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                             <div className={cn(
