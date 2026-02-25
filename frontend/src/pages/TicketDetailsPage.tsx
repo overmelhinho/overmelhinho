@@ -440,6 +440,10 @@ export default function TicketDetailsPage() {
     }
   }
 
+  // Define os contadores reativos localmente pelo array em cache, caindo para contadores vindos do DB se array for undefined
+  const _totalLocalSubtasks = ticket?.subtasks?.length ?? ticket?.subtasks_count ?? 0;
+  const _completedLocalSubtasks = ticket?.subtasks?.filter(st => st.is_completed).length ?? ticket?.completed_subtasks_count ?? 0;
+
   const headerBadges = (
     <div className="flex flex-wrap items-center gap-2 mt-3">
       {ticket?.setor && <Badge>{ticket.setor}</Badge>}
@@ -602,18 +606,18 @@ export default function TicketDetailsPage() {
                     <CheckCircle2 size={20} className="text-gray-400" /> O Trabalho
                   </h2>
                   <span className="text-xs font-black text-gray-500 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider">
-                    {ticket.completed_subtasks_count || 0}/{ticket.subtasks_count || 0}
+                    {_completedLocalSubtasks}/{_totalLocalSubtasks}
                   </span>
                 </div>
 
                 {/* Barra de Progresso Visual */}
                 <div className="w-full bg-gray-100 rounded-full h-2 mb-6 overflow-hidden">
                   <div
-                    className={`h-2 rounded-full transition-all duration-500 ease-out ${((ticket.completed_subtasks_count || 0) === (ticket.subtasks_count || 0) && (ticket.subtasks_count || 0) > 0)
+                    className={`h-2 rounded-full transition-all duration-500 ease-out ${(_completedLocalSubtasks === _totalLocalSubtasks && _totalLocalSubtasks > 0)
                       ? 'bg-[#37B24D]'
                       : 'bg-yellow-400'
                       }`}
-                    style={{ width: `${ticket.subtasks_count ? ((ticket.completed_subtasks_count || 0) / ticket.subtasks_count) * 100 : 0}%` }}
+                    style={{ width: `${_totalLocalSubtasks ? (_completedLocalSubtasks / _totalLocalSubtasks) * 100 : 0}%` }}
                   ></div>
                 </div>
 
@@ -700,8 +704,8 @@ export default function TicketDetailsPage() {
 
               {/* Call to Action: O Botão Mágico (Resolução Condicional) */}
               {(() => {
-                const total = ticket.subtasks_count || 0;
-                const completed = ticket.completed_subtasks_count || 0;
+                const total = _totalLocalSubtasks;
+                const completed = _completedLocalSubtasks;
                 const progress100 = total > 0 && completed === total;
                 const disableResolveAction = !progress100 || !canSubmit;
 
