@@ -61,7 +61,7 @@ export default function Sidebar() {
       to: "/campanhas",
       label: "Campanhas",
       icon: <Megaphone size={18} />,
-      perms: ["view_campanha"],
+      perms: ["view_campanhas", "manage_campanhas"],
     },
     {
       to: "/orcamentos",
