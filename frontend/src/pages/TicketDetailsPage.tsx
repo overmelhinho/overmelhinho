@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Clock, Settings2, UserCircle, Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTicket, useUpdateTicket, TicketStatus, TicketPrioridade, useCreateSubtask, useToggleSubtask, useDeleteSubtask } from "@/hooks/useTickets";
 
@@ -418,8 +419,26 @@ export default function TicketDetailsPage() {
     await quickUpdate(payload, dueAt ? "Prazo atualizado." : "Prazo removido.");
   }
 
+  const [isPropsModalOpen, setIsPropsModalOpen] = useState(false);
+
+  async function handleSaveProps() {
+    if (!ticketId) return;
+    const payload: any = {};
+    if (status) payload.status = status;
+    if (prioridade) payload.prioridade = prioridade;
+    payload.due_at = dueAt || null;
+
+    try {
+      await update.mutateAsync(payload);
+      setToast({ type: "success", msg: "Propriedades atualizadas." });
+      setIsPropsModalOpen(false);
+    } catch (e: any) {
+      setToast({ type: "error", msg: extractErrorMessage(e) });
+    }
+  }
+
   const headerBadges = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 mt-3">
       {ticket?.setor && <Badge>{ticket.setor}</Badge>}
       {ticket?.status && <Badge tone={statusTone(ticket.status)}>{statusLabelPt(ticket.status)}</Badge>}
       {ticket?.prioridade && <Badge tone={prioridadeTone(ticket.prioridade)}>{prioridadeLabelPt(ticket.prioridade)}</Badge>}
@@ -428,8 +447,8 @@ export default function TicketDetailsPage() {
   );
 
   return (
-    <div className="p-6">
-      {/* Modal global */}
+    <div className="min-h-screen bg-[#F2F2F2] p-4 md:p-6 lg:p-8">
+      {/* Modal Global de Confirmação */}
       <ConfirmDialog
         open={!!confirm}
         title={confirm?.title || ""}
@@ -446,254 +465,18 @@ export default function TicketDetailsPage() {
         }}
       />
 
-      {/* Header */}
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <div className="mb-1 text-sm text-gray-600">
-            <Link to="/tickets" className="hover:underline">
-              Tickets
-            </Link>{" "}
-            / #{ticketId}
-          </div>
+      {/* Modal Simplificado: Editar Propriedades */}
+      {isPropsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsPropsModalOpen(false)} />
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6 z-10 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Editar Propriedades</h3>
 
-          <h1 className="truncate text-2xl font-semibold text-gray-900">
-            {ticket?.titulo ? ticket.titulo : "Detalhe do Ticket"}
-          </h1>
-
-          <div className="mt-2">{headerBadges}</div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50"
-            onClick={() => navigate(-1)}
-          >
-            Voltar
-          </button>
-
-          {/* Primárias */}
-          {ticket && !ticket.assignee_id && (
-            <button
-              disabled={!canSubmit}
-              onClick={onAssume}
-              className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
-              title="Assumir este ticket"
-            >
-              Assumir
-            </button>
-          )}
-
-          {ticket && (
-            <button
-              disabled={!canSubmit}
-              onClick={() => confirmStatusChange("resolvido", { comment: "Resolvido" })}
-              className="rounded-xl bg-[#B70F0A] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
-              title="No Criativo, só resolve se cliente tiver logo e imagens"
-            >
-              Resolver
-            </button>
-          )}
-
-          {/* Secundárias em dropdown */}
-          {ticket && (
-            <ActionMenu
-              disabled={!canSubmit}
-              items={[
-                { label: "Marcar como Em andamento", onClick: () => confirmStatusChange("em_andamento", { comment: "Em andamento" }) },
-                { label: "Marcar como Aguardando cliente", onClick: () => confirmStatusChange("aguardando_cliente", { comment: "Aguardando retorno do cliente" }) },
-                { label: "Marcar como Aguardando interno", onClick: () => confirmStatusChange("aguardando_interno", { comment: "Aguardando interno" }) },
-                { label: "Fechar ticket", onClick: () => confirmStatusChange("fechado", { comment: "Fechado" }) },
-                { label: "Cancelar ticket", danger: true, onClick: () => confirmStatusChange("cancelado", { comment: "Cancelado", tone: "danger" }) },
-              ]}
-            />
-          )}
-        </div>
-      </div>
-
-      {toast && <Toast type={toast.type} message={toast.msg} onClose={() => setToast(null)} />}
-
-      {isLoading && <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">Carregando...</div>}
-
-      {isError && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-red-600 shadow-sm">
-          Erro ao carregar ticket.
-        </div>
-      )}
-
-      {ticket && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* Conteúdo principal */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Descrição */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <div className="text-sm text-gray-600">Descrição</div>
-              {ticket.descricao ? (
-                <div className="mt-2 whitespace-pre-line text-sm text-gray-800">{ticket.descricao}</div>
-              ) : (
-                <div className="mt-2 text-sm text-gray-500">Sem descrição.</div>
-              )}
-            </div>
-
-            {/* Subtarefas */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="text-sm font-semibold text-gray-900">Checklist (Subtarefas)</div>
-                <div className="text-xs text-gray-500 font-medium">
-                  {ticket.completed_subtasks_count || 0}/{ticket.subtasks_count || 0}
-                </div>
-              </div>
-
-              <div className="space-y-2 mb-4">
-                {ticket.subtasks?.map(st => (
-                  <div key={st.id} className="flex items-start gap-3 group">
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
-                      checked={st.is_completed}
-                      onChange={() => toggleSubtask.mutate(st.id)}
-                      disabled={toggleSubtask.isPending || deleteSubtask.isPending}
-                    />
-                    <div className="flex-1">
-                      <div className={`text-sm ${st.is_completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                        {st.title}
-                      </div>
-                      {st.is_completed && st.completedBy && (
-                        <div className="text-[10px] text-gray-500 mt-0.5">
-                          Concluído por {st.completedBy.name} em {fmtDate(st.completed_at)}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        if (window.confirm("Tem certeza que deseja remover esta subtarefa?")) {
-                          deleteSubtask.mutate(st.id);
-                        }
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 transition-opacity"
-                      title="Excluir"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-                {(!ticket.subtasks || ticket.subtasks.length === 0) && (
-                  <div className="text-sm text-gray-500 italic">Nenhuma subtarefa.</div>
-                )}
-              </div>
-
-              <form onSubmit={onAddSubtask} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nova subtarefa..."
-                  className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:bg-white"
-                  value={newSubtask}
-                  onChange={e => setNewSubtask(e.target.value)}
-                  disabled={createSubtask.isPending}
-                />
-                <button
-                  type="submit"
-                  disabled={!newSubtask.trim() || createSubtask.isPending}
-                  className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
-                >
-                  Adicionar
-                </button>
-              </form>
-            </div>
-
-            {/* Meta cards */}
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-medium text-gray-600">Cliente</div>
-
-                  {clienteId && (
-                    <a
-                      href={`/clientes/${clienteId}/editar`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
-                      title="Abrir cliente em nova aba"
-                    >
-                      Abrir cliente ↗
-                    </a>
-                  )}
-                </div>
-
-                <div className="mt-1 font-semibold text-gray-900">{clienteNome}</div>
-                {ticket.cliente?.cpf_cnpj && <div className="mt-1 text-xs text-gray-500">{ticket.cliente.cpf_cnpj}</div>}
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="text-xs font-medium text-gray-600">Informações</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Badge>{ticket.setor}</Badge>
-                  <Badge tone={statusTone(ticket.status)}>{statusLabelPt(ticket.status)}</Badge>
-                  <Badge tone={prioridadeTone(ticket.prioridade)}>{prioridadeLabelPt(ticket.prioridade)}</Badge>
-                </div>
-                <div className="mt-3 text-xs text-gray-500">
-                  Criado em: {fmtDate(ticket.created_at)} <br />
-                  Atualizado em: {fmtDate(ticket.updated_at)}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="text-xs font-medium text-gray-600">Responsável</div>
-                <div className="mt-1 font-semibold text-gray-900">{ticket.assignee?.name ? ticket.assignee.name : "Sem responsável"}</div>
-                <div className="mt-1 text-xs text-gray-500">{ticket.assignee?.email ? ticket.assignee.email : "—"}</div>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="text-xs font-medium text-gray-600">Prazo</div>
-                <div className="mt-1 font-semibold text-gray-900">{fmtDate(ticket.due_at)}</div>
-
-                <div className="mt-3 flex flex-col gap-2">
-                  <input
-                    type="date"
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                    value={dueAt || toDateInputValue(ticket.due_at)}
-                    onChange={(e) => setDueAt(e.target.value)}
-                  />
-
-                  <div className="flex gap-2">
-                    <button
-                      disabled={!canSubmit}
-                      onClick={onChangeDueAt}
-                      className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      Salvar
-                    </button>
-
-                    <button
-                      disabled={!canSubmit}
-                      onClick={() =>
-                        openConfirm({
-                          title: "Remover prazo?",
-                          description: "Tem certeza que deseja remover o prazo deste ticket?",
-                          confirmText: "Remover",
-                          cancelText: "Cancelar",
-                          tone: "danger",
-                          onConfirm: async () => {
-                            setDueAt("");
-                            await quickUpdate({ due_at: null, comment: "Prazo removido" }, "Prazo removido.");
-                          },
-                        })
-                      }
-                      className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-                      title="Remover prazo"
-                    >
-                      Remover
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Ajustes manuais (status/prioridade) */}
-            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:grid-cols-2">
+            <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Alterar status</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Status</label>
                 <select
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                  className="w-full h-12 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold focus:ring-0 focus:border-gray-300"
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}
                 >
@@ -708,20 +491,12 @@ export default function TicketDetailsPage() {
                   <option value="fechado">Fechado</option>
                   <option value="cancelado">Cancelado</option>
                 </select>
-
-                <button
-                  disabled={!canSubmit || !status}
-                  onClick={onChangeStatus}
-                  className="mt-2 w-full rounded-xl bg-[#B70F0A] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
-                >
-                  Salvar status
-                </button>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Prioridade</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Prioridade</label>
                 <select
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                  className="w-full h-12 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold focus:ring-0 focus:border-gray-300"
                   value={prioridade}
                   onChange={(e) => setPrioridade(e.target.value as any)}
                 >
@@ -731,72 +506,294 @@ export default function TicketDetailsPage() {
                   <option value="alta">Alta</option>
                   <option value="urgente">Urgente</option>
                 </select>
-
-                <button
-                  disabled={!canSubmit || !prioridade}
-                  onClick={onChangePrioridade}
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Salvar prioridade
-                </button>
               </div>
-            </div>
 
-            {/* Comentário */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <div className="mb-2 text-sm font-semibold text-gray-900">Atualização / Comentário</div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Prazo (Due Date)</label>
+                <input
+                  type="date"
+                  className="w-full h-12 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold focus:ring-0 focus:border-gray-300"
+                  value={dueAt}
+                  onChange={(e) => setDueAt(e.target.value)}
+                />
+              </div>
 
-              <textarea
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                rows={3}
-                placeholder="Escreva um update… (isso entra na timeline)"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-
-              <div className="mt-2 flex items-center justify-between">
-                <div className="text-xs text-gray-500">{update.isPending ? "Salvando…" : "Comentários ficam registrados na timeline."}</div>
+              <div className="pt-4 flex justify-end gap-3">
                 <button
-                  disabled={!canSubmit || !comment.trim()}
-                  onClick={onAddComment}
-                  className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
+                  onClick={() => setIsPropsModalOpen(false)}
+                  className="px-5 py-2 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-colors"
                 >
-                  Publicar
+                  Cancelar
+                </button>
+                <button
+                  disabled={!canSubmit || update.isPending}
+                  onClick={handleSaveProps}
+                  className="px-5 py-2 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  {update.isPending ? "Salvando..." : "Salvar Alterações"}
                 </button>
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Timeline Activity Feed */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="mb-3 text-sm font-semibold text-gray-900">Timeline</div>
+      {toast && <Toast type={toast.type} message={toast.msg} onClose={() => setToast(null)} />}
 
-            {(!ticket.logs || ticket.logs.length === 0) && <div className="text-sm text-gray-600">Sem histórico ainda.</div>}
+      {isLoading && <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">Carregando chamada...</div>}
 
-            {ticket.logs && ticket.logs.length > 0 && (
-              <div className="space-y-3">
-                {ticket.logs.map((l) => (
-                  <div key={l.id} className="flex gap-3">
-                    <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200 bg-white text-sm">
-                      {actionIcon(l.action)}
+      {isError && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-red-600 shadow-sm">
+          Erro ao carregar ticket.
+        </div>
+      )}
+
+      {ticket && (
+        <div className="mx-auto max-w-7xl">
+          {/* Breadcrumbs & Actions Header */}
+          <div className="mb-6 flex items-center justify-between">
+            <button
+              className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft size={16} /> Voltar aos Tickets
+            </button>
+
+            <ActionMenu
+              disabled={!canSubmit}
+              items={[
+                { label: "Marcar como Em Andamento", onClick: () => confirmStatusChange("em_andamento", { comment: "Em andamento" }) },
+                { label: "Marcar como Aguardando Cliente", onClick: () => confirmStatusChange("aguardando_cliente", { comment: "Aguardando retorno do cliente" }) },
+                { label: "Cancelar Ticket", danger: true, onClick: () => confirmStatusChange("cancelado", { comment: "Cancelado", tone: "danger" }) },
+              ]}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            {/* Coluna Principal: Foco na Tarefa (col-span-2) */}
+            <div className="lg:col-span-2 space-y-6">
+
+              {/* Header Limpo */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ticket #{ticket.id}</span>
+                <h1 className="mt-1 text-2xl md:text-3xl font-bold font-serif text-gray-900 leading-tight">
+                  {ticket.titulo || "Ticket Sem Título"}
+                </h1>
+                {headerBadges}
+              </div>
+
+              {/* Bloco 1: O Problema */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <AlertCircle size={20} className="text-gray-400" /> Descrição
+                </h2>
+                <div className="text-[15px] text-gray-700 leading-relaxed whitespace-pre-line bg-gray-50/50 p-4 rounded-xl border border-gray-50">
+                  {ticket.descricao || <span className="italic opacity-50">Nenhum detalhe informado no escopo deste ticket.</span>}
+                </div>
+              </div>
+
+              {/* Bloco 2: O Trabalho (Checklist) */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-5">
+                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <CheckCircle2 size={20} className="text-gray-400" /> O Trabalho
+                  </h2>
+                  <span className="text-xs font-black text-gray-500 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                    {ticket.completed_subtasks_count || 0}/{ticket.subtasks_count || 0}
+                  </span>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  {ticket.subtasks?.map(st => (
+                    <div key={st.id} className="group flex items-start gap-4 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors">
+                      <input
+                        type="checkbox"
+                        className="mt-1 flex-shrink-0 h-5 w-5 rounded-md border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer transition-all"
+                        checked={st.is_completed}
+                        onChange={() => toggleSubtask.mutate(st.id)}
+                        disabled={toggleSubtask.isPending || deleteSubtask.isPending}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${st.is_completed ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                          {st.title}
+                        </p>
+                        {st.is_completed && st.completedBy && (
+                          <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">
+                            ✓ {st.completedBy.name.split(' ')[0]} em {fmtDate(st.completed_at)}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (window.confirm("Remover esta subtarefa?")) deleteSubtask.mutate(st.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="Remover Tarefa"
+                      >
+                        ✕
+                      </button>
                     </div>
+                  ))}
+                  {(!ticket.subtasks || ticket.subtasks.length === 0) && (
+                    <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-100 rounded-xl">
+                      <p className="text-sm font-medium text-gray-400">Nenhuma subtarefa criada.</p>
+                      <p className="text-xs text-gray-400 mt-1">Divida a entrega para organizar o andamento.</p>
+                    </div>
+                  )}
+                </div>
 
-                    <div className="min-w-0 flex-1 rounded-2xl border border-gray-200 bg-white p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-semibold text-gray-800">{actionLabel(l.action)}</div>
-                        <div className="text-xs text-gray-500">{fmtDate(l.created_at)}</div>
-                      </div>
+                <form onSubmit={onAddSubtask} className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Adicionar nova subtarefa..."
+                    className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold focus:bg-white focus:ring-0 focus:border-gray-300 transition-colors"
+                    value={newSubtask}
+                    onChange={e => setNewSubtask(e.target.value)}
+                    disabled={createSubtask.isPending}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newSubtask.trim() || createSubtask.isPending}
+                    className="rounded-xl bg-gray-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                  >
+                    Add
+                  </button>
+                </form>
+              </div>
 
-                      {l.message && <div className="mt-1 whitespace-pre-line text-sm text-gray-800">{l.message}</div>}
+              {/* Call to Action: Resolver Ticket */}
+              <button
+                disabled={!canSubmit}
+                onClick={() => confirmStatusChange("resolvido", { comment: "O Ticket foi marcado como Resolvido" })}
+                className="w-full h-16 rounded-[16px] bg-[#C00000] text-white text-lg font-black tracking-wide shadow-xl shadow-red-900/10 hover:bg-[#A30D09] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                <CheckCircle2 size={24} />
+                CONCLUIR TAREFA / RESOLVER
+              </button>
 
-                      <div className="mt-2 text-xs text-gray-500">
-                        {l.user?.name ? `por ${l.user.name}` : "—"}
-                      </div>
+            </div>
+
+            {/* Coluna Lateral: Contexto e Timeline (col-span-1) */}
+            <div className="lg:col-span-1 flex flex-col gap-6 h-full">
+
+              {/* Progressive Disclosure Card 1: Contexto */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Contexto</h3>
+                  <button
+                    onClick={() => {
+                      setStatus(ticket.status || "");
+                      setPrioridade(ticket.prioridade || "");
+                      setDueAt(ticket.due_at ? toDateInputValue(ticket.due_at) : "");
+                      setIsPropsModalOpen(true);
+                    }}
+                    className="text-[10px] font-black text-blue-700 bg-blue-50/80 hover:bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors uppercase tracking-widest"
+                  >
+                    <Settings2 size={12} /> Editar
+                  </button>
+                </div>
+
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold shrink-0">
+                      {clienteNome.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Cliente</p>
+                      <p className="text-sm font-bold text-gray-900 truncate" title={clienteNome}>{clienteNome}</p>
+                      {ticket.cliente?.cpf_cnpj && <p className="text-xs text-gray-500 truncate">{ticket.cliente.cpf_cnpj}</p>}
                     </div>
                   </div>
-                ))}
+
+                  <div className="flex items-center gap-3 pt-4 border-t border-gray-50/80">
+                    {ticket.assignee_id ? (
+                      <>
+                        <div className="w-10 h-10 rounded-full bg-[#C00000]/10 flex items-center justify-center text-[#C00000] font-bold shrink-0">
+                          {ticket.assignee?.name?.substring(0, 1).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Responsável</p>
+                          <p className="text-sm font-bold text-gray-900 truncate">{ticket.assignee?.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{ticket.assignee?.email}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-3 w-full">
+                        <div className="w-10 h-10 rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 shrink-0">
+                          <UserCircle size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Responsável</p>
+                          <p className="text-xs font-semibold text-gray-600 mb-1">Ninguém atribuído</p>
+                          <button
+                            onClick={onAssume}
+                            disabled={!canSubmit}
+                            className="text-xs font-bold text-[#C00000] hover:underline"
+                          >
+                            Assumir Posição
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Card 2: Timeline em formato Chat */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col flex-1" style={{ maxHeight: 'max(600px, calc(100vh - 120px))' }}>
+                <div className="p-5 border-b border-gray-50 shrink-0 flex items-center gap-2">
+                  <Clock size={16} className="text-gray-400" />
+                  <h3 className="text-[10px] font-black text-gray-500 tracking-widest uppercase">Atividade e Comentários</h3>
+                </div>
+
+                <div className="p-5 flex-1 overflow-y-auto space-y-6 bg-gray-50/30">
+                  {ticket.logs?.map(l => (
+                    <div key={l.id} className="flex gap-4">
+                      <div className="mt-1 w-8 h-8 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-[11px] shrink-0 z-10 text-gray-500 font-bold">
+                        {actionIcon(l.action)}
+                      </div>
+                      <div className="flex-1 bg-white border border-gray-100 p-4 rounded-2xl rounded-tl-sm shadow-sm relative group">
+                        <div className="flex justify-between items-start gap-2 mb-2">
+                          <span className="text-xs font-bold text-gray-900">{actionLabel(l.action)}</span>
+                          <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">{fmtDate(l.created_at)}</span>
+                        </div>
+                        {l.message && <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{l.message}</p>}
+                        <p className="text-[10px] font-semibold text-gray-400 mt-2 text-right">
+                          {l.user?.name ? l.user.name.split(' ')[0] : "Sistema Automático"}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {(!ticket.logs || ticket.logs.length === 0) && (
+                    <div className="text-center text-sm font-medium text-gray-400 italic mt-8 border-2 border-dashed border-gray-200 p-6 rounded-2xl">
+                      Nenhuma atualização inserida no histórico.
+                    </div>
+                  )}
+                </div>
+
+                {/* Input Textarea Fixado no Bottom */}
+                <div className="p-4 border-t border-gray-50 bg-white rounded-b-2xl shrink-0">
+                  <div className="relative">
+                    <textarea
+                      value={comment}
+                      onChange={e => setComment(e.target.value)}
+                      placeholder="Adicionar um comentário..."
+                      rows={2}
+                      className="w-full text-sm resize-none bg-gray-50 border border-gray-100 focus:bg-white focus:border-gray-300 focus:ring-0 rounded-xl p-4 pr-16 placeholder-gray-400 transition-colors font-medium shadow-inner shadow-gray-200/20"
+                    />
+                    <button
+                      onClick={onAddComment}
+                      disabled={!canSubmit || !comment.trim()}
+                      className="absolute bottom-3 right-3 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white p-2.5 rounded-lg transition-transform hover:scale-105 active:scale-95 shadow-sm"
+                      title="Enviar comentário"
+                    >
+                      <Send size={16} className="-ml-0.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       )}
