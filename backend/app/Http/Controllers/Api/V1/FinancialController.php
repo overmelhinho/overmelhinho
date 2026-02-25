@@ -314,8 +314,9 @@ class FinancialController extends Controller
             // Sincronizar baixa com o Tiny se a fatura tiver um ID lá
             if ($invoice->tiny_account_id) {
                 try {
-                    $this->tinyService->payReceivable($invoice->tiny_account_id, $invoice->amount);
-                    Log::info("Baixa da fatura #{$invoice->id} sincronizada com sucesso no Tiny ERP.");
+                    $valorBaixa = $invoice->payable_amount ?? $invoice->amount;
+                    $this->tinyService->payReceivable($invoice->tiny_account_id, $valorBaixa);
+                    Log::info("Baixa da fatura #{$invoice->id} sincronizada com sucesso no Tiny ERP (Valor: R$ {$valorBaixa}).");
                 }
                 catch (\Exception $e) {
                     Log::error("Erro ao sincronizar baixa da fatura #{$invoice->id} no Tiny: " . $e->getMessage());

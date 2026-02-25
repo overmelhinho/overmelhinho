@@ -85,7 +85,7 @@ class TinyErpService
      * Cria conta a receber no Tiny.
      * Método: conta.receber.incluir
      */
-    public function createReceivable(Invoice $invoice): array
+    public function createReceivable(Invoice $invoice, float $amountOverride = null): array
     {
         // Sempre tenta sincronizar/atualizar o cliente antes de criar a conta
         $tinyId = $this->syncClient($invoice->client);
@@ -93,10 +93,14 @@ class TinyErpService
             throw new \Exception("Não foi possível sincronizar o cliente nº {$invoice->client->id} com o Tiny.");
         }
 
+        $valorCobrado = $amountOverride !== null 
+            ? $amountOverride 
+            : ($invoice->payable_amount ?? $invoice->amount);
+
         $contaReceber = [
             'data_emissao' => now()->format('d/m/Y'),
             'vencimento' => $invoice->due_date instanceof \Carbon\Carbon ? $invoice->due_date->format('d/m/Y') : date('d/m/Y', strtotime($invoice->due_date)),
-            'valor' => number_format($invoice->amount, 2, ',', ''),
+            'valor' => number_format($valorCobrado, 2, ',', ''),
             'historico' => "Fatura #{$invoice->id} - Plano " . ($invoice->plan ? $invoice->plan->name : 'Avulso'),
             'cliente' => [
                 'id' => (int)$invoice->client->tiny_id,

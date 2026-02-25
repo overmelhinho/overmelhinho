@@ -44,6 +44,9 @@ interface Invoice {
     total_parcels?: number;
     group_id?: string;
     plan?: Plan;
+    is_permuta?: boolean;
+    permuta_amount?: number;
+    payable_amount?: number;
 }
 
 export default function TabFinanceiro() {
@@ -375,8 +378,17 @@ export default function TabFinanceiro() {
                                         <td className="px-6 py-4 text-gray-600">
                                             {format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })}
                                         </td>
-                                        <td className="px-6 py-4 font-bold text-gray-900">
-                                            R$ {Number(invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-gray-900">
+                                                    R$ {Number(invoice.payable_amount ?? invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                                {invoice.is_permuta && (
+                                                    <span className="text-[9px] text-orange-600 font-bold uppercase tracking-tight bg-orange-50 px-1.5 py-0.5 rounded w-fit mt-1 border border-orange-100/50">
+                                                        + Permuta R$ {Number(invoice.permuta_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-[10px] font-bold text-gray-500 uppercase">
