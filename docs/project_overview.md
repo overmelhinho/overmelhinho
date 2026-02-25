@@ -37,9 +37,14 @@ O projeto é divido em duas aplicações principais (Backend e Frontend), config
 A aplicação atua como um ERP/CRM/Gestão completa para o negócio, sendo composta dos seguintes módulos identificados via controllers, models e migrations:
 
 1. **Gestão de Clientes e CRM**
-   - Cadastro de Clientes (`Cliente`).
+   - Cadastro de Clientes (`Cliente`) com formulário em abas: Identificação, Endereço, Contato, Redes Sociais, Horários, Logotipo, Mídia e Galeria.
+   - **Geração de Descrição com IA**: O botão "Gerar com IA" na aba Identificação usa OpenAI GPT-4o-mini + Google Places para redigir automaticamente o texto "Sobre" da empresa.
+   - **Importação de Horários via Google Maps**: O botão "Importar do Google Maps" na aba Horário busca os períodos de funcionamento do Google Places API e preenche a tabela interativa, incluindo tratamento de dias com múltiplos períodos (manhã + tarde).
+   - **Campos de Contato expandidos**: Suporte a até 4 números de telefone, com seleção de WhatsApp principal via radio button, e e-mail opcional.
+   - **Aba de Mídia com toggle Arquivo/Link**: Permite enviar um PDF/imagem (até 10MB) ou inserir um link externo para catálogos e cardápios digitais.
    - Gestão de Contatos e Endereços (`Contato`, `Endereco`, `Cidade`).
    - Módulo de Leads e CRM comercial (`Lead`, `Oportunidade`), incluindo esteira automática de recuperação e integração com Tickets. *(Veja `docs/leads_module.md` para detalhes)*.
+   - *(Veja `docs/clientes_module.md` para documentação completa do módulo de clientes)*.
 
 2. **Atendimento e Suporte (Tickets)**
    - Kanban de tickets (`Ticket`, `TicketLog`, `TicketSubtask`) permitindo assinalar atendentes, trocar status, definir subtarefas.
