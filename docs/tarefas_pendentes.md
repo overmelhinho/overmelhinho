@@ -19,6 +19,12 @@ Este documento lista o status das tarefas em andamento e o que ainda precisa ser
 - [x] **Migração `client_materials`**: Nova tabela para materiais de clientes (arquivo ou link).
 - [x] **Migração `contatos`**: Adicionados campos `telefone_outro`, `whatsapp_selected`, `exibir_*`.
 
+### Módulo Financeiro — Pagamento com Permuta
+
+- [x] **Model & Migration de Permuta**: Adicionados campos `is_permuta`, `permuta_amount`, `payable_amount` e `permuta_description` à tabela de Invoices.
+- [x] **Lógica Backend**: Modificação no `storeInvoice` para verificar se é permuta 100% (ativa plano imediatamente sem gerar recebível no Tiny) ou permuta parcial (desconta o valor e gera recebível com a diferença).
+- [x] **Feedback Visual e Validação Frontend**: Campos dinâmicos no modal (Progressive Disclosure) informando o valor original, desconto, abatimento da permuta e o valor final real a ser cobrado. Mudança do botão de ação dependendo do resíduo (ex: "Confirmar Permuta e Ativar" para permuta integral).
+
 ---
 
 ## 🔴 PRIORIDADE 1: Configuração e Ativação (Produção)
