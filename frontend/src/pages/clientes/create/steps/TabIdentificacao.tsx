@@ -4,6 +4,7 @@ import { Building2, FileText, Hash, Briefcase, Tag, Eye, EyeOff, Sparkles, X, Ca
 import MaskedInput from "@/components/ui/masked-input";
 import axios from "@/services/api";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const splitKeywords = (text: string): string[] => {
   if (!text) return [];
@@ -32,6 +33,7 @@ const normalizeKeywords = (items: string[], limit = 20): string[] => {
 };
 
 export default function TabIdentificacao() {
+  const navigate = useNavigate();
   const { values, handleChange, setFieldValue } = useFormikContext<any>();
   const [cnpjError, setCnpjError] = useState("");
   const [showPreviewDescricao, setShowPreviewDescricao] = useState(false);
@@ -42,6 +44,9 @@ export default function TabIdentificacao() {
 
   const [isPredictingFoundation, setIsPredictingFoundation] = useState(false);
   const [isLookingUpGoogle, setIsLookingUpGoogle] = useState(false);
+
+  const [clienteExistente, setClienteExistente] = useState<{ id: number; nome: string } | null>(null);
+  const [checkingCnpj, setCheckingCnpj] = useState(false);
 
   const handleAiFoundation = async () => {
     if (!values.nome_fantasia || !values.cidade) {
@@ -65,6 +70,29 @@ export default function TabIdentificacao() {
       setIsPredictingFoundation(false);
     }
   };
+
+  useMemo(() => {
+    const raw = (values.cnpj || "").replace(/\D/g, "");
+    if (raw.length === 14) {
+      (async () => {
+        setCheckingCnpj(true);
+        try {
+          const { data } = await axios.get("/v1/clientes/check-cnpj", { params: { cnpj: raw } });
+          if (data.exists && data.id != values.id) {
+            setClienteExistente({ id: data.id, nome: data.nome });
+          } else {
+            setClienteExistente(null);
+          }
+        } catch (e) {
+          console.error("Erro ao checar CNPJ", e);
+        } finally {
+          setCheckingCnpj(false);
+        }
+      })();
+    } else {
+      if (clienteExistente) setClienteExistente(null);
+    }
+  }, [values.cnpj]);
 
   const handleGoogleLookup = async () => {
     if (!values.nome_fantasia || !values.cidade) {
@@ -238,7 +266,31 @@ export default function TabIdentificacao() {
               }`}
           />
 
-          {cnpjError && (
+          {checkingCnpj && (
+            <p className="text-[10px] text-gray-400 mt-1 animate-pulse">
+              Verificando banco de dados...
+            </p>
+          )}
+
+          {clienteExistente && (
+            <div className="bg-red-50 border border-red-200 p-3 rounded-lg mt-2 shadow-sm">
+              <p className="text-xs text-red-700 font-bold mb-2 flex items-center gap-1">
+                <Search className="w-3 h-3" /> CNPJ JÁ CADASTRADO
+              </p>
+              <p className="text-[11px] text-gray-700 mb-2 uppercase font-medium">
+                {clienteExistente.nome}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate(`/clientes/${clienteExistente.id}/editar`)}
+                className="bg-red-600 text-white text-[10px] px-3 py-1.5 rounded-md hover:bg-red-700 transition font-bold"
+              >
+                IR PARA O CADASTRO EXISTENTE
+              </button>
+            </div>
+          )}
+
+          {cnpjError && !clienteExistente && (
             <p className="text-xs text-red-600 mt-1 flex items-center gap-1 animate-pulse">
               ⚠️ {cnpjError}
             </p>

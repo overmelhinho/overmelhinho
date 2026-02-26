@@ -99,6 +99,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/clientes/{id}/seo-rankings', [SeoRankingController::class , 'getClientRankings']);
     Route::post('/clientes/{id}/seo/keywords/generate', [ClienteController::class , 'generateSeoKeywords']);
     Route::patch('/clientes/{id}/seo/keywords', [ClienteController::class , 'updateSeoKeywords']);
+    Route::get('clientes/check-cnpj', [ClienteController::class, 'checkCnpj']);
     Route::get('clientes/google-reviews-lookup', [ClienteController::class, 'lookupGoogleReviews']);
     Route::apiResource('clientes', ClienteController::class);
 

@@ -596,7 +596,7 @@ export default function ClientesList() {
                           className="px-3 py-1.5 rounded-lg border text-xs hover:bg-gray-50 transition"
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.location.href = `/clientes/${c.id}`;
+                            window.location.href = `/clientes/${c.id}/editar`;
                           }}
                         >
                           Abrir <ExternalLink className="inline w-3 h-3 ml-1" />

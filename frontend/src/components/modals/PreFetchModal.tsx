@@ -11,7 +11,10 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
 } from "lucide-react";
+import MaskedInput from "@/components/ui/masked-input";
+import { useNavigate } from "react-router-dom";
 
 const cidadesSerra = [
   "André da Rocha",
@@ -161,6 +164,7 @@ export default function PreFetchModal({
   onClose,
   onConfirm,
 }: Props) {
+  const navigate = useNavigate();
   const [tipoCliente, setTipoCliente] = useState<"gratuito" | "pagante">(tipoClienteInicial);
 
   const [cidade, setCidade] = useState("");
@@ -173,12 +177,40 @@ export default function PreFetchModal({
   const [sugestoes, setSugestoes] = useState<Record<string, any>>({});
   const [showDetalhes, setShowDetalhes] = useState(false);
 
+  const [clienteExistente, setClienteExistente] = useState<{ id: number; nome: string } | null>(null);
+  const [checkingCnpj, setCheckingCnpj] = useState(false);
+
   // ✅ Sempre sincroniza o nome inicial mais recente (ex: usuário alterou no formulário e reabriu modal)
   useEffect(() => {
     setNome(nomeInicial || "");
   }, [nomeInicial]);
 
   const cnpjValido = useMemo(() => (cnpj ? isValidCnpj(cnpj) : false), [cnpj]);
+
+  // ✅ Verifica duplicidade ao completar 14 dígitos
+  useEffect(() => {
+    const raw = onlyDigits(cnpj);
+    if (raw.length === 14) {
+      (async () => {
+        setCheckingCnpj(true);
+        try {
+          const { data } = await axios.get("/v1/clientes/check-cnpj", { params: { cnpj: raw } });
+
+          if (data.exists) {
+            setClienteExistente({ id: data.id, nome: data.nome });
+          } else {
+            setClienteExistente(null);
+          }
+        } catch (e) {
+          console.error("Erro ao checar CNPJ", e);
+        } finally {
+          setCheckingCnpj(false);
+        }
+      })();
+    } else {
+      setClienteExistente(null);
+    }
+  }, [cnpj]);
 
   const etapasUI = useMemo(
     () => [
@@ -365,24 +397,46 @@ export default function PreFetchModal({
 
             <div>
               <label className="text-sm font-medium text-gray-700">CNPJ (opcional)</label>
-              <input
+              <MaskedInput
+                mask="99.999.999/9999-99"
                 value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
+                onChange={(e: any) => setCnpj(e.target.value)}
                 placeholder="00.000.000/0000-00"
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#B70F0A] outline-none"
+                className={`mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 outline-none transition ${clienteExistente ? "border-red-500 ring-red-100" : "focus:ring-[#B70F0A]"
+                  }`}
               />
-              <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                {cnpj ? (
-                  cnpjValido ? (
-                    <span className="inline-flex items-center gap-1 text-green-700">
-                      <CheckCircle2 className="w-4 h-4" /> CNPJ válido
-                    </span>
-                  ) : (
-                    <span className="text-red-600">CNPJ inválido</span>
-                  )
-                ) : (
-                  <span>Se tiver o CNPJ, a precisão melhora.</span>
+              <div className="mt-1 flex flex-col gap-1">
+                {checkingCnpj && <span className="text-[10px] text-gray-400 animate-pulse">Verificando existência...</span>}
+
+                {clienteExistente && (
+                  <div className="bg-red-50 border border-red-200 p-2 rounded-lg mt-1">
+                    <p className="text-[10px] text-red-700 font-semibold mb-1">
+                      ⚠️ Este CNPJ já possui cadastro: <br />
+                      <span className="uppercase">{clienteExistente.nome}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/clientes/${clienteExistente.id}/editar`)}
+                      className="inline-flex items-center gap-1 text-[10px] bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Ir para o Cliente
+                    </button>
+                  </div>
                 )}
+                <div className="text-xs text-gray-500 mt-0.5">
+                  {cnpj ? (
+                    cnpjValido ? (
+                      <span className="inline-flex items-center gap-1 text-green-700">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> CNPJ válido
+                      </span>
+                    ) : (
+                      <span className="text-red-500">CNPJ inválido</span>
+                    )
+                  ) : (
+                    "Se tiver o CNPJ, a precisão melhora."
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -406,9 +460,9 @@ export default function PreFetchModal({
             <div className="flex items-center gap-2">
               <button
                 onClick={buscar}
-                disabled={loading}
+                disabled={loading || !!clienteExistente}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition text-sm font-medium
-                  ${loading
+                  ${loading || !!clienteExistente
                     ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                     : "bg-[#B70F0A] hover:bg-[#900B07] text-white"
                   }`}

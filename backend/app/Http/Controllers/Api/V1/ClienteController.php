@@ -152,7 +152,7 @@ class ClienteController extends Controller
 
     public function show($id)
     {
-        $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens'])
+        $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews'])
             ->findOrFail($id);
 
         return new ClienteResource($cliente);
@@ -380,6 +380,9 @@ public function historico(Request $request, int $id)
 
                 'generate_seo_keywords' => 'nullable|boolean',
                 'seo_keywords_text'     => 'nullable|string',
+                'data_fundacao'         => 'nullable|date',
+                'google_place_id'       => 'nullable|string|max:255',
+                'reviews'               => 'nullable|array',
             ]);
 
             $generate = $request->boolean('generate_seo_keywords', true);
@@ -406,8 +409,11 @@ public function historico(Request $request, int $id)
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
                 'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
-                'horario_atendimento'   => $validated['horario_atendimento'] ?? null,
             ];
+
+            if (Schema::hasColumn('clientes', 'horario_atendimento')) {
+                $clienteData['horario_atendimento'] = $validated['horario_atendimento'] ?? null;
+            }
 
             if (Schema::hasColumn('clientes', 'seo_keywords_source')) {
                 $clienteData['seo_keywords_source'] = $seoSource;
@@ -430,6 +436,14 @@ public function historico(Request $request, int $id)
             }
             if (Schema::hasColumn('clientes', 'status_assinatura')) {
                 $clienteData['status_assinatura'] = $statusAssinatura;
+            }
+
+            if (Schema::hasColumn('clientes', 'data_fundacao')) {
+                $clienteData['data_fundacao'] = $validated['data_fundacao'] ?? null;
+            }
+
+            if (Schema::hasColumn('clientes', 'google_place_id')) {
+                $clienteData['google_place_id'] = $validated['google_place_id'] ?? null;
             }
 
             $cliente = Cliente::create($clienteData);
@@ -484,26 +498,33 @@ public function historico(Request $request, int $id)
                 }
             }
 
-            DB::commit();
+            // Salva reviews do Google
+            if (array_key_exists('reviews', $validated) && is_array($validated['reviews'])) {
+                $sentIds = [];
+                foreach ($validated['reviews'] as $rev) {
+                    $rid = $rev['google_review_id'] ?? (($rev['time'] ?? '') . '_' . ($rev['author_name'] ?? ''));
+                    if ($rid === '_') continue;
 
-            // Salva reviews se enviados
-            if ($request->has('reviews') && is_array($request->input('reviews'))) {
-                foreach ($request->input('reviews') as $rev) {
-                    \App\Models\ClienteReview::create([
-                        'cliente_id' => $cliente->id,
-                        'author_name' => $rev['author_name'] ?? 'Anônimo',
-                        'profile_photo_url' => $rev['profile_photo_url'] ?? null,
-                        'rating' => $rev['rating'] ?? 5,
-                        'text' => $rev['text'] ?? '',
-                        'relative_time_description' => $rev['relative_time_description'] ?? '',
-                        'time' => $rev['time'] ?? time(),
-                    ]);
+                    $sentIds[] = $rid;
+                    ClienteReview::updateOrCreate(
+                        ['google_review_id' => $rid, 'cliente_id' => $cliente->id],
+                        [
+                            'author_name' => $rev['author_name'] ?? 'Anônimo',
+                            'author_photo_url' => $rev['author_photo_url'] ?? ($rev['profile_photo_url'] ?? null),
+                            'rating' => $rev['rating'] ?? 5,
+                            'text' => $rev['text'] ?? '',
+                            'relative_time_description' => isset($rev['time']) ? date('Y-m-d H:i:s', $rev['time']) : ($rev['relative_time_description'] ?? null),
+                        ]
+                    );
                 }
+                $cliente->reviews()->whereNotIn('google_review_id', $sentIds)->delete();
             }
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'data' => $cliente->load(['enderecos', 'contatos', 'segmentos', 'cidadesAtendidas', 'redesSociais', 'galeriaImagens']),
+                'data' => new ClienteResource($cliente->load(['enderecos', 'contatos', 'segmentos', 'cidadesAtendidas', 'redesSociais', 'galeriaImagens', 'reviews'])),
             ], 201);
 
         } catch (ValidationException $e) {
@@ -702,6 +723,9 @@ public function historico(Request $request, int $id)
 
                 'generate_seo_keywords' => 'nullable|boolean',
                 'seo_keywords_text'     => 'nullable|string',
+                'data_fundacao'         => 'nullable|date',
+                'google_place_id'       => 'nullable|string|max:255',
+                'reviews'               => 'nullable|array',
             ]);
 
             $generate = $request->boolean('generate_seo_keywords', true);
@@ -727,8 +751,11 @@ public function historico(Request $request, int $id)
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
                 'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
-                'horario_atendimento'   => $validated['horario_atendimento'] ?? null,
             ];
+
+            if (Schema::hasColumn('clientes', 'horario_atendimento')) {
+                $clienteData['horario_atendimento'] = $validated['horario_atendimento'] ?? null;
+            }
 
             if (Schema::hasColumn('clientes', 'seo_keywords_source')) {
                 $clienteData['seo_keywords_source'] = $seoSource;
@@ -752,6 +779,14 @@ public function historico(Request $request, int $id)
 
             if (Schema::hasColumn('clientes', 'status_assinatura')) {
                 $clienteData['status_assinatura'] = $statusAssinatura;
+            }
+
+            if (Schema::hasColumn('clientes', 'data_fundacao')) {
+                $clienteData['data_fundacao'] = $validated['data_fundacao'] ?? null;
+            }
+
+            if (Schema::hasColumn('clientes', 'google_place_id')) {
+                $clienteData['google_place_id'] = $validated['google_place_id'] ?? null;
             }
 
             $cliente->update($clienteData);
@@ -827,11 +862,33 @@ public function historico(Request $request, int $id)
                 }
             }
 
+            // Salva reviews do Google
+            if (array_key_exists('reviews', $validated) && is_array($validated['reviews'])) {
+                $sentIds = [];
+                foreach ($validated['reviews'] as $rev) {
+                    $rid = $rev['google_review_id'] ?? (($rev['time'] ?? '') . '_' . ($rev['author_name'] ?? ''));
+                    if ($rid === '_') continue;
+
+                    $sentIds[] = $rid;
+                    ClienteReview::updateOrCreate(
+                        ['google_review_id' => $rid, 'cliente_id' => $cliente->id],
+                        [
+                            'author_name' => $rev['author_name'] ?? 'Anônimo',
+                            'author_photo_url' => $rev['author_photo_url'] ?? ($rev['profile_photo_url'] ?? null),
+                            'rating' => $rev['rating'] ?? 5,
+                            'text' => $rev['text'] ?? '',
+                            'relative_time_description' => isset($rev['time']) ? date('Y-m-d H:i:s', $rev['time']) : ($rev['relative_time_description'] ?? null),
+                        ]
+                    );
+                }
+                $cliente->reviews()->whereNotIn('google_review_id', $sentIds)->delete();
+            }
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'data' => $cliente->fresh()->load(['enderecos', 'contatos', 'segmentos', 'cidadesAtendidas', 'redesSociais', 'galeriaImagens']),
+                'data' => new ClienteResource($cliente->fresh()->load(['enderecos', 'contatos', 'segmentos', 'cidadesAtendidas', 'redesSociais', 'galeriaImagens', 'reviews'])),
             ], 200);
 
         } catch (ValidationException $e) {
@@ -1242,16 +1299,22 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
     /**
      * Sincroniza os reviews do Google para um cliente.
      */
-    public function getGoogleReviews(string $id, GooglePlacesService $googleService)
+    public function getGoogleReviews(string $id, Request $request, GooglePlacesService $googleService)
     {
-        $cliente = Cliente::findOrFail($id);
-        
-        if (!$cliente->google_place_id) {
+        // Prioriza o ID que vem na request (caso o usuário tenha acabado de buscar no frontend e ainda não salvou no DB)
+        $placeId = $request->query('place_id');
+
+        if (!$placeId) {
+            $cliente = Cliente::findOrFail($id);
+            $placeId = $cliente->google_place_id;
+        }
+
+        if (!$placeId) {
             return response()->json(['success' => false, 'message' => 'Google Place ID não configurado.'], 400);
         }
 
         try {
-            $reviews = $googleService->getReviews($cliente->google_place_id);
+            $reviews = $googleService->getReviews($placeId);
 
             return response()->json([
                 'success' => true,
@@ -1260,7 +1323,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         } catch (\Throwable $e) {
             Log::error('[ClienteController] Erro ao buscar reviews', [
                 'cliente_id' => $id,
-                'place_id' => $cliente->google_place_id,
+                'place_id' => $placeId,
                 'error' => $e->getMessage()
             ]);
             return response()->json(['success' => false, 'message' => 'Erro interno ao consultar o Google.'], 500);
@@ -1274,6 +1337,11 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
     {
         $cliente = Cliente::findOrFail($id);
         $reviews = $request->input('reviews', []);
+        $placeId = $request->input('google_place_id');
+
+        if ($placeId) {
+            $cliente->update(['google_place_id' => $placeId]);
+        }
 
         foreach ($reviews as $rev) {
             ClienteReview::updateOrCreate(
@@ -1290,6 +1358,24 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         }
 
         return response()->json(['success' => true, 'message' => 'Reviews salvos com sucesso.']);
+    }
+
+    public function checkCnpj(Request $request)
+    {
+        $cnpj = preg_replace('/\D/', '', $request->input('cnpj', ''));
+        if (!$cnpj) return response()->json(['exists' => false]);
+
+        $exists = Cliente::where('cpf_cnpj', $cnpj)->first();
+
+        if ($exists) {
+            return response()->json([
+                'exists' => true,
+                'id' => $exists->id,
+                'nome' => $exists->nome_fantasia
+            ]);
+        }
+
+        return response()->json(['exists' => false]);
     }
 
     private function audit(

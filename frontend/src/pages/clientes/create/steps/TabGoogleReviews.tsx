@@ -14,14 +14,23 @@ export default function TabGoogleReviews() {
     const placeId = values.google_place_id;
     const isCreateMode = !values.id;
 
-    // Ao carregar, se já houver reviews selecionados no formik (vindo da criação), pré-seleciona
+    // Ao carregar, se já houver reviews selecionados no formik, pré-seleciona
     useEffect(() => {
-        if (isCreateMode && values.selected_reviews && Array.isArray(values.selected_reviews)) {
+        const currentReviews = values.reviews || (Array.isArray(values.selected_reviews) ? values.selected_reviews : []);
+        if (Array.isArray(currentReviews) && currentReviews.length > 0) {
             const ids = new Set<string>();
-            values.selected_reviews.forEach((r: any) => ids.add(`${r.time}_${r.author_name}`));
+            currentReviews.forEach((r: any) => {
+                const rid = r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : null);
+                if (rid) ids.add(rid);
+            });
             setSelectedIds(ids);
+
+            // Se já tem reviews salvos mas a lista local está vazia, mostra os salvos
+            if (reviews.length === 0) {
+                setReviews(currentReviews);
+            }
         }
-    }, [isCreateMode, values.selected_reviews]);
+    }, [values.reviews, values.selected_reviews]);
 
     const handleLookup = async () => {
         if (!values.nome_fantasia || !values.cidade) {
@@ -53,11 +62,10 @@ export default function TabGoogleReviews() {
         setLoading(true);
         try {
             let endpoint = `/v1/clientes/${values.id}/google-reviews`;
-            let params = {};
+            let params = { place_id: placeId };
 
             if (isCreateMode) {
                 endpoint = `/v1/clientes/google-reviews-lookup`;
-                params = { place_id: placeId };
             }
 
             const { data } = await axios.get(endpoint, { params });
@@ -77,40 +85,26 @@ export default function TabGoogleReviews() {
         }
     };
 
-    const saveSelected = async () => {
-        const selectedReviews = reviews.filter((r) => selectedIds.has(`${r.time}_${r.author_name}`));
-        if (selectedReviews.length === 0) {
-            toast.error("Selecione ao menos um comentário.");
-            return;
-        }
-
-        if (isCreateMode) {
-            // No modo de criação, apenas guardamos no Formik para enviar junto no POST final
-            setFieldValue("selected_reviews", selectedReviews);
-            toast.success("Comentários marcados para salvar!");
-            return;
-        }
-
-        // No modo de edição, salvamos direto via API
-        const t = toast.loading("Salvando comentários...");
-        try {
-            await axios.post(`/v1/clientes/${values.id}/google-reviews`, {
-                reviews: selectedReviews,
-            });
-            toast.success("Comentários salvos com sucesso!");
-        } catch (err) {
-            toast.error("Erro ao salvar comentários.");
-        } finally {
-            toast.dismiss(t);
-        }
-    };
-
     const toggleSelection = (r: any) => {
-        const id = `${r.time}_${r.author_name}`;
+        const id = r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : null);
+        if (!id) return;
+
         const next = new Set(selectedIds);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
+        let updatedReviews = values.reviews || (Array.isArray(values.selected_reviews) ? values.selected_reviews : []);
+
+        if (next.has(id)) {
+            next.delete(id);
+            updatedReviews = updatedReviews.filter((x: any) => {
+                const rid = x.google_review_id || (x.time && x.author_name ? `${x.time}_${x.author_name}` : null);
+                return rid !== id;
+            });
+        } else {
+            next.add(id);
+            updatedReviews = [...updatedReviews, r];
+        }
+
         setSelectedIds(next);
+        setFieldValue(isCreateMode ? "selected_reviews" : "reviews", updatedReviews);
     };
 
     return (
@@ -225,20 +219,6 @@ export default function TabGoogleReviews() {
                             </div>
                         );
                     })}
-
-                    <div className="flex justify-end pt-4">
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                saveSelected();
-                            }}
-                            className="bg-green-600 text-white px-8 py-2 rounded-md hover:bg-green-700 flex items-center gap-2 font-semibold shadow-md active:scale-95 transition-all"
-                        >
-                            <CheckCircle2 className="w-4 h-4" />
-                            {isCreateMode ? "Confirmar Seleção" : "Salvar Selecionados"}
-                        </button>
-                    </div>
                 </div>
             )}
         </div>

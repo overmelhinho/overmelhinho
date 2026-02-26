@@ -60,6 +60,10 @@ class ClienteResource extends JsonResource
             'redes_sociais' => RedeSocialResource::collection($this->whenLoaded('redesSociais')),
             'galeria' => GaleriaImagemResource::collection($this->whenLoaded('galeriaImagens')),
             'cidades_atendidas' => CidadeResource::collection($this->whenLoaded('cidadesAtendidas')),
+            'reviews' => ClienteReviewResource::collection($this->whenLoaded('reviews')),
+
+            'google_place_id' => $this->google_place_id,
+            'data_fundacao' => $this->data_fundacao ? $this->data_fundacao->format('Y-m-d') : null,
         ];
     }
 }

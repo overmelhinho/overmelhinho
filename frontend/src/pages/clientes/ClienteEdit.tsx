@@ -262,6 +262,13 @@ export default function ClienteEdit() {
       contact_preference: c?.contact_preference || "",
       best_contact_shift: c?.best_contact_shift || "",
       contract_ends_at: c?.contract_ends_at ? c.contract_ends_at.split('T')[0] : "",
+
+      // google reviews
+      reviews: Array.isArray(c?.reviews) ? c.reviews.map((r: any) => ({
+        ...r,
+        time: r.google_review_id ? parseInt(r.google_review_id.split('_')[0]) : 0,
+        profile_photo_url: r.author_photo_url || ""
+      })) : [],
     };
   }, [data]);
 
@@ -387,6 +394,7 @@ export default function ClienteEdit() {
 
               data_fundacao: values.data_fundacao || null,
               google_place_id: values.google_place_id || null,
+              reviews: values.reviews || [],
             };
 
             // ✅ UPDATE
