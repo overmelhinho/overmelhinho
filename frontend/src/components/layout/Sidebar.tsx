@@ -76,13 +76,11 @@ export default function Sidebar() {
       perms: ["view_financial"],
     },
     { to: "/relatorios", label: "Relatórios", icon: <FileText size={18} />, perms: ["view_report"] },
-    { to: "/criativo", label: "Criativo", icon: <Palette size={18} />, perms: ["manage_creative", "view_dashboard"] }, // Ajustado para acesso básico se tiver dashboard
     { to: "/tickets", label: "Tickets", icon: <Ticket size={18} /> },
     { to: "/vagas", label: "Vagas PRO", icon: <Briefcase size={18} /> },
   ];
 
   const itemsBottom: Item[] = [
-    { to: "/configuracoes", label: "Configurações", icon: <Settings size={18} />, perms: ["manage_settings"] },
     { to: "/usuarios", label: "Usuários", icon: <UserCog size={18} />, perms: ["manage_users"] },
     { to: "/funcoes", label: "Funções", icon: <ShieldCheck size={18} />, perms: ["manage roles", "manage_roles"] },
     { to: "/permissoes", label: "Permissões", icon: <KeyRound size={18} />, perms: ["manage permissions", "manage_permissions"] },
@@ -123,8 +121,8 @@ export default function Sidebar() {
 
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#B70F0A] to-[#8A0B07] text-white lg:block">
-      <div className="px-6 py-6">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#B70F0A] to-[#8A0B07] text-white lg:flex flex-col">
+      <div className="px-6 py-6 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
             <span className="text-lg font-black">V</span>
@@ -138,18 +136,20 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav className="px-4">
-        <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
-          Operação
-        </div>
-        <div className="space-y-1">{itemsTop.map(renderItem)}</div>
-      </nav>
+      <div className="flex-1 overflow-y-auto px-4 overflow-x-hidden scrollbar-thin scrollbar-thumb-white/20 hover:scrollbar-thumb-white/40">
+        <nav>
+          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
+            Operação
+          </div>
+          <div className="space-y-1">{itemsTop.map(renderItem)}</div>
+        </nav>
 
-      <div className="mt-6 border-t border-white/15 px-4 pt-4">
-        <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
-          Administração
+        <div className="mt-6 border-t border-white/15 pt-4 pb-10">
+          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
+            Administração
+          </div>
+          <div className="space-y-1">{itemsBottom.map(renderItem)}</div>
         </div>
-        <div className="space-y-1 pb-6">{itemsBottom.map(renderItem)}</div>
       </div>
     </aside>
   );
