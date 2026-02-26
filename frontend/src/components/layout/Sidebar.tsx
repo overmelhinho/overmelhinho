@@ -15,6 +15,7 @@ import {
   DollarSign, // Financeiro
   Target,
   MessageCircle,
+  Megaphone,
 } from "lucide-react";
 
 type Item = {
