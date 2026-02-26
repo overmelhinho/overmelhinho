@@ -227,11 +227,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);
 Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
 
-// ✅ Rotas Públicas — Assinatura de Autorização e PDF (sem autenticação)
-Route::get('/v1/autorizar/{token}',  [AutorizacaoController::class, 'showByToken']);
-Route::post('/v1/autorizar/{token}', [AutorizacaoController::class, 'sign']);
-Route::get('/v1/autorizacoes/{id}/pdf',      [AutorizacaoController::class, 'generatePdf']);
-Route::get('/v1/autorizacoes/{id}/preview',  [AutorizacaoController::class, 'previewPdf']);
+// ✅ Rotas Públicas de Autorizações/Contratos
+Route::prefix('v1/autorizacoes')->group(function () {
+    Route::get('/{id}/pdf',      [AutorizacaoController::class, 'generatePdf']);
+    Route::get('/{id}/preview',  [AutorizacaoController::class, 'previewPdf']);
+});
+
+Route::prefix('v1/autorizar')->group(function () {
+    Route::get('/{token}',  [AutorizacaoController::class, 'showByToken']);
+    Route::post('/{token}', [AutorizacaoController::class, 'sign']);
+});
 
 
 
