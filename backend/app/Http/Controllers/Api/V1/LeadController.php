@@ -69,7 +69,7 @@ class LeadController extends Controller
 
         $lead = Lead::create($data)->fresh();
 
-        return new LeadResource($lead);
+        return (new LeadResource($lead))->response()->setStatusCode(201);
     }
 
     public function update(LeadRequest $request, $id)

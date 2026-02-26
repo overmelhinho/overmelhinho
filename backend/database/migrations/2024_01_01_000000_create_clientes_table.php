@@ -26,7 +26,7 @@ return new class extends Migration
                 $table->string('video')->nullable();
                 $table->string('portfolio_url')->nullable();
                 $table->string('logo_url')->nullable();
-                $table->boolean('possui_publicidade')->default(false);
+                $table->boolean('possui_publicidade')->default(false)->nullable();
                 $table->timestamps(); // created_at, updated_at
 
                 // Campos que sofreram alteração em migrations futuras (mas precisam existir aqui)
@@ -35,6 +35,7 @@ return new class extends Migration
                 $table->timestamp('seo_keywords_updated_at')->nullable();
                 $table->string('status_assinatura')->nullable();
                 $table->string('tipo_cliente')->nullable();
+                $table->json('horario_atendimento')->nullable();
             });
         }
     }

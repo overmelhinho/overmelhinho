@@ -23,6 +23,7 @@ import TabMidia from "./create/steps/TabMidia";
 import TabCidadesAtendidas from "./create/steps/TabCidadesAtendidas";
 import TabFinanceiro from "./create/steps/TabFinanceiro";
 import TabAuditoria from "./create/steps/TabAuditoria";
+import TabGoogleReviews from "./create/steps/TabGoogleReviews";
 import SeoPerformanceWidget from "@/components/seo/SeoPerformanceWidget";
 
 type TipoCliente = "gratuito" | "pagante";
@@ -135,7 +136,8 @@ export default function ClienteEdit() {
         { id: 8, label: "Logotipo" },
         { id: 9, label: "Mídia" },
         { id: 10, label: "Galeria" },
-        { id: 11, label: "Financeiro" }
+        { id: 11, label: "Google Reviews" },
+        { id: 12, label: "Financeiro" }
       );
     }
 
@@ -188,6 +190,7 @@ export default function ClienteEdit() {
     })).filter((x: any) => !!x.url);
 
     return {
+      id: clienteId,
       // interno
       tipoCliente: tipoNorm,
 
@@ -229,6 +232,8 @@ export default function ClienteEdit() {
 
       beneficios: Array.isArray(c?.beneficios) ? c.beneficios : [],
       horario_atendimento: c?.horario_atendimento || "",
+      data_fundacao: c?.data_fundacao ? c.data_fundacao.split("T")[0] : "",
+      google_place_id: c?.google_place_id || "",
 
       // uploads
       logotipo: c?.logo_url || c?.logotipo || null,
@@ -379,6 +384,9 @@ export default function ClienteEdit() {
               generate_seo_keywords: values.generate_seo_keywords,
               seo_keywords_text:
                 values.generate_seo_keywords === false ? values.seo_keywords_text : undefined,
+
+              data_fundacao: values.data_fundacao || null,
+              google_place_id: values.google_place_id || null,
             };
 
             // ✅ UPDATE
@@ -544,6 +552,7 @@ export default function ClienteEdit() {
               {tabs[step]?.label === "Logotipo" && <TabLogotipo />}
               {tabs[step]?.label === "Mídia" && <TabMidia />}
               {tabs[step]?.label === "Galeria" && <TabGaleria />}
+              {tabs[step]?.label === "Google Reviews" && <TabGoogleReviews />}
               {tabs[step]?.label === "Financeiro" && <TabFinanceiro />}
               {tabs[step]?.label === "Performance" && <SeoPerformanceWidget clientId={clienteId} />}
               {tabs[step]?.label === "Histórico" && <TabAuditoria />}

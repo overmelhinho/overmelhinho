@@ -89,11 +89,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ⚠️ Rotas estáticas de clientes ANTES do apiResource (evita conflito com {id})
     Route::post('/clientes/ai-description', [ClienteController::class, 'generateAiDescription']);
     Route::get('/clientes/google-hours', [ClienteController::class, 'getGoogleHours']);
+    Route::get('/clientes/google-lookup', [ClienteController::class, 'getPlaceIdByQuery']);
+    Route::get('/clientes/ai-foundation', [ClienteController::class, 'getFoundationDateByAi']);
+
+    Route::get('/clientes/{id}/google-reviews', [ClienteController::class, 'getGoogleReviews']);
+    Route::post('/clientes/{id}/google-reviews', [ClienteController::class, 'saveGoogleReviews']);
 
     Route::get('/clientes/{id}/historico', [ClienteController::class , 'historico']);
     Route::get('/clientes/{id}/seo-rankings', [SeoRankingController::class , 'getClientRankings']);
     Route::post('/clientes/{id}/seo/keywords/generate', [ClienteController::class , 'generateSeoKeywords']);
     Route::patch('/clientes/{id}/seo/keywords', [ClienteController::class , 'updateSeoKeywords']);
+    Route::get('clientes/google-reviews-lookup', [ClienteController::class, 'lookupGoogleReviews']);
     Route::apiResource('clientes', ClienteController::class);
 
     Route::get('/job-roles', [JobRoleController::class , 'index']);
@@ -148,6 +154,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('oportunidades/kanban', [OportunidadeController::class , 'kanban']);
     Route::patch('oportunidades/{id}/mover', [OportunidadeController::class , 'mover']);
     Route::apiResource('oportunidades', OportunidadeController::class);
+    Route::get('leads/stats', [LeadController::class , 'stats'])->middleware('permission:view_lead');
     Route::apiResource('leads', LeadController::class);
     Route::post('leads/{lead}/send-followup', [LeadController::class , 'sendFollowup']);
 
@@ -157,7 +164,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::get('/dashboard/kpis', [DashboardController::class , 'kpis']);
 
-    Route::get('/leads/stats', [LeadController::class , 'stats'])->middleware('permission:view_lead');
+
     Route::get('/dashboard/test', [DashboardController::class , 'test']);
 
     Route::get('/lead-intel/fetch', [LeadIntelController::class , 'fetch']);

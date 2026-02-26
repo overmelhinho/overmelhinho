@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\ClientAiService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -30,6 +31,8 @@ class LeadIntelService
             'inscricao_municipal' => '',
             'origem_dado' => 'Merged',
             'website' => '',
+            'google_place_id' => '',
+            'data_fundacao' => '',
         ];
 
         try {
@@ -52,7 +55,7 @@ class LeadIntelService
             $places = $this->consultarGooglePlaces($query);
             if (!empty($places)) {
                 // Campos “vitrine” que costumam estar mais vivos no Google
-                foreach (['nome_fantasia', 'telefone', 'endereco', 'website', 'horario_atendimento'] as $k) {
+                foreach (['nome_fantasia', 'telefone', 'endereco', 'website', 'horario_atendimento', 'google_place_id'] as $k) {
                     if (!empty($places[$k])) {
                         $dados[$k] = $places[$k];
                     }
@@ -100,9 +103,21 @@ class LeadIntelService
                 $descIA = $this->gerarDescricaoComIA($dados, $cidadePreferida);
                 if ($descIA !== '') {
                     $dados['descricao'] = $descIA;
-                    $dados['origem_dado'] = ($dados['origem_dado'] ?? 'Merged') . '+DescricaoIA';
                 }
             }
+
+            // =====================================================
+            // 5) Data de Fundação via IA
+            // ===================================
+            if (empty($dados['data_fundacao'])) {
+                 $aiService = app(ClientAiService::class);
+                 $dados['data_fundacao'] = $aiService->predictFoundationDate(
+                     $dados['nome_fantasia'] ?: $query,
+                     $cidadePreferida ?: ''
+                 );
+            }
+
+            $dados['origem_dado'] = ($dados['origem_dado'] ?? 'Merged') . '+IA_Foundation';
 
             Log::info("✅ [LeadIntel] Retorno", [
                 'nome_fantasia' => $dados['nome_fantasia'],
@@ -160,6 +175,7 @@ class LeadIntelService
                     'endereco' => $endereco,
                     'inscricao_estadual' => '',
                     'inscricao_municipal' => '',
+                    'data_fundacao' => $empresa['data_inicio_atividade'] ?? '',
                     'origem_dado' => 'BrasilAPI',
                 ];
 
@@ -190,6 +206,7 @@ class LeadIntelService
                     'endereco' => trim("{$empresa['logradouro']}, {$empresa['numero']} - {$empresa['bairro']}, {$empresa['municipio']} - {$empresa['uf']}, {$empresa['cep']}"),
                     'inscricao_estadual' => '',
                     'inscricao_municipal' => '',
+                    'data_fundacao' => isset($empresa['abertura']) ? \Carbon\Carbon::createFromFormat('d/m/Y', $empresa['abertura'])->format('Y-m-d') : '',
                     'origem_dado' => 'ReceitaWS',
                 ];
 
@@ -245,6 +262,7 @@ class LeadIntelService
                 'telefone' => $r['formatted_phone_number'] ?? '',
                 'endereco' => $r['formatted_address'] ?? '',
                 'website' => $r['website'] ?? '',
+                'google_place_id' => $placeId,
             ];
 
             // Mapear Horários

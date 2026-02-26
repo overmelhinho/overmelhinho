@@ -59,6 +59,15 @@ function isValidCnpj(cnpj: string) {
   return onlyDigits(cnpj).length === 14;
 }
 
+function formatDateToBr(dateString: string) {
+  if (!dateString) return "";
+  if (dateString.includes("/")) return dateString; // já formatado ou vindo assim
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString.substring(0, 10))) return dateString;
+
+  const [year, month, day] = dateString.substring(0, 10).split("-");
+  return `${day}/${month}/${year}`;
+}
+
 /**
  * ✅ Parse robusto:
  * - extrai CEP
@@ -306,11 +315,10 @@ export default function PreFetchModal({
               {etapasUI.map((e) => (
                 <div
                   key={e.id}
-                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] border ${
-                    etapa === e.id
-                      ? "bg-[#B70F0A] text-white border-[#B70F0A]"
-                      : "bg-gray-50 text-gray-600 border-gray-200"
-                  }`}
+                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] border ${etapa === e.id
+                    ? "bg-[#B70F0A] text-white border-[#B70F0A]"
+                    : "bg-gray-50 text-gray-600 border-gray-200"
+                    }`}
                 >
                   {etapa === e.id ? <Loader2 className="w-3 h-3 animate-spin" /> : e.icon}
                   {e.label}
@@ -400,10 +408,9 @@ export default function PreFetchModal({
                 onClick={buscar}
                 disabled={loading}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition text-sm font-medium
-                  ${
-                    loading
-                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                      : "bg-[#B70F0A] hover:bg-[#900B07] text-white"
+                  ${loading
+                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                    : "bg-[#B70F0A] hover:bg-[#900B07] text-white"
                   }`}
               >
                 {loading ? (
@@ -520,6 +527,24 @@ export default function PreFetchModal({
                     <label className="block text-xs font-semibold text-gray-500">Website</label>
                     <input
                       value={sugestoes.website || ""}
+                      readOnly
+                      className="w-full border rounded-md px-2 py-2 text-sm bg-gray-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500">Data de Fundação</label>
+                    <input
+                      value={formatDateToBr(sugestoes.data_fundacao || "")}
+                      readOnly
+                      className="w-full border rounded-md px-2 py-2 text-sm bg-gray-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500">Google Place ID</label>
+                    <input
+                      value={sugestoes.google_place_id || ""}
                       readOnly
                       className="w-full border rounded-md px-2 py-2 text-sm bg-gray-50"
                     />

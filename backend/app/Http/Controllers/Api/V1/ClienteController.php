@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Models\ClienteReview;
 use App\Services\ClientAiService;
 use App\Services\GooglePlacesService;
 
@@ -484,6 +485,21 @@ public function historico(Request $request, int $id)
             }
 
             DB::commit();
+
+            // Salva reviews se enviados
+            if ($request->has('reviews') && is_array($request->input('reviews'))) {
+                foreach ($request->input('reviews') as $rev) {
+                    \App\Models\ClienteReview::create([
+                        'cliente_id' => $cliente->id,
+                        'author_name' => $rev['author_name'] ?? 'Anônimo',
+                        'profile_photo_url' => $rev['profile_photo_url'] ?? null,
+                        'rating' => $rev['rating'] ?? 5,
+                        'text' => $rev['text'] ?? '',
+                        'relative_time_description' => $rev['relative_time_description'] ?? '',
+                        'time' => $rev['time'] ?? time(),
+                    ]);
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -1170,52 +1186,152 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         ]);
     }
 
-private function audit(
-    string $action,
-    string $entityType,
-    int $entityId,
-    ?array $fieldChanges = null,
-    ?int $clienteId = null,
-    ?int $leadId = null,
-    array $metadata = []
-): void {
-    try {
-        $actorId = auth()->id();
-
-        // Se não houver usuário autenticado, não grava (evita quebrar qualquer fluxo).
-        if (!$actorId) return;
-
-        $req = request();
-
-        $metadata = array_merge([
-            'ip' => $req?->ip(),
-            'user_agent' => $req?->userAgent(),
-            'path' => $req?->path(),
-            'method' => $req?->method(),
-        ], $metadata);
-
-        AuditLog::create([
-            'actor_user_id' => (int) $actorId,
-            'action' => $action,
-            'entity_type' => $entityType,
-            'entity_id' => $entityId,
-            'cliente_id' => $clienteId,
-            'lead_id' => $leadId,
-            'field_changes' => $fieldChanges,
-            'metadata' => $metadata,
+    /**
+     * Busca a data de fundação via IA.
+     */
+    public function getFoundationDateByAi(Request $request, ClientAiService $aiService)
+    {
+        $request->validate([
+            'nome' => 'required|string',
+            'cidade' => 'required|string',
         ]);
-    } catch (\Throwable $e) {
-        // Nunca pode quebrar a ação do usuário por falha de auditoria
-        Log::warning('AUDIT_LOG_FAIL', [
-            'action' => $action,
-            'entity_type' => $entityType,
-            'entity_id' => $entityId,
-            'error' => $e->getMessage(),
+
+        $date = $aiService->predictFoundationDate($request->input('nome'), $request->input('cidade'));
+
+        return response()->json([
+            'success' => true,
+            'data_fundacao' => $date
         ]);
     }
-}
 
+    /**
+     * Busca o Place ID e Telefone via Google.
+     */
+    public function getPlaceIdByQuery(Request $request, GooglePlacesService $googleService)
+    {
+        $request->validate([
+            'query' => 'required|string',
+        ]);
 
+        $details = $googleService->getDetailsByQuery($request->input('query'));
 
+        return response()->json([
+            'success' => !!$details,
+            'details' => $details
+        ]);
+    }
 
+    /**
+     * Busca reviews por um Place ID genérico (usado no cadastro de novos clientes)
+     */
+    public function lookupGoogleReviews(Request $request, GooglePlacesService $googleService)
+    {
+        $placeId = $request->input('place_id');
+        if (!$placeId) {
+            return response()->json(['success' => false, 'message' => 'Place ID é obrigatório.'], 400);
+        }
+
+        try {
+            $reviews = $googleService->getReviews($placeId);
+            return response()->json(['success' => true, 'reviews' => $reviews]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Erro ao consultar Google.'], 500);
+        }
+    }
+
+    /**
+     * Sincroniza os reviews do Google para um cliente.
+     */
+    public function getGoogleReviews(string $id, GooglePlacesService $googleService)
+    {
+        $cliente = Cliente::findOrFail($id);
+        
+        if (!$cliente->google_place_id) {
+            return response()->json(['success' => false, 'message' => 'Google Place ID não configurado.'], 400);
+        }
+
+        try {
+            $reviews = $googleService->getReviews($cliente->google_place_id);
+
+            return response()->json([
+                'success' => true,
+                'reviews' => $reviews
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('[ClienteController] Erro ao buscar reviews', [
+                'cliente_id' => $id,
+                'place_id' => $cliente->google_place_id,
+                'error' => $e->getMessage()
+            ]);
+            return response()->json(['success' => false, 'message' => 'Erro interno ao consultar o Google.'], 500);
+        }
+    }
+
+    /**
+     * Salva reviews selecionados.
+     */
+    public function saveGoogleReviews(Request $request, string $id)
+    {
+        $cliente = Cliente::findOrFail($id);
+        $reviews = $request->input('reviews', []);
+
+        foreach ($reviews as $rev) {
+            ClienteReview::updateOrCreate(
+                ['google_review_id' => $rev['time'] . '_' . $rev['author_name']], // Chave composta simples para o Google
+                [
+                    'cliente_id' => $cliente->id,
+                    'author_name' => $rev['author_name'],
+                    'author_photo_url' => $rev['profile_photo_url'] ?? null,
+                    'rating' => $rev['rating'],
+                    'text' => $rev['text'],
+                    'relative_time_description' => isset($rev['time']) ? date('Y-m-d H:i:s', $rev['time']) : null,
+                ]
+            );
+        }
+
+        return response()->json(['success' => true, 'message' => 'Reviews salvos com sucesso.']);
+    }
+
+    private function audit(
+        string $action,
+        string $entityType,
+        int $entityId,
+        ?array $fieldChanges = null,
+        ?int $clienteId = null,
+        ?int $leadId = null,
+        array $metadata = []
+    ): void {
+        try {
+            $actorId = auth()->id();
+
+            if (!$actorId) return;
+
+            $req = request();
+
+            $metadata = array_merge([
+                'ip' => $req?->ip(),
+                'user_agent' => $req?->userAgent(),
+                'path' => $req?->path(),
+                'method' => $req?->method(),
+            ], $metadata);
+
+            \App\Models\AuditLog::create([
+                'actor_user_id' => (int) $actorId,
+                'action' => $action,
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'cliente_id' => $clienteId,
+                'lead_id' => $leadId,
+                'field_changes' => $fieldChanges,
+                'metadata' => $metadata,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('AUDIT_LOG_FAIL', [
+                'action' => $action,
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 }

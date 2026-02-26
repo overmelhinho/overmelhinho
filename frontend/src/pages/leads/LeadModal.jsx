@@ -245,7 +245,7 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
           {renderStep()}
           <DialogFooter className="flex justify-between mt-4">
             <Button type="button" onClick={prevStep} disabled={step === 0}>Voltar</Button>
-            <Button type="button" onClick={nextStep}>{step < steps.length - (isComercial ? 1 : 0) ? "Avançar" : "Salvar"}</Button>
+            <Button type="button" onClick={nextStep}>{step < steps.length - 1 ? "Avançar" : "Salvar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

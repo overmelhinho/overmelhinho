@@ -1,6 +1,6 @@
 import { useFormikContext } from "formik";
 import { useMemo, useRef, useState } from "react";
-import { Building2, FileText, Hash, Briefcase, Tag, Eye, EyeOff, Sparkles, X } from "lucide-react";
+import { Building2, FileText, Hash, Briefcase, Tag, Eye, EyeOff, Sparkles, X, Calendar, MapPin, Search } from "lucide-react";
 import MaskedInput from "@/components/ui/masked-input";
 import axios from "@/services/api";
 import toast from "react-hot-toast";
@@ -39,6 +39,62 @@ export default function TabIdentificacao() {
 
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const [isPredictingFoundation, setIsPredictingFoundation] = useState(false);
+  const [isLookingUpGoogle, setIsLookingUpGoogle] = useState(false);
+
+  const handleAiFoundation = async () => {
+    if (!values.nome_fantasia || !values.cidade) {
+      toast.error("Preencha o Nome e a Cidade primeiro.");
+      return;
+    }
+    setIsPredictingFoundation(true);
+    try {
+      const { data } = await axios.get("/v1/clientes/ai-foundation", {
+        params: { nome: values.nome_fantasia, cidade: values.cidade }
+      });
+      if (data.data_fundacao) {
+        setFieldValue("data_fundacao", data.data_fundacao);
+        toast.success("Data de fundação encontrada!");
+      } else {
+        toast.error("Não foi possível encontrar a data.");
+      }
+    } catch (err) {
+      toast.error("Erro ao buscar data de fundação.");
+    } finally {
+      setIsPredictingFoundation(false);
+    }
+  };
+
+  const handleGoogleLookup = async () => {
+    if (!values.nome_fantasia || !values.cidade) {
+      toast.error("Preencha Nome e Cidade para buscar no Google.");
+      return;
+    }
+    setIsLookingUpGoogle(true);
+    try {
+      const query = `${values.nome_fantasia} ${values.cidade}`;
+      const { data } = await axios.get("/v1/clientes/google-lookup", { params: { query } });
+
+      if (data.success && data.details) {
+        setFieldValue("google_place_id", data.details.place_id);
+
+        // WhatsApp/Phone autofill if empty
+        const phone = data.details.international_phone_number || data.details.formatted_phone_number;
+        if (!values.telefone_principal && phone) {
+          setFieldValue("telefone_principal", phone);
+        }
+
+        toast.success("Dados do Google sincronizados!");
+      } else {
+        toast.error("Local não encontrado no Google Maps.");
+      }
+    } catch (err) {
+      toast.error("Erro ao consultar Google Places.");
+    } finally {
+      setIsLookingUpGoogle(false);
+    }
+  };
 
   const generateSeo = values.generate_seo_keywords !== false; // default true
   const tags: string[] = Array.isArray(values.seo_keywords) ? values.seo_keywords : [];
@@ -226,6 +282,55 @@ export default function TabIdentificacao() {
             onChange={handleChange}
             className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
           />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-[#B70F0A]" /> Data de Fundação
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              name="data_fundacao"
+              value={values.data_fundacao || ""}
+              onChange={handleChange}
+              className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
+            />
+            <button
+              type="button"
+              onClick={handleAiFoundation}
+              disabled={isPredictingFoundation}
+              className="p-2 border rounded-md hover:bg-gray-50 text-[#B70F0A]"
+              title="Buscar com IA"
+            >
+              <Sparkles className={`w-4 h-4 ${isPredictingFoundation ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-[#B70F0A]" /> Google Place ID
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              name="google_place_id"
+              placeholder="Chave única do Google Maps"
+              value={values.google_place_id || ""}
+              onChange={handleChange}
+              className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
+            />
+            <button
+              type="button"
+              onClick={handleGoogleLookup}
+              disabled={isLookingUpGoogle}
+              className="p-2 border rounded-md hover:bg-gray-50 text-[#B70F0A]"
+              title="Buscar no Google Maps"
+            >
+              <Search className={`w-4 h-4 ${isLookingUpGoogle ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* ✅ SEO Keywords moderno */}

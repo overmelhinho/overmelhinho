@@ -46,6 +46,8 @@ class Cliente extends Model
         'contract_ends_at',
         'beneficios',
         'horario_atendimento',
+        'google_place_id',
+        'data_fundacao',
     ];
 
     public function renewals()
@@ -69,6 +71,7 @@ class Cliente extends Model
         'horario_atendimento' => 'array',
         'seo_keywords_updated_at' => 'datetime',
         'contract_ends_at' => 'date',
+        'data_fundacao' => 'date',
     ];
 
     public function setCpfCnpjAttribute($value): void
@@ -109,5 +112,10 @@ class Cliente extends Model
     public function interacoes()
     {
         return $this->hasMany(ClientInteraction::class, 'cliente_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(ClienteReview::class, 'cliente_id');
     }
 }

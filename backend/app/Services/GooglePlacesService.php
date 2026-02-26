@@ -38,19 +38,7 @@ class GooglePlacesService
 
             $placeId = $searchResponse['results'][0]['place_id'];
 
-            // 2. Buscar Detalhes (incluindo opening_hours)
-            $detailResponse = Http::get("https://maps.googleapis.com/maps/api/place/details/json", [
-                'place_id' => $placeId,
-                'key' => $this->apiKey,
-                'fields' => 'name,formatted_address,formatted_phone_number,website,opening_hours,geometry,business_status',
-                'language' => 'pt-BR'
-            ]);
-
-            if (!$detailResponse->successful()) {
-                return null;
-            }
-
-            return $detailResponse['result'];
+            return $this->getDetails($placeId);
 
         } catch (\Throwable $e) {
             Log::error('[GooglePlacesService] Erro ao buscar detalhes', [
@@ -59,6 +47,48 @@ class GooglePlacesService
             ]);
             return null;
         }
+    }
+
+    /**
+     * Busca detalhes específicos por Place ID (inclui reviews)
+     */
+    public function getDetails(string $placeId): ?array
+    {
+        if (!$this->apiKey) return null;
+
+        try {
+            $response = Http::get("https://maps.googleapis.com/maps/api/place/details/json", [
+                'place_id' => $placeId,
+                'key' => $this->apiKey,
+                'fields' => 'name,formatted_address,formatted_phone_number,international_phone_number,website,opening_hours,geometry,business_status,reviews,place_id',
+                'language' => 'pt-BR'
+            ]);
+
+            if ($response->failed()) {
+                Log::error('[GooglePlacesService] Falha na HTTP response do Details', ['status' => $response->status(), 'body' => $response->body()]);
+                return null;
+            }
+
+            return $response->json('result');
+        } catch (\Throwable $e) {
+            Log::error('[GooglePlacesService] Erro ao buscar detalhes por ID', ['id' => $placeId, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Busca apenas os reviews
+     */
+    public function getReviews(string $placeId): array
+    {
+        $details = $this->getDetails($placeId);
+        
+        if (!$details) {
+            Log::warning('[GooglePlacesService] getReviews: detalhes não retornados para o ID ' . $placeId);
+            return [];
+        }
+
+        return $details['reviews'] ?? [];
     }
 
     /**

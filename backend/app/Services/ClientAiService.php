@@ -67,4 +67,45 @@ class ClientAiService
             return '';
         }
     }
+    /**
+     * Tenta prever a data de fundação da empresa via IA.
+     */
+    public function predictFoundationDate(string $name, string $city): ?string
+    {
+        if (!$this->openaiKey) return null;
+
+        $prompt = "Identifique a data de fundação da empresa '{$name}' em '{$city}'.\n" .
+                  "Responda APENAS com a data no formato YYYY-MM-DD.\n" .
+                  "Se não tiver certeza, tente achar o ano e use o primeiro dia do ano (ex: 2010-01-01).\n" .
+                  "Se não encontrar nenhuma pista confiável, responda apenas NULL.";
+
+        try {
+            $response = Http::withToken($this->openaiKey)
+                ->timeout(20)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'temperature' => 0.0
+                ]);
+
+            if (!$response->successful()) return null;
+
+            $result = trim($response->json('choices.0.message.content'));
+            Log::info("[ClientAiService] Raw AI foundation result: " . $result);
+
+            if (preg_match('/\d{4}-\d{2}-\d{2}/', $result, $matches)) {
+                return $matches[0];
+            }
+            
+            if (str_contains(strtoupper($result), 'NULL')) return null;
+
+            return null;
+
+        } catch (\Throwable $e) {
+            Log::error('[ClientAiService] Erro na predição da data', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
 }

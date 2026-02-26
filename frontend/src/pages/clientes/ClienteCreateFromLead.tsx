@@ -21,6 +21,7 @@ import TabLogotipo from "./create/steps/TabLogotipo";
 import TabGaleria from "./create/steps/TabGaleria";
 import TabMidia from "./create/steps/TabMidia";
 import TabCidadesAtendidas from "./create/steps/TabCidadesAtendidas";
+import TabGoogleReviews from "./create/steps/TabGoogleReviews";
 
 import ClienteTicketsModal from "@/components/modals/ClienteTicketsModal";
 
@@ -200,7 +201,8 @@ export default function ClienteCreateFromLead() {
         { id: 7, label: "Horário" },
         { id: 8, label: "Logotipo" },
         { id: 9, label: "Mídia" },
-        { id: 10, label: "Galeria" }
+        { id: 10, label: "Galeria" },
+        { id: 11, label: "Google Reviews" }
       );
     }
 
@@ -443,6 +445,9 @@ export default function ClienteCreateFromLead() {
               generate_seo_keywords: true,
               seo_keywords_text: "",
 
+              google_place_id: "",
+              data_fundacao: "",
+              selected_reviews: [],
               galeria: [],
             }}
             validationSchema={validationSchema}
@@ -510,6 +515,9 @@ export default function ClienteCreateFromLead() {
                   generate_seo_keywords: values.generate_seo_keywords,
                   seo_keywords_text:
                     values.generate_seo_keywords === false ? values.seo_keywords_text : undefined,
+                  data_fundacao: values.data_fundacao || null,
+                  google_place_id: values.google_place_id || null,
+                  reviews: values.selected_reviews || [],
                 };
 
                 // 1) cria cliente
@@ -685,6 +693,9 @@ export default function ClienteCreateFromLead() {
 
                 if (dados.descricao) setFieldValue("descricao", String(dados.descricao));
 
+                if (dados.google_place_id) setFieldValue("google_place_id", String(dados.google_place_id));
+                if (dados.data_fundacao) setFieldValue("data_fundacao", String(dados.data_fundacao));
+
                 toast.success("Dados aplicados ao cadastro.");
               };
 
@@ -822,6 +833,7 @@ export default function ClienteCreateFromLead() {
                     {step === 8 && tipoCliente === "pagante" && <TabLogotipo />}
                     {step === 9 && tipoCliente === "pagante" && <TabMidia />}
                     {step === 10 && tipoCliente === "pagante" && <TabGaleria />}
+                    {step === 11 && tipoCliente === "pagante" && <TabGoogleReviews />}
                   </div>
 
                   <div className="flex justify-between">

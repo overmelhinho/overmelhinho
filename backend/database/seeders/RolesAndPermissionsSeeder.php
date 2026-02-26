@@ -35,6 +35,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'create_lead',
             'edit_lead',
             'delete_lead',
+            'view leads',
+            'create leads',
+            'edit leads',
+            'delete leads',
 
             // Clientes
             'view_client',

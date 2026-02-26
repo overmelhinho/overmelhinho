@@ -7,6 +7,7 @@ import "./index.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ReactQueryProvider from "@/contexts/ReactQueryProvider";
 import { Toaster } from "react-hot-toast";
+import { Toaster as SonnerToaster } from "sonner";
 
 // 🔍 Debug global para capturar o erro real mesmo no build minificado
 window.onerror = function (message, source, lineno, colno, error) {
@@ -43,6 +44,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             },
           }}
         />
+        <SonnerToaster richColors position="top-right" />
       </AuthProvider>
     </ReactQueryProvider>
   </React.StrictMode>
