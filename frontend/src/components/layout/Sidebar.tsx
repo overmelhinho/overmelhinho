@@ -8,10 +8,7 @@ import {
   ShieldCheck,
   KeyRound,
   FileText,
-  Palette,
   Ticket,
-  Settings,
-  Megaphone,
   UserPlus,
   Briefcase,
   CreditCard,
@@ -136,16 +133,16 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 overflow-x-hidden scrollbar-thin scrollbar-thumb-white/20 hover:scrollbar-thumb-white/40">
+      <div className="flex-1 sidebar-scroll px-4">
         <nav>
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
+          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
             Operação
           </div>
           <div className="space-y-1">{itemsTop.map(renderItem)}</div>
         </nav>
 
-        <div className="mt-6 border-t border-white/15 pt-4 pb-10">
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
+        <div className="mt-8 pt-4 pb-10">
+          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
             Administração
           </div>
           <div className="space-y-1">{itemsBottom.map(renderItem)}</div>
