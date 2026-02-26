@@ -25,6 +25,18 @@ import {
 } from "lucide-react";
 import { useFormikContext } from "formik";
 import { cn } from "@/lib/utils";
+import CreateAutorizacaoModal from "../../../financeiro/components/CreateAutorizacaoModal";
+import PreviewAutorizacaoModal from "../../../financeiro/components/PreviewAutorizacaoModal";
+import { MoreHorizontal, Share2, Send, CheckCircle, DollarSign } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface Plan {
     id: number;
@@ -49,6 +61,16 @@ interface Invoice {
     payable_amount?: number;
 }
 
+interface Autorizacao {
+    id: number;
+    numero: number;
+    titulo_anuncio: string;
+    valor_total: number;
+    status: "rascunho" | "aguardando_assinatura" | "assinado" | "cancelado";
+    data_inicio: string;
+    data_fim: string;
+}
+
 export default function TabFinanceiro() {
     const { id } = useParams();
     const queryClient = useQueryClient();
@@ -58,6 +80,11 @@ export default function TabFinanceiro() {
     const [paymentMethod, setPaymentMethod] = useState("boleto");
     const [installments, setInstallments] = useState(1);
     const [dueDate, setDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
+
+    // Autorização States
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [selectedAuth, setSelectedAuth] = useState<{ id: number, numero: number } | null>(null);
 
     // Discount States
     const [showDiscount, setShowDiscount] = useState(false);
@@ -75,6 +102,15 @@ export default function TabFinanceiro() {
         queryFn: async () => {
             const resp = await axios.get(`/v1/clientes/${id}/invoices`);
             return resp.data;
+        },
+    });
+
+    // Fetch Autorizações
+    const { data: autorizacoes, isLoading: isLoadingAuths, refetch: refetchAuths } = useQuery<Autorizacao[]>({
+        queryKey: ["client-autorizacoes", id],
+        queryFn: async () => {
+            const resp = await axios.get("/v1/autorizacoes", { params: { cliente_id: id } });
+            return resp.data.data;
         },
     });
 
@@ -178,8 +214,68 @@ export default function TabFinanceiro() {
                         <AlertCircle size={12} /> Cancelado
                     </span>
                 );
+        }
+    };
+
+    const getAuthStatusBadge = (status: string) => {
+        switch (status) {
+            case "assinado":
+                return (
+                    <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-black uppercase bg-green-100 text-green-700 shadow-sm">
+                        <CheckCircle size={12} /> Assinado
+                    </span>
+                );
+            case "aguardando_assinatura":
+                return (
+                    <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-black uppercase bg-yellow-100 text-yellow-700 shadow-sm animate-pulse">
+                        <Clock size={12} /> Aguardando
+                    </span>
+                );
+            case "cancelado":
+                return (
+                    <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-black uppercase bg-gray-100 text-gray-700 shadow-sm">
+                        <XCircle size={12} /> Cancelado
+                    </span>
+                );
             default:
-                return status;
+                return (
+                    <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-700 shadow-sm">
+                        <FileText size={12} /> Rascunho
+                    </span>
+                );
+        }
+    };
+
+    const XCircle = ({ size }: { size: number }) => <AlertCircle size={size} />; // Fallback icon
+
+    const handleSendLink = async (authId: number) => {
+        try {
+            const response = await axios.post(`/v1/autorizacoes/${authId}/send-link`);
+            const link = response.data.link;
+
+            if (link) {
+                navigator.clipboard.writeText(link);
+                toast.success("Link copiado para o clipboard!", { icon: "📋" });
+            } else {
+                toast.success("Link gerado com sucesso!");
+            }
+
+            refetchAuths();
+        } catch (error) {
+            toast.error("Erro ao enviar link.");
+        }
+    };
+
+    const handleGenerateInvoicesManual = async (authId: number) => {
+        const loadingToast = toast.loading("Comunicando com Tiny ERP e gerando faturas...");
+        try {
+            const resp = await axios.post(`/v1/autorizacoes/${authId}/generate-invoices`);
+            toast.success(`Sucesso! ${resp.data.invoices_criadas} faturas geradas.`, { id: loadingToast });
+            queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+            refetchAuths();
+        } catch (error: any) {
+            const msg = error.response?.data?.message || "Erro ao gerar faturas.";
+            toast.error(msg, { id: loadingToast });
         }
     };
 
@@ -320,6 +416,125 @@ export default function TabFinanceiro() {
                 </div>
             </div>
 
+            {/* Nova Seção: Contratos (Autorizações) */}
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <FileText className="text-red-600" size={20} />
+                            Contratos (Autorizações)
+                        </h3>
+                        <p className="text-sm text-gray-500 font-medium uppercase tracking-tight text-[10px]">Gestão de contratos e assinaturas digitais.</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setIsAuthModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl hover:bg-black transition-colors font-bold text-xs shadow-sm"
+                    >
+                        <Plus size={18} />
+                        Gerar Contrato
+                    </button>
+                </div>
+
+                <div className="overflow-hidden border border-gray-100 rounded-2xl bg-white shadow-sm">
+                    <table className="w-full text-sm text-left text-gray-500">
+                        <thead className="text-[10px] text-gray-400 uppercase font-black bg-gray-50/50 border-b border-gray-100">
+                            <tr>
+                                <th className="px-6 py-4">Nº Contrato</th>
+                                <th className="px-6 py-4">Veiculação</th>
+                                <th className="px-6 py-4">Investimento</th>
+                                <th className="px-6 py-4">Vigência</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {isLoadingAuths ? (
+                                <tr><td colSpan={6} className="px-6 py-4 text-center animate-pulse">Carregando...</td></tr>
+                            ) : autorizacoes?.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400 italic font-medium">
+                                        Nenhum contrato gerado para este cliente.
+                                    </td>
+                                </tr>
+                            ) : (
+                                autorizacoes?.map((auth) => (
+                                    <tr key={auth.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-6 py-4 font-black text-gray-900">
+                                            #{auth.numero.toString().padStart(5, '0')}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-xs font-bold text-gray-600">
+                                                {auth.titulo_anuncio}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 font-black text-gray-900">
+                                            R$ {Number(auth.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-4 text-xs font-semibold text-gray-400">
+                                            {format(new Date(auth.data_inicio), "dd/MM/yy")} - {format(new Date(auth.data_fim), "dd/MM/yy")}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {getAuthStatusBadge(auth.status)}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                                                        <MoreHorizontal size={16} />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl border-gray-100 p-1">
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setSelectedAuth({ id: auth.id, numero: auth.numero });
+                                                            setIsPreviewOpen(true);
+                                                        }}
+                                                        className="rounded-lg font-bold text-xs gap-2 py-2 cursor-pointer"
+                                                    >
+                                                        <Printer size={14} className="text-gray-400" /> Visualizar PDF
+                                                    </DropdownMenuItem>
+
+                                                    {auth.status === "rascunho" && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleSendLink(auth.id)}
+                                                            className="rounded-lg font-bold text-xs gap-2 py-2 text-blue-600 bg-blue-50/50 hover:bg-blue-50 cursor-pointer"
+                                                        >
+                                                            <Share2 size={14} /> Enviar p/ Assinatura
+                                                        </DropdownMenuItem>
+                                                    )}
+
+                                                    {auth.status === "aguardando_assinatura" && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleSendLink(auth.id)}
+                                                            className="rounded-lg font-bold text-xs gap-2 py-2 text-yellow-600 bg-yellow-50 cursor-pointer"
+                                                        >
+                                                            <LinkIcon size={14} /> Copiar Link p/ Envio Manual
+                                                        </DropdownMenuItem>
+                                                    )}
+
+                                                    {auth.status === "assinado" && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleGenerateInvoicesManual(auth.id)}
+                                                            className="rounded-lg font-bold text-xs gap-2 py-2 text-emerald-600 bg-emerald-50 cursor-pointer"
+                                                        >
+                                                            <DollarSign size={14} /> Gerar Faturas Tiny
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="h-px bg-gray-100 my-4" />
+
+
             <div className="flex justify-between items-center">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -329,11 +544,19 @@ export default function TabFinanceiro() {
                     <p className="text-sm text-gray-500">Histórico de faturas e cobranças do cliente.</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#B70F0A] text-white rounded-lg hover:bg-[#8e0c08] transition-colors font-medium shadow-sm"
+                    onClick={() => {
+                        const hasPendingAuth = autorizacoes?.some(a => ['rascunho', 'aguardando_assinatura'].includes(a.status));
+                        if (hasPendingAuth) {
+                            if (!window.confirm("Atenção: Este cliente possui contratos pendentes de assinatura. Gerar uma cobrança manual agora pode causar duplicidade. Deseja continuar mesmo assim?")) {
+                                return;
+                            }
+                        }
+                        setIsModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 transition-colors font-bold text-xs shadow-sm"
                 >
                     <Plus size={18} />
-                    Gerar Cobrança
+                    Gerar Cobrança Avulsa
                 </button>
             </div>
 
@@ -743,6 +966,22 @@ export default function TabFinanceiro() {
                     </div>
                 </div>
             )}
+            <CreateAutorizacaoModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+                onSuccess={() => {
+                    refetchAuths();
+                    setIsAuthModalOpen(false);
+                }}
+                initialClientId={Number(id)}
+            />
+
+            <PreviewAutorizacaoModal
+                isOpen={isPreviewOpen}
+                onClose={() => setIsPreviewOpen(false)}
+                autorizacaoId={selectedAuth?.id || null}
+                numero={selectedAuth?.numero || null}
+            />
         </div>
     );
 }

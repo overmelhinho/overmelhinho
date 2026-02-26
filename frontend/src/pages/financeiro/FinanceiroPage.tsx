@@ -4,6 +4,7 @@ import PlansPage from "./PlansPage";
 import InvoicesTab from "./InvoicesTab";
 import MetricsTab from "./MetricsTab";
 import RenewalsTab from "./RenewalsTab";
+import AutorizacoesTab from "./AutorizacoesTab";
 import {
     LayoutDashboard,
     FileText,
@@ -124,8 +125,11 @@ export default function FinanceiroPage() {
 
             <Tabs defaultValue="invoices" className="w-full space-y-6">
                 <TabsList className="bg-white p-1 border rounded-lg">
+                    <TabsTrigger value="autorizacoes" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
+                        <FileText size={16} /> Contratos (Autorizações)
+                    </TabsTrigger>
                     <TabsTrigger value="invoices" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
-                        <FileText size={16} /> Faturas
+                        <DollarSign size={16} /> Faturas
                     </TabsTrigger>
                     <TabsTrigger value="renewals" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
                         <RefreshCw size={16} /> Renovações
@@ -137,6 +141,10 @@ export default function FinanceiroPage() {
                         <LayoutDashboard size={16} /> Métricas
                     </TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="autorizacoes" className="focus-visible:outline-none">
+                    <AutorizacoesTab />
+                </TabsContent>
 
                 <TabsContent value="invoices" className="focus-visible:outline-none">
                     <InvoicesTab />

@@ -49,8 +49,11 @@ A aplicação atua como um ERP/CRM/Gestão completa para o negócio, sendo compo
 2. **Atendimento e Suporte (Tickets)**
    - Kanban de tickets (`Ticket`, `TicketLog`, `TicketSubtask`) permitindo assinalar atendentes, trocar status, definir subtarefas.
 
-3. **Módulo Financeiro**
-   - Faturamento (`Invoice`), planos de assinatura (`Plan`), controle parcelas e recorrência em clientes.
+3. **Módulo Financeiro e Contratos**
+   - Gestão de faturamento (`Invoice`), planos de assinatura (`Plan`) e **Autorizações de Publicidade** (`Autorizacao`).
+   - **Fluxo de Contratos**: Geração de propostas com assinatura digital, captura de IP do assinante e geração de PDF assinado automaticamente.
+   - **Integração Tiny ERP**: Automação completa que gera faturas no Tiny imediatamente após a assinatura do contrato pelo cliente.
+   - *(Veja `docs/financeiro_module.md` para documentação completa do módulo financeiro)*.
 
 4. **Recrutamento e RH (Job Board)**
    - Cadastro de vagas de emprego (`JobOpportunity`, `JobRole`) e controle de Candidatos (`Candidate`).

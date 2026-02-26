@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\CandidateController;
 use App\Http\Controllers\Api\V1\ReportController;
 
 use App\Http\Controllers\Api\V1\RenewalController;
+use App\Http\Controllers\Api\V1\AutorizacaoController;
 
 Route::post('/v1/upload-temp', [UploadTempController::class , 'uploadTemp']);
 
@@ -54,7 +55,6 @@ Route::post('/v1/jobs/{id}/apply', [JobOpportunityController::class , 'apply']);
 Route::get('/v1/renewals/magic-link/{token}', [RenewalController::class , 'showByToken']);
 Route::post('/v1/renewals/magic-link/{token}/approve', [RenewalController::class , 'approve']);
 Route::post('/v1/renewals/magic-link/{token}/update-data', [RenewalController::class , 'updateData']);
-
 // ✅ Webhook Tiny (Desprotegido)
 Route::post('/v1/webhooks/tiny', [\App\Http\Controllers\Api\V1\FinancialController::class , 'handleWebhook']);
 
@@ -202,6 +202,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/renewals', [RenewalController::class , 'index']);
     Route::post('/renewals/generate-link', [RenewalController::class , 'generateLink']);
 
+    // ✅ Autorizações (Contratos de Publicidade)
+    Route::prefix('autorizacoes')->group(function () {
+        Route::get('/',          [AutorizacaoController::class, 'index']);
+        Route::post('/',         [AutorizacaoController::class, 'store']);
+        Route::get('/{id}',      [AutorizacaoController::class, 'show']);
+        Route::put('/{id}',      [AutorizacaoController::class, 'update']);
+        Route::patch('/{id}/cancel', [AutorizacaoController::class, 'cancel']);
+        Route::post('/{id}/send-link',       [AutorizacaoController::class, 'sendLink']);
+        Route::post('/{id}/generate-invoices', [AutorizacaoController::class, 'generateInvoices']);
+    });
+
     // ✅ Orçamentos com IA
     Route::get('/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'index']);
     Route::get('/clients/{id}/quotes-focus', [\App\Http\Controllers\Api\V1\QuoteController::class, 'indexFocus']);
@@ -215,3 +226,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 // ✅ Rotas Públicas de Orçamentos e Tracking
 Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);
 Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
+
+// ✅ Rotas Públicas — Assinatura de Autorização e PDF (sem autenticação)
+Route::get('/v1/autorizar/{token}',  [AutorizacaoController::class, 'showByToken']);
+Route::post('/v1/autorizar/{token}', [AutorizacaoController::class, 'sign']);
+Route::get('/v1/autorizacoes/{id}/pdf',      [AutorizacaoController::class, 'generatePdf']);
+Route::get('/v1/autorizacoes/{id}/preview',  [AutorizacaoController::class, 'previewPdf']);
+
+
+

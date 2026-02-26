@@ -70,10 +70,15 @@ import ClientReportDashboard from "@/pages/reports/ClientReportDashboard";
 
 // ✅ Público
 import RenewalMagicLinkPage from "@/pages/public/RenewalMagicLinkPage";
+import AutorizarPage from "@/pages/public/AutorizarPage";
 
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
+
+  // ✅ Autorização - Público
+  { path: "/autorizar/:token", element: <AutorizarPage /> },
+
 
   {
     path: "/dashboard",

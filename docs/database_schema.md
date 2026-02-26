@@ -22,9 +22,11 @@ Baseado nas migrations e models presentes no `backend/`, esta é a estrutura das
 - `ticket_logs`: Histórico de interações nos tickets.
 - `ticket_subtasks`: Subtarefas/checklists dentro de um ticket de atendimento.
 
-## 4. Financeiro
+## 4. Financeiro e Contratos
 - `plans`: Planos de contratação associados a clientes/sistema (possui `tiny_id` indicativo de integração).
-- `invoices`: Faturas geradas (inclui dados de parcelas e justificativas).
+- `autorizacoes`: Contratos de publicidade (inclui `magic_link_token`, `status`, `assinatura_base64`, `valor_total`).
+- `autorizacao_parcelas`: Parcelas individuais vinculadas à autorização (rastreia o `invoice_id` gerado).
+- `invoices`: Faturas geradas e sincronizadas com Tiny ERP (inclui link de pagamento e dados de parcelas).
 
 ## 5. Recrutamento e RH
 - `job_roles`: Cargos disponíveis ou tabelados.
