@@ -11,9 +11,10 @@ class Kernel extends ConsoleKernel
      * Registrar comandos personalizados.
      */
     protected $commands = [
-        \App\Console\Commands\CleanTempSupabase::class ,
-        \App\Console\Commands\GenerateRecurringInvoices::class ,
-        \App\Console\Commands\CheckOverdueInvoicesAndCreateTickets::class ,
+        \App\Console\Commands\CleanTempSupabase::class,
+        \App\Console\Commands\GenerateRecurringInvoices::class,
+        \App\Console\Commands\CheckOverdueInvoicesAndCreateTickets::class,
+        \App\Console\Commands\GenerateRenewals::class,
     ];
 
     /**
@@ -29,6 +30,9 @@ class Kernel extends ConsoleKernel
 
         // 🎫 Verifica faturas vencidas e cria tickets às 07:00 da manhã
         $schedule->command('app:check-overdue-invoices-tickets')->dailyAt('07:00');
+
+        // 🔄 Gera renovações no dia 1 de cada mês às 05:00 (contratos que vencem no mês seguinte)
+        $schedule->command('renewals:generate')->monthlyOn(1, '05:00');
     }
 
     /**
