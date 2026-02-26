@@ -55,6 +55,18 @@ Route::post('/v1/jobs/{id}/apply', [JobOpportunityController::class , 'apply']);
 Route::get('/v1/renewals/magic-link/{token}', [RenewalController::class , 'showByToken']);
 Route::post('/v1/renewals/magic-link/{token}/approve', [RenewalController::class , 'approve']);
 Route::post('/v1/renewals/magic-link/{token}/update-data', [RenewalController::class , 'updateData']);
+
+// ✅ Rotas Públicas de Autorizações/Contratos
+Route::prefix('v1/autorizacoes')->group(function () {
+    Route::get('/{id}/pdf',      [AutorizacaoController::class, 'generatePdf']);
+    Route::get('/{id}/preview',  [AutorizacaoController::class, 'previewPdf']);
+});
+
+Route::prefix('v1/autorizar')->group(function () {
+    Route::get('/{token}',  [AutorizacaoController::class, 'showByToken']);
+    Route::post('/{token}', [AutorizacaoController::class, 'sign']);
+});
+
 // ✅ Webhook Tiny (Desprotegido)
 Route::post('/v1/webhooks/tiny', [\App\Http\Controllers\Api\V1\FinancialController::class , 'handleWebhook']);
 
@@ -226,17 +238,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 // ✅ Rotas Públicas de Orçamentos e Tracking
 Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);
 Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
-
-// ✅ Rotas Públicas de Autorizações/Contratos
-Route::prefix('v1/autorizacoes')->group(function () {
-    Route::get('/{id}/pdf',      [AutorizacaoController::class, 'generatePdf']);
-    Route::get('/{id}/preview',  [AutorizacaoController::class, 'previewPdf']);
-});
-
-Route::prefix('v1/autorizar')->group(function () {
-    Route::get('/{token}',  [AutorizacaoController::class, 'showByToken']);
-    Route::post('/{token}', [AutorizacaoController::class, 'sign']);
-});
 
 
 

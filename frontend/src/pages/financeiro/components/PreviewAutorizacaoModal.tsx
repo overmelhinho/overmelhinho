@@ -23,8 +23,9 @@ export default function PreviewAutorizacaoModal({
 }: PreviewAutorizacaoModalProps) {
     if (!autorizacaoId) return null;
 
-    const previewUrl = `${import.meta.env.VITE_API_URL}/v1/autorizacoes/${autorizacaoId}/preview`;
-    const downloadUrl = `${import.meta.env.VITE_API_URL}/v1/autorizacoes/${autorizacaoId}/pdf`;
+    const baseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+    const previewUrl = `${baseUrl}/v1/autorizacoes/${autorizacaoId}/preview`;
+    const downloadUrl = `${baseUrl}/v1/autorizacoes/${autorizacaoId}/pdf`;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
