@@ -23,7 +23,7 @@ export default function PreviewAutorizacaoModal({
 }: PreviewAutorizacaoModalProps) {
     if (!autorizacaoId) return null;
 
-    const baseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+    const baseUrl = (import.meta.env.VITE_API_URL || "https://api.overmelhinho.com.br/api").replace(/\/+$/, "");
     const previewUrl = `${baseUrl}/v1/autorizacoes/${autorizacaoId}/preview`;
     const downloadUrl = `${baseUrl}/v1/autorizacoes/${autorizacaoId}/pdf`;
 
