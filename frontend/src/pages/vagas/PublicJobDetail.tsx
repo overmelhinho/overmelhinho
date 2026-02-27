@@ -1,6 +1,7 @@
 // Página Pública: Detalhes da Vaga + Formulário de Candidatura
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useClientAnalytics } from "@/hooks/useClientAnalytics";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? "https://api.overmelhinho.com.br/api";
 
@@ -26,6 +27,13 @@ export default function PublicJobDetail() {
     const [error, setError] = useState("");
     const fileRef = useRef<HTMLInputElement>(null);
 
+    // ✅ Novo GA4 Hook
+    const { trackInteraction } = useClientAnalytics(job ? {
+        id: job.cliente_id,
+        segmento: "Vagas",
+        cidade: job.city
+    } : null);
+
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -39,13 +47,6 @@ export default function PublicJobDetail() {
             .then((data) => {
                 setJob(data);
                 setLoading(false);
-
-                // Registro de Tracking (Page View)
-                if (data.cliente_id) {
-                    import("@/lib/tracking").then(({ trackInteraction }) => {
-                        trackInteraction(data.cliente_id, 'page_view');
-                    });
-                }
             })
             .catch(() => setLoading(false));
     }, [id]);

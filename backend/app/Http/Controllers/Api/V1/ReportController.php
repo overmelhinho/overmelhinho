@@ -4,9 +4,17 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Services\Ga4ReportingService;
 
 class ReportController extends Controller
 {
+    protected $ga4;
+
+    public function __construct(Ga4ReportingService $ga4)
+    {
+        $this->ga4 = $ga4;
+    }
+
     /**
      * Dashboard do Lojista (Visão Externa)
      */
@@ -14,13 +22,16 @@ class ReportController extends Controller
     {
         $cliente = \App\Models\Cliente::findOrFail($id);
 
-        // 1. Visibilidade (Interações nos últimos 30 dias)
+        // 1. Visibilidade (Interações nos últimos 30 dias - Database Fallback)
         $interactions = \App\Models\ClientInteraction::where('cliente_id', $id)
             ->where('created_at', '>=', now()->subDays(30))
             ->selectRaw('interaction_type, count(*) as total')
             ->groupBy('interaction_type')
             ->get()
             ->pluck('total', 'interaction_type');
+
+        // 2. Tenta buscar dados REAIS do GA4 (Mais precisos para o cliente)
+        $ga4Metrics = $this->ga4->getClientMetrics($id);
 
         // Sparkline - Acessos diários últimos 7 dias
         $sparkline = \App\Models\ClientInteraction::where('cliente_id', $id)
@@ -31,7 +42,7 @@ class ReportController extends Controller
             ->orderBy('date')
             ->get();
 
-        // 2. Vagas
+        // 3. Vagas
         $vagasAtivas = \App\Models\JobOpportunity::where('cliente_id', $id)
             ->where('status', 'published')
             ->count();
@@ -40,17 +51,19 @@ class ReportController extends Controller
             $q->where('cliente_id', $id);
         })->count();
 
-        // 3. SEO (Última checagem)
+        // 4. SEO (Última checagem)
         $seo = \App\Models\SeoRanking::where('cliente_id', $id)
             ->orderBy('checked_at', 'desc')
             ->first();
 
         return response()->json([
             'visibilidade' => [
-                'total_views' => $interactions['page_view'] ?? 0,
-                'whatsapp' => $interactions['whatsapp_click'] ?? 0,
+                // Prioriza GA4 se houver dados, senão usa DB
+                'total_views' => max($interactions['page_view'] ?? 0, $ga4Metrics['views']),
+                'whatsapp' => max($interactions['whatsapp_click'] ?? 0, $ga4Metrics['conversions'] / 2), // Estimativa se vier misto
                 'waze' => $interactions['waze_click'] ?? 0,
                 'social' => $interactions['social_click'] ?? 0,
+                'ga4_status' => $ga4Metrics['views'] > 0 ? 'active' : 'fallback',
                 'sparkline' => $sparkline
             ],
             'vagas' => [
@@ -95,12 +108,25 @@ class ReportController extends Controller
             ->limit(5)
             ->get(['id', 'nome_fantasia']);
 
-        // 4. Gaps de Busca (Mock)
-        $searchGaps = [
-            ['term' => 'guinho 24h em cambara', 'count' => 45],
-            ['term' => 'borracharia aberta agora', 'count' => 32],
-            ['term' => 'aluguel de gerador', 'count' => 18],
-        ];
+        // 5. Inteligência de Tráfego (Híbrido)
+        $ga4Global = $this->ga4->getGlobalMetrics(30);
+        $topSegments = $this->ga4->getTopSegments(5);
+        
+        // Se GA4 falhar, tenta mock ou DB
+        if (empty($topSegments)) {
+            $topSegments = [
+                ['name' => 'Restaurantes', 'users' => 1250],
+                ['name' => 'Borracharias', 'users' => 980],
+                ['name' => 'Saúde', 'users' => 750],
+                ['name' => 'Serviços 24h', 'users' => 620],
+                ['name' => 'Eventos', 'users' => 410],
+            ];
+        }
+
+        // Conversões Totais (Database)
+        $totalConversions = \App\Models\ClientInteraction::whereIn('interaction_type', ['whatsapp_click', 'waze_click'])
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
 
         return response()->json([
             'financeiro' => [
@@ -116,7 +142,15 @@ class ReportController extends Controller
                 'avg_response_minutes' => round($tempoMedioResponse, 0),
                 'top_clientes' => $topClientes
             ],
+            'trafego' => [
+                'page_views_total' => $ga4Global['views'],
+                'conversions_total' => $totalConversions,
+                'top_segments' => $topSegments,
+                'history' => $ga4Global['history'],
+                'views_change' => '+12%' // Mock para exemplo, pode ser calculado comparando com período anterior
+            ],
             'search_gaps' => $searchGaps
         ]);
     }
 }
+

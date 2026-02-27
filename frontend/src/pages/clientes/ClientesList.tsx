@@ -1,7 +1,9 @@
 // /var/www/frontend/src/pages/clientes/ClientesList.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import axios from "@/services/api";
+
 import Skeleton from "@/components/ui/skeleton";
 import toast from "react-hot-toast";
 import {
@@ -235,7 +237,9 @@ function ActionButton({
 }
 
 export default function ClientesList() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
+
   const [searchDebounced, setSearchDebounced] = useState("");
   const [tipo, setTipo] = useState<"all" | TipoCliente>("all");
   const [page, setPage] = useState<number>(1);
@@ -591,17 +595,30 @@ export default function ClientesList() {
                       </td>
 
                       <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          className="px-3 py-1.5 rounded-lg border text-xs hover:bg-gray-50 transition"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.location.href = `/clientes/${c.id}/editar`;
-                          }}
-                        >
-                          Abrir <ExternalLink className="inline w-3 h-3 ml-1" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            className="px-3 py-1.5 rounded-lg border text-xs hover:bg-red-50 hover:border-red-200 hover:text-[#C00000] transition font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/clientes/${c.id}/hub`);
+                            }}
+                          >
+                            Hub ✦
+                          </button>
+                          <button
+                            type="button"
+                            className="px-3 py-1.5 rounded-lg border text-xs hover:bg-gray-50 transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/clientes/${c.id}/editar`);
+                            }}
+                          >
+                            Editar <ExternalLink className="inline w-3 h-3 ml-1" />
+                          </button>
+                        </div>
                       </td>
+
                     </tr>
                   );
                 })}

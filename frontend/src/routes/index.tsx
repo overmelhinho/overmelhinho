@@ -26,6 +26,8 @@ import ClienteCreateFromLead from "@/pages/clientes/ClienteCreateFromLead";
 import ClienteEdit from "@/pages/clientes/ClienteEdit";
 import ClienteCadastroForm from "@/pages/clientes/ClienteCadastroForm";
 import ClientesList from "@/pages/clientes/ClientesList";
+import ClientHubPage from "@/pages/clientes/ClientHubPage";
+
 
 // Usuários
 import UserListPage from "@/pages/UserListPage";
@@ -207,6 +209,17 @@ const router = createBrowserRouter([
       >
         <DashboardLayout>
           <ClienteEdit />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  {
+    path: "/clientes/:id/hub",
+    element: (
+      <ProtectedRoute perms={["view_client"]}>
+        <DashboardLayout>
+          <ClientHubPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

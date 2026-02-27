@@ -18,6 +18,8 @@ Este documento lista o status das tarefas em andamento e o que ainda precisa ser
 - [x] **Fix de Ordem de Rotas**: Rotas estáticas `/clientes/ai-description` e `/clientes/google-hours` movidas para antes do `apiResource` para evitar conflito com `{id}`.
 - [x] **Migração `client_materials`**: Nova tabela para materiais de clientes (arquivo ou link).
 - [x] **Migração `contatos`**: Adicionados campos `telefone_outro`, `whatsapp_selected`, `exibir_*`.
+- [x] **Infraestrutura GA4 Híbrida**: Implementado services (Reporting e Measurement Protocol) no Laravel e custom hook Analytics no React.
+
 
 ### Módulo Financeiro — Pagamento com Permuta
 
@@ -79,6 +81,22 @@ Este documento lista o status das tarefas em andamento e o que ainda precisa ser
 ### 4.2 Dashboards
 - [x] **Dashboards Funcionais**: Botões de navegação conectados e operacionais.
 - [ ] **Deploy de Assets**: Rodar `npm run build` no servidor para compilar a biblioteca `recharts`.
+
+### 4.3 Configuração e Ativação GA4 (Google Analytics)
+- [ ] **Google Cloud Console**:
+    - [ ] Ativar a **Google Analytics Data API**.
+    - [ ] Criar **Conta de Serviço (Service Account)**.
+    - [ ] Gerar Chave JSON e salvar em `backend/storage/app/analytics/service-account.json`.
+- [ ] **Google Analytics 4 (Google Admin)**:
+    - [ ] Criar **Dimensões Personalizadas**: `client_id`, `client_segment`, `client_city` (Escopo: Evento).
+    - [ ] Criar **Segredo da API do Measurement Protocol**: Em Fluxos de Dados > Selecionar Fluxo > Protocolo de Medição.
+    - [ ] Adicionar e-mail da Service Account como **Visualizador** no acesso à Propriedade.
+- [ ] **Configuração .env (Servidor VPS)**:
+    - [ ] `GA4_MEASUREMENT_ID`: O ID "G-" do fluxo de dados.
+    - [ ] `GA4_API_SECRET`: O segredo gerado no console do GA.
+    - [ ] `GA4_PROPERTY_ID`: ID da propriedade (encontrado nas configurações da propriedade).
+    - [ ] `VITE_GA4_MEASUREMENT_ID`: Repetir o ID "G-" no frontend.
+
 
 ---
 

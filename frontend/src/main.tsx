@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ReactQueryProvider from "@/contexts/ReactQueryProvider";
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
+import { initGA } from "@/lib/analytics";
 
 // 🔍 Debug global para capturar o erro real mesmo no build minificado
 window.onerror = function (message, source, lineno, colno, error) {
@@ -20,8 +21,15 @@ window.onerror = function (message, source, lineno, colno, error) {
   return false;
 };
 
+// Inicializa o Google Analytics 4 com segurança
+try {
+  initGA();
+} catch (e) {
+  console.error("Falha ao inicializar GA4:", e);
+}
 // 🔍 Captura também erros em Promises e React internamente
 window.addEventListener("unhandledrejection", (event) => {
+
   console.group("🚨 Unhandled Promise Rejection");
   console.error("💥 Motivo:", (event as any).reason);
   console.error("🧠 Stack:", (event as any).reason?.stack);

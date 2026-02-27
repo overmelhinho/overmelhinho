@@ -18,10 +18,12 @@ O sistema utiliza um modelo de **Tracking Ativo** para capturar interações que
 
 ### APIs de Agregação
 - **Endpoint Lojista**: `GET /api/v1/clients/{id}/reports/dashboard`
-    - Consolida visibilidade dos últimos 30 dias.
+    - Consolida visibilidade dos últimos 30 dias (Dados Híbridos: DB Local + GA4 Data API).
+    - Métricas de GA4: Visualizações reais e eventos de conversão filtrados por `client_id`.
     - Sparkline de acessos dos últimos 7 dias.
     - Status de SEO (tabela `seo_rankings`).
     - Performance de Vagas (tabelas `job_opportunities` e `candidates`).
+
 - **Endpoint Admin**: `GET /api/v1/admin/reports/dashboard`
     - Financeiro: MRR (Mensal Recorrente) baseado em planos ativos.
     - Inadimplência: Comparativo MRR vs Invoices pendentes.
