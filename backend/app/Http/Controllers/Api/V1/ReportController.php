@@ -127,6 +127,15 @@ class ReportController extends Controller
         $totalConversions = \App\Models\ClientInteraction::whereIn('interaction_type', ['whatsapp_click', 'waze_click'])
             ->where('created_at', '>=', now()->subDays(30))
             ->count();
+            
+        // Gaps de Busca (Mock até termos a integração com Search Trends ativa)    
+        $searchGaps = [
+            ['term' => 'Pet Shop', 'count' => 850],
+            ['term' => 'Estética Automotiva', 'count' => 620],
+            ['term' => 'Dentista 24h', 'count' => 410],
+            ['term' => 'Pizzaria', 'count' => 1200],
+            ['term' => 'Energia Solar', 'count' => 300],
+        ];
 
         return response()->json([
             'financeiro' => [

@@ -233,11 +233,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Dashboards e Relatórios
     Route::get('/clients/{id}/reports/dashboard', [ReportController::class, 'clientDashboard']);
     Route::get('/admin/reports/dashboard', [ReportController::class, 'adminDashboard']);
+    
+    // ✅ Radar de Oportunidades (Gaps + IA)
+    Route::get('/radar/oportunidades', [\App\Http\Controllers\Api\V1\RadarController::class, 'index']);
+    Route::post('/radar/oportunidades/script', [\App\Http\Controllers\Api\V1\RadarController::class, 'generateScript']);
 });
+
 
 // ✅ Rotas Públicas de Orçamentos e Tracking
 Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);
 Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
+Route::post('/v1/tracking/search', [\App\Http\Controllers\Api\V1\TrackingController::class, 'search']);
 
 
 

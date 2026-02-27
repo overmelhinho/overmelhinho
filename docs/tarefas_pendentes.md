@@ -108,3 +108,11 @@ Este documento lista o status das tarefas em andamento e o que ainda precisa ser
 
 ### 5.2 Histórico de Chat
 - [ ] Criar interface para o lojista ver mensagens trocadas no painel.
+
+### 5.3 Radar de Oportunidades (Gaps de Mercado)
+- [ ] **Integração Front-end Público**: Ligar o campo de pesquisa do site ao endpoint `/v1/tracking/search` para iniciar de fato a coleta orgânica.
+- [ ] **Integração Real-Time com Websockets (Reverb)**: Se um "Gap gigante" bater no sistema, notificar a equipe comercial ao vivo.
+- [ ] **Oportunidades Arquivadas ou Excluídas**: Permitir ao administrador "dispensar" uma sugestão de oportunidade e ocultá-la do Radar.
+- [ ] **Feedback da IA Gen**: Permitir edição e regeneração de *Tone of Voice* (ex. Botões alternativos: "Gerar mais agressivo", "Gerar mais formal").
+- [ ] **Conexão com CRM**: Acoplar o "Prospectar" para abrir um modal puxando possíveis links/Google Maps locais antes de jogar pro WhatsApp - facilitando encontrar o prospect.
+

@@ -34,7 +34,8 @@ Este documento serve para acompanhar o progresso da configuração final do GA4.
 - [x] **3.1. Infraestrutura Base**: Services Laravel e Hooks React criados.
 - [x] **3.2. Tracking de Vagas**: Implementado na página de detalhes de vagas públicas.
 - [ ] **3.3. Tracking do Portal Público**: Injetar `useClientAnalytics` nos botões de contato (WhatsApp, Waze, Redes Sociais) do perfil da empresa.
-- [ ] **3.4. Validar Relatórios**: Verificar se `ClientReportDashboard` está consumindo os dados da Data API sem erros.
+- [x] **3.4. Validar Relatórios**: Conexão GA4 testada e validada via Tinker — retorno sem erros ✅
+
 
 ---
 
@@ -43,13 +44,14 @@ Este documento serve para acompanhar o progresso da configuração final do GA4.
 
 - [x] **4.1. Upload de Credenciais**: Enviar o `service-account.json` para `backend/storage/app/analytics/`.
 
-- [ ] **4.2. Variáveis de Ambiente (.env)**: Configurar no servidor:
+- [x] **4.2. Variáveis de Ambiente (.env)**: Configurar no servidor:
     - `GA4_MEASUREMENT_ID`
     - `GA4_API_SECRET`
     - `GA4_PROPERTY_ID`
     - `VITE_GA4_MEASUREMENT_ID`
-- [ ] **4.3. Build Frontend**: Rodar `npm run build` no servidor para compilar a nova biblioteca `react-ga4`.
-- [ ] **4.4. Cache Laravel**: Rodar `php artisan config:clear` e `php artisan config:cache`.
+- [x] **4.3. Build Frontend**: Rodar `npm run build` — biblioteca `react-ga4` compilada.
+- [x] **4.4. Cache Laravel**: `php artisan config:clear` e `php artisan config:cache` executados com sucesso.
+
 
 ---
 

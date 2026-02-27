@@ -328,7 +328,7 @@ export default function AdminReportDashboard() {
                             </div>
                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Fonte: GA4</span>
                         </div>
-                        <div className="h-[200px] w-full">
+                        <div className="relative h-[200px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart
                                     data={report?.trafego?.history || []}
@@ -371,10 +371,10 @@ export default function AdminReportDashboard() {
                                 </AreaChart>
                             </ResponsiveContainer>
                             {(!report?.trafego?.history || report.trafego.history.length === 0) && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="text-center">
-                                        <p className="text-sm font-black text-gray-200 uppercase tracking-widest">Dados indisponíveis</p>
-                                        <p className="text-xs text-gray-300 mt-1">Configure o GA4 para ativar este gráfico</p>
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="text-center bg-white/80 backdrop-blur-sm p-4 rounded-xl">
+                                        <p className="text-sm font-black text-gray-500 uppercase tracking-widest">Dados indisponíveis</p>
+                                        <p className="text-xs text-gray-400 mt-1">Aguardando processamento do GA4...</p>
                                     </div>
                                 </div>
                             )}

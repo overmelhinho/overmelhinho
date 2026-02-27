@@ -8,6 +8,8 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 
 import LeadsPage from "@/pages/LeadsPage";
 import LeadsKanbanPage from "@/pages/LeadsKanbanPage";
+import OportunidadesPage from "@/pages/oportunidades/OportunidadesPage";
+
 
 import RelatoriosPage from "@/pages/RelatoriosPage";
 import CriativoPage from "@/pages/CriativoPage";
@@ -155,6 +157,18 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
+  {
+    path: "/radar-oportunidades",
+    element: (
+      <ProtectedRoute perms={["view_dashboard"]}>
+        <DashboardLayout>
+          <OportunidadesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
 
   // ✅ CLIENTES (LISTAGEM)
   {

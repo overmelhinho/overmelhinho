@@ -16,6 +16,29 @@ class TrackingController extends Controller
         $this->ga4 = $ga4;
     }
 
+    public function search(Request $request)
+    {
+        $request->validate([
+            'term' => 'required|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'results_count' => 'nullable|integer',
+        ]);
+
+        $log = \App\Models\SearchLog::create([
+            'term' => mb_strtolower($request->term, 'UTF-8'),
+            'city' => $request->city ? mb_strtolower($request->city, 'UTF-8') : null,
+            'results_count' => $request->results_count ?? 0,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'session_id' => $request->session()->getId(),
+        ]);
+
+        return response()->json([
+            'message' => 'Busca registrada',
+            'data' => $log
+        ], 201);
+    }
+
     public function store(Request $request)
     {
         $request->validate([

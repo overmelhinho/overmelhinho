@@ -16,6 +16,7 @@ import {
   Target,
   MessageCircle,
   Megaphone,
+  Sparkles,
 } from "lucide-react";
 
 type Item = {
@@ -56,7 +57,14 @@ export default function Sidebar() {
 
     { to: "/clientes", label: "Clientes", icon: <Users size={18} />, perms: ["view_client"] },
     {
+      to: "/radar-oportunidades",
+      label: "Radar",
+      icon: <Sparkles size={18} />,
+      perms: ["view_dashboard"],
+    },
+    {
       to: "/campanhas",
+
       label: "Campanhas",
       icon: <Megaphone size={18} />,
       perms: ["view_campanhas", "manage_campanhas"],
