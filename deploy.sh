@@ -53,9 +53,11 @@ CHANGED="$(git diff --name-only "$PREV_COMMIT" "$NEW_COMMIT" || true)"
 
 backend_changed=false
 frontend_changed=false
+site_changed=false
 
 if echo "$CHANGED" | grep -qE '^backend/'; then backend_changed=true; fi
 if echo "$CHANGED" | grep -qE '^frontend/'; then frontend_changed=true; fi
+if echo "$CHANGED" | grep -qE '^site/'; then site_changed=true; fi
 
 log "Mudanças detectadas:"
 echo "$CHANGED" | sed 's/^/ - /'
@@ -80,6 +82,14 @@ rollback() {
     cd "$APP_DIR/frontend"
     npm ci || true
     npm run build || true
+  fi
+
+  if $site_changed; then
+    log "Rollback site (nextjs): rebuild + restart"
+    cd "$APP_DIR/site"
+    npm ci || true
+    npm run build || true
+    pm2 restart overmelhinho-site || true
   fi
 
   log "Rollback finalizado."
@@ -138,6 +148,25 @@ if $frontend_changed; then
   chmod -R a+rX "$APP_DIR/frontend/dist" || true
 else
   log "Frontend sem mudanças — pulando."
+fi
+
+# SITE (Next.js)
+if $site_changed; then
+  log "== SITE (NEXTJS) DEPLOY =="
+  cd "$APP_DIR/site"
+
+  log "npm ci..."
+  npm ci
+
+  log "npm run build..."
+  npm run build
+
+  log "reiniciando site (pm2)..."
+  # Tenta reiniciar, se não existir, cria o processo
+  pm2 restart overmelhinho-site || pm2 start npm --name "overmelhinho-site" -- start
+  pm2 save
+else
+  log "Site sem mudanças — pulando."
 fi
 
 log "== DEPLOY OK =="
