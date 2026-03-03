@@ -30,7 +30,7 @@ class TrackingController extends Controller
             'results_count' => $request->results_count ?? 0,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'session_id' => $request->session()->getId(),
+            'session_id' => $request->hasSession() ? $request->session()->getId() : null,
         ]);
 
         return response()->json([

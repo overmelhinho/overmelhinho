@@ -21,6 +21,8 @@ class EnderecoResource extends JsonResource
             'link_maps'    => $this->link_maps,
             'link_waze'    => $this->link_waze,
             'iframe_maps'  => $this->iframe_maps,
+            'latitude'     => $this->latitude ? (float) $this->latitude : null,
+            'longitude'    => $this->longitude ? (float) $this->longitude : null,
             'created_at'   => $this->created_at,
             'updated_at'   => $this->updated_at,
         ];

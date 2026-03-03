@@ -21,6 +21,41 @@ use App\Services\GooglePlacesService;
 
 class ClienteController extends Controller
 {
+    public function indexPublic(Request $request)
+    {
+        $q = trim((string) ($request->input('q') ?? ''));
+        $perPage = (int) ($request->input('per_page') ?? 15);
+        
+        $query = Cliente::query()
+            ->where(function($sub) {
+                $sub->where('status_assinatura', 'ativa')
+                    ->orWhere('tipo_cliente', 'gratuito');
+            });
+
+        // ✅ Busca
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
+                    ->orWhere('nome_alternativo', 'ilike', "%{$q}%")
+                    ->orWhereHas('segmentos', function ($sq) use ($q) {
+                        $sq->where('segmentos.nome', 'ilike', "%{$q}%");
+                    })
+                    ->orWhereHas('enderecos', function ($eq) use ($q) {
+                        $eq->where('bairro', 'ilike', "%{$q}%")
+                           ->orWhere('cidade', 'ilike', "%{$q}%");
+                    });
+            });
+        }
+
+        $query->with(['enderecos', 'segmentos', 'cidadesAtendidas', 'contatos']);
+        $query->withCount(['reviews']);
+        
+        // Paginação
+        $clientes = $query->paginate($perPage);
+
+        return ClienteResource::collection($clientes);
+    }
+
     public function index(Request $request)
     {
         // Params aceitos (compat com frontend atual e futuro)
@@ -155,6 +190,19 @@ class ClienteController extends Controller
         $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews'])
             ->findOrFail($id);
 
+        return new ClienteResource($cliente);
+    }
+
+    public function showPublic($id)
+    {
+        $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews'])
+            ->find($id);
+
+        if (!$cliente) {
+            return response()->json(['message' => 'Cliente não encontrado'], 404);
+        }
+
+        // Simplificando o recurso para o público
         return new ClienteResource($cliente);
     }
 

@@ -7,13 +7,13 @@ use Illuminate\Support\Facades\Log;
 
 class Ga4MeasurementProtocolService
 {
-    protected string $measurementId;
-    protected string $apiSecret;
+    protected ?string $measurementId = null;
+    protected ?string $apiSecret = null;
 
     public function __construct()
     {
-        $this->measurementId = config('analytics.ga4.measurement_id', env('GA4_MEASUREMENT_ID'));
-        $this->apiSecret = config('analytics.ga4.api_secret', env('GA4_API_SECRET'));
+        $this->measurementId = config('analytics.ga4.measurement_id') ?: env('GA4_MEASUREMENT_ID');
+        $this->apiSecret = config('analytics.ga4.api_secret') ?: env('GA4_API_SECRET');
     }
 
     /**

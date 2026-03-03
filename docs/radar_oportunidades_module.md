@@ -24,7 +24,7 @@ O **Radar de Oportunidades** é uma ferramenta comercial do painel Administrativ
 ---
 
 ## 🛠 Tarefas Futuras (Roadmap do Radar)
-- [ ] **Integração Front-end Público:** Ligar o campo de pesquisa do site ao endpoint `/v1/tracking/search` para iniciar de fato a coleta orgânica.
+- [x] **Integração Front-end Público:** Ligar o campo de pesquisa do site ao endpoint `/v1/tracking/search` para iniciar de fato a coleta orgânica.
 - [ ] **Integração Real-Time com Websockets (Reverb):** Se um "Gap gigante" bater no sistema, notificar a equipe comercial ao vivo.
 - [ ] **Oportunidades Arquivadas ou Excluídas:** Permitir ao administrador "dispensar" uma sugestão de oportunidade e ocultá-la do Radar.
 - [ ] **Feedback da IA Gen:** Permitir edição e regeneração de *Tone of Voice* (ex. Botões alternativos: "Gerar mais agressivo", "Gerar mais formal").

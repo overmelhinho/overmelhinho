@@ -1,26 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FCFAF8;
+  /* Cloud Dancer */
+  --foreground: #1A1A1A;
+  --primary-red: #C00000;
+  --gummy-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --inner-glow: inset 0 2px 4px 0 rgba(255, 255, 255, 0.3);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand-red: #C00000;
+  --color-cloud-dancer: #FCFAF8;
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-serif: var(--font-geist-sans), 'Helvetica Neue', sans-serif;
+  --radius-pill: 500px;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  /* Remove o highlight azul no mobile */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cursor pointer para links e botões */
+a,
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  cursor: pointer;
+}
+
+/* Efeito Gimme Gummy */
+.gummy-card {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: var(--gummy-shadow);
+}
+
+.gummy-card:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Utilitários Extras */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.mask-fade-right {
+  mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
