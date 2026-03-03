@@ -33,7 +33,9 @@ const SearchMap = dynamic(() => import('@/components/SearchMap'), {
     )
 });
 
-export default function SearchPage() {
+import { Suspense } from 'react';
+
+function SearchContent() {
     const [hoveredResult, setHoveredResult] = useState<number | null>(null);
     const [selectedMapResult, setSelectedMapResult] = useState<number | null>(null);
     const router = useRouter();
@@ -419,7 +421,18 @@ export default function SearchPage() {
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-
         </div>
+    );
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-cloud-dancer flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-brand-red border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }>
+            <SearchContent />
+        </Suspense>
     );
 }
