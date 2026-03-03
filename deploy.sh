@@ -19,6 +19,15 @@ if ! flock -n 9; then
   fail "Já existe um deploy em andamento (lock: $LOCK_FILE)."
 fi
 
+# Carregar NVM se disponível
+export NVM_DIR="$HOME/.nvm"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  log "Carregando NVM..."
+  source "$NVM_DIR/nvm.sh"
+else
+  log "⚠️ Aviso: NVM não encontrado. Usando Node padrão do sistema."
+fi
+
 cd "$APP_DIR"
 
 log "== DEPLOY START =="
@@ -69,6 +78,7 @@ rollback() {
   if $backend_changed; then
     log "Rollback backend: composer + caches + restart octane"
     cd "$APP_DIR/backend"
+    command -v nvm >/dev/null && nvm use 18.20.8
     composer install --no-dev --optimize-autoloader || true
     php artisan config:cache || true
     php artisan route:cache || true
@@ -80,6 +90,7 @@ rollback() {
   if $frontend_changed; then
     log "Rollback frontend: rebuild"
     cd "$APP_DIR/frontend"
+    command -v nvm >/dev/null && nvm use 18.20.8
     npm ci || true
     npm run build || true
   fi
@@ -87,6 +98,7 @@ rollback() {
   if $site_changed; then
     log "Rollback site (nextjs): rebuild + restart"
     cd "$APP_DIR/site"
+    command -v nvm >/dev/null && nvm use 20
     npm ci || true
     npm run build || true
     pm2 restart overmelhinho-site || true
@@ -137,6 +149,7 @@ if $frontend_changed; then
   cd "$APP_DIR/frontend"
 
   log "npm ci..."
+  command -v nvm >/dev/null && nvm use 18.20.8
   npm ci
 
   log "npm run build..."
@@ -156,6 +169,7 @@ if $site_changed; then
   cd "$APP_DIR/site"
 
   log "npm ci..."
+  command -v nvm >/dev/null && nvm use 20
   npm ci
 
   log "npm run build..."
