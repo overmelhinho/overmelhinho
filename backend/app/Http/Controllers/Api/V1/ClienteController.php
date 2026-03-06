@@ -25,6 +25,8 @@ class ClienteController extends Controller
     {
         $q = trim((string) ($request->input('q') ?? ''));
         $perPage = (int) ($request->input('per_page') ?? 15);
+        $cityId = $request->input('city_id');
+        $cityName = $request->input('city_name');
         
         $query = Cliente::query()
             ->where(function($sub) {
@@ -32,7 +34,7 @@ class ClienteController extends Controller
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
-        // ✅ Busca
+        // ✅ Busca por termo
         if ($q !== '') {
             $query->where(function ($sub) use ($q) {
                 $sub->where('nome_fantasia', 'ilike', "%{$q}%")
@@ -47,13 +49,79 @@ class ClienteController extends Controller
             });
         }
 
+        // ✅ Filtro por Cidade (Geolocalização Contextual)
+        if ($cityId) {
+            $query->whereHas('cidadesAtendidas', function($c) use ($cityId) {
+                $c->where('cidades.id', $cityId);
+            });
+        } elseif ($cityName) {
+            $query->whereHas('cidadesAtendidas', function($c) use ($cityName) {
+                $c->where('cidades.nome', 'ilike', "%{$cityName}%");
+            });
+        }
+
         $query->with(['enderecos', 'segmentos', 'cidadesAtendidas', 'contatos']);
         $query->withCount(['reviews']);
         
-        // Paginação
+        // ✅ PRIORIDADE: Pagantes ativos primeiro, depois gratuitos
+        $query->orderByRaw("
+            CASE 
+                WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0 
+                ELSE 1 
+            END ASC
+        ");
+        
+        // Ordenação secundária por rating (desc) e nome
+        $query->orderByDesc('google_rating')
+              ->orderBy('nome_fantasia');
+
         $clientes = $query->paginate($perPage);
 
         return ClienteResource::collection($clientes);
+    }
+
+    /**
+     * ✅ Sugestões Inteligentes (Autocomplete)
+     */
+    public function suggestions(Request $request)
+    {
+        $q = trim((string) ($request->input('q') ?? ''));
+        if (strlen($q) < 2) return response()->json([]);
+
+        $cityId = $request->input('city_id');
+
+        // Busca Clientes (Match de nome)
+        $clientes = Cliente::query()
+            ->select(['id', 'nome_fantasia', 'logo_url', 'tipo_cliente', 'status_assinatura'])
+            ->where('nome_fantasia', 'ilike', "%{$q}%")
+            ->where(fn($sub) => $sub->where('status_assinatura', 'ativa')->orWhere('tipo_cliente', 'gratuito'))
+            ->when($cityId, function($sq) use ($cityId) {
+                $sq->whereHas('cidadesAtendidas', fn($c) => $c->where('cidades.id', $cityId));
+            })
+            ->orderByRaw("CASE WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0 ELSE 1 END ASC")
+            ->limit(5)
+            ->get();
+
+        // Busca Segmentos (Categorias)
+        $segmentos = Segmento::query()
+            ->where('nome', 'ilike', "%{$q}%")
+            ->limit(3)
+            ->get();
+
+        return response()->json([
+            'results' => $clientes->map(fn($c) => [
+                'id' => $c->id,
+                'title' => $c->nome_fantasia,
+                'image' => $c->logo_url,
+                'type' => 'client',
+                'priority' => ($c->tipo_cliente === 'pagante' && $c->status_assinatura === 'ativa')
+            ]),
+            'categories' => $segmentos->map(fn($s) => [
+                'id' => $s->id,
+                'title' => $s->nome,
+                'type' => 'category'
+            ])
+        ]);
     }
 
     public function index(Request $request)

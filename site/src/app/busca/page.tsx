@@ -34,6 +34,7 @@ const SearchMap = dynamic(() => import('@/components/SearchMap'), {
 });
 
 import { Suspense } from 'react';
+import { useLocation } from '@/contexts/LocationContext';
 
 function SearchContent() {
     const [hoveredResult, setHoveredResult] = useState<number | null>(null);
@@ -43,6 +44,7 @@ function SearchContent() {
     const searchParams = useSearchParams();
     const [query, setQuery] = useState('');
     const observerTarget = useRef(null);
+    const { cityId, cityName } = useLocation();
 
     useEffect(() => {
         let q = searchParams.get('q');
@@ -62,9 +64,16 @@ function SearchContent() {
         isFetchingNextPage,
         isLoading,
     } = useInfiniteQuery({
-        queryKey: ['search', query],
+        queryKey: ['search', query, cityId],
         queryFn: async ({ pageParam = 1 }) => {
-            const res = await api.get(`/public/search?q=${encodeURIComponent(query)}&page=${pageParam}&per_page=10`);
+            const res = await api.get(`/public/search`, {
+                params: {
+                    q: query,
+                    page: pageParam,
+                    per_page: 10,
+                    city_id: cityId || searchParams.get('city_id')
+                }
+            });
             return res.data;
         },
         initialPageParam: 1,
@@ -100,8 +109,8 @@ function SearchContent() {
     const selectedMapItem = useMemo(() => allResults.find((r: any) => r.id === selectedMapResult), [allResults, selectedMapResult]);
 
     useEffect(() => {
-        if (query && data) trackSearch(query, 'Geral', allResults.length);
-    }, [query, data, allResults.length]);
+        if (query && data) trackSearch(query, cityName || 'Geral', allResults.length);
+    }, [query, data, allResults.length, cityName]);
 
     const handleNewSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {

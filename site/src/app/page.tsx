@@ -4,28 +4,18 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, Sparkles, Menu, Search, User, Home as HomeIcon, Briefcase, Heart, MessageCircle, ArrowRight } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
-
-declare global {
-  interface Window {
-    webkitSpeechRecognition: any;
-  }
-}
+import { SearchAutocomplete } from '@/components/SearchAutocomplete';
 
 export default function Home() {
   const router = useRouter();
   const { trackSearch } = useAnalytics();
-  const [isListening, setIsListening] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
-  const recognitionRef = useRef<any>(null);
-
-
   const scrollyRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
   // Animação de escrita do título
   const [textIndex, setTextIndex] = useState(0);
-  const [currentText, setCurrentText] = useState('');
+  const [currentPhrase, setCurrentPhrase] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const phrases = ['sua região', 'sua cidade', 'seu bairro', 'sua rua'];
   const typingSpeed = isDeleting ? 50 : 150;
@@ -35,13 +25,13 @@ export default function Home() {
       const fullText = phrases[textIndex];
 
       if (!isDeleting) {
-        setCurrentText(fullText.substring(0, currentText.length + 1));
-        if (currentText === fullText) {
+        setCurrentPhrase(fullText.substring(0, currentPhrase.length + 1));
+        if (currentPhrase === fullText) {
           setTimeout(() => setIsDeleting(true), 2000);
         }
       } else {
-        setCurrentText(fullText.substring(0, currentText.length - 1));
-        if (currentText === '') {
+        setCurrentPhrase(fullText.substring(0, currentPhrase.length - 1));
+        if (currentPhrase === '') {
           setIsDeleting(false);
           setTextIndex((textIndex + 1) % phrases.length);
         }
@@ -49,14 +39,14 @@ export default function Home() {
     }, typingSpeed);
 
     return () => clearTimeout(timer);
-  }, [currentText, isDeleting, textIndex]);
+  }, [currentPhrase, isDeleting, textIndex]);
 
   // Categorias
   const categories = [
-    { id: 1, name: 'Gastronomia', icon: '🍕', color: 'bg-[#FFF4E6]', size: 'col-span-2', desc: 'Sabor da região' },
-    { id: 2, name: 'Saúde', icon: '🩺', color: 'bg-[#E6F9F4]', size: 'col-span-1', desc: 'Bem-estar' },
-    { id: 3, name: 'Serviços', icon: '🛠️', color: 'bg-[#E6F0FF]', size: 'col-span-1', desc: 'Soluções' },
-    { id: 4, name: 'Vagas', icon: '💼', color: 'bg-[#F3E8FF]', size: 'col-span-2', desc: 'Carreira' },
+    { id: 1, name: 'Gastronomia', icon: '🍕', color: 'bg-[#FFF4E6]', desc: 'Sabor da região' },
+    { id: 2, name: 'Saúde', icon: '🩺', color: 'bg-[#E6F9F4]', desc: 'Bem-estar' },
+    { id: 3, name: 'Serviços', icon: '🛠️', color: 'bg-[#E6F0FF]', desc: 'Soluções' },
+    { id: 4, name: 'Vagas', icon: '💼', color: 'bg-[#F3E8FF]', desc: 'Carreira' },
   ];
 
   const featured = [
@@ -69,10 +59,8 @@ export default function Home() {
   useEffect(() => {
     const handleScroll = () => {
       if (!scrollyRef.current) return;
-
       const rect = scrollyRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
-
       const start = rect.top;
       const progress = Math.max(0, Math.min(1, (viewportHeight - start) / (viewportHeight + rect.height)));
       setScrollProgress(progress * 2);
@@ -82,46 +70,8 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const toggleVoiceSearch = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const SpeechRecognition = window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Seu navegador não suporta busca por voz.");
-      return;
-    }
-
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.lang = 'pt-BR';
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = true;
-
-    recognitionRef.current.onstart = () => setIsListening(true);
-    recognitionRef.current.onend = () => setIsListening(false);
-
-    recognitionRef.current.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setSearchTerm(transcript);
-      if (event.results[0].isFinal) {
-        setTimeout(() => handleSearch(transcript), 1000);
-      }
-    };
-
-    recognitionRef.current.start();
-  };
-
-  const handleSearch = (termOverride?: string) => {
-    const term = termOverride || searchTerm;
-    if (!term.trim()) return;
-
-    // Rastreia no Radar de Oportunidades
+  const handleQuickSearch = (term: string) => {
     trackSearch(term);
-
-    // Navega para a busca
     router.push(`/busca?q=${encodeURIComponent(term)}`);
   };
 
@@ -129,7 +79,7 @@ export default function Home() {
     <div className="min-h-screen bg-cloud-dancer pb-32 font-sans">
       {/* 1. HEADER */}
       <header className="sticky top-0 z-50 glass-effect border-b border-gray-100 px-6 pt-8 pb-4 flex items-center justify-between md:pt-4">
-        <div className="flex items-center space-x-3 cursor-pointer">
+        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => router.push('/')}>
           <div className="bg-brand-red w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform group">
             <span className="text-white font-black text-xl italic tracking-tighter group-active:rotate-12 transition-transform">V</span>
           </div>
@@ -137,8 +87,8 @@ export default function Home() {
         </div>
 
         <div className="hidden md:flex items-center space-x-10 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-          <a href="#" className="hover:text-brand-red transition-colors cursor-pointer">Anuncie</a>
-          <a href="#" className="hover:text-brand-red transition-colors cursor-pointer">Funciona</a>
+          <a href="#" className="hover:text-brand-red transition-colors">Anuncie</a>
+          <a href="#" className="hover:text-brand-red transition-colors">Funciona</a>
           <button className="flex items-center space-x-2 text-gray-900 bg-white px-6 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 border border-gray-100 font-sans">
             <span className="font-black">Login</span>
             <User size={18} className="text-brand-red" />
@@ -159,57 +109,24 @@ export default function Home() {
         {/* 2. HERO & VUI (Busca Conversacional) */}
         <section className="text-center space-y-10 py-6">
           <div className="space-y-4">
-            <h1 className="text-3xl font-black text-gray-900 tracking-tighter leading-[1] md:text-5xl font-serif italic">
-              Encontre o melhor da <br />
-              <span className="text-brand-red inline-block min-h-[1.2em]">
-                {currentText}
-                <span className="inline-block w-1 h-10 md:h-16 bg-brand-red ml-1 animate-pulse"></span>
+            <h1 className="text-5xl md:text-8xl font-black text-gray-900 tracking-tighter leading-none italic font-serif">
+              Encontre o melhor da<br />
+              <span className="text-brand-red relative whitespace-nowrap">
+                {currentPhrase}
+                <span className="absolute -right-2 top-0 bottom-0 w-2 bg-brand-red animate-pulse"></span>
               </span>
             </h1>
-            <p className="text-gray-400 font-bold text-sm md:text-xl max-w-xs mx-auto md:max-w-2xl leading-relaxed uppercase tracking-tighter font-sans">
-              Milhares de empresas, serviços e profissionais perto de você em um só clique.
-            </p>
+            <p className="text-gray-400 font-bold text-[10px] md:text-sm uppercase tracking-[0.4em] max-w-md mx-auto leading-relaxed">Milhares de empresas, serviços e profissionais perto de você em um só clique.</p>
           </div>
 
-          <div className={`relative gummy-card bg-white rounded-full p-2 flex items-center shadow-[0_40px_80px_-20px_rgba(0,0,0,0.12)] max-w-2xl mx-auto border-4 transition-all duration-700 ${isListening ? 'border-brand-red ring-[15px] ring-red-100/30' : 'border-white'}`}>
-            <div className={`pl-4 ${isListening ? 'text-brand-red animate-pulse' : 'text-gray-500'}`}>
-              <Search size={22} strokeWidth={3} />
-            </div>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder={isListening ? "Processando sua voz..." : "O que você precisa?"}
-              className="flex-1 bg-transparent border-none focus:ring-0 px-2 py-4 text-gray-900 font-black placeholder:text-gray-400 md:text-2xl font-sans"
-              onFocus={() => setIsListening(false)}
-            />
-            <div className="flex items-center space-x-2 pr-2">
-              <button
-                onClick={toggleVoiceSearch}
-                className={`p-3 md:p-5 rounded-full transition-all active:scale-75 shadow-lg relative ${isListening ? 'bg-brand-red text-white scale-110' : 'bg-red-50 text-brand-red hover:bg-red-100'}`}
-              >
-                <Mic className="w-[22px] h-[22px] md:w-[28px] md:h-[28px]" strokeWidth={2.5} />
-                {isListening && (
-                  <span className="absolute -inset-3 rounded-full border-4 border-brand-red animate-ping opacity-10"></span>
-                )}
-              </button>
-              <button
-                onClick={() => handleSearch()}
-                className="bg-brand-red text-white p-3 md:p-5 rounded-2xl md:rounded-[1.8rem] shadow-xl active:scale-95 transition-transform flex items-center space-x-2 group font-sans"
-              >
-                <Sparkles className="w-[20px] h-[20px] md:w-[22px] md:h-[22px] group-hover:rotate-12 transition-transform" />
-                <span className="hidden md:inline font-black uppercase text-xs tracking-widest">Buscar</span>
-              </button>
-            </div>
-          </div>
+          <SearchAutocomplete />
 
           {/* Shortcut Tags */}
           <div className="flex space-x-3 overflow-x-auto pb-4 pt-2 no-scrollbar mask-fade-right justify-center">
             {['Pizzaria', 'Pet Shop', 'Manutenção', 'Academia', 'Vagas'].map((tag) => (
               <button
                 key={tag}
-                onClick={() => handleSearch(tag)}
+                onClick={() => handleQuickSearch(tag)}
                 className="whitespace-nowrap bg-white border border-gray-100 px-8 py-4 rounded-full text-[11px] font-black text-gray-500 shadow-sm active:scale-95 transition-all hover:text-brand-red hover:border-brand-red/20 uppercase tracking-[0.2em] font-sans cursor-pointer"
               >
                 {tag}
@@ -245,7 +162,7 @@ export default function Home() {
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSearch(cat.name);
+                        handleQuickSearch(cat.name);
                       }}
                       className="mt-4 flex items-center space-x-2 text-brand-red font-black text-sm uppercase animate-in fade-in slide-in-from-left-2 transition-all font-sans cursor-pointer"
                     >
@@ -260,8 +177,8 @@ export default function Home() {
         </section>
 
         {/* 4. SCROLLYTELLING ADS */}
-        <section ref={scrollyRef} className="h-[120vh] relative pt-10">
-          <div className="sticky top-20 h-[80vh] w-full bg-black rounded-[5rem] overflow-hidden shadow-3xl group">
+        <section ref={scrollyRef} className="h-[120vh] relative pt-10 px-2 sm:px-0">
+          <div className="sticky top-20 h-[70vh] w-full bg-black rounded-[5rem] overflow-hidden shadow-3xl group">
             <div
               className="absolute inset-0 transition-all duration-200"
               style={{
@@ -284,7 +201,7 @@ export default function Home() {
                 A melhor pizza <br />da cidade agora <br />no seu portal.
               </h3>
               <p className="text-xl font-bold opacity-60 font-sans">Pizzaria Napolitana • Entrega Grátis hoje</p>
-              <button className="mt-10 bg-white text-black px-12 py-6 rounded-[2.5rem] font-black text-xl active:scale-90 transition-transform shadow-2xl hover:bg-brand-red hover:text-white font-sans">
+              <button className="mt-10 bg-white text-black px-12 py-6 rounded-[2.5rem] font-black text-xl active:scale-90 transition-transform shadow-2xl hover:bg-brand-red hover:text-white font-sans cursor-pointer">
                 Pedir Agora
               </button>
             </div>
@@ -302,7 +219,7 @@ export default function Home() {
                 Nossa IA cruzou seu histórico com a proximidade para selecionar estas jóias.
               </p>
             </div>
-            <button className="bg-white text-brand-red px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest border-4 border-white shadow-xl hover:shadow-brand-red/10 transition-all active:scale-95 font-sans">
+            <button className="bg-white text-brand-red px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest border-4 border-white shadow-xl hover:shadow-brand-red/10 transition-all active:scale-95 font-sans cursor-pointer">
               Ver Favoritos
             </button>
           </div>
@@ -339,19 +256,19 @@ export default function Home() {
 
         {/* 6. CTA BANNER FINAL */}
         <section className="mt-10 mb-20 px-2 font-sans">
-          <div className="bg-brand-red rounded-[6rem] p-20 text-center space-y-12 shadow-[0_50px_100px_-20px_rgba(192,0,0,0.3)] relative overflow-hidden group border-[15px] border-white/10 ring-1 ring-brand-red/50">
+          <div className="bg-brand-red rounded-[6rem] p-10 md:p-20 text-center space-y-12 shadow-[0_50px_100px_-20px_rgba(192,0,0,0.3)] relative overflow-hidden group border-[15px] border-white/10 ring-1 ring-brand-red/50">
             <div className="relative z-10 space-y-8">
-              <h2 className="text-4xl font-black text-white md:text-7xl tracking-tighter leading-[0.9] font-serif">
+              <h2 className="text-4xl font-black text-white md:text-7xl tracking-tighter leading-[0.9] font-serif uppercase">
                 Sua empresa <br />em evidência.
               </h2>
-              <p className="text-red-100 font-bold text-2xl max-w-sm mx-auto opacity-70 tracking-tight">
+              <p className="text-red-100 font-bold text-lg md:text-2xl max-w-sm mx-auto opacity-70 tracking-tight">
                 O único portal que conversa com o cliente.
               </p>
-              <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-8">
-                <button className="bg-white text-brand-red px-16 py-8 rounded-[3rem] font-black text-3xl shadow-3xl active:scale-95 transition-all hover:bg-red-50 hover:scale-105 font-sans">
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-8">
+                <button className="bg-white text-brand-red px-10 md:px-16 py-5 md:py-8 rounded-[3rem] font-black text-xl md:text-3xl shadow-3xl active:scale-95 transition-all hover:bg-red-50 hover:scale-105 font-sans cursor-pointer">
                   Anunciar
                 </button>
-                <button className="bg-black/20 text-white px-12 py-7 rounded-[2.5rem] font-black text-sm active:scale-95 border border-white/10 backdrop-blur-md uppercase tracking-[0.2em] font-sans">
+                <button className="bg-black/20 text-white px-8 md:px-12 py-5 md:py-7 rounded-[2.5rem] font-black text-xs md:text-sm active:scale-95 border border-white/10 backdrop-blur-md uppercase tracking-[0.2em] font-sans cursor-pointer">
                   Consultoria
                 </button>
               </div>
