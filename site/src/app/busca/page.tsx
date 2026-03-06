@@ -38,6 +38,7 @@ import { Suspense } from 'react';
 function SearchContent() {
     const [hoveredResult, setHoveredResult] = useState<number | null>(null);
     const [selectedMapResult, setSelectedMapResult] = useState<number | null>(null);
+    const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
     const router = useRouter();
     const searchParams = useSearchParams();
     const [query, setQuery] = useState('');
@@ -121,7 +122,7 @@ function SearchContent() {
             <div className="lg:flex lg:h-screen lg:overflow-hidden">
 
                 {/* ============ LADO ESQUERDO: LISTA ============ */}
-                <div className="flex-1 lg:w-[520px] lg:flex-shrink-0 lg:overflow-y-auto no-scrollbar lg:border-r border-gray-100">
+                <div className={`flex-1 lg:w-[520px] lg:flex-shrink-0 lg:overflow-y-auto no-scrollbar lg:border-r border-gray-100 ${viewMode === 'map' ? 'hidden lg:block' : 'block'}`}>
 
                     <header className="sticky top-0 z-50 bg-cloud-dancer/90 backdrop-blur-2xl border-b border-gray-100 p-4 space-y-4 shadow-sm">
                         <div className="flex items-center space-x-3">
@@ -318,7 +319,7 @@ function SearchContent() {
                 </div>
 
                 {/* ============ LADO DIREITO: MAPA LEAFLET REAL ============ */}
-                <div className="hidden lg:block lg:flex-1 relative overflow-hidden">
+                <div className={`flex-1 relative overflow-hidden ${viewMode === 'list' ? 'hidden lg:block' : 'block h-screen lg:h-auto'}`}>
 
                     {/* Mapa real com OpenStreetMap */}
                     <SearchMap
@@ -347,9 +348,19 @@ function SearchContent() {
                         </div>
                     </div>
 
+                    {/* MARCADOR DE VOLTAR PARA LISTA NO MOBILE (QUANDO NO MAPA) */}
+                    <div className="absolute top-6 right-6 lg:hidden z-[1000]">
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className="bg-white/90 backdrop-blur-md p-4 rounded-[1.5rem] shadow-2xl border border-white active:scale-90 transition-all text-gray-900"
+                        >
+                            <ArrowLeft size={24} />
+                        </button>
+                    </div>
+
                     {/* =========== AIRBNB-STYLE MODAL CARD =========== */}
                     {selectedMapItem && (
-                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-sm animate-in slide-in-from-bottom-5 fade-in duration-300 pointer-events-auto">
+                        <div className="absolute bottom-32 lg:bottom-10 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-sm animate-in slide-in-from-bottom-5 fade-in duration-300 pointer-events-auto">
                             <div className="bg-white/80 backdrop-blur-3xl p-3 border border-white/50 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] gummy-card">
                                 <div className="relative group/modal cursor-pointer" onClick={() => router.push(`/cliente/${selectedMapItem.id}`)}>
                                     <div className="h-44 w-full rounded-[2rem] overflow-hidden relative shadow-inner">
@@ -398,9 +409,29 @@ function SearchContent() {
                 </div>
             </div>
 
+            {/* BOTÃO FLUTUANTE DE ALTERNÂNCIA (MODERN STYLE) */}
+            <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[110] lg:hidden">
+                <button
+                    onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+                    className="bg-gray-900 border-4 border-white text-white px-8 py-4 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all flex items-center space-x-3 group"
+                >
+                    {viewMode === 'list' ? (
+                        <>
+                            <MapPin size={18} className="text-brand-red group-hover:rotate-12 transition-transform" />
+                            <span>Ver Mapa</span>
+                        </>
+                    ) : (
+                        <>
+                            <Menu size={18} className="text-brand-red" />
+                            <span>Ver Lista</span>
+                        </>
+                    )}
+                </button>
+            </div>
+
             {/* BOTTOM NAV MOBILE */}
-            <nav className="fixed bottom-0 left-0 right-0 z-[100] p-6 lg:hidden">
-                <div className="bg-white/80 backdrop-blur-3xl border border-white/20 rounded-[3rem] p-4 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.2)] flex items-center justify-around">
+            <nav className="fixed bottom-0 left-0 right-0 z-[100] p-6 lg:hidden pointer-events-none">
+                <div className="bg-white/80 backdrop-blur-3xl border border-white/20 rounded-[3rem] p-4 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.2)] flex items-center justify-around pointer-events-auto">
                     {[
                         { icon: <Home size={22} />, active: false, path: '/' },
                         { icon: <SearchIcon size={22} />, active: true, path: '/busca' },

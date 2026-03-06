@@ -128,7 +128,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-cloud-dancer pb-32 font-sans">
       {/* 1. HEADER */}
-      <header className="sticky top-0 z-50 glass-effect border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-50 glass-effect border-b border-gray-100 px-6 pt-8 pb-4 flex items-center justify-between md:pt-4">
         <div className="flex items-center space-x-3 cursor-pointer">
           <div className="bg-brand-red w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform group">
             <span className="text-white font-black text-xl italic tracking-tighter group-active:rotate-12 transition-transform">V</span>
@@ -147,7 +147,7 @@ export default function Home() {
 
         <div className="flex items-center space-x-4 md:hidden">
           <button className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm active:scale-90 transition-transform">
-            <User size={20} className="text-gray-400" />
+            <User size={20} className="text-gray-500" />
           </button>
           <button className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm active:scale-90 transition-transform border border-gray-50">
             <Menu size={20} className="text-gray-900" />
@@ -155,7 +155,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="px-6 py-10 max-w-6xl mx-auto space-y-20">
+      <main className="px-8 py-10 max-w-6xl mx-auto space-y-20 md:px-6">
         {/* 2. HERO & VUI (Busca Conversacional) */}
         <section className="text-center space-y-10 py-6">
           <div className="space-y-4">
@@ -172,7 +172,7 @@ export default function Home() {
           </div>
 
           <div className={`relative gummy-card bg-white rounded-full p-2 flex items-center shadow-[0_40px_80px_-20px_rgba(0,0,0,0.12)] max-w-2xl mx-auto border-4 transition-all duration-700 ${isListening ? 'border-brand-red ring-[15px] ring-red-100/30' : 'border-white'}`}>
-            <div className={`pl-4 ${isListening ? 'text-brand-red animate-pulse' : 'text-gray-300'}`}>
+            <div className={`pl-4 ${isListening ? 'text-brand-red animate-pulse' : 'text-gray-500'}`}>
               <Search size={22} strokeWidth={3} />
             </div>
             <input
@@ -181,7 +181,7 @@ export default function Home() {
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder={isListening ? "Processando sua voz..." : "O que você precisa?"}
-              className="flex-1 bg-transparent border-none focus:ring-0 px-2 py-4 text-gray-900 font-black placeholder:text-gray-200 md:text-2xl font-sans"
+              className="flex-1 bg-transparent border-none focus:ring-0 px-2 py-4 text-gray-900 font-black placeholder:text-gray-400 md:text-2xl font-sans"
               onFocus={() => setIsListening(false)}
             />
             <div className="flex items-center space-x-2 pr-2">
@@ -210,7 +210,7 @@ export default function Home() {
               <button
                 key={tag}
                 onClick={() => handleSearch(tag)}
-                className="whitespace-nowrap bg-white border border-gray-100 px-7 py-3 rounded-full text-[10px] font-black text-gray-400 shadow-sm active:scale-95 transition-all hover:text-brand-red hover:border-brand-red/20 uppercase tracking-[0.2em] font-sans cursor-pointer"
+                className="whitespace-nowrap bg-white border border-gray-100 px-8 py-4 rounded-full text-[11px] font-black text-gray-500 shadow-sm active:scale-95 transition-all hover:text-brand-red hover:border-brand-red/20 uppercase tracking-[0.2em] font-sans cursor-pointer"
               >
                 {tag}
               </button>
