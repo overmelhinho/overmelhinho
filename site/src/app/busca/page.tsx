@@ -129,7 +129,7 @@ function SearchContent() {
                 subtitle: "Confira as vagas exclusivas do RH Conecta de hoje.",
                 image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80",
                 cta: "Ver Vagas",
-                link: "/busca?q=vagas",
+                link: "/vagas",
                 color: "#2d3436"
             }
         ];
