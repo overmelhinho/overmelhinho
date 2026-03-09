@@ -73,21 +73,51 @@ export const SearchAutocomplete = () => {
     };
 
     const startVoiceSearch = () => {
-        if (!('webkitSpeechRecognition' in window)) {
-            alert('Seu navegador não suporta busca por voz.');
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert('Seu navegador não suporta busca por voz. Tente usar o Google Chrome ou Safari.');
             return;
         }
 
-        const recognition = new (window as any).webkitSpeechRecognition();
-        recognition.lang = 'pt-BR';
-        recognition.onstart = () => setIsListening(true);
-        recognition.onend = () => setIsListening(false);
-        recognition.onresult = (event: any) => {
-            const transcript = event.results[0][0].transcript;
-            setQuery(transcript);
-            handleSearch(transcript);
-        };
-        recognition.start();
+        try {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.interimResults = true;
+            recognition.continuous = false;
+
+            recognition.onstart = () => {
+                setIsListening(true);
+            };
+
+            recognition.onend = () => {
+                setIsListening(false);
+            };
+
+            recognition.onerror = (event: any) => {
+                console.error('Speech recognition error', event.error);
+                setIsListening(false);
+                if (event.error === 'not-allowed') {
+                    alert('Permissão de microfone negada. Ative o microfone nas configurações do seu navegador.');
+                } else if (event.error === 'network') {
+                    alert('Erro de rede na busca por voz. Verifique sua conexão.');
+                }
+            };
+
+            recognition.onresult = (event: any) => {
+                const transcript = event.results[0][0].transcript;
+                setQuery(transcript);
+
+                if (event.results[0].isFinal) {
+                    handleSearch(transcript);
+                }
+            };
+
+            recognition.start();
+        } catch (err) {
+            console.error('Error starting speech recognition:', err);
+            setIsListening(false);
+        }
     };
 
     return (

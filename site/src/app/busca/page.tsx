@@ -253,30 +253,44 @@ function SearchContent() {
     };
 
     const startVoiceSearch = () => {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert('Seu navegador não suporta busca por voz.');
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert('Seu navegador não suporta busca por voz. Tente usar o Google Chrome ou Safari.');
             return;
         }
 
-        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-        const recognition = new SpeechRecognition();
+        try {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.interimResults = true;
+            recognition.continuous = false;
 
-        recognition.lang = 'pt-BR';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
+            recognition.onstart = () => setIsListening(true);
+            recognition.onend = () => setIsListening(false);
+            recognition.onerror = (event: any) => {
+                console.error('Speech recognition error', event.error);
+                setIsListening(false);
+                if (event.error === 'not-allowed') {
+                    alert('Permissão de microfone negada. Ative o microfone nas configurações do seu navegador.');
+                }
+            };
 
-        recognition.onstart = () => setIsListening(true);
-        recognition.onend = () => setIsListening(false);
-        recognition.onerror = () => setIsListening(false);
+            recognition.onresult = (event: any) => {
+                const transcript = event.results[0][0].transcript;
+                if (transcript) {
+                    setQuery(transcript);
+                    if (event.results[0].isFinal) {
+                        router.push(`/busca?q=${encodeURIComponent(transcript)}${cityId ? `&city_id=${cityId}` : ''}`);
+                    }
+                }
+            };
 
-        recognition.onresult = (event: any) => {
-            const transcript = event.results[0][0].transcript;
-            if (transcript) {
-                router.push(`/busca?q=${encodeURIComponent(transcript)}${cityId ? `&city_id=${cityId}` : ''}`);
-            }
-        };
-
-        recognition.start();
+            recognition.start();
+        } catch (err) {
+            console.error('Error starting speech recognition:', err);
+            setIsListening(false);
+        }
     };
 
     return (
