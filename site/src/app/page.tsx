@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Mic, Sparkles, Menu, Search, User, Home as HomeIcon, Briefcase, Heart, MessageCircle, ArrowRight } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
+import Logo from '@/components/Logo';
 
 export default function Home() {
   const router = useRouter();
@@ -79,17 +80,18 @@ export default function Home() {
     <div className="min-h-screen bg-cloud-dancer pb-32 font-sans">
       {/* 1. HEADER */}
       <header className="sticky top-0 z-50 glass-effect border-b border-gray-100 px-6 pt-8 pb-4 flex items-center justify-between md:pt-4">
-        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => router.push('/')}>
-          <div className="bg-brand-red w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform group">
-            <span className="text-white font-black text-xl italic tracking-tighter group-active:rotate-12 transition-transform">V</span>
-          </div>
-          <span className="hidden sm:block font-black text-xl text-gray-900 tracking-tighter font-serif">O Vermelhinho</span>
+        <div className="cursor-pointer" onClick={() => router.push('/')}>
+          <Logo />
         </div>
 
         <div className="hidden md:flex items-center space-x-10 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-          <a href="#" className="hover:text-brand-red transition-colors">Anuncie</a>
-          <a href="#" className="hover:text-brand-red transition-colors">Funciona</a>
-          <button className="flex items-center space-x-2 text-gray-900 bg-white px-6 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 border border-gray-100 font-sans">
+          <button onClick={() => router.push('/anuncie')} className="hover:text-brand-red transition-colors">Anuncie</button>
+          <button onClick={() => router.push('/como-funciona')} className="hover:text-brand-red transition-colors">Funciona</button>
+          <button onClick={() => router.push('/vagas')} className="hover:text-brand-red transition-colors">Vagas</button>
+          <button
+            onClick={() => router.push('/login')}
+            className="flex items-center space-x-2 text-gray-900 bg-white px-6 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 border border-gray-100 font-sans"
+          >
             <span className="font-black">Login</span>
             <User size={18} className="text-brand-red" />
           </button>
