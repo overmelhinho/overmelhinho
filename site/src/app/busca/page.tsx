@@ -59,7 +59,7 @@ function SearchContent() {
 
     // Buscar cidades iniciais
     useEffect(() => {
-        api.get('/v1/cidades').then(res => setAvailableCities(res.data.data || res.data)).catch(() => { });
+        api.get('/cidades').then(res => setAvailableCities(res.data.data || res.data)).catch(() => { });
         // ✅ Foco automático no input ao carregar a página (Abre o teclado no Mobile)
         if (inputRef.current) inputRef.current.focus();
     }, []);
