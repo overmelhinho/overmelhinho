@@ -76,52 +76,39 @@ export const SearchAutocomplete = () => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
-            alert('Seu navegador não suporta busca por voz. Tente usar o Google Chrome ou Safari.');
+            alert('Busca por voz não suportada. Tente o Chrome ou Safari.');
             return;
         }
 
         try {
-            // Solicita permissão explicitamente via API de Mídia para forçar o prompt do navegador
-            await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Solicita permissão e interrompe o uso imediato para deixar o Recognition assumir o canal de áudio
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
 
             const recognition = new SpeechRecognition();
             recognition.lang = 'pt-BR';
             recognition.interimResults = true;
             recognition.continuous = false;
 
-            recognition.onstart = () => {
-                setIsListening(true);
-            };
-
-            recognition.onend = () => {
-                setIsListening(false);
-            };
-
+            recognition.onstart = () => setIsListening(true);
+            recognition.onend = () => setIsListening(false);
             recognition.onerror = (event: any) => {
                 console.error('Speech recognition error', event.error);
                 setIsListening(false);
-                if (event.error === 'not-allowed') {
-                    alert('Permissão de microfone negada. Por favor, autorize nas configurações do seu navegador.');
-                }
             };
 
             recognition.onresult = (event: any) => {
                 const transcript = event.results[0][0].transcript;
                 setQuery(transcript);
-
-                if (event.results[0].isFinal) {
-                    handleSearch(transcript);
-                }
+                if (event.results[0].isFinal) handleSearch(transcript);
             };
 
             recognition.start();
         } catch (err: any) {
             console.error('Error starting speech recognition:', err);
             setIsListening(false);
-            if (err.name === 'NotAllowedError') {
-                alert('Acesso ao microfone negado ou bloqueado pelo navegador.');
-            } else {
-                alert('Ocorreu um erro ao tentar usar o microfone.');
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                alert('O microfone está desativado. Toque no ícone ao lado do endereço do site (no topo) para permitir o acesso.');
             }
         }
     };
