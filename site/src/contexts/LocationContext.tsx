@@ -28,47 +28,35 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const detectLocation = async () => {
             setIsLoading(true);
 
-            // 1. Tentar ler do localStorage
+            // 1. Tentar ler do localStorage primeiro
             const stored = localStorage.getItem('user_city');
             if (stored) {
-                const { id, name } = JSON.parse(stored);
-                setCityId(id);
-                setCityName(name);
+                try {
+                    const { id, name } = JSON.parse(stored);
+                    setCityId(id);
+                    setCityName(name);
+                } catch {
+                    localStorage.removeItem('user_city');
+                }
                 setIsLoading(false);
                 return;
             }
 
-            // 2. Tentar Browser Geolocation
-            if ("geolocation" in navigator) {
+            // 2. Tentar Browser Geolocation (apenas GPS, sem chamadas externas)
+            if ('geolocation' in navigator) {
                 navigator.geolocation.getCurrentPosition(
-                    async (position) => {
+                    (position) => {
                         const { latitude, longitude } = position.coords;
                         setCoords({ lat: latitude, lng: longitude });
-
-                        // Tentar buscar a cidade via IP-API (mais rápido e sem chave pros testes agora)
-                        try {
-                            const res = await fetch('https://ipapi.co/json/');
-                            const data = await res.json();
-                            if (data.city) {
-                                setCityName(data.city);
-                            }
-                        } catch (e) {
-                            console.error("Erro ao cruzar dados de localização", e);
-                        }
+                        // Cidade será selecionada manualmente pelo usuário via modal
                         setIsLoading(false);
                     },
-                    async () => {
-                        // Fallback IP-API se o usuário negar geolocalização
-                        try {
-                            const res = await fetch('https://ipapi.co/json/');
-                            const data = await res.json();
-                            if (data?.city) setCityName(data.city);
-                        } catch {
-                            // Falha silenciosa: extensão ou rede bloqueou a requisição
-                        } finally {
-                            setIsLoading(false);
-                        }
-                    }
+                    () => {
+                        // Usuário negou geolocalização — encerra silenciosamente
+                        // O usuário pode selecionar a cidade pelo modal
+                        setIsLoading(false);
+                    },
+                    { timeout: 5000, maximumAge: 60000 }
                 );
             } else {
                 setIsLoading(false);
