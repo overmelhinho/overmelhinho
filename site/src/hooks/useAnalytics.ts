@@ -2,7 +2,7 @@
 
 import api from '@/services/api';
 
-type InteractionType = 'page_view' | 'whatsapp_click' | 'waze_click' | 'social_click';
+type InteractionType = 'page_view' | 'whatsapp_click' | 'waze_click' | 'social_click' | 'call_click' | 'share_click';
 
 export const useAnalytics = () => {
 

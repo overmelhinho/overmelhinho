@@ -96,12 +96,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center space-x-4 md:hidden">
-          <button className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm active:scale-90 transition-transform">
-            <User size={20} className="text-gray-500" />
-          </button>
-          <button className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm active:scale-90 transition-transform border border-gray-50">
-            <Menu size={20} className="text-gray-900" />
-          </button>
+          {/* Removido botões redundantes para foco na busca */}
         </div>
       </header>
 
@@ -284,19 +279,20 @@ export default function Home() {
       <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] md:hidden w-[94%] max-w-md">
         <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[3.5rem] p-3 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around">
           {[
-            { icon: <HomeIcon size={28} strokeWidth={2.5} />, label: 'Portal', active: true },
-            { icon: <Search size={28} strokeWidth={2.5} />, label: 'IA', active: false },
-            { icon: <Briefcase size={28} strokeWidth={2.5} />, label: 'Vagas', active: false },
-            { icon: <Heart size={28} strokeWidth={2.5} />, label: 'Salvos', active: false },
-            { icon: <Menu size={28} strokeWidth={2.5} />, label: 'Menu', active: false },
+            { icon: <HomeIcon size={28} strokeWidth={2.5} />, label: 'Portal', path: '/', active: true },
+            { icon: <Search size={28} strokeWidth={2.5} />, label: 'Busca', path: '/busca' },
+            { icon: <Briefcase size={28} strokeWidth={2.5} />, label: 'Vagas', path: '/busca?q=vagas' },
+            { icon: <Heart size={28} strokeWidth={2.5} />, label: 'Salvos', path: '#' },
+            { icon: <User size={28} strokeWidth={2.5} />, label: 'Conta', path: '#' },
           ].map((item, idx) => (
             <button
               key={idx}
+              onClick={() => item.path !== '#' && router.push(item.path)}
               className={`flex flex-col items-center justify-center p-4 transition-all active:scale-50 ${item.active ? 'text-brand-red bg-red-100/50 rounded-[2.5rem] px-8 shadow-inner' : 'text-gray-400'
                 } font-sans`}
             >
               {item.icon}
-              {item.active && <span className="text-[10px] font-black mt-2 uppercase tracking-tighter">Portal</span>}
+              {item.active && <span className="text-[10px] font-black mt-2 uppercase tracking-tighter">{item.label}</span>}
             </button>
           ))}
         </div>

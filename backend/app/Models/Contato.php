@@ -28,6 +28,10 @@ class Contato extends Model
     protected $casts = [
         'whatsapp_principal' => 'boolean',
         'whatsapp_secundario' => 'boolean',
+        'exibir_tel_principal' => 'boolean',
+        'exibir_tel_secundario' => 'boolean',
+        'exibir_celular' => 'boolean',
+        'exibir_tel_outro' => 'boolean',
     ];
 
     public function cliente()

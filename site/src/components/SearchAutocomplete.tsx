@@ -8,6 +8,7 @@ import api from '@/services/api';
 
 interface Suggestion {
     id: number;
+    slug?: string;
     title: string;
     image?: string;
     type: 'client' | 'category';
@@ -45,7 +46,16 @@ export const SearchAutocomplete = () => {
                 const res = await api.get(`/public/search/suggestions`, {
                     params: { q: query, city_id: cityId }
                 });
-                setSuggestions(res.data);
+
+                // ✅ Limpeza de duplicados por slug/id antes de salvar no estado
+                const cleanedResults = (res.data.results || []).filter((item: any, index: number, self: any[]) =>
+                    index === self.findIndex((t: any) => (t.id === item.id))
+                );
+
+                setSuggestions({
+                    ...res.data,
+                    results: cleanedResults
+                });
                 setIsOpen(true);
             } catch (error) {
                 console.error("Erro ao buscar sugestões", error);
@@ -144,7 +154,7 @@ export const SearchAutocomplete = () => {
                                     {suggestions.results.map(res => (
                                         <div
                                             key={res.id}
-                                            onClick={() => router.push(`/cliente/${res.id}`)}
+                                            onClick={() => router.push(`/cliente/${res.slug || res.id}`)}
                                             className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-all cursor-pointer group"
                                         >
                                             <div className="flex items-center space-x-4">

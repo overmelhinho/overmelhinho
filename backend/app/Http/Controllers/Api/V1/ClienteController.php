@@ -15,6 +15,8 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Models\ClienteReview;
+use App\Models\Cidade;
+use App\Models\Segmento;
 use App\Services\ClientAiService;
 use App\Services\GooglePlacesService;
 
@@ -34,46 +36,101 @@ class ClienteController extends Controller
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
-        // ✅ Busca por termo
+        // ✅ Busca por termo com Lógica Fuzzy (Resiliente a Erros)
         if ($q !== '') {
-            $query->where(function ($sub) use ($q) {
+            $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
+            
+            $query->where(function ($sub) use ($q, $normalizedQ) {
+                // 1. Match Exato ou Parcial (Alta Prioridade)
                 $sub->where('nome_fantasia', 'ilike', "%{$q}%")
-                    ->orWhere('nome_alternativo', 'ilike', "%{$q}%")
-                    ->orWhereHas('segmentos', function ($sq) use ($q) {
+                    ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+
+                // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
+                static $canUseSimilarity = null;
+                if ($canUseSimilarity === null) {
+                    try {
+                        DB::select('SELECT similarity(\'a\', \'b\')');
+                        $canUseSimilarity = true;
+                    } catch (\Exception $e) { $canUseSimilarity = false; }
+                }
+
+                if ($canUseSimilarity) {
+                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.15", [$normalizedQ])
+                        ->orWhereRaw("similarity(nome_alternativo, ?) > 0.15", [$normalizedQ]);
+                } else {
+                    // Fallback agressivo por palavras
+                    $words = explode(' ', $normalizedQ);
+                    foreach ($words as $word) {
+                        if (strlen($word) > 2) {
+                            $sub->orWhere('nome_fantasia', 'ilike', "%{$word}%");
+                        }
+                    }
+                }
+
+                // 3. Busca em Segmentos e Endereços
+                $sub->orWhereHas('segmentos', function ($sq) use ($q) {
                         $sq->where('segmentos.nome', 'ilike', "%{$q}%");
                     })
                     ->orWhereHas('enderecos', function ($eq) use ($q) {
                         $eq->where('bairro', 'ilike', "%{$q}%")
-                           ->orWhere('cidade', 'ilike', "%{$q}%");
+                           ->orWhere('cidade', 'ilike', "%{$q}%")
+                           ->orWhere('rua', 'ilike', "%{$q}%");
                     });
             });
         }
 
         // ✅ Filtro por Cidade (Geolocalização Contextual)
         if ($cityId) {
-            $query->whereHas('cidadesAtendidas', function($c) use ($cityId) {
-                $c->where('cidades.id', $cityId);
+            $query->where(function($sub) use ($cityId) {
+                $sub->whereHas('cidadesAtendidas', function($c) use ($cityId) {
+                    $c->where('cidades.id', $cityId);
+                })->orWhereHas('enderecos', function($e) use ($cityId) {
+                    $city = \App\Models\Cidade::find($cityId);
+                    if ($city) {
+                        $e->where('cidade', 'ilike', "%{$city->nome}%");
+                    }
+                });
             });
         } elseif ($cityName) {
-            $query->whereHas('cidadesAtendidas', function($c) use ($cityName) {
-                $c->where('cidades.nome', 'ilike', "%{$cityName}%");
+            $query->where(function($sub) use ($cityName) {
+                $sub->whereHas('cidadesAtendidas', function($c) use ($cityName) {
+                    $c->where('cidades.nome', 'ilike', "%{$cityName}%");
+                })->orWhereHas('enderecos', function($e) use ($cityName) {
+                    $e->where('cidade', 'ilike', "%{$cityName}%");
+                });
             });
         }
 
         $query->with(['enderecos', 'segmentos', 'cidadesAtendidas', 'contatos']);
         $query->withCount(['reviews']);
         
-        // ✅ PRIORIDADE: Pagantes ativos primeiro, depois gratuitos
-        $query->orderByRaw("
-            CASE 
-                WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0 
-                ELSE 1 
-            END ASC
-        ");
+        // ✅ PRIORIDADE: Pagantes locais, depois pagantes que atendem a região, depois gratuitos
+        if ($cityId) {
+            $query->orderByRaw("
+                CASE 
+                    WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN
+                        CASE 
+                            WHEN EXISTS (
+                                SELECT 1 FROM enderecos 
+                                WHERE enderecos.cliente_id = clientes.id 
+                                AND enderecos.cidade ilike (SELECT nome FROM cidades WHERE id = ? LIMIT 1)
+                            ) THEN 0
+                            ELSE 1
+                        END
+                    ELSE 2
+                END ASC
+            ", [$cityId]);
+        } else {
+            $query->orderByRaw("
+                CASE 
+                    WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0 
+                    ELSE 1 
+                END ASC
+            ");
+        }
         
-        // Ordenação secundária por rating (desc) e nome
-        $query->orderByDesc('google_rating')
-              ->orderBy('nome_fantasia');
+        // Ordenação secundária por nome
+        $query->orderBy('nome_fantasia');
 
         $clientes = $query->paginate($perPage);
 
@@ -88,15 +145,41 @@ class ClienteController extends Controller
         $q = trim((string) ($request->input('q') ?? ''));
         if (strlen($q) < 2) return response()->json([]);
 
+        // Busca Clientes (Lógica Fuzzy)
+        $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
         $cityId = $request->input('city_id');
-
-        // Busca Clientes (Match de nome)
+        
         $clientes = Cliente::query()
-            ->select(['id', 'nome_fantasia', 'logo_url', 'tipo_cliente', 'status_assinatura'])
-            ->where('nome_fantasia', 'ilike', "%{$q}%")
+            ->select(['id', 'slug', 'nome_fantasia', 'logo_url', 'tipo_cliente', 'status_assinatura'])
+            ->where(function($sub) use ($q, $normalizedQ) {
+                // Match direto
+                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
+                    ->orWhere('nome_fantasia', 'ilike', "%{$normalizedQ}%");
+                
+                // Similarity (pg_trgm)
+                static $canUseSim = null;
+                if ($canUseSim === null) {
+                    try {
+                        DB::select('SELECT similarity(\'a\', \'b\')');
+                        $canUseSim = true;
+                    } catch (\Exception $e) { $canUseSim = false; }
+                }
+
+                if ($canUseSim) {
+                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.15", [$normalizedQ]);
+                } else {
+                    $sub->orWhere('nome_fantasia', 'ilike', substr($normalizedQ, 0, 3) . "%");
+                }
+            })
             ->where(fn($sub) => $sub->where('status_assinatura', 'ativa')->orWhere('tipo_cliente', 'gratuito'))
             ->when($cityId, function($sq) use ($cityId) {
-                $sq->whereHas('cidadesAtendidas', fn($c) => $c->where('cidades.id', $cityId));
+                $sq->where(function($sub) use ($cityId) {
+                    $sub->whereHas('cidadesAtendidas', fn($c) => $c->where('cidades.id', $cityId))
+                        ->orWhereHas('enderecos', function($e) use ($cityId) {
+                            $city = \App\Models\Cidade::find($cityId);
+                            if ($city) $e->where('cidade', 'ilike', "%{$city->nome}%");
+                        });
+                });
             })
             ->orderByRaw("CASE WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0 ELSE 1 END ASC")
             ->limit(5)
@@ -111,6 +194,7 @@ class ClienteController extends Controller
         return response()->json([
             'results' => $clientes->map(fn($c) => [
                 'id' => $c->id,
+                'slug' => $c->slug,
                 'title' => $c->nome_fantasia,
                 'image' => $c->logo_url,
                 'type' => 'client',
@@ -263,15 +347,69 @@ class ClienteController extends Controller
 
     public function showPublic($id)
     {
-        $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews'])
-            ->find($id);
+        $query = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews', 'jobOpportunities']);
+        
+        if (is_numeric($id)) {
+            $cliente = $query->find($id);
+        } else {
+            $cliente = $query->where('slug', $id)->first();
+        }
 
         if (!$cliente) {
             return response()->json(['message' => 'Cliente não encontrado'], 404);
         }
 
-        // Simplificando o recurso para o público
         return new ClienteResource($cliente);
+    }
+
+    /**
+     * ✅ Motor de Recomendação Inteligente (Sugere similares, mas NUNCA concorrentes diretos)
+     */
+    public function recommendations($id)
+    {
+        if (is_numeric($id)) {
+            $cliente = Cliente::with(['segmentos', 'enderecos'])->find($id);
+        } else {
+            $cliente = Cliente::with(['segmentos', 'enderecos'])->where('slug', $id)->first();
+        }
+        
+        if (!$cliente) return response()->json([], 404);
+
+        $segmentIds = $cliente->segmentos->pluck('id')->toArray();
+        $cidade = $cliente->enderecos->first()?->cidade;
+
+        // Base da query: Clientes que NÃO são o atual e NÃO pertencem aos mesmos segmentos
+        $baseQuery = Cliente::with(['enderecos', 'segmentos'])
+            ->where('id', '!=', $id)
+            ->whereDoesntHave('segmentos', function($q) use ($segmentIds) {
+                $q->whereIn('segmentos.id', $segmentIds);
+            });
+
+        // 1. Tentar buscar na mesma cidade primeiro
+        $recommendations = (clone $baseQuery);
+        if ($cidade) {
+            $recommendations->whereHas('enderecos', function($q) use ($cidade) {
+                $q->where('cidade', 'ilike', "%{$cidade}%");
+            });
+        }
+        
+        $results = $recommendations->inRandomOrder()->limit(4)->get();
+
+        // 2. Se não deu 4, completa com outros random (ainda sem os concorrentes)
+        if ($results->count() < 4) {
+            $excludeIds = $results->pluck('id')->toArray();
+            $excludeIds[] = $id;
+
+            $others = (clone $baseQuery)
+                ->whereNotIn('id', $excludeIds)
+                ->inRandomOrder()
+                ->limit(4 - $results->count())
+                ->get();
+            
+            $results = $results->concat($others);
+        }
+
+        return ClienteResource::collection($results);
     }
 
 

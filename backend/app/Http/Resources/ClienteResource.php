@@ -22,6 +22,7 @@ class ClienteResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'slug' => $this->slug,
             'nome_fantasia' => $this->nome_fantasia,
             'razao_social' => $this->razao_social,
             'cpf_cnpj' => $this->cpf_cnpj,
@@ -56,6 +57,7 @@ class ClienteResource extends JsonResource
             'galeria' => GaleriaImagemResource::collection($this->whenLoaded('galeriaImagens')),
             'cidades_atendidas' => CidadeResource::collection($this->whenLoaded('cidadesAtendidas')),
             'reviews' => ClienteReviewResource::collection($this->whenLoaded('reviews')),
+            'job_opportunities' => $this->whenLoaded('jobOpportunities'),
 
             'google_place_id' => $this->google_place_id,
             'data_fundacao' => $this->data_fundacao ? (is_string($this->data_fundacao) ? $this->data_fundacao : $this->data_fundacao->format('Y-m-d')) : null,

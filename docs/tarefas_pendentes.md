@@ -22,10 +22,16 @@ Este documento lista o status das tarefas em andamento e o que ainda precisa ser
 - [x] **Arquitetura Híbrida (Node 18 + Node 20)**: Configurado NVM na VPS para suportar simultaneamente o Dashboard/Backend (v18) e o novo Site Público (Next.js v20).
 - [x] **Deploy Automatizado (Site Público)**: Script `deploy.sh` atualizado com detecção de pastas e troca automática de versão do Node via NVM.
 - [x] **Setup Novo Site Público (Next.js)**: Framework instalado com Tailwind CSS v4, React Query v5 e Axios, configurado em `https://novo.overmelhinho.com.br`.
-- [x] **Home Page 2026 (Disruptiva)**: Implementado Bento Grid Dinâmico, Busca VUI (IA), Scrollytelling Ads e estética Gimme Gummy.
-- [x] **Search Listing Page 2026**: Criado página de resultados com "Match Perfeito" IA e Mapa Skeuomorph.
-- [x] **Página do Cliente 2026**: Implementado micro-interações de conversão e fluxo de Vagas Atrito Zero.
-- [x] **SSL & Redirects**: Certificado SSL (Let's Encrypt) ativo e redirecionamento HTTPS configurado em todos os subdomínios.
+- [x] **Home Page 2026 (Disruptiva)**: Bento Grid Dinâmico, Busca VUI (IA) e estética Gimme Gummy.
+- [x] **Search Listing Page 2026**: "Match Perfeito" IA e Mapa Skeuomorph.
+- [x] **Página do Cliente 2026**: Micro-interações de conversão e Vagas Atrito Zero.
+- [x] **Busca Inteligente (Fuzzy Search)**: Algoritmo resiliente a erros (pg_trgm) e Autocomplete Preditivo.
+- [x] **Normalização & Geolocalização**: Remoção de artigos e detecção automática de cidade.
+- [x] **SSL & Redirects**: Certificado SSL (Let's Encrypt) ativo e redirecionamento HTTPS.
+- [x] **Galeria Premium & Lightbox**: Lightbox interativo com navegação e animações Framer Motion.
+- [x] **Mapa Real Interativo**: Integração com Google Maps Iframe para visualização de ruas (Zoom 16x).
+- [x] **Motor de Recomendações (Anti-Concorrência)**: Sugestões inteligentes de empresas similares (mesma cidade, segmentos diferentes).
+- [x] **Share Inteligente**: Botão de compartilhamento com Web Share API e fallback para Clipboard com feedback visual.
 
 
 ### Módulo Financeiro — Pagamento com Permuta

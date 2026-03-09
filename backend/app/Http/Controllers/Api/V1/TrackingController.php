@@ -43,7 +43,7 @@ class TrackingController extends Controller
     {
         $request->validate([
             'cliente_id' => 'required|exists:clientes,id',
-            'interaction_type' => 'required|in:page_view,whatsapp_click,waze_click,social_click'
+            'interaction_type' => 'required|in:page_view,whatsapp_click,waze_click,social_click,call_click,share_click'
         ]);
 
         $interaction = \App\Models\ClientInteraction::create([

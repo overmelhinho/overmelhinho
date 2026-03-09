@@ -20,6 +20,7 @@ class Cliente extends Model
 
     protected $fillable = [
         'nome_fantasia',
+        'slug',
         'razao_social',
         'nome_alternativo',
         'cpf_cnpj',
@@ -117,5 +118,10 @@ class Cliente extends Model
     public function reviews()
     {
         return $this->hasMany(ClienteReview::class, 'cliente_id');
+    }
+
+    public function jobOpportunities()
+    {
+        return $this->hasMany(JobOpportunity::class, 'client_id');
     }
 }

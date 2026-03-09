@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import {
     Search as SearchIcon,
@@ -15,11 +15,17 @@ import {
     Briefcase,
     Heart,
     Menu,
+    User,
+    X,
+    CheckCircle2,
+    Mic
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { useInfiniteQuery } from '@tanstack/react-query';
 import api from '@/services/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from '@/contexts/LocationContext';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import 'leaflet/dist/leaflet.css';
 
 // Importação dinâmica do mapa (sem SSR, obrigatório para Leaflet)
@@ -34,17 +40,106 @@ const SearchMap = dynamic(() => import('@/components/SearchMap'), {
 });
 
 import { Suspense } from 'react';
-import { useLocation } from '@/contexts/LocationContext';
 
 function SearchContent() {
     const [hoveredResult, setHoveredResult] = useState<number | null>(null);
     const [selectedMapResult, setSelectedMapResult] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+    const [availableCities, setAvailableCities] = useState<any[]>([]);
+    const [citySearchQuery, setCitySearchQuery] = useState('');
+    const [isListening, setIsListening] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
     const router = useRouter();
     const searchParams = useSearchParams();
     const [query, setQuery] = useState('');
     const observerTarget = useRef(null);
-    const { cityId, cityName } = useLocation();
+    const { cityId, cityName, setCity } = useLocation();
+
+    // Buscar cidades iniciais
+    useEffect(() => {
+        api.get('/v1/cidades').then(res => setAvailableCities(res.data.data || res.data)).catch(() => { });
+        // ✅ Foco automático no input ao carregar a página (Abre o teclado no Mobile)
+        if (inputRef.current) inputRef.current.focus();
+    }, []);
+
+    const filteredCities = useMemo(() => {
+        if (!citySearchQuery) return availableCities.slice(0, 10);
+        return availableCities.filter(c =>
+            c.nome.toLowerCase().includes(citySearchQuery.toLowerCase())
+        ).slice(0, 10);
+    }, [availableCities, citySearchQuery]);
+
+    // Mapeamento de filtros inteligentes
+    const getDynamicFilters = useCallback(() => {
+        const q = query.toLowerCase();
+        if (q.includes('pizz') || q.includes('fome') || q.includes('comida'))
+            return ['🍕 Aberto Agora', '🚚 Entrega Grátis', '⭐ Melhores Notas', '💸 Promoção'];
+        if (q.includes('casa') || q.includes('apartamento') || q.includes('aluguel'))
+            return ['🏠 Aluguel', '🔑 Venda', '🚗 Com Garagem', '✨ Lançamento'];
+        if (q.includes('vaga') || q.includes('emprego') || q.includes('trabalho'))
+            return ['💼 Home Office', '📝 CLT', '🎓 Estágio', '📍 Perto de Mim'];
+        if (q.includes('carro') || q.includes('veiculo') || q.includes('moto'))
+            return ['🚗 Seminovo', '💰 Financiamento', '🔄 Troca', '🔒 Blindado'];
+
+        return ['📍 Aberto Agora', '🚚 Entrega Grátis', '✨ Com IA', '⭐ Melhores Notas'];
+    }, [query]);
+
+    const activeFilters = useMemo(() => getDynamicFilters(), [getDynamicFilters]);
+
+    // ✅ Verifica se o cliente atende a região selecionada (mas é de fora da cidade)
+    const isExpansionClient = useCallback((item: any) => {
+        if (!cityName || !item.enderecos?.[0]?.cidade) return false;
+        const normalizedSearchCity = cityName.toLowerCase().trim();
+        const clientCity = item.enderecos[0].cidade.toLowerCase().trim();
+
+        // Se a cidade do endereço é diferente da cidade buscada, mas ele está nos resultados,
+        // é porque ele atende a região via contrato premium de expansão
+        return !clientCity.includes(normalizedSearchCity) && normalizedSearchCity !== clientCity;
+    }, [cityName]);
+
+    // ✅ Lógica de Campanhas de Hero Banner (Patrocinadores de Categorias/Keywords)
+    const heroAd = useMemo(() => {
+        if (!query && !cityName) return null;
+
+        const q = query?.toLowerCase() || "";
+        const city = cityName?.toLowerCase() || "";
+
+        // Mock de campanhas (Isso viria de uma tabela 'banners_busca' no futuro)
+        const campaigns = [
+            {
+                id: 1,
+                keywords: ['pizza', 'comida', 'fome', 'lanche', 'restaurante'],
+                segments: ['Alimentação', 'Gastronomia'],
+                cities: ['farroupilha', 'caxias do sul'],
+                title: "Bateu a fome?",
+                subtitle: "As melhores pizzas da região com entrega grátis hoje!",
+                image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80",
+                cta: "Pedir Agora",
+                link: "https://wa.me/5554999999999",
+                color: "#ff4d4d"
+            },
+            {
+                id: 2,
+                keywords: ['vaga', 'emprego', 'trabalho', 'oportunidade'],
+                segments: ['Vagas', 'RH'],
+                cities: [], // Todas as cidades
+                title: "Sua nova carreira começa aqui",
+                subtitle: "Confira as vagas exclusivas do RH Conecta de hoje.",
+                image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80",
+                cta: "Ver Vagas",
+                link: "/busca?q=vagas",
+                color: "#2d3436"
+            }
+        ];
+
+        return campaigns.find(c => {
+            const matchKeyword = c.keywords.some(k => q.includes(k));
+            const matchCity = c.cities.length === 0 || c.cities.includes(city);
+            return matchKeyword && matchCity;
+        });
+    }, [query, cityName]);
 
     useEffect(() => {
         let q = searchParams.get('q');
@@ -85,7 +180,14 @@ function SearchContent() {
     });
 
     const allResults = useMemo(() => {
-        return data?.pages.flatMap(page => page.data) || [];
+        const results = data?.pages.flatMap(page => page.data) || [];
+        // ✅ Remover duplicatas por ID (caso o backend retorne o mesmo item em páginas diferentes)
+        const seen = new Set();
+        return results.filter(item => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+        });
     }, [data]);
 
     // Intersection Observer para scroll infinito
@@ -125,6 +227,33 @@ function SearchContent() {
         window.open(`https://wa.me/55${clean}`, '_blank');
     };
 
+    const startVoiceSearch = () => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('Seu navegador não suporta busca por voz.');
+            return;
+        }
+
+        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+        const recognition = new SpeechRecognition();
+
+        recognition.lang = 'pt-BR';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        recognition.onerror = () => setIsListening(false);
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            if (transcript) {
+                router.push(`/busca?q=${encodeURIComponent(transcript)}${cityId ? `&city_id=${cityId}` : ''}`);
+            }
+        };
+
+        recognition.start();
+    };
+
     return (
         <div className="min-h-screen bg-cloud-dancer font-sans selection:bg-brand-red/10 overflow-x-hidden">
 
@@ -140,21 +269,53 @@ function SearchContent() {
                             </button>
                             <div className="flex-1 relative group">
                                 <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                    <SearchIcon size={18} className="text-brand-red" />
+                                    <SearchIcon size={18} className={isListening ? 'text-brand-red animate-pulse' : 'text-brand-red'} />
                                 </div>
                                 <input
+                                    ref={inputRef}
                                     type="text"
                                     key={query}
                                     defaultValue={query}
                                     placeholder="O que você procura?"
                                     onKeyDown={handleNewSearch}
-                                    className="w-full bg-white rounded-full py-4 pl-12 pr-4 shadow-sm border border-gray-100 focus:ring-4 focus:ring-brand-red/5 focus:border-brand-red transition-all font-bold text-gray-900 text-sm outline-none"
+                                    className={`w-full bg-white rounded-full py-4 pl-12 pr-14 shadow-sm border transition-all font-bold text-gray-900 text-sm outline-none ${isListening ? 'border-brand-red ring-8 ring-red-100/50' : 'border-gray-100 focus:ring-4 focus:ring-brand-red/5 focus:border-brand-red'
+                                        }`}
                                 />
+                                <button
+                                    onClick={startVoiceSearch}
+                                    className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all active:scale-75 ${isListening ? 'bg-brand-red text-white shadow-lg animate-bounce' : 'text-gray-400 hover:text-brand-red'
+                                        }`}
+                                >
+                                    <Mic size={18} />
+                                </button>
                             </div>
+                            <button
+                                onClick={() => setIsCityModalOpen(true)}
+                                className="hidden md:flex items-center space-x-2 px-5 py-4 bg-white rounded-full border border-gray-100 shadow-sm hover:border-brand-red transition-all active:scale-95 group"
+                            >
+                                <MapPin size={18} className="text-brand-red" />
+                                <span className="text-sm font-black text-gray-900 truncate max-w-[100px]">{cityName || 'Cidade'}</span>
+                            </button>
                         </div>
-                        <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-                            {['Aberto Agora', 'Entrega Grátis', 'Com IA', 'Melhores Notas'].map((filter) => (
-                                <button key={filter} className="whitespace-nowrap px-5 py-2.5 bg-white/70 backdrop-blur-md border border-gray-100 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-400 active:scale-95 hover:bg-white hover:text-brand-red transition-all shadow-sm cursor-pointer">
+
+                        <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1">
+                            <button
+                                onClick={() => setIsCityModalOpen(true)}
+                                className="md:hidden flex items-center space-x-2 px-4 py-2.5 bg-brand-red text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-100 active:scale-95"
+                            >
+                                <MapPin size={14} />
+                                <span>{cityName || 'Cidade'}</span>
+                            </button>
+
+                            {activeFilters.map((filter) => (
+                                <button
+                                    key={filter}
+                                    onClick={() => {
+                                        const cleanFilter = filter.split(' ').slice(1).join(' ');
+                                        router.push(`/busca?q=${encodeURIComponent(query + ' ' + cleanFilter)}`);
+                                    }}
+                                    className="whitespace-nowrap px-5 py-2.5 bg-white/70 backdrop-blur-md border border-gray-100 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-400 active:scale-95 hover:bg-white hover:text-brand-red transition-all shadow-sm cursor-pointer"
+                                >
                                     {filter}
                                 </button>
                             ))}
@@ -162,6 +323,36 @@ function SearchContent() {
                     </header>
 
                     <main className="px-5 py-6 space-y-12 pb-40">
+
+                        {/* HERO AD BANNER (PATROCINADO) */}
+                        {!isLoading && heroAd && (
+                            <motion.section
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="relative group cursor-pointer"
+                                onClick={() => window.open(heroAd.link, heroAd.link.startsWith('http') ? '_blank' : '_self')}
+                            >
+                                <div className="relative h-64 md:h-80 rounded-[4rem] overflow-hidden shadow-2xl border-4 border-white group-hover:scale-[1.02] transition-transform duration-700">
+                                    <img src={heroAd.image} className="w-full h-full object-cover" alt="" />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-center px-10 space-y-4">
+                                        <div className="bg-white/20 backdrop-blur-md self-start px-4 py-1.5 rounded-full border border-white/30">
+                                            <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Patrocinado</span>
+                                        </div>
+                                        <h2 className="text-4xl md:text-5xl font-black text-white font-serif italic tracking-tighter leading-none">{heroAd.title}</h2>
+                                        <p className="text-white/80 text-sm font-bold max-w-xs leading-relaxed">{heroAd.subtitle}</p>
+                                        <div className="flex items-center space-x-4 pt-4">
+                                            <button className="bg-white text-gray-900 px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl group-hover:bg-brand-red group-hover:text-white transition-all">
+                                                {heroAd.cta}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/10 backdrop-blur-3xl flex items-center justify-center border border-white/20">
+                                        <Sparkles className="text-white animate-pulse" size={24} />
+                                    </div>
+                                </div>
+                                <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-brand-red/10 rounded-full blur-[60px] pointer-events-none" />
+                            </motion.section>
+                        )}
 
                         {/* LOADING */}
                         {isLoading && (
@@ -195,12 +386,19 @@ function SearchContent() {
                                             <Sparkles size={16} className="text-brand-red animate-pulse" />
                                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-red">Sugestão Inteligente</span>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none">Afinidade</p>
-                                            <p className="text-3xl font-black text-brand-red font-serif italic tracking-tighter">98%</p>
+                                        <div className="flex flex-col items-end space-y-2">
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none">Afinidade</p>
+                                                <p className="text-3xl font-black text-brand-red font-serif italic tracking-tighter">98%</p>
+                                            </div>
+                                            {isExpansionClient(matchPerfeito) && (
+                                                <span className="bg-amber-100/80 backdrop-blur-sm text-amber-700 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-200 shadow-sm animate-pulse">
+                                                    ✨ Atende na sua região
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center space-x-8 mb-10 cursor-pointer group/item" onClick={() => router.push(`/cliente/${matchPerfeito.id}`)}>
+                                    <div className="flex items-center space-x-8 mb-10 cursor-pointer group/item" onClick={() => router.push(`/cliente/${matchPerfeito.slug || matchPerfeito.id}`)}>
                                         <div className="w-24 h-24 rounded-[2.5rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
                                             <img src={matchPerfeito.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200"} alt="" className="w-full h-full object-cover" />
                                         </div>
@@ -237,7 +435,7 @@ function SearchContent() {
                                     {patrocinados.map((item: any) => (
                                         <div
                                             key={item.id}
-                                            onClick={() => router.push(`/cliente/${item.id}`)}
+                                            onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
                                             onMouseEnter={() => setHoveredResult(item.id)}
                                             onMouseLeave={() => setHoveredResult(null)}
                                             className="bg-white rounded-[3.5rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer"
@@ -253,7 +451,13 @@ function SearchContent() {
                                                 <div className="pt-16 space-y-4">
                                                     <div className="flex justify-between items-center">
                                                         <h4 className="text-2xl font-black text-gray-900 tracking-tight font-serif italic leading-none truncate max-w-[200px]">{item.nome_fantasia}</h4>
-                                                        <span className="text-xs font-black text-brand-red bg-brand-red/5 px-3 py-1.5 rounded-xl border border-brand-red/10">PREMIUM</span>
+                                                        {isExpansionClient(item) ? (
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">✨ ATENDE AQUI</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs font-black text-brand-red bg-brand-red/5 px-3 py-1.5 rounded-xl border border-brand-red/10">PREMIUM</span>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center text-[10px] font-bold text-gray-400 space-x-4 uppercase tracking-[0.1em]">
                                                         <span className="flex items-center"><MapPin size={14} className="mr-1 text-brand-red" /> {item.enderecos?.[0]?.bairro || 'Local'}</span>
@@ -288,7 +492,7 @@ function SearchContent() {
                                     {outrosResultados.map((item: any, idx: number) => (
                                         <div
                                             key={item.id}
-                                            onClick={() => router.push(`/cliente/${item.id}`)}
+                                            onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
                                             onMouseEnter={() => setHoveredResult(item.id)}
                                             onMouseLeave={() => setHoveredResult(null)}
                                             className={`flex items-center justify-between p-7 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
@@ -371,7 +575,7 @@ function SearchContent() {
                     {selectedMapItem && (
                         <div className="absolute bottom-32 lg:bottom-10 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-sm animate-in slide-in-from-bottom-5 fade-in duration-300 pointer-events-auto">
                             <div className="bg-white/80 backdrop-blur-3xl p-3 border border-white/50 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] gummy-card">
-                                <div className="relative group/modal cursor-pointer" onClick={() => router.push(`/cliente/${selectedMapItem.id}`)}>
+                                <div className="relative group/modal cursor-pointer" onClick={() => router.push(`/cliente/${selectedMapItem.slug || selectedMapItem.id}`)}>
                                     <div className="h-44 w-full rounded-[2rem] overflow-hidden relative shadow-inner">
                                         <img
                                             src={selectedMapItem.galeria?.[0]?.url || selectedMapItem.logotipo_url || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400"}
@@ -439,21 +643,104 @@ function SearchContent() {
             </div>
 
             {/* BOTTOM NAV MOBILE */}
-            <nav className="fixed bottom-0 left-0 right-0 z-[100] p-6 lg:hidden pointer-events-none">
-                <div className="bg-white/80 backdrop-blur-3xl border border-white/20 rounded-[3rem] p-4 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.2)] flex items-center justify-around pointer-events-auto">
+            <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-[94%] max-w-md lg:hidden">
+                <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[3.5rem] p-3 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around pointer-events-auto">
                     {[
-                        { icon: <Home size={22} />, active: false, path: '/' },
-                        { icon: <SearchIcon size={22} />, active: true, path: '/busca' },
-                        { icon: <Briefcase size={22} />, active: false, path: '#' },
-                        { icon: <Heart size={22} />, active: false, path: '#' },
-                        { icon: <Menu size={22} />, active: false, path: '#' },
+                        { icon: <Home size={28} strokeWidth={2.5} />, label: 'Portal', path: '/', active: false },
+                        { icon: <SearchIcon size={28} strokeWidth={2.5} />, label: 'Busca', path: '/busca', active: true },
+                        { icon: <Briefcase size={28} strokeWidth={2.5} />, label: 'Vagas', path: '/busca?q=vagas', active: false },
+                        { icon: <Heart size={28} strokeWidth={2.5} />, label: 'Salvos', path: '#', active: false },
+                        { icon: <User size={28} strokeWidth={2.5} />, label: 'Conta', path: '#', active: false },
                     ].map((item, idx) => (
-                        <button key={idx} onClick={() => item.path !== '#' && router.push(item.path)} className={`p-4 transition-all active:scale-75 ${item.active ? 'text-brand-red bg-brand-red/5 rounded-[1.5rem]' : 'text-gray-300'}`}>
+                        <button
+                            key={idx}
+                            onClick={() => {
+                                if (item.path === '/busca') {
+                                    if (inputRef.current) inputRef.current.focus();
+                                } else if (item.path !== '#') {
+                                    router.push(item.path);
+                                }
+                            }}
+                            className={`flex flex-col items-center justify-center p-4 transition-all active:scale-50 ${item.active ? 'text-brand-red bg-red-100/50 rounded-[2.5rem] px-8 shadow-inner' : 'text-gray-400'
+                                } font-sans`}
+                        >
                             {item.icon}
+                            {item.active && <span className="text-[10px] font-black mt-2 uppercase tracking-tighter">{item.label}</span>}
                         </button>
                     ))}
                 </div>
-            </nav>
+            </nav >
+
+            {/* 🏙️ MODAL SELETOR DE CIDADE */}
+            <AnimatePresence>
+                {isCityModalOpen && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsCityModalOpen(false)}
+                            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative bg-white w-full max-w-lg rounded-[3.5rem] shadow-2xl overflow-hidden gummy-card"
+                        >
+                            <div className="p-10 space-y-8">
+                                <div className="flex justify-between items-center">
+                                    <div className="space-y-1">
+                                        <h3 className="text-3xl font-black text-gray-900 font-serif italic tracking-tighter">Mudar Região</h3>
+                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Encontre serviços em outras cidades</p>
+                                    </div>
+                                    <button onClick={() => setIsCityModalOpen(false)} className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 active:scale-75 transition-all">
+                                        <X size={24} />
+                                    </button>
+                                </div>
+
+                                <div className="relative">
+                                    <SearchIcon className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-red" size={20} />
+                                    <input
+                                        type="text"
+                                        value={citySearchQuery}
+                                        onChange={(e) => setCitySearchQuery(e.target.value)}
+                                        placeholder="Digite o nome da cidade..."
+                                        className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red/20 focus:bg-white rounded-3xl py-5 pl-14 pr-6 font-bold text-gray-900 transition-all outline-none shadow-inner"
+                                    />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-2">Sugestões próximos de você</p>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {filteredCities.map((city: any) => (
+                                            <button
+                                                key={city.id}
+                                                onClick={() => {
+                                                    setCity(city.id, city.nome);
+                                                    setIsCityModalOpen(false);
+                                                }}
+                                                className={`flex items-center justify-between p-5 rounded-3xl border-2 transition-all ${cityName === city.nome ? 'bg-brand-red/5 border-brand-red' : 'bg-white border-gray-50 hover:bg-gray-50'}`}
+                                            >
+                                                <div className="flex items-center space-x-4">
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cityName === city.nome ? 'bg-brand-red text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                                        <MapPin size={20} />
+                                                    </div>
+                                                    <span className={`font-black tracking-tight ${cityName === city.nome ? 'text-brand-red' : 'text-gray-900'}`}>{city.nome}</span>
+                                                </div>
+                                                {cityName === city.nome && <CheckCircle2 size={20} className="text-brand-red" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 p-6 text-center">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest opacity-50">O Vermelhinho • Geo Intelligence v2.0</p>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <style jsx global>{`
         .gummy-card { transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
