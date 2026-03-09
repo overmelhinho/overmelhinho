@@ -50,9 +50,33 @@ export default function Home() {
   ];
 
   const featured = [
-    { name: "Bistrô do Vale", category: "Restaurante", rating: 4.9, img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80", location: "Centro, Petrolina" },
-    { name: "Odonto Clean", category: "Saúde", rating: 4.8, img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80", location: "Vila Eduardo, Petrolina" },
-    { name: "Guerreiros Gym", category: "Fitness", rating: 5.0, img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&auto=format&fit=crop&q=80", location: "Areia Branca, Petrolina" },
+    {
+      name: "Giardino Restaurante",
+      category: "Gastronomia",
+      rating: 4.9,
+      img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80",
+      location: "Centro, Farroupilha - RS",
+      whatsapp: "5554999999001",
+      desc: "Culinária italiana autêntica no coração da Serra Gaúcha."
+    },
+    {
+      name: "Clínica Serra Saúde",
+      category: "Saúde",
+      rating: 4.8,
+      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
+      location: "Bairro Centro, Garibaldi - RS",
+      whatsapp: "5554999999002",
+      desc: "Atendimento médico completo com especialistas da região."
+    },
+    {
+      name: "Serra Fit Academia",
+      category: "Fitness",
+      rating: 5.0,
+      img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&auto=format&fit=crop&q=80",
+      location: "Av. Principal, Bento Gonçalves - RS",
+      whatsapp: "5554999999003",
+      desc: "Musculação, cardio e aulas coletivas 6 dias por semana."
+    },
   ];
 
   // Lógica de Scrollytelling
@@ -148,7 +172,31 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 4. SCROLLYTELLING ADS */}
+        {/* 4. COMO FUNCIONA — 3 passos */}
+        <section className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter font-serif">Como Funciona</h2>
+            <button onClick={() => router.push('/como-funciona')} className="text-[10px] font-black text-brand-red uppercase tracking-widest hover:underline">Ver mais →</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { step: '01', icon: '🔍', title: 'Busque', desc: 'Digite o que precisa ou fale pelo microfone. Nossa IA entende sua intenção.' },
+              { step: '02', icon: '📍', title: 'Encontre', desc: 'Veja empresas e serviços próximos a você, ordenados por relevância e avaliação.' },
+              { step: '03', icon: '💬', title: 'Conecte', desc: 'Entre em contato direto pelo WhatsApp sem intermediários. Simples e rápido.' },
+            ].map((s) => (
+              <div key={s.step} className="bg-white rounded-[3rem] p-8 border border-gray-50 shadow-sm space-y-4 hover:shadow-lg hover:scale-[1.02] transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="text-5xl">{s.icon}</div>
+                  <span className="text-[10px] font-black text-gray-200 tracking-[0.3em]">{s.step}</span>
+                </div>
+                <h3 className="text-xl font-black text-gray-900 tracking-tight font-serif">{s.title}</h3>
+                <p className="text-gray-400 font-medium text-sm leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. SCROLLYTELLING ADS */}
         <section ref={scrollyRef} className="h-[120vh] relative pt-10 px-2 sm:px-0">
           <div className="sticky top-20 h-[70vh] w-full bg-black rounded-[5rem] overflow-hidden shadow-3xl group">
             <div
@@ -161,20 +209,23 @@ export default function Home() {
               <img
                 src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1600&auto=format&fit=crop&q=80"
                 className="w-full h-full object-cover filter brightness-[0.4] contrast-[1.2]"
-                alt="Patrocinador Master"
+                alt="Destaque Patrocinado"
               />
             </div>
 
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white space-y-6">
               <div className="bg-brand-red/90 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.4em] shadow-xl font-sans">
-                AD Premium
+                Espaço Publicitário
               </div>
               <h3 className="text-4xl md:text-6xl font-black tracking-tighter leading-none max-w-4xl mx-auto font-serif italic">
-                A melhor pizza <br />da cidade agora <br />no seu portal.
+                Sua empresa aqui,<br />onde todos<br />estão olhando.
               </h3>
-              <p className="text-xl font-bold opacity-60 font-sans">Pizzaria Napolitana • Entrega Grátis hoje</p>
-              <button className="mt-10 bg-white text-black px-12 py-6 rounded-[2.5rem] font-black text-xl active:scale-90 transition-transform shadow-2xl hover:bg-brand-red hover:text-white font-sans cursor-pointer">
-                Pedir Agora
+              <p className="text-xl font-bold opacity-60 font-sans">Destaque Premium no Portal O Vermelhinho</p>
+              <button
+                onClick={() => router.push('/anuncie')}
+                className="mt-10 bg-white text-black px-12 py-6 rounded-[2.5rem] font-black text-xl active:scale-90 transition-transform shadow-2xl hover:bg-brand-red hover:text-white font-sans cursor-pointer"
+              >
+                Quero Anunciar
               </button>
             </div>
 
@@ -209,24 +260,30 @@ export default function Home() {
                     Destaque Portal
                   </div>
                 </div>
-                <div className="p-10 flex-1 flex flex-col justify-between space-y-10">
+                <div className="p-10 flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-2">
                     <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.4em] font-sans">{item.category}</span>
                     <h4 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter leading-none font-serif">{item.name}</h4>
                     <p className="text-gray-400 font-bold tracking-tight font-sans">{item.location}</p>
+                    <p className="text-gray-400 font-medium text-sm mt-2">{item.desc}</p>
                   </div>
 
-                  <button className="w-full bg-[#25D366] text-white py-7 rounded-[2.5rem] font-black text-xl active:scale-95 transition-all shadow-[0_20px_40px_-5px_rgba(37,211,102,0.4)] flex items-center justify-center space-x-4 border-b-8 border-[#128C7E]/40 hover:brightness-105 active:border-b-0 active:translate-y-2 font-sans cursor-pointer">
+                  <a
+                    href={`https://wa.me/${item.whatsapp}?text=Olá! Vi sua empresa no portal O Vermelhinho e gostaria de saber mais.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#25D366] text-white py-7 rounded-[2.5rem] font-black text-xl active:scale-95 transition-all shadow-[0_20px_40px_-5px_rgba(37,211,102,0.4)] flex items-center justify-center space-x-4 border-b-8 border-[#128C7E]/40 hover:brightness-105 active:border-b-0 active:translate-y-2 font-sans"
+                  >
                     <MessageCircle fill="currentColor" size={28} />
-                    <span>WhatsApp</span>
-                  </button>
+                    <span>Contato pelo WhatsApp</span>
+                  </a>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* 6. CTA BANNER FINAL */}
+        {/* 7. CTA BANNER FINAL */}
         <section className="mt-10 mb-20 px-2 font-sans">
           <div className="bg-brand-red rounded-[6rem] p-10 md:p-20 text-center space-y-12 shadow-[0_50px_100px_-20px_rgba(192,0,0,0.3)] relative overflow-hidden group border-[15px] border-white/10 ring-1 ring-brand-red/50">
             <div className="relative z-10 space-y-8">
@@ -237,12 +294,20 @@ export default function Home() {
                 O único portal que conversa com o cliente.
               </p>
               <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-8">
-                <button className="bg-white text-brand-red px-10 md:px-16 py-5 md:py-8 rounded-[3rem] font-black text-xl md:text-3xl shadow-3xl active:scale-95 transition-all hover:bg-red-50 hover:scale-105 font-sans cursor-pointer">
+                <button
+                  onClick={() => router.push('/anuncie')}
+                  className="bg-white text-brand-red px-10 md:px-16 py-5 md:py-8 rounded-[3rem] font-black text-xl md:text-3xl shadow-3xl active:scale-95 transition-all hover:bg-red-50 hover:scale-105 font-sans cursor-pointer"
+                >
                   Anunciar
                 </button>
-                <button className="bg-black/20 text-white px-8 md:px-12 py-5 md:py-7 rounded-[2.5rem] font-black text-xs md:text-sm active:scale-95 border border-white/10 backdrop-blur-md uppercase tracking-[0.2em] font-sans cursor-pointer">
-                  Consultoria
-                </button>
+                <a
+                  href="https://wa.me/5554326800002?text=Olá! Gostaria de uma consultoria sobre anúncios no Vermelhinho."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-black/20 text-white px-8 md:px-12 py-5 md:py-7 rounded-[2.5rem] font-black text-xs md:text-sm active:scale-95 border border-white/10 backdrop-blur-md uppercase tracking-[0.2em] font-sans flex items-center gap-2"
+                >
+                  💬 Consultoria
+                </a>
               </div>
             </div>
 
