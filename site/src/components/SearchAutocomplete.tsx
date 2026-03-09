@@ -72,7 +72,7 @@ export const SearchAutocomplete = () => {
         router.push(`/busca?q=${encodeURIComponent(term)}${cityId ? `&city_id=${cityId}` : ''}`);
     };
 
-    const startVoiceSearch = () => {
+    const startVoiceSearch = async () => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
@@ -81,6 +81,9 @@ export const SearchAutocomplete = () => {
         }
 
         try {
+            // Solicita permissão explicitamente via API de Mídia para forçar o prompt do navegador
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+
             const recognition = new SpeechRecognition();
             recognition.lang = 'pt-BR';
             recognition.interimResults = true;
@@ -98,9 +101,7 @@ export const SearchAutocomplete = () => {
                 console.error('Speech recognition error', event.error);
                 setIsListening(false);
                 if (event.error === 'not-allowed') {
-                    alert('Permissão de microfone negada. Ative o microfone nas configurações do seu navegador.');
-                } else if (event.error === 'network') {
-                    alert('Erro de rede na busca por voz. Verifique sua conexão.');
+                    alert('Permissão de microfone negada. Por favor, autorize nas configurações do seu navegador.');
                 }
             };
 
@@ -114,9 +115,14 @@ export const SearchAutocomplete = () => {
             };
 
             recognition.start();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error starting speech recognition:', err);
             setIsListening(false);
+            if (err.name === 'NotAllowedError') {
+                alert('Acesso ao microfone negado ou bloqueado pelo navegador.');
+            } else {
+                alert('Ocorreu um erro ao tentar usar o microfone.');
+            }
         }
     };
 

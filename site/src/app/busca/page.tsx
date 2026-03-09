@@ -252,7 +252,7 @@ function SearchContent() {
         window.open(`https://wa.me/55${clean}`, '_blank');
     };
 
-    const startVoiceSearch = () => {
+    const startVoiceSearch = async () => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
@@ -261,6 +261,9 @@ function SearchContent() {
         }
 
         try {
+            // ✅ Forçar o prompt de permissão nativo
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+
             const recognition = new SpeechRecognition();
             recognition.lang = 'pt-BR';
             recognition.interimResults = true;
@@ -272,7 +275,7 @@ function SearchContent() {
                 console.error('Speech recognition error', event.error);
                 setIsListening(false);
                 if (event.error === 'not-allowed') {
-                    alert('Permissão de microfone negada. Ative o microfone nas configurações do seu navegador.');
+                    alert('O microfone parece estar bloqueado. Por favor, autorize nas configurações.');
                 }
             };
 
@@ -287,9 +290,12 @@ function SearchContent() {
             };
 
             recognition.start();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error starting speech recognition:', err);
             setIsListening(false);
+            if (err.name === 'NotAllowedError') {
+                alert('Por favor, autorize o microfone para realizar a busca por voz.');
+            }
         }
     };
 
