@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import {
     Search as SearchIcon,
@@ -140,6 +140,31 @@ function SearchContent() {
             return matchKeyword && matchCity;
         });
     }, [query, cityName]);
+
+    // ✅ Banners Intersticiais (Aparecem no meio da lista de resultados)
+    const interstitialAds = useMemo(() => {
+        const ads = [
+            {
+                id: 101,
+                title: "Anuncie no O Vermelhinho",
+                description: "Sua empresa em destaque para quem realmente procura.",
+                image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+                cta: "Saber Mais",
+                link: "https://overmelhinho.com.br/anuncie",
+                bgColor: "bg-indigo-600"
+            },
+            {
+                id: 102,
+                title: "Baixe nosso App",
+                description: "Tenha a cidade na palma da sua mão. Rápido e grátis.",
+                image: "https://images.unsplash.com/photo-1512428559083-a4979b2b91ef?w=800&q=80",
+                cta: "Download",
+                link: "#",
+                bgColor: "bg-emerald-600"
+            }
+        ];
+        return ads;
+    }, []);
 
     useEffect(() => {
         let q = searchParams.get('q');
@@ -489,29 +514,65 @@ function SearchContent() {
                             <section className="space-y-8">
                                 <h3 className="text-xl font-black text-gray-900 tracking-tight font-serif px-2">Todos os Resultados</h3>
                                 <div className="bg-white rounded-[4rem] shadow-2xl border border-white overflow-hidden p-2">
-                                    {outrosResultados.map((item: any, idx: number) => (
-                                        <div
-                                            key={item.id}
-                                            onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
-                                            onMouseEnter={() => setHoveredResult(item.id)}
-                                            onMouseLeave={() => setHoveredResult(null)}
-                                            className={`flex items-center justify-between p-7 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
-                                        >
-                                            <div className="flex items-center space-x-6">
-                                                <div className="w-16 h-16 rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
-                                                    <img src={item.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-xl leading-none">{item.nome_fantasia}</h5>
-                                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
-                                                </div>
-                                            </div>
-                                            <button className="w-14 h-14 rounded-[1.8rem] bg-white shadow-sm border border-gray-100 text-brand-red flex items-center justify-center active:scale-90 transition-all hover:bg-brand-red hover:text-white group-hover:shadow-md">
-                                                <Phone size={20} fill="currentColor" className="opacity-20 group-hover:opacity-100 transition-opacity" />
-                                            </button>
-                                        </div>
-                                    ))}
+                                    {outrosResultados.map((item: any, idx: number) => {
+                                        const showAd = (idx + 1) % 5 === 0;
+                                        const ad = interstitialAds[Math.floor(idx / 5) % interstitialAds.length];
 
+                                        return (
+                                            <React.Fragment key={item.id}>
+                                                <div
+                                                    onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
+                                                    onMouseEnter={() => setHoveredResult(item.id)}
+                                                    onMouseLeave={() => setHoveredResult(null)}
+                                                    className={`flex items-center justify-between p-7 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
+                                                >
+                                                    <div className="flex items-center space-x-6">
+                                                        <div className="w-16 h-16 rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
+                                                            <img src={item.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-xl leading-none">{item.nome_fantasia}</h5>
+                                                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <button className="w-14 h-14 rounded-[1.8rem] bg-white shadow-sm border border-gray-100 text-brand-red flex items-center justify-center active:scale-90 transition-all hover:bg-brand-red hover:text-white group-hover:shadow-md">
+                                                        <Phone size={20} fill="currentColor" className="opacity-20 group-hover:opacity-100 transition-opacity" />
+                                                    </button>
+                                                </div>
+
+                                                {showAd && (
+                                                    <div className="mx-4 my-8">
+                                                        <div className={`relative ${ad.bgColor} rounded-[3rem] p-8 overflow-hidden group/ad cursor-pointer`}>
+                                                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                                                                <div className="flex-1 space-y-2 text-center md:text-left">
+                                                                    <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">Publicidade</span>
+                                                                    <h4 className="text-2xl font-black text-white font-serif italic tracking-tight leading-none">
+                                                                        {ad.title}
+                                                                    </h4>
+                                                                    <p className="text-white/70 text-xs font-medium leading-relaxed">
+                                                                        {ad.description}
+                                                                    </p>
+                                                                    <div className="pt-2">
+                                                                        <button className="bg-white text-gray-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-transform">
+                                                                            {ad.cta}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl rotate-3 group-hover/ad:rotate-0 transition-transform duration-500 hidden sm:block">
+                                                                    <img
+                                                                        src={ad.image}
+                                                                        className="w-full h-full object-cover"
+                                                                        alt=""
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
                                     <div ref={observerTarget} className="py-12 flex justify-center">
                                         {isFetchingNextPage ? (
                                             <div className="flex items-center space-x-3 bg-gray-50 px-6 py-3 rounded-full border border-gray-100">

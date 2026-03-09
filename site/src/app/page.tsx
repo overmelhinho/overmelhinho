@@ -100,13 +100,13 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="px-8 py-10 max-w-6xl mx-auto space-y-20 md:px-6">
+      <main className="px-4 py-10 max-w-6xl mx-auto space-y-20 md:px-6">
         {/* 2. HERO & VUI (Busca Conversacional) */}
         <section className="text-center space-y-10 py-6">
           <div className="space-y-4">
             <h1 className="text-5xl md:text-8xl font-black text-gray-900 tracking-tighter leading-none italic font-serif">
               Encontre o melhor da<br />
-              <span className="text-brand-red relative whitespace-nowrap">
+              <span className="text-brand-red relative">
                 {currentPhrase}
                 <span className="absolute -right-2 top-0 bottom-0 w-2 bg-brand-red animate-pulse"></span>
               </span>

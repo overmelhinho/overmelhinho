@@ -94,8 +94,8 @@ export const SearchAutocomplete = () => {
         <div className="relative w-full max-w-2xl mx-auto z-[200]" ref={dropdownRef}>
             {/* INPUT PRINCIPAL */}
             <div className={`relative gummy-card bg-white rounded-full p-2 flex items-center shadow-[0_40px_80px_-20px_rgba(0,0,0,0.12)] border-4 transition-all duration-700 ${isListening ? 'border-brand-red ring-[15px] ring-red-100/30' : 'border-white'} ${isOpen ? 'rounded-b-none' : ''}`}>
-                <div className={`pl-4 ${isListening ? 'text-brand-red animate-pulse' : 'text-gray-500'}`}>
-                    <Search size={22} strokeWidth={3} />
+                <div className={`pl-2 md:pl-4 flex-shrink-0 ${isListening ? 'text-brand-red animate-pulse' : 'text-gray-500'}`}>
+                    <Search size={20} className="md:w-6 md:h-6" strokeWidth={3} />
                 </div>
                 <input
                     type="text"
@@ -104,19 +104,19 @@ export const SearchAutocomplete = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     onFocus={() => setIsOpen(query.length >= 2)}
                     placeholder={isListening ? "Processando sua voz..." : `O que você precisa em ${cityName || 'sua região'}?`}
-                    className="flex-1 bg-transparent border-none focus:ring-0 px-2 py-4 text-gray-900 font-black placeholder:text-gray-400 md:text-2xl font-sans outline-none"
+                    className="flex-1 min-w-0 bg-transparent border-none focus:ring-0 px-2 py-3 md:py-4 text-gray-900 font-black placeholder:text-gray-400 text-sm md:text-2xl font-sans outline-none"
                 />
-                <div className="flex items-center space-x-2 pr-2">
+                <div className="flex items-center space-x-1 md:space-x-2 pr-1 md:pr-2 flex-shrink-0">
                     {query && (
-                        <button onClick={() => setQuery('')} className="p-3 text-gray-300 hover:text-gray-600 transition-colors">
-                            <X size={20} />
+                        <button onClick={() => setQuery('')} className="p-2 md:p-3 text-gray-300 hover:text-gray-600 transition-colors">
+                            <X size={18} className="md:w-5 md:h-5" />
                         </button>
                     )}
                     <button
                         onClick={startVoiceSearch}
-                        className={`p-4 rounded-full transition-all duration-500 active:scale-75 cursor-pointer ${isListening ? 'bg-brand-red text-white scale-125' : 'bg-gray-50 text-brand-red hover:bg-gray-100'}`}
+                        className={`p-3 md:p-4 rounded-full transition-all duration-500 active:scale-75 cursor-pointer ${isListening ? 'bg-brand-red text-white scale-110 md:scale-125' : 'bg-gray-50 text-brand-red hover:bg-gray-100'}`}
                     >
-                        <Mic size={24} fill={isListening ? "currentColor" : "none"} strokeWidth={3} />
+                        <Mic size={20} className="md:w-6 md:h-6" fill={isListening ? "currentColor" : "none"} strokeWidth={3} />
                     </button>
                 </div>
             </div>
