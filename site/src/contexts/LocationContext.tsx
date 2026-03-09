@@ -57,15 +57,17 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                         }
                         setIsLoading(false);
                     },
-                    () => {
+                    async () => {
                         // Fallback IP-API se o usuário negar geolocalização
-                        fetch('https://ipapi.co/json/')
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data.city) setCityName(data.city);
-                                setIsLoading(false);
-                            })
-                            .catch(() => setIsLoading(false));
+                        try {
+                            const res = await fetch('https://ipapi.co/json/');
+                            const data = await res.json();
+                            if (data?.city) setCityName(data.city);
+                        } catch {
+                            // Falha silenciosa: extensão ou rede bloqueou a requisição
+                        } finally {
+                            setIsLoading(false);
+                        }
                     }
                 );
             } else {
