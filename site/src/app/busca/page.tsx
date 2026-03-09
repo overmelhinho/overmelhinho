@@ -256,14 +256,18 @@ function SearchContent() {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
-            alert('Busca por voz não suportada. Tente o Chrome ou Safari.');
+            alert('Busca por voz não suportada. Use Chrome ou Safari.');
             return;
         }
 
         try {
-            // Solicita permissão e interrompe o uso imediato para deixar o Recognition assumir o canal de áudio
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
+            setIsListening(true);
+
+            // Tenta garantir permissão no nível do navegador
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+            }
 
             const recognition = new SpeechRecognition();
             recognition.lang = 'pt-BR';
@@ -272,13 +276,16 @@ function SearchContent() {
 
             recognition.onstart = () => setIsListening(true);
             recognition.onend = () => setIsListening(false);
+
             recognition.onerror = (event: any) => {
-                console.error('Speech recognition error', event.error);
                 setIsListening(false);
+                if (event.error === 'not-allowed') {
+                    alert('O Chrome está sem permissão de microfone no seu Android. Vá em Configurações > Apps > Chrome > Permissões e ative o Microfone.');
+                }
             };
 
             recognition.onresult = (event: any) => {
-                const transcript = event.results[0][0].transcript;
+                const transcript = event.results?.[0]?.[0]?.transcript;
                 if (transcript) {
                     setQuery(transcript);
                     if (event.results[0].isFinal) {
@@ -287,12 +294,15 @@ function SearchContent() {
                 }
             };
 
-            recognition.start();
+            // Delay para o hardware do celular processar a transição
+            setTimeout(() => {
+                try { recognition.start(); } catch (e) { setIsListening(false); }
+            }, 250);
+
         } catch (err: any) {
-            console.error('Error starting speech recognition:', err);
             setIsListening(false);
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                alert('O microfone está desativado. Toque no ícone ao lado do endereço do site (no topo) para permitir o acesso.');
+            if (err.name === 'NotAllowedError') {
+                alert('Acesso negado pelo sistema. Verifique as Permissões do App Chrome nas configurações do seu celular.');
             }
         }
     };
