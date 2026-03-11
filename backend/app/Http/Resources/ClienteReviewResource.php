@@ -13,9 +13,11 @@ class ClienteReviewResource extends JsonResource
             'cliente_id' => $this->cliente_id,
             'author_name' => $this->author_name,
             'author_photo_url' => $this->author_photo_url,
+            'profile_photo_url' => $this->author_photo_url, // Alias para compatibilidade
             'rating' => $this->rating,
             'text' => $this->text,
-            'relative_time_description' => $this->relative_time_description ? $this->relative_time_description->toISOString() : null,
+            'time' => $this->relative_time_description ? $this->relative_time_description->timestamp : null,
+            'relative_time_description' => $this->relative_time_description ? $this->relative_time_description->diffForHumans() : null,
             'google_review_id' => $this->google_review_id,
             'is_visible' => $this->is_visible,
         ];
