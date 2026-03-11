@@ -42,12 +42,21 @@ class UploadTempController extends Controller
                 $url = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$path}";
 
                 $response = Http::withHeaders([
-                    'apikey' => $supabaseKey,
+                    'apikey'        => $supabaseKey,
                     'Authorization' => "Bearer {$supabaseKey}",
-                    'Content-Type' => $mime,
-                ])->withBody($bytes, $mime)->put($url);
+                    'Content-Type'  => $mime,
+                    'x-upsert'      => 'true',
+                ])->withBody($bytes, $mime)->post($url);
 
+                // Supabase retorna 200 ou 200 para uploads bem-sucedidos
                 if ($response->failed()) {
+                    Log::error('UPLOAD_TEMP_SUPABASE_FAIL', [
+                        'status'   => $response->status(),
+                        'body'     => $response->body(),
+                        'path'     => $path,
+                        'mime'     => $mime,
+                        'url'      => $url,
+                    ]);
                     throw new \Exception("Supabase {$response->status()}: " . $response->body());
                 }
 
