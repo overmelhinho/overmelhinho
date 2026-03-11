@@ -11,5 +11,17 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- 🔧 Script de Auto-Cura (Auto-Reload on Failure/Deploy) -->
+    <script>
+      window.addEventListener('error', function(e) {
+        // Detecta erro de carregamento nos módulos (o erro do print)
+        if (e.target.tagName === 'SCRIPT' || e.message && (e.message.indexOf('type "text/html"') !== -1 || e.message.indexOf('ChunkLoadError') !== -1)) {
+          console.warn('⚠️ Erro de carregamento detectado após deploy. Recarregando pagina...');
+          window.location.reload(true); // Força recarregamento sem cache
+        }
+      }, true);
+    </script>
+    <div style="display:none">Build: 2026-03-11 14:00</div>
   </body>
 </html>
