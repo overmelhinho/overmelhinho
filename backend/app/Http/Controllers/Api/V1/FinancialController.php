@@ -417,6 +417,68 @@ class FinancialController extends Controller
     }
 
     /**
+     * Reenvia ao Tiny todas as faturas pendentes que ainda não possuem tiny_account_id
+     */
+    public function resendToTiny()
+    {
+        $invoices = Invoice::where('status', 'pending')
+            ->whereNull('tiny_account_id')
+            ->with(['client.enderecos', 'client.contatos', 'plan'])
+            ->get();
+
+        $sent = 0;
+        $failed = 0;
+        $details = [];
+
+        Log::info("[ResendToTiny] Faturas sem tiny_id encontradas: {$invoices->count()}");
+
+        foreach ($invoices as $invoice) {
+            try {
+                $valorCobrado = $invoice->payable_amount ?? $invoice->amount;
+
+                // Pula faturas de permuta total (valor 0)
+                if ($valorCobrado <= 0) {
+                    $details[] = ['invoice_id' => $invoice->id, 'status' => 'skipped', 'reason' => 'Valor zerado (permuta total)'];
+                    continue;
+                }
+
+                $tinyData = $this->tinyService->createReceivable($invoice, $valorCobrado);
+                $invoice->update([
+                    'tiny_account_id' => $tinyData['tiny_account_id'],
+                    'payment_url'     => $tinyData['payment_url'],
+                ]);
+
+                $sent++;
+                $details[] = [
+                    'invoice_id'      => $invoice->id,
+                    'status'          => 'success',
+                    'tiny_account_id' => $tinyData['tiny_account_id'],
+                    'client'          => $invoice->client->nome_fantasia,
+                ];
+                Log::info("[ResendToTiny] Fatura #{$invoice->id} enviada ao Tiny com sucesso. ID: {$tinyData['tiny_account_id']}");
+
+            } catch (\Exception $e) {
+                $failed++;
+                $details[] = [
+                    'invoice_id' => $invoice->id,
+                    'status'     => 'error',
+                    'reason'     => $e->getMessage(),
+                    'client'     => $invoice->client->nome_fantasia ?? 'N/A',
+                ];
+                Log::error("[ResendToTiny] Falha ao enviar fatura #{$invoice->id}: " . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'message'   => "Reenvio concluído. {$sent} enviadas com sucesso, {$failed} com erro.",
+            'total'     => $invoices->count(),
+            'enviadas'  => $sent,
+            'erros'     => $failed,
+            'detalhes'  => $details,
+        ]);
+    }
+
+    /**
      * Webhook do Tiny ERP (Olist)
      * Recebe notificações de faturamento e baixa de contas.
      */

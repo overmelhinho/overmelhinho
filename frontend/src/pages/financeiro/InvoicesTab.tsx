@@ -97,6 +97,7 @@ export default function InvoicesTab() {
     const [justification, setJustification] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isResending, setIsResending] = useState(false);
 
     const handleSync = async () => {
         setIsSyncing(true);
@@ -109,6 +110,25 @@ export default function InvoicesTab() {
             toast.error("Erro ao sincronizar com o Tiny ERP.");
         } finally {
             setIsSyncing(false);
+        }
+    };
+
+    const handleResendToTiny = async () => {
+        setIsResending(true);
+        try {
+            const response = await axios.post("/v1/financial/invoices/resend-to-tiny");
+            const { enviadas, erros, total } = response.data;
+            if (erros === 0) {
+                toast.success(`${enviadas} de ${total} faturas enviadas ao Tiny com sucesso!`);
+            } else {
+                toast.success(`${enviadas} enviadas. ${erros} com erro — verifique o log.`);
+            }
+            refetch();
+        } catch (error) {
+            console.error("Erro ao reenviar:", error);
+            toast.error("Erro ao reenviar faturas ao Tiny ERP.");
+        } finally {
+            setIsResending(false);
         }
     };
 
@@ -276,6 +296,18 @@ export default function InvoicesTab() {
                     >
                         <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
                         {isSyncing ? "Sincronizando..." : "Sincronizar Tiny"}
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleResendToTiny}
+                        disabled={isResending}
+                        className="h-9 border-orange-200 rounded-xl px-4 text-xs font-bold gap-2 hover:bg-orange-50 bg-white text-orange-700"
+                        title="Envia ao Tiny as faturas que ainda não foram registradas lá"
+                    >
+                        <Send size={14} className={isResending ? "animate-pulse" : ""} />
+                        {isResending ? "Reenviando..." : "Reenviar ao Tiny"}
                     </Button>
 
                     {dateRange === "custom" && (
