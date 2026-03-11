@@ -6,21 +6,37 @@
   <meta name="robots" content="noindex, nofollow">
   <link href="https://fonts.googleapis.com/css?family=Poppins:400,600,700&display=swap" rel="stylesheet">
 
-  <!-- 🔧 Script de Auto-Cura (Auto-Reload on Failure/Deploy) -->
+  <!-- 🔧 Script de Auto-Cura v2 (Com proteção contra loops) -->
   <script>
-    window.addEventListener('error', function (e) {
-      var msg = (e.message || "").toLowerCase();
-      var targetNode = e.target || {};
-      var isScriptError = targetNode.tagName === 'SCRIPT' || targetNode.tagName === 'LINK';
+    (function () {
+      var RK = 'ov_reload_count';
+      var count = parseInt(sessionStorage.getItem(RK) || '0');
 
-      // Detecta erro de carregamento (manifest antigo) ou erro de MIME type pós-deploy
-      if (isScriptError || msg.indexOf('type "text/html"') !== -1 || msg.indexOf('loading chunk') !== -1 || msg.indexOf('chunkloaderror') !== -1) {
-        console.warn('⚠️ Erro de carregamento pós-deploy detectado. Recarregando em 1s...');
-        setTimeout(function () {
-          window.location.reload(true);
-        }, 1000);
-      }
-    }, true);
+      window.addEventListener('error', function (e) {
+        var msg = (e.message || "").toLowerCase();
+        var target = e.target || {};
+        var tag = (target.tagName || "").toUpperCase();
+
+        // Só recarrega se for erro de script/link (indicando chunk mismatch ou deploy 404/html)
+        var isScript = tag === 'SCRIPT' || tag === 'LINK';
+        var isDeployErr = msg.indexOf('type "text/html"') !== -1 ||
+          msg.indexOf('chunkloaderror') !== -1 ||
+          msg.indexOf('loading chunk') !== -1;
+
+        if (isScript || isDeployErr) {
+          if (count < 3) {
+            sessionStorage.setItem(RK, (count + 1).toString());
+            console.warn('⚠️ Erro de carregamento (deploy). Recarregando... tentativa: ' + (count + 1));
+            setTimeout(function () { window.location.reload(true); }, 1500);
+          } else {
+            console.error('❌ Falha persistente após 3 tentativas.');
+          }
+        }
+      }, true);
+
+      // Reseta se o app rodar estável por 5s
+      setTimeout(function () { sessionStorage.removeItem(RK); }, 5000);
+    })();
   </script>
 
   <title>Overmelhinho</title>
