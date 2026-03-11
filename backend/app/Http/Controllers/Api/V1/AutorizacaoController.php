@@ -195,7 +195,14 @@ class AutorizacaoController extends Controller
             'status'           => 'aguardando_assinatura',
         ]);
 
-        $link = config('app.frontend_url') . "/autorizar/{$token}";
+        // Fallback inteligente para URL do front
+        $frontendUrl = config('app.frontend_url');
+        $host = $request->header('origin') ?: $request->header('referer') ?: 'localhost';
+        
+        if (str_contains($frontendUrl, 'localhost') && !str_contains($host, 'localhost') && !str_contains($host, '127.0.0.1')) {
+            $frontendUrl = 'https://dash.overmelhinho.com.br';
+        }
+        $link = $frontendUrl . "/autorizar/{$token}";
 
         $phone = $autorizacao->cliente->contatos->firstWhere('principal', true)->celular ?? $autorizacao->cliente->contatos->first()->celular ?? null;
         

@@ -165,8 +165,15 @@ class RenewalController extends Controller
             ]);
         }
 
+        $frontendUrl = config('app.frontend_url');
+        $host = $request->header('origin') ?: $request->header('referer') ?: 'localhost';
+        
+        if (str_contains($frontendUrl, 'localhost') && !str_contains($host, 'localhost') && !str_contains($host, '127.0.0.1')) {
+            $frontendUrl = 'https://dash.overmelhinho.com.br';
+        }
+
         return response()->json([
-            'magic_link' => config('app.frontend_url') . "/renovar/{$renewal->magic_link_token}",
+            'magic_link' => $frontendUrl . "/renovar/{$renewal->magic_link_token}",
             'renewal' => $renewal
         ]);
     }
