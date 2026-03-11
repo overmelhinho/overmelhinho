@@ -194,30 +194,62 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         setForm(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+
+        console.log("[CreateAutorizacaoModal] Iniciando submissão...", { clienteId, form });
+
         if (!clienteId) {
             toast.error("Por favor, selecione um cliente.");
             return;
         }
 
+        if (!form.titulo_anuncio) {
+            toast.error("Por favor, informe o título do anúncio.");
+            return;
+        }
+
+        const valor = parseFloat(form.valor_total);
+        if (isNaN(valor) || valor <= 0) {
+            toast.error("Por favor, informe um valor total válido.");
+            return;
+        }
+
+        // Validação de datas
+        if (new Date(form.data_fim) <= new Date(form.data_inicio)) {
+            toast.error("A data de término deve ser posterior à data de início.");
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            await axios.post("/v1/autorizacoes", {
+            const payload = {
                 ...form,
                 cliente_id: clienteId,
-                num_parcelas: parseInt(form.num_parcelas),
-                valor_total: parseFloat(form.valor_total),
-                taxa_cadastro: parseFloat(form.taxa_cadastro),
-                desconto_valor: parseFloat(form.desconto_valor || "0"),
-                permuta_amount: parseFloat(form.permuta_amount || "0"),
-                is_permuta: form.is_permuta,
-            });
+                num_parcelas: parseInt(form.num_parcelas) || 1,
+                valor_total: valor,
+                taxa_cadastro: parseFloat(form.taxa_cadastro) || 0,
+                desconto_valor: parseFloat(form.desconto_valor || "0") || 0,
+                permuta_amount: parseFloat(form.permuta_amount || "0") || 0,
+                is_permuta: !!form.is_permuta,
+            };
+
+            console.log("[CreateAutorizacaoModal] Enviando payload:", payload);
+            const response = await axios.post("/v1/autorizacoes", payload);
+            console.log("[CreateAutorizacaoModal] Sucesso:", response.data);
+
             toast.success("Autorização criada com sucesso!");
             onSuccess();
         } catch (error: any) {
+            console.error("[CreateAutorizacaoModal] Erro ao salvar:", error);
             const message = error.response?.data?.message || "Erro ao criar autorização.";
             toast.error(message);
+
+            // Se houver erros de validação específicos do Laravel
+            if (error.response?.data?.errors) {
+                const firstError = Object.values(error.response.data.errors)[0] as string[];
+                if (firstError) toast.error(firstError[0]);
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -379,7 +411,6 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                             onChange={handleChange}
                                             placeholder="Ex: Super Banner Home"
                                             className="rounded-xl h-11 border-gray-200 font-bold focus:ring-red-500"
-                                            required
                                         />
                                     </div>
 
@@ -403,7 +434,6 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                                 value={form.data_inicio}
                                                 onChange={handleChange}
                                                 className="rounded-xl h-11 border-gray-200 font-bold focus:ring-red-500"
-                                                required
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -414,7 +444,6 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                                 value={form.data_fim}
                                                 onChange={handleChange}
                                                 className="rounded-xl h-11 border-gray-200 font-bold focus:ring-red-500"
-                                                required
                                             />
                                         </div>
                                     </div>
@@ -441,7 +470,6 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                                     value={form.valor_total}
                                                     onChange={handleChange}
                                                     className="rounded-xl h-11 border-gray-200 pl-10 font-black text-gray-900 focus:ring-red-500"
-                                                    required
                                                 />
                                             </div>
                                         </div>
@@ -576,7 +604,6 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                                 value={form.data_primeira_parcela}
                                                 onChange={handleChange}
                                                 className="rounded-xl h-11 border-gray-200 font-bold focus:ring-red-500"
-                                                required
                                             />
                                         </div>
                                     </div>
@@ -682,8 +709,9 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                             Cancelar e Sair
                         </Button>
                         <Button
-                            type="submit"
+                            type="button"
                             disabled={isSubmitting || !clienteId}
+                            onClick={() => handleSubmit()}
                             className="bg-gray-900 hover:bg-black text-white font-black rounded-xl px-10 h-11 shadow-xl shadow-gray-200 transition-all flex items-center gap-2"
                         >
                             {isSubmitting ? (
