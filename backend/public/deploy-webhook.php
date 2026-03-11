@@ -68,16 +68,16 @@ if (function_exists('fastcgi_finish_request')) {
     fastcgi_finish_request();
 }
 
-// --- Executa o deploy em background ---
-$deployScript = $rootDir . '/deploy-auto.sh';
+// --- Executa o deploy via script existente (com lock file para evitar concorrência) ---
+$deployScript = '/var/www/deploy.sh';
 
 if (!file_exists($deployScript)) {
     logMsg("ERRO: Script de deploy não encontrado em {$deployScript}", $logFile);
     exit(1);
 }
 
-$command = "bash {$deployScript} >> {$logFile} 2>&1 &";
-logMsg("Executando: {$command}", $logFile);
+$command = "sudo bash {$deployScript} >> {$logFile} 2>&1 &";
+logMsg("Executando: sudo bash {$deployScript}", $logFile);
 exec($command);
 
 logMsg('=== WEBHOOK FINALIZADO (Deploy rodando em background) ===', $logFile);

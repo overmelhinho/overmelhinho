@@ -175,11 +175,40 @@ else
   # Verifica se o dist sumiu por algum motivo, se sim, força build
   if [ ! -d "$APP_DIR/frontend/dist" ]; then
     log "⚠️ Pasta dist não encontrada. Forçando build..."
+    frontend_changed=true
+  else
+    # Sanity check: verifica se o JS referenciado no index.html realmente existe
+    DIST_INDEX="$APP_DIR/frontend/dist/index.html"
+    if [ -f "$DIST_INDEX" ]; then
+      JS_REF=$(grep -oP 'src="/assets/\K[^"]+' "$DIST_INDEX" | head -1)
+      if [ -n "$JS_REF" ] && [ ! -f "$APP_DIR/frontend/dist/assets/$JS_REF" ]; then
+        log "⚠️ SANITY CHECK FALHOU: dist/index.html referencia '$JS_REF' que NÃO EXISTE em dist/assets/. Forçando rebuild!"
+        frontend_changed=true
+      fi
+    fi
+  fi
+
+  if $frontend_changed; then
+    log "== FRONTEND DEPLOY (forçado pela sanity check) =="
     cd "$APP_DIR/frontend"
     command -v nvm >/dev/null && nvm use 18.20.8
-    npm run build
+    npm ci
+    rm -rf dist_new
+    npm run build -- --outDir dist_new
+    if [ -d "dist_new" ]; then
+      rm -rf dist_old
+      [ -d "dist" ] && mv dist dist_old
+      mv dist_new dist
+      rm -rf dist_old
+      chown -R www-data:www-data "$APP_DIR/frontend/dist" || true
+      chmod -R a+rX "$APP_DIR/frontend/dist" || true
+      log "✓ Frontend reconstruído com sucesso."
+    else
+      fail "Build falhou: pasta dist_new não foi criada."
+    fi
+  else
+    log "Frontend sem mudanças — pulando."
   fi
-  log "Frontend sem mudanças — pulando."
 fi
 
 # SITE (Next.js)
