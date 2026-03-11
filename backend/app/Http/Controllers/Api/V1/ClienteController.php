@@ -769,7 +769,7 @@ public function historico(Request $request, int $id)
                             'rating' => (int)($rev['rating'] ?? 5),
                             'text' => $rev['text'] ?? '',
                             'relative_time_description' => (isset($rev['time']) && is_numeric($rev['time'])) 
-                                ? date('Y-m-d H:i:s', (int)$rev['time']) 
+                                ? date('c', (int)$rev['time']) 
                                 : ($rev['relative_time_description'] ?? null),
                         ]
                     );
@@ -1139,7 +1139,7 @@ public function historico(Request $request, int $id)
                             'rating' => (int)($rev['rating'] ?? 5),
                             'text' => $rev['text'] ?? '',
                             'relative_time_description' => (isset($rev['time']) && is_numeric($rev['time'])) 
-                                ? date('Y-m-d H:i:s', (int)$rev['time']) 
+                                ? date('c', (int)$rev['time']) 
                                 : ($rev['relative_time_description'] ?? null),
                         ]
                     );
