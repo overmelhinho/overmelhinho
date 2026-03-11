@@ -839,6 +839,23 @@ public function historico(Request $request, int $id)
             $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas'])
                 ->findOrFail($id);
 
+            // AUTO-HEALING SCHEMA (Garante que Supabase esteja em dia)
+            try {
+                if (!Schema::hasColumn('cliente_reviews', 'google_review_id')) {
+                    DB::statement("ALTER TABLE cliente_reviews ADD COLUMN google_review_id VARCHAR(255) UNIQUE NULL");
+                }
+                if (!Schema::hasColumn('cliente_reviews', 'is_visible')) {
+                    DB::statement("ALTER TABLE cliente_reviews ADD COLUMN is_visible BOOLEAN DEFAULT TRUE");
+                }
+                if (!Schema::hasColumn('clientes', 'horario_atendimento')) {
+                    DB::statement("ALTER TABLE clientes ADD COLUMN horario_atendimento JSONB NULL");
+                }
+                if (!Schema::hasColumn('clientes', 'beneficios')) {
+                    DB::statement("ALTER TABLE clientes ADD COLUMN beneficios JSONB NULL");
+                }
+            } catch (\Exception $e) {
+                Log::warning("Auto-healing schema warning: " . $e->getMessage());
+            }
 
             $cpfCnpjRaw = (string) ($request->input('cpf_cnpj') ?? $request->input('cnpj') ?? $request->input('cpfCnpj') ?? '');
             $cpfCnpjNormalized = preg_replace('/\D+/', '', $cpfCnpjRaw) ?? '';
@@ -1140,24 +1157,22 @@ public function historico(Request $request, int $id)
                 $sentIds = [];
                 if (is_array($reviewsInput)) {
                     foreach ($reviewsInput as $rev) {
-                        // Gera um ID robusto: google_id real ou (cliente_time_nome) para unicidade global
+                        // Gera um ID robusto compatível com o frontend
                         $rid = $rev['google_review_id'] ?? null;
                         if (!$rid && isset($rev['time'])) {
-                            $rid = $cliente->id . '_' . $rev['time'] . '_' . Str::slug($rev['author_name'] ?? 'anon');
+                            $slug = preg_replace('/[^a-z0-9]+/', '', strtolower($rev['author_name'] ?? 'anon'));
+                            $rid = $cliente->id . '_' . $rev['time'] . '_' . $slug;
                         }
                         
                         if (!$rid) continue;
                         $sentIds[] = (string) $rid;
 
-                        // Tenta converter a data
+                        // Tenta converter a data de forma segura
                         $dateVal = null;
                         if (isset($rev['time']) && is_numeric($rev['time'])) {
                             $dateVal = date('Y-m-d H:i:s', (int)$rev['time']);
-                        } elseif (isset($rev['relative_time_description'])) {
-                            // Se for uma data formatada em ISO, o Eloquent aceita.
-                            // Se for "há 2 meses", ignoramos para não dar erro de SQL (manterá o antigo ou null)
-                            $isDate = strtotime((string)$rev['relative_time_description']);
-                            if ($isDate) $dateVal = date('Y-m-d H:i:s', $isDate);
+                        } elseif (isset($rev['relative_time_description']) && strtotime((string)$rev['relative_time_description'])) {
+                            $dateVal = date('Y-m-d H:i:s', strtotime((string)$rev['relative_time_description']));
                         }
 
                         ClienteReview::updateOrCreate(
@@ -1173,7 +1188,7 @@ public function historico(Request $request, int $id)
                     }
                 }
                 
-                // Sync: Deleta os reviews que tinham ID e NÃO vieram na request para este cliente
+                // Sync: Deleta os reviews desmarcados
                 $cliente->reviews()
                     ->whereNotNull('google_review_id')
                     ->whereNotIn('google_review_id', $sentIds)

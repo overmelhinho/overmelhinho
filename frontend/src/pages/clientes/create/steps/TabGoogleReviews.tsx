@@ -14,20 +14,27 @@ export default function TabGoogleReviews() {
     const placeId = values.google_place_id;
     const isCreateMode = !values.id;
 
-    // Ao carregar, se já houver reviews selecionados no formik, pré-seleciona
+    const getReviewId = (r: any) => {
+        if (r.google_review_id) return String(r.google_review_id);
+        const author = r.author_name || "anon";
+        const time = r.time || "0";
+        const slug = author.toLowerCase().replace(/[^a-z0-9]+/g, '');
+        return `${values.id || 'new'}_${time}_${slug}`;
+    };
+
+    // Sincroniza seleção visual com os dados do Formik
     useEffect(() => {
         const currentReviews = values.reviews || [];
-        if (Array.isArray(currentReviews) && currentReviews.length > 0) {
+        if (Array.isArray(currentReviews)) {
             const ids = new Set<string>();
             currentReviews.forEach((r: any) => {
-                // Tenta pegar o ID real ou o sintético (deve bater com o backend)
-                const rid = r.google_review_id || (r.time && r.author_name ? `${values.id}_${r.time}_${r.author_name.toLowerCase().replace(/\s+/g, '-')}` : null);
+                const rid = getReviewId(r);
                 if (rid) ids.add(rid);
             });
             setSelectedIds(ids);
 
-            // Garantia: Se o formik tem dados salvos mas a tela está vazia, força a exibição
-            if (reviews.length === 0) {
+            // Se o Formik tem dados e a tela está vazia (ex: ao voltar na aba), mostra os salvos
+            if (reviews.length === 0 && currentReviews.length > 0) {
                 setReviews([...currentReviews]);
             }
         }
@@ -86,36 +93,24 @@ export default function TabGoogleReviews() {
         }
     };
 
-    const getReviewId = (r: any) => {
-        if (r.google_review_id) return String(r.google_review_id);
-        if (r.time && r.author_name) {
-            return `${values.id}_${r.time}_${r.author_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-        }
-        return null;
-    };
-
     const toggleSelection = (r: any) => {
         const id = getReviewId(r);
         if (!id) return;
 
         const next = new Set(selectedIds);
-        let currentList = values.reviews || [];
+        let currentList = [...(values.reviews || [])];
 
         if (next.has(id)) {
             next.delete(id);
             currentList = currentList.filter((x: any) => getReviewId(x) !== id);
         } else {
             next.add(id);
-            // Garante que o objeto tenha o google_review_id antes de ir pro Formik
-            const reviewToAdd = {
+            currentList.push({
                 ...r,
                 google_review_id: id,
                 author_photo_url: r.author_photo_url || r.profile_photo_url || null
-            };
-            currentList = [...currentList, reviewToAdd];
+            });
         }
-
-        setSelectedIds(next);
         setFieldValue("reviews", currentList);
     };
 
@@ -145,9 +140,6 @@ export default function TabGoogleReviews() {
                             <Search className={`w-4 h-4 ${lookingUp ? "animate-spin" : ""}`} />
                         </button>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                        Necessário para puxar as avaliações automaticamente.
-                    </p>
                 </div>
 
                 <button
@@ -174,9 +166,6 @@ export default function TabGoogleReviews() {
                 <div className="p-10 border-2 border-dashed rounded-xl text-center space-y-3">
                     <AlertCircle className="w-10 h-10 text-gray-400 mx-auto" />
                     <p className="text-gray-600 font-medium">Place ID não configurado.</p>
-                    <p className="text-xs text-gray-400">
-                        Use a busca acima ou configure na aba Identificação.
-                    </p>
                 </div>
             )}
 
@@ -189,7 +178,7 @@ export default function TabGoogleReviews() {
             {reviews.length > 0 && (
                 <div className="grid grid-cols-1 gap-4">
                     {reviews.map((r, idx) => {
-                        const id = getReviewId(r) || `rev_${idx}`;
+                        const id = getReviewId(r);
                         const isSelected = selectedIds.has(id);
                         const photoUrl = r.author_photo_url || r.profile_photo_url || "";
 
