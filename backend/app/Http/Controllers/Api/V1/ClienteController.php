@@ -765,13 +765,15 @@ public function historico(Request $request, int $id)
                         [
                             'author_name' => $rev['author_name'] ?? 'Anônimo',
                             'author_photo_url' => $rev['author_photo_url'] ?? ($rev['profile_photo_url'] ?? null),
-                            'rating' => $rev['rating'] ?? 5,
+                            'rating' => (int)($rev['rating'] ?? 5),
                             'text' => $rev['text'] ?? '',
-                            'relative_time_description' => isset($rev['time']) ? date('Y-m-d H:i:s', $rev['time']) : ($rev['relative_time_description'] ?? null),
+                            'relative_time_description' => (isset($rev['time']) && is_numeric($rev['time'])) 
+                                ? date('Y-m-d H:i:s', (int)$rev['time']) 
+                                : ($rev['relative_time_description'] ?? null),
                         ]
                     );
                 }
-                $cliente->reviews()->whereNotIn('google_review_id', $sentIds)->delete();
+                $cliente->reviews()->whereNotNull('google_review_id')->whereNotIn('google_review_id', $sentIds)->delete();
             }
 
             DB::commit();
@@ -1129,13 +1131,15 @@ public function historico(Request $request, int $id)
                         [
                             'author_name' => $rev['author_name'] ?? 'Anônimo',
                             'author_photo_url' => $rev['author_photo_url'] ?? ($rev['profile_photo_url'] ?? null),
-                            'rating' => $rev['rating'] ?? 5,
+                            'rating' => (int)($rev['rating'] ?? 5),
                             'text' => $rev['text'] ?? '',
-                            'relative_time_description' => isset($rev['time']) ? date('Y-m-d H:i:s', $rev['time']) : ($rev['relative_time_description'] ?? null),
+                            'relative_time_description' => (isset($rev['time']) && is_numeric($rev['time'])) 
+                                ? date('Y-m-d H:i:s', (int)$rev['time']) 
+                                : ($rev['relative_time_description'] ?? null),
                         ]
                     );
                 }
-                $cliente->reviews()->whereNotIn('google_review_id', $sentIds)->delete();
+                $cliente->reviews()->whereNotNull('google_review_id')->whereNotIn('google_review_id', $sentIds)->delete();
             }
 
             DB::commit();
