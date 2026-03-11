@@ -71,6 +71,23 @@ Route::prefix('v1/autorizar')->group(function () {
 Route::post('/v1/webhooks/tiny', [\App\Http\Controllers\Api\V1\FinancialController::class , 'handleWebhook']);
 
 Route::get('/v1/teste-segmento', fn() => response()->json(['msg' => 'rota simples ok']));
+Route::get('/v1/debug-deploy', function () {
+    $frontendDir = __DIR__ . '/../../frontend/dist';
+    $files = [];
+    if (file_exists($frontendDir)) {
+        exec("ls -la " . escapeshellarg($frontendDir) . " 2>&1", $out);
+        $files['dist'] = $out;
+    }
+    if (file_exists($frontendDir . '/assets')) {
+        exec("ls -la " . escapeshellarg($frontendDir . '/assets') . " 2>&1", $out2);
+        $files['assets'] = $out2;
+    }
+    
+    // Check VPS memory
+    exec("free -m 2>&1", $mem);
+    
+    return ['msg' => 'ok', 'files' => $files, 'mem' => $mem];
+});
 Route::get('/v1/segmentos', [SegmentoController::class , 'index']);
 Route::get('/v1/cidades', [CidadeController::class , 'index']);
 
