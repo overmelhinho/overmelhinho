@@ -752,14 +752,15 @@ public function historico(Request $request, int $id)
                 }
             }
 
-            // Salva reviews do Google
-            if (array_key_exists('reviews', $validated) && is_array($validated['reviews'])) {
+            // Salva reviews do Google (somente se enviado na request)
+            if ($request->has('reviews') && is_array($request->input('reviews'))) {
+                $reviewsInput = $request->input('reviews');
                 $sentIds = [];
-                foreach ($validated['reviews'] as $rev) {
+                foreach ($reviewsInput as $rev) {
                     $rid = $rev['google_review_id'] ?? (($rev['time'] ?? '') . '_' . ($rev['author_name'] ?? ''));
                     if ($rid === '_') continue;
 
-                    $sentIds[] = $rid;
+                    $sentIds[] = (string) $rid;
                     ClienteReview::updateOrCreate(
                         ['google_review_id' => $rid, 'cliente_id' => $cliente->id],
                         [
@@ -773,7 +774,6 @@ public function historico(Request $request, int $id)
                         ]
                     );
                 }
-                $cliente->reviews()->whereNotNull('google_review_id')->whereNotIn('google_review_id', $sentIds)->delete();
             }
 
             DB::commit();
@@ -1041,8 +1041,12 @@ public function historico(Request $request, int $id)
                 $clienteData['data_fundacao'] = $validated['data_fundacao'] ?? null;
             }
 
-            if (Schema::hasColumn('clientes', 'google_place_id')) {
-                $clienteData['google_place_id'] = $validated['google_place_id'] ?? null;
+            if ($request->has('horario_atendimento')) {
+                $clienteData['horario_atendimento'] = $request->input('horario_atendimento');
+            }
+
+            if ($request->has('google_place_id')) {
+                $clienteData['google_place_id'] = $request->input('google_place_id');
             }
 
             $cliente->update($clienteData);
@@ -1118,14 +1122,15 @@ public function historico(Request $request, int $id)
                 }
             }
 
-            // Salva reviews do Google
-            if (array_key_exists('reviews', $validated) && is_array($validated['reviews'])) {
+            // Salva reviews do Google (somente se vier na request)
+            if ($request->has('reviews') && is_array($request->input('reviews'))) {
+                $reviewsInput = $request->input('reviews');
                 $sentIds = [];
-                foreach ($validated['reviews'] as $rev) {
+                foreach ($reviewsInput as $rev) {
                     $rid = $rev['google_review_id'] ?? (($rev['time'] ?? '') . '_' . ($rev['author_name'] ?? ''));
                     if ($rid === '_') continue;
 
-                    $sentIds[] = $rid;
+                    $sentIds[] = (string) $rid;
                     ClienteReview::updateOrCreate(
                         ['google_review_id' => $rid, 'cliente_id' => $cliente->id],
                         [
@@ -1139,6 +1144,7 @@ public function historico(Request $request, int $id)
                         ]
                     );
                 }
+                // Sync: deleta os que não vieram (somente se reviews foi enviado como array)
                 $cliente->reviews()->whereNotNull('google_review_id')->whereNotIn('google_review_id', $sentIds)->delete();
             }
 

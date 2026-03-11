@@ -231,7 +231,7 @@ export default function ClienteEdit() {
         : [],
 
       beneficios: Array.isArray(c?.beneficios) ? c.beneficios : [],
-      horario_atendimento: c?.horario_atendimento || "",
+      horario_atendimento: Array.isArray(c?.horario_atendimento) ? c.horario_atendimento : [],
       data_fundacao: c?.data_fundacao ? c.data_fundacao.split("T")[0] : "",
       google_place_id: c?.google_place_id || "",
 
@@ -266,8 +266,8 @@ export default function ClienteEdit() {
       // google reviews
       reviews: Array.isArray(c?.reviews) ? c.reviews.map((r: any) => ({
         ...r,
-        time: r.google_review_id ? parseInt(r.google_review_id.split('_')[0]) : 0,
-        profile_photo_url: r.author_photo_url || ""
+        google_review_id: r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : null),
+        profile_photo_url: r.author_photo_url || r.profile_photo_url || ""
       })) : [],
     };
   }, [data]);
