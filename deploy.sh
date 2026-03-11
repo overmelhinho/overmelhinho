@@ -180,9 +180,20 @@ else
     # Sanity check: verifica se o JS referenciado no index.html realmente existe
     DIST_INDEX="$APP_DIR/frontend/dist/index.html"
     if [ -f "$DIST_INDEX" ]; then
-      JS_REF=$(grep -oP 'src="/assets/\K[^"]+' "$DIST_INDEX" | head -1)
-      if [ -n "$JS_REF" ] && [ ! -f "$APP_DIR/frontend/dist/assets/$JS_REF" ]; then
-        log "⚠️ SANITY CHECK FALHOU: dist/index.html referencia '$JS_REF' que NÃO EXISTE em dist/assets/. Forçando rebuild!"
+      # Tenta extrair o nome do arquivo JS principal (ex: index-XXXX.js)
+      JS_REF=$(grep -oE 'index-[a-zA-Z0-9_-]+\.js' "$DIST_INDEX" | head -1 || echo "")
+      
+      log "🔍 Verificando integridade: index.html aponta para '$JS_REF'..."
+      
+      if [ -n "$JS_REF" ]; then
+        if [ ! -f "$APP_DIR/frontend/dist/assets/$JS_REF" ]; then
+          log "⚠️ INTEGRIDADE FALHOU: O arquivo '$JS_REF' não existe em dist/assets/. Forçando rebuild!"
+          frontend_changed=true
+        else
+          log "✅ Integridade do frontend OK."
+        fi
+      else
+        log "⚠️ Aviso: Não foi possível encontrar referência de JS no index.html. Forçando build por segurança."
         frontend_changed=true
       fi
     fi
