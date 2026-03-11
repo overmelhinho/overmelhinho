@@ -236,7 +236,7 @@ export default function ClienteEdit() {
       google_place_id: c?.google_place_id || "",
 
       // uploads
-      logotipo: c?.logo_url || c?.logotipo || null,
+      logotipo: c?.logotipo_url || c?.logo_url || c?.logotipo || null,
       logotipo_path: null,
       logotipo_mime: null,
 

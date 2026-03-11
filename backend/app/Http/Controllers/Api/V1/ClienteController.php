@@ -1258,7 +1258,8 @@ public function historico(Request $request, int $id)
             ])->post($copyUrl, $copyPayload);
 
             if ($copyResp->failed()) {
-                if ($copyResp->status() === 409) {
+                $copyData = $copyResp->json();
+                if ($copyResp->status() === 409 || ($copyResp->status() === 400 && ($copyData['statusCode'] ?? '') == '409')) {
                     $delDestUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
                     Http::withHeaders([
                         'apikey' => $supabaseKey,
@@ -1398,7 +1399,8 @@ $this->audit(
             ])->post($copyUrl, $copyPayload);
 
             if ($copyResp->failed()) {
-                if ($copyResp->status() === 409) {
+                $copyData = $copyResp->json();
+                if ($copyResp->status() === 409 || ($copyResp->status() === 400 && ($copyData['statusCode'] ?? '') == '409')) {
                     $delDestUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
                     Http::withHeaders([
                         'apikey' => $supabaseKey,
