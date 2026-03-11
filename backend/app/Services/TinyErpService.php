@@ -61,15 +61,14 @@ class TinyErpService
             ]);
 
             if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
+                $erroMsg = $json['retorno']['erros'][0]['erro'] ?? 'Erro desconhecido';
                 Log::error("Erro ao sincronizar contato no Tiny", [
-                    'method' => $method,
-                    'response' => $json,
-                    'client_id' => $client->id
+                    'client_id' => $client->id,
+                    'erro' => $erroMsg
                 ]);
-                return $client->tiny_id;
+                throw new \Exception($erroMsg);
             }
 
-            // No incluir, retornará o ID no registros[0]. No alterar pode vir ID ou vazio (se não houve mudança)
             $tinyId = $json['retorno']['registros'][0]['registro']['id'] ?? $client->tiny_id;
 
             if ($tinyId && !$client->tiny_id) {
@@ -77,11 +76,10 @@ class TinyErpService
             }
 
             return (string)$tinyId;
-
         }
         catch (\Exception $e) {
             Log::error('Exceção ao sincronizar cliente Tiny: ' . $e->getMessage());
-            return $client->tiny_id;
+            throw $e;
         }
     }
 
@@ -92,9 +90,14 @@ class TinyErpService
     public function createReceivable(Invoice $invoice, float $amountOverride = null): array
     {
         // Sempre tenta sincronizar/atualizar o cliente antes de criar a conta
-        $tinyId = $this->syncClient($invoice->client);
+        try {
+            $tinyId = $this->syncClient($invoice->client);
+        } catch (\Exception $e) {
+            throw new \Exception("Erro ao sincronizar cliente no Tiny: " . $e->getMessage());
+        }
+
         if (!$tinyId) {
-            throw new \Exception("Não foi possível sincronizar o cliente nº {$invoice->client->id} com o Tiny.");
+            throw new \Exception("Não foi possível obter o ID do cliente no Tiny.");
         }
 
         $valorCobrado = $amountOverride !== null 
