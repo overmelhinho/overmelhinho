@@ -62,6 +62,9 @@ return [
         'token' => env('ZAPI_TOKEN'),
         'client_id' => env('ZAPI_CLIENT_ID'),
     ],
-
+    
+    'tiny' => [
+        'token' => env('TINY_ERP_TOKEN', env('TINY_ERP')),
+    ],
 
 ];
