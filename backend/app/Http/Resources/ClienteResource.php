@@ -59,6 +59,9 @@ class ClienteResource extends JsonResource
             'reviews' => ClienteReviewResource::collection($this->whenLoaded('reviews')),
             'job_opportunities' => $this->whenLoaded('jobOpportunities'),
 
+            'video' => $this->video,
+            'portfolio_url' => $this->portfolio_url,
+
             'google_place_id' => $this->google_place_id,
             'data_fundacao' => $this->data_fundacao ? (is_string($this->data_fundacao) ? $this->data_fundacao : $this->data_fundacao->format('Y-m-d')) : null,
             'google_rating' => $this->reviews_count ? round(5.0, 1) : null, // Mocking rating for now if not in DB
