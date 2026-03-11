@@ -1,27 +1,36 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="robots" content="noindex, nofollow">
-    <link href="https://fonts.googleapis.com/css?family=Poppins:400,600,700&display=swap" rel="stylesheet">
 
-    <title>Overmelhinho</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex, nofollow">
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600,700&display=swap" rel="stylesheet">
 
-    <!-- 🔧 Script de Auto-Cura (Auto-Reload on Failure/Deploy) -->
-    <script>
-      window.addEventListener('error', function(e) {
-        // Detecta erro de carregamento nos módulos (o erro do print)
-        if (e.target.tagName === 'SCRIPT' || e.message && (e.message.indexOf('type "text/html"') !== -1 || e.message.indexOf('ChunkLoadError') !== -1)) {
-          console.warn('⚠️ Erro de carregamento detectado após deploy. Recarregando pagina...');
-          window.location.reload(true); // Força recarregamento sem cache
-        }
-      }, true);
-    </script>
-    <div style="display:none">Build: 2026-03-11 14:00</div>
-  </body>
+  <!-- 🔧 Script de Auto-Cura (Auto-Reload on Failure/Deploy) -->
+  <script>
+    window.addEventListener('error', function (e) {
+      var msg = (e.message || "").toLowerCase();
+      var targetNode = e.target || {};
+      var isScriptError = targetNode.tagName === 'SCRIPT' || targetNode.tagName === 'LINK';
+
+      // Detecta erro de carregamento (manifest antigo) ou erro de MIME type pós-deploy
+      if (isScriptError || msg.indexOf('type "text/html"') !== -1 || msg.indexOf('loading chunk') !== -1 || msg.indexOf('chunkloaderror') !== -1) {
+        console.warn('⚠️ Erro de carregamento pós-deploy detectado. Recarregando em 1s...');
+        setTimeout(function () {
+          window.location.reload(true);
+        }, 1000);
+      }
+    }, true);
+  </script>
+
+  <title>Overmelhinho</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+  <div style="display:none">Build: 2026-03-11 14:30</div>
+</body>
+
 </html>

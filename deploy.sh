@@ -152,14 +152,33 @@ if $frontend_changed; then
   command -v nvm >/dev/null && nvm use 18.20.8
   npm ci
 
-  log "npm run build..."
-  npm run build
+  log "npm run build (atômico)..."
+  # Build em pasta temporária para evitar tela branca durante o processo
+  rm -rf dist_new
+  npm run build -- --outDir dist_new
+
+  if [ -d "dist_new" ]; then
+    log "Swap de pastas dist..."
+    rm -rf dist_old
+    [ -d "dist" ] && mv dist dist_old
+    mv dist_new dist
+    rm -rf dist_old
+  else
+    fail "Build falhou: pasta dist_new não foi criada."
+  fi
 
   # garantir que o dist pode ser lido pelo Nginx
   log "ajustando permissões do dist..."
-  chown -R root:root "$APP_DIR/frontend/dist" || true
+  chown -R www-data:www-data "$APP_DIR/frontend/dist" || true
   chmod -R a+rX "$APP_DIR/frontend/dist" || true
 else
+  # Verifica se o dist sumiu por algum motivo, se sim, força build
+  if [ ! -d "$APP_DIR/frontend/dist" ]; then
+    log "⚠️ Pasta dist não encontrada. Forçando build..."
+    cd "$APP_DIR/frontend"
+    command -v nvm >/dev/null && nvm use 18.20.8
+    npm run build
+  fi
   log "Frontend sem mudanças — pulando."
 fi
 
