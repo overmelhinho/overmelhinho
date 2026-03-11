@@ -1258,7 +1258,24 @@ public function historico(Request $request, int $id)
             ])->post($copyUrl, $copyPayload);
 
             if ($copyResp->failed()) {
-                throw new \Exception("COPY failed {$copyResp->status()}: " . $copyResp->body());
+                if ($copyResp->status() === 409) {
+                    $delDestUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
+                    Http::withHeaders([
+                        'apikey' => $supabaseKey,
+                        'Authorization' => "Bearer {$supabaseKey}",
+                        'Content-Type' => 'application/json',
+                    ])->delete($delDestUrl, ['prefixes' => [$destPath]]);
+
+                    $copyResp = Http::withHeaders([
+                        'apikey' => $supabaseKey,
+                        'Authorization' => "Bearer {$supabaseKey}",
+                        'Content-Type' => 'application/json',
+                    ])->post($copyUrl, $copyPayload);
+                }
+
+                if ($copyResp->failed()) {
+                    throw new \Exception("COPY failed {$copyResp->status()}: " . $copyResp->body());
+                }
             }
 
             // DELETE temp
@@ -1381,7 +1398,24 @@ $this->audit(
             ])->post($copyUrl, $copyPayload);
 
             if ($copyResp->failed()) {
-                throw new \Exception("COPY failed {$copyResp->status()}: " . $copyResp->body());
+                if ($copyResp->status() === 409) {
+                    $delDestUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
+                    Http::withHeaders([
+                        'apikey' => $supabaseKey,
+                        'Authorization' => "Bearer {$supabaseKey}",
+                        'Content-Type' => 'application/json',
+                    ])->delete($delDestUrl, ['prefixes' => [$destPath]]);
+
+                    $copyResp = Http::withHeaders([
+                        'apikey' => $supabaseKey,
+                        'Authorization' => "Bearer {$supabaseKey}",
+                        'Content-Type' => 'application/json',
+                    ])->post($copyUrl, $copyPayload);
+                }
+
+                if ($copyResp->failed()) {
+                    throw new \Exception("COPY failed {$copyResp->status()}: " . $copyResp->body());
+                }
             }
 
             // DELETE temp
