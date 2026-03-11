@@ -517,6 +517,7 @@ export default function ClienteCreateFromLead() {
                     values.generate_seo_keywords === false ? values.seo_keywords_text : undefined,
                   data_fundacao: values.data_fundacao || null,
                   google_place_id: values.google_place_id || null,
+                  horario_atendimento: values.horario_atendimento || [],
                   reviews: values.selected_reviews || [],
                 };
 

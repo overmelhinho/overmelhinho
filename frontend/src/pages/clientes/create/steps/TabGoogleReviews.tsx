@@ -90,21 +90,28 @@ export default function TabGoogleReviews() {
         if (!id) return;
 
         const next = new Set(selectedIds);
-        let updatedReviews = values.reviews || (Array.isArray(values.selected_reviews) ? values.selected_reviews : []);
+        let currentList = values.reviews || (Array.isArray(values.selected_reviews) ? values.selected_reviews : []);
 
         if (next.has(id)) {
             next.delete(id);
-            updatedReviews = updatedReviews.filter((x: any) => {
+            currentList = currentList.filter((x: any) => {
                 const rid = x.google_review_id || (x.time && x.author_name ? `${x.time}_${x.author_name}` : null);
                 return rid !== id;
             });
         } else {
             next.add(id);
-            updatedReviews = [...updatedReviews, r];
+            // Garante que o objeto tenha o google_review_id antes de ir pro Formik
+            const reviewToAdd = {
+                ...r,
+                google_review_id: id,
+                // Normaliza campos de foto se vier do Google direto
+                author_photo_url: r.author_photo_url || r.profile_photo_url || null
+            };
+            currentList = [...currentList, reviewToAdd];
         }
 
         setSelectedIds(next);
-        setFieldValue(isCreateMode ? "selected_reviews" : "reviews", updatedReviews);
+        setFieldValue(isCreateMode ? "selected_reviews" : "reviews", currentList);
     };
 
     return (
@@ -176,9 +183,11 @@ export default function TabGoogleReviews() {
 
             {reviews.length > 0 && (
                 <div className="grid grid-cols-1 gap-4">
-                    {reviews.map((r) => {
-                        const id = `${r.time}_${r.author_name}`;
+                    {reviews.map((r, idx) => {
+                        const id = r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : `rev_${idx}_${r.author_name}`);
                         const isSelected = selectedIds.has(id);
+                        const photoUrl = r.author_photo_url || r.profile_photo_url || "";
+
                         return (
                             <div
                                 key={id}
@@ -187,11 +196,17 @@ export default function TabGoogleReviews() {
                                     }`}
                             >
                                 <div className="relative flex-shrink-0">
-                                    <img
-                                        src={r.profile_photo_url}
-                                        alt={r.author_name}
-                                        className="w-12 h-12 rounded-full border shadow-sm"
-                                    />
+                                    {photoUrl ? (
+                                        <img
+                                            src={photoUrl}
+                                            alt={r.author_name}
+                                            className="w-12 h-12 rounded-full border shadow-sm object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full border bg-gray-100 flex items-center justify-center text-gray-400 font-bold">
+                                            {r.author_name?.charAt(0)}
+                                        </div>
+                                    )}
                                     {isSelected && (
                                         <CheckCircle2 className="w-5 h-5 text-green-600 absolute -top-1 -right-1 bg-white rounded-full" />
                                     )}

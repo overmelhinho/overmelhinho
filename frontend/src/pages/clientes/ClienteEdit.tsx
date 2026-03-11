@@ -394,6 +394,7 @@ export default function ClienteEdit() {
 
               data_fundacao: values.data_fundacao || null,
               google_place_id: values.google_place_id || null,
+              horario_atendimento: values.horario_atendimento || [],
               reviews: values.reviews || [],
             };
 
