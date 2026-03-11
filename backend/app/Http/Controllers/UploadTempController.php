@@ -16,9 +16,9 @@ class UploadTempController extends Controller
             'files.*' => 'file|max:10240|mimes:jpg,jpeg,png,webp,pdf',
         ]);
 
-        $supabaseUrl = rtrim(env('SUPABASE_URL'), '/');
-        $supabaseKey = env('SUPABASE_KEY'); // ⚠️ ideal: SERVICE_ROLE no backend
-        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+        $supabaseUrl = rtrim(config('services.supabase.url', ''), '/');
+        $supabaseKey = config('services.supabase.key'); // SERVICE_ROLE key
+        $bucket = config('services.supabase.bucket', 'clientes-media');
         $userId = auth()->id() ?? 'guest';
 
         $results = [];
