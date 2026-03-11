@@ -16,21 +16,22 @@ export default function TabGoogleReviews() {
 
     // Ao carregar, se já houver reviews selecionados no formik, pré-seleciona
     useEffect(() => {
-        const currentReviews = values.reviews || (Array.isArray(values.selected_reviews) ? values.selected_reviews : []);
+        const currentReviews = values.reviews || [];
         if (Array.isArray(currentReviews) && currentReviews.length > 0) {
             const ids = new Set<string>();
             currentReviews.forEach((r: any) => {
-                const rid = r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : null);
+                // Tenta pegar o ID real ou o sintético (deve bater com o backend)
+                const rid = r.google_review_id || (r.time && r.author_name ? `${values.id}_${r.time}_${r.author_name.toLowerCase().replace(/\s+/g, '-')}` : null);
                 if (rid) ids.add(rid);
             });
             setSelectedIds(ids);
 
-            // Se já tem reviews salvos mas a lista local está vazia, mostra os salvos
+            // Garantia: Se o formik tem dados salvos mas a tela está vazia, força a exibição
             if (reviews.length === 0) {
-                setReviews(currentReviews);
+                setReviews([...currentReviews]);
             }
         }
-    }, [values.reviews, values.selected_reviews]);
+    }, [values.reviews, values.id]);
 
     const handleLookup = async () => {
         if (!values.nome_fantasia || !values.cidade) {
@@ -85,33 +86,37 @@ export default function TabGoogleReviews() {
         }
     };
 
+    const getReviewId = (r: any) => {
+        if (r.google_review_id) return String(r.google_review_id);
+        if (r.time && r.author_name) {
+            return `${values.id}_${r.time}_${r.author_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+        }
+        return null;
+    };
+
     const toggleSelection = (r: any) => {
-        const id = r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : null);
+        const id = getReviewId(r);
         if (!id) return;
 
         const next = new Set(selectedIds);
-        let currentList = values.reviews || (Array.isArray(values.selected_reviews) ? values.selected_reviews : []);
+        let currentList = values.reviews || [];
 
         if (next.has(id)) {
             next.delete(id);
-            currentList = currentList.filter((x: any) => {
-                const rid = x.google_review_id || (x.time && x.author_name ? `${x.time}_${x.author_name}` : null);
-                return rid !== id;
-            });
+            currentList = currentList.filter((x: any) => getReviewId(x) !== id);
         } else {
             next.add(id);
             // Garante que o objeto tenha o google_review_id antes de ir pro Formik
             const reviewToAdd = {
                 ...r,
                 google_review_id: id,
-                // Normaliza campos de foto se vier do Google direto
                 author_photo_url: r.author_photo_url || r.profile_photo_url || null
             };
             currentList = [...currentList, reviewToAdd];
         }
 
         setSelectedIds(next);
-        setFieldValue(isCreateMode ? "selected_reviews" : "reviews", currentList);
+        setFieldValue("reviews", currentList);
     };
 
     return (
@@ -184,7 +189,7 @@ export default function TabGoogleReviews() {
             {reviews.length > 0 && (
                 <div className="grid grid-cols-1 gap-4">
                     {reviews.map((r, idx) => {
-                        const id = r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : `rev_${idx}_${r.author_name}`);
+                        const id = getReviewId(r) || `rev_${idx}`;
                         const isSelected = selectedIds.has(id);
                         const photoUrl = r.author_photo_url || r.profile_photo_url || "";
 

@@ -753,26 +753,38 @@ public function historico(Request $request, int $id)
             }
 
             // Salva reviews do Google (somente se enviado na request)
-            if ($request->has('reviews') && is_array($request->input('reviews'))) {
+            if ($request->has('reviews')) {
                 $reviewsInput = $request->input('reviews');
                 $sentIds = [];
-                foreach ($reviewsInput as $rev) {
-                    $rid = $rev['google_review_id'] ?? (($rev['time'] ?? '') . '_' . ($rev['author_name'] ?? ''));
-                    if ($rid === '_') continue;
+                if (is_array($reviewsInput)) {
+                    foreach ($reviewsInput as $rev) {
+                        $rid = $rev['google_review_id'] ?? null;
+                        if (!$rid && isset($rev['time'])) {
+                            $rid = $cliente->id . '_' . $rev['time'] . '_' . Str::slug($rev['author_name'] ?? 'anon');
+                        }
+                        
+                        if (!$rid) continue;
+                        $sentIds[] = (string) $rid;
 
-                    $sentIds[] = (string) $rid;
-                    ClienteReview::updateOrCreate(
-                        ['google_review_id' => $rid, 'cliente_id' => $cliente->id],
-                        [
-                            'author_name' => $rev['author_name'] ?? 'Anônimo',
-                            'author_photo_url' => $rev['author_photo_url'] ?? ($rev['profile_photo_url'] ?? null),
-                            'rating' => (int)($rev['rating'] ?? 5),
-                            'text' => $rev['text'] ?? '',
-                            'relative_time_description' => (isset($rev['time']) && is_numeric($rev['time'])) 
-                                ? date('c', (int)$rev['time']) 
-                                : ($rev['relative_time_description'] ?? null),
-                        ]
-                    );
+                        $dateVal = null;
+                        if (isset($rev['time']) && is_numeric($rev['time'])) {
+                            $dateVal = date('Y-m-d H:i:s', (int)$rev['time']);
+                        } elseif (isset($rev['relative_time_description'])) {
+                            $isDate = strtotime((string)$rev['relative_time_description']);
+                            if ($isDate) $dateVal = date('Y-m-d H:i:s', $isDate);
+                        }
+
+                        ClienteReview::updateOrCreate(
+                            ['google_review_id' => (string)$rid, 'cliente_id' => $cliente->id],
+                            [
+                                'author_name' => $rev['author_name'] ?? 'Anônimo',
+                                'author_photo_url' => $rev['author_photo_url'] ?? ($rev['profile_photo_url'] ?? null),
+                                'rating' => (int)($rev['rating'] ?? 5),
+                                'text' => $rev['text'] ?? '',
+                                'relative_time_description' => $dateVal,
+                            ]
+                        );
+                    }
                 }
             }
 
@@ -1123,29 +1135,49 @@ public function historico(Request $request, int $id)
             }
 
             // Salva reviews do Google (somente se vier na request)
-            if ($request->has('reviews') && is_array($request->input('reviews'))) {
+            if ($request->has('reviews')) {
                 $reviewsInput = $request->input('reviews');
                 $sentIds = [];
-                foreach ($reviewsInput as $rev) {
-                    $rid = $rev['google_review_id'] ?? (($rev['time'] ?? '') . '_' . ($rev['author_name'] ?? ''));
-                    if ($rid === '_') continue;
+                if (is_array($reviewsInput)) {
+                    foreach ($reviewsInput as $rev) {
+                        // Gera um ID robusto: google_id real ou (cliente_time_nome) para unicidade global
+                        $rid = $rev['google_review_id'] ?? null;
+                        if (!$rid && isset($rev['time'])) {
+                            $rid = $cliente->id . '_' . $rev['time'] . '_' . Str::slug($rev['author_name'] ?? 'anon');
+                        }
+                        
+                        if (!$rid) continue;
+                        $sentIds[] = (string) $rid;
 
-                    $sentIds[] = (string) $rid;
-                    ClienteReview::updateOrCreate(
-                        ['google_review_id' => $rid, 'cliente_id' => $cliente->id],
-                        [
-                            'author_name' => $rev['author_name'] ?? 'Anônimo',
-                            'author_photo_url' => $rev['author_photo_url'] ?? ($rev['profile_photo_url'] ?? null),
-                            'rating' => (int)($rev['rating'] ?? 5),
-                            'text' => $rev['text'] ?? '',
-                            'relative_time_description' => (isset($rev['time']) && is_numeric($rev['time'])) 
-                                ? date('c', (int)$rev['time']) 
-                                : ($rev['relative_time_description'] ?? null),
-                        ]
-                    );
+                        // Tenta converter a data
+                        $dateVal = null;
+                        if (isset($rev['time']) && is_numeric($rev['time'])) {
+                            $dateVal = date('Y-m-d H:i:s', (int)$rev['time']);
+                        } elseif (isset($rev['relative_time_description'])) {
+                            // Se for uma data formatada em ISO, o Eloquent aceita.
+                            // Se for "há 2 meses", ignoramos para não dar erro de SQL (manterá o antigo ou null)
+                            $isDate = strtotime((string)$rev['relative_time_description']);
+                            if ($isDate) $dateVal = date('Y-m-d H:i:s', $isDate);
+                        }
+
+                        ClienteReview::updateOrCreate(
+                            ['google_review_id' => (string)$rid, 'cliente_id' => $cliente->id],
+                            [
+                                'author_name' => $rev['author_name'] ?? 'Anônimo',
+                                'author_photo_url' => $rev['author_photo_url'] ?? ($rev['profile_photo_url'] ?? null),
+                                'rating' => (int)($rev['rating'] ?? 5),
+                                'text' => $rev['text'] ?? '',
+                                'relative_time_description' => $dateVal,
+                            ]
+                        );
+                    }
                 }
-                // Sync: deleta os que não vieram (somente se reviews foi enviado como array)
-                $cliente->reviews()->whereNotNull('google_review_id')->whereNotIn('google_review_id', $sentIds)->delete();
+                
+                // Sync: Deleta os reviews que tinham ID e NÃO vieram na request para este cliente
+                $cliente->reviews()
+                    ->whereNotNull('google_review_id')
+                    ->whereNotIn('google_review_id', $sentIds)
+                    ->delete();
             }
 
             DB::commit();
