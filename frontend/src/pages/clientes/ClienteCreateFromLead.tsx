@@ -179,7 +179,7 @@ export default function ClienteCreateFromLead() {
   const validationSchema = Yup.object({
     nome_fantasia: Yup.string().required("Nome fantasia é obrigatório"),
     cnpj: Yup.string().required("CPF/CNPJ é obrigatório"),
-    email: Yup.string().email("Email inválido").required("Email é obrigatório"),
+    email: Yup.string().email("Email inválido").nullable(),
     telefone_principal: Yup.string().required("Telefone principal é obrigatório"),
     responsavel: Yup.string().required("Responsável é obrigatório"),
   });

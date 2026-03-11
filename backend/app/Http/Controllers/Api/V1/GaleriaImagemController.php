@@ -202,9 +202,9 @@ class GaleriaImagemController extends Controller
 
         $cliente = Cliente::findOrFail($clienteId);
 
-        $supabaseUrl = rtrim(env('SUPABASE_URL'), '/');
-        $supabaseKey = env('SUPABASE_SERVICE_KEY') ?: env('SUPABASE_KEY');
-        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+        $supabaseUrl = rtrim(config('services.supabase.url'), '/');
+        $supabaseKey = config('services.supabase.service_role_key') ?: config('services.supabase.key');
+        $bucket = config('services.supabase.bucket', 'clientes-media');
 
         $updated = [];
         $errors = [];

@@ -1214,9 +1214,9 @@ public function historico(Request $request, int $id)
 
         $cliente = Cliente::findOrFail($clienteId);
 
-        $supabaseUrl = rtrim(env('SUPABASE_URL'), '/');
-        $supabaseKey = env('SUPABASE_SERVICE_KEY') ?: env('SUPABASE_KEY');
-        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+        $supabaseUrl = rtrim(config('services.supabase.url'), '/');
+        $supabaseKey = config('services.supabase.service_role_key') ?: config('services.supabase.key');
+        $bucket = config('services.supabase.bucket', 'clientes-media');
 
         $input = trim((string) $request->input('temp_path', ''));
 
@@ -1334,9 +1334,9 @@ $this->audit(
 
         $cliente = Cliente::findOrFail($clienteId);
 
-        $supabaseUrl = rtrim(env('SUPABASE_URL'), '/');
-        $supabaseKey = env('SUPABASE_SERVICE_KEY') ?: env('SUPABASE_KEY');
-        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+        $supabaseUrl = rtrim(config('services.supabase.url'), '/');
+        $supabaseKey = config('services.supabase.service_role_key') ?: config('services.supabase.key');
+        $bucket = config('services.supabase.bucket', 'clientes-media');
 
         $input = trim((string) $request->input('temp_path', ''));
 

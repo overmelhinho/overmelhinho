@@ -521,9 +521,9 @@ class CampanhaMidiaController extends Controller
             'meta_json' => 'nullable|array',
         ]);
 
-        $supabaseUrl = rtrim(env('SUPABASE_URL'), '/');
-        $supabaseKey = env('SUPABASE_SERVICE_KEY') ?: env('SUPABASE_KEY');
-        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+        $supabaseUrl = rtrim(config('services.supabase.url'), '/');
+        $supabaseKey = config('services.supabase.service_role_key') ?: config('services.supabase.key');
+        $bucket = config('services.supabase.bucket', 'clientes-media');
 
         $input = trim((string) $data['temp_path']);
         if (Str::startsWith($input, 'http://') || Str::startsWith($input, 'https://')) {
