@@ -14,7 +14,14 @@ class TinyErpService
 
     public function __construct()
     {
-        $this->token = config('services.tiny.token', env('TINY_ERP_TOKEN', ''));
+        // Suporta tanto TINY_ERP_TOKEN quanto TINY_ERP (legado)
+        $this->token = config('services.tiny.token', 
+            env('TINY_ERP_TOKEN', env('TINY_ERP', ''))
+        );
+
+        if (empty($this->token)) {
+            Log::warning('[TinyErpService] Token não configurado! Defina TINY_ERP_TOKEN no .env');
+        }
     }
 
     /**
