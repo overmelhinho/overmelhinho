@@ -36,6 +36,8 @@ window.addEventListener("unhandledrejection", (event) => {
   console.groupEnd();
 });
 
+// Build trigger: 2026-03-11 13:10
+console.log("🚀 React Bootstrapping dashboard...");
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ReactQueryProvider>

@@ -177,7 +177,7 @@ export default function ClienteEdit() {
             [];
 
     const galeria = (galeriaRaw || []).map((g: any, idx: number) => ({
-      id: g?.id ? String(g.id) : crypto.randomUUID(),
+      id: g?.id ? String(g.id) : (typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2)),
       url: g?.url || g?.public_url || "",
       thumb_url: g?.thumb_url || g?.url || g?.public_url || "",
       legenda: g?.legenda || "",
