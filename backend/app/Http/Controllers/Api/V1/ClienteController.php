@@ -36,14 +36,25 @@ class ClienteController extends Controller
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
-        // ✅ Busca por termo com Lógica Fuzzy (Resiliente a Erros)
+        // ✅ Busca Inteligente (Fuzzy + Aprendizado de Typos)
         if ($q !== '') {
             $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
             
-            $query->where(function ($sub) use ($q, $normalizedQ) {
-                // 1. Match Exato ou Parcial (Alta Prioridade)
+            // 1. Verifica se existe uma correção aprendida pelo sistema (Learning Logic)
+            $learned = \App\Models\SearchCorrection::where('typo', mb_strtolower($normalizedQ, 'UTF-8'))
+                ->orderByDesc('hit_count')
+                ->first();
+            
+            $effectiveQ = $learned ? $learned->correction : $normalizedQ;
+
+            $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ) {
+                // Match Exato ou Parcial (Alta Prioridade)
                 $sub->where('nome_fantasia', 'ilike', "%{$q}%")
                     ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+
+                if ($effectiveQ !== $normalizedQ) {
+                    $sub->orWhere('nome_fantasia', 'ilike', "%{$effectiveQ}%");
+                }
 
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
                 static $canUseSimilarity = null;
@@ -55,8 +66,9 @@ class ClienteController extends Controller
                 }
 
                 if ($canUseSimilarity) {
-                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.15", [$normalizedQ])
-                        ->orWhereRaw("similarity(nome_alternativo, ?) > 0.15", [$normalizedQ]);
+                    // Threshold mais baixo (0.1) para capturar "caza" vs "casa"
+                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.1", [$normalizedQ])
+                        ->orWhereRaw("similarity(nome_alternativo, ?) > 0.1", [$normalizedQ]);
                 } else {
                     // Fallback agressivo por palavras
                     $words = explode(' ', $normalizedQ);
@@ -68,15 +80,22 @@ class ClienteController extends Controller
                 }
 
                 // 3. Busca em Segmentos e Endereços
-                $sub->orWhereHas('segmentos', function ($sq) use ($q) {
-                        $sq->where('segmentos.nome', 'ilike', "%{$q}%");
+                $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ) {
+                        $sq->where('segmentos.nome', 'ilike', "%{$q}%")
+                           ->orWhere('segmentos.nome', 'ilike', "%{$effectiveQ}%");
                     })
-                    ->orWhereHas('enderecos', function ($eq) use ($q) {
+                    ->orWhereHas('enderecos', function ($eq) use ($q, $effectiveQ) {
                         $eq->where('bairro', 'ilike', "%{$q}%")
                            ->orWhere('cidade', 'ilike', "%{$q}%")
-                           ->orWhere('rua', 'ilike', "%{$q}%");
+                           ->orWhere('rua', 'ilike', "%{$q}%")
+                           ->orWhere('bairro', 'ilike', "%{$effectiveQ}%");
                     });
             });
+
+            // Se usarmos similarity, vamos ordenar por ela para que o "match" mais próximo venha primeiro
+            if ($canUseSimilarity) {
+                $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
+            }
         }
 
         // ✅ Filtro por Cidade (Geolocalização Contextual)
@@ -145,18 +164,29 @@ class ClienteController extends Controller
         $q = trim((string) ($request->input('q') ?? ''));
         if (strlen($q) < 2) return response()->json([]);
 
-        // Busca Clientes (Lógica Fuzzy)
-        $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
+        // Busca Clientes (Lógica Inteligente: Aprendizado + Fuzzy)
+        $normalizedQ = mb_strtolower(trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q)), 'UTF-8');
         $cityId = $request->input('city_id');
         
+        // Tenta ver se temos uma correção aprendida no histórico
+        $learned = \App\Models\SearchCorrection::where('typo', $normalizedQ)
+            ->orderByDesc('hit_count')
+            ->first();
+        
+        $effectiveQ = $learned ? $learned->correction : $normalizedQ;
+
         $clientes = Cliente::query()
             ->select(['id', 'slug', 'nome_fantasia', 'logo_url', 'tipo_cliente', 'status_assinatura'])
-            ->where(function($sub) use ($q, $normalizedQ) {
-                // Match direto
+            ->where(function($sub) use ($q, $normalizedQ, $effectiveQ) {
+                // Match direto ou corrigido
                 $sub->where('nome_fantasia', 'ilike', "%{$q}%")
                     ->orWhere('nome_fantasia', 'ilike', "%{$normalizedQ}%");
                 
-                // Similarity (pg_trgm)
+                if ($effectiveQ !== $normalizedQ) {
+                    $sub->orWhere('nome_fantasia', 'ilike', "%{$effectiveQ}%");
+                }
+                
+                // Similarity (pg_trgm) - Threshold baixo 0.1
                 static $canUseSim = null;
                 if ($canUseSim === null) {
                     try {
@@ -166,7 +196,7 @@ class ClienteController extends Controller
                 }
 
                 if ($canUseSim) {
-                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.15", [$normalizedQ]);
+                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.1", [$normalizedQ]);
                 } else {
                     $sub->orWhere('nome_fantasia', 'ilike', substr($normalizedQ, 0, 3) . "%");
                 }

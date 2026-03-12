@@ -24,13 +24,46 @@ class TrackingController extends Controller
             'results_count' => 'nullable|integer',
         ]);
 
+        $term = mb_strtolower($request->term, 'UTF-8');
+        $resultsCount = (int) ($request->results_count ?? 0);
+        $ipAddress = $request->ip();
+        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
+
+        // ✅ Lógica de Aprendizado: Detecta se o usuário corrigiu a busca após um erro (0 resultados)
+        if ($resultsCount > 0) {
+            try {
+                $lastFailed = \App\Models\SearchLog::where(function($q) use ($ipAddress, $sessionId) {
+                        if ($sessionId) $q->where('session_id', $sessionId);
+                        else $q->where('ip_address', $ipAddress);
+                    })
+                    ->where('results_count', 0)
+                    ->where('term', '!=', $term)
+                    ->where('created_at', '>=', now()->subMinutes(2))
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                if ($lastFailed) {
+                    $dist = levenshtein($lastFailed->term, $term);
+                    // Se a distância for pequena (máximo 3 caracteres de diferença), consideramos correção
+                    if ($dist >= 1 && $dist <= 3) {
+                        \App\Models\SearchCorrection::updateOrCreate(
+                            ['typo' => $lastFailed->term, 'correction' => $term],
+                            ['hit_count' => \Illuminate\Support\Facades\DB::raw('hit_count + 1')]
+                        );
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Erro no aprendizado de busca: ' . $e->getMessage());
+            }
+        }
+
         $log = \App\Models\SearchLog::create([
-            'term' => mb_strtolower($request->term, 'UTF-8'),
+            'term' => $term,
             'city' => $request->city ? mb_strtolower($request->city, 'UTF-8') : null,
-            'results_count' => $request->results_count ?? 0,
-            'ip_address' => $request->ip(),
+            'results_count' => $resultsCount,
+            'ip_address' => $ipAddress,
             'user_agent' => $request->userAgent(),
-            'session_id' => $request->hasSession() ? $request->session()->getId() : null,
+            'session_id' => $sessionId,
         ]);
 
         return response()->json([
