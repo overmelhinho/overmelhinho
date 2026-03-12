@@ -36,6 +36,15 @@ class ClienteController extends Controller
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
+        // ✅ Verificação de Similaridade (pg_trgm) - Disponível para todo o escopo
+        static $canUseSimilarity = null;
+        if ($canUseSimilarity === null) {
+            try {
+                DB::select('SELECT similarity(\'a\', \'b\')');
+                $canUseSimilarity = true;
+            } catch (\Exception $e) { $canUseSimilarity = false; }
+        }
+
         // ✅ Busca Inteligente (Fuzzy + Aprendizado de Typos)
         if ($q !== '') {
             $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
@@ -47,7 +56,7 @@ class ClienteController extends Controller
             
             $effectiveQ = $learned ? $learned->correction : $normalizedQ;
 
-            $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ) {
+            $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSimilarity) {
                 // Match Exato ou Parcial (Alta Prioridade)
                 $sub->where('nome_fantasia', 'ilike', "%{$q}%")
                     ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
@@ -57,14 +66,6 @@ class ClienteController extends Controller
                 }
 
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
-                static $canUseSimilarity = null;
-                if ($canUseSimilarity === null) {
-                    try {
-                        DB::select('SELECT similarity(\'a\', \'b\')');
-                        $canUseSimilarity = true;
-                    } catch (\Exception $e) { $canUseSimilarity = false; }
-                }
-
                 if ($canUseSimilarity) {
                     // Threshold mais baixo (0.1) para capturar "caza" vs "casa"
                     $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.1", [$normalizedQ])
@@ -178,9 +179,18 @@ class ClienteController extends Controller
         
         $effectiveQ = $learned ? $learned->correction : $normalizedQ;
 
+        // ✅ Verificação de Similaridade (pg_trgm)
+        static $canUseSim = null;
+        if ($canUseSim === null) {
+            try {
+                DB::select('SELECT similarity(\'a\', \'b\')');
+                $canUseSim = true;
+            } catch (\Exception $e) { $canUseSim = false; }
+        }
+
         $clientes = Cliente::query()
             ->select(['id', 'slug', 'nome_fantasia', 'logo_url', 'tipo_cliente', 'status_assinatura'])
-            ->where(function($sub) use ($q, $normalizedQ, $effectiveQ) {
+            ->where(function($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSim) {
                 // Match direto ou corrigido
                 $sub->where('nome_fantasia', 'ilike', "%{$q}%")
                     ->orWhere('nome_fantasia', 'ilike', "%{$normalizedQ}%");
@@ -190,14 +200,6 @@ class ClienteController extends Controller
                 }
                 
                 // Similarity (pg_trgm) - Threshold baixo 0.1
-                static $canUseSim = null;
-                if ($canUseSim === null) {
-                    try {
-                        DB::select('SELECT similarity(\'a\', \'b\')');
-                        $canUseSim = true;
-                    } catch (\Exception $e) { $canUseSim = false; }
-                }
-
                 if ($canUseSim) {
                     $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.1", [$normalizedQ]);
                 } else {
