@@ -107,8 +107,8 @@ export default function Home() {
           <div className="space-y-4">
             <h1 className="text-5xl md:text-8xl font-black text-gray-900 tracking-tighter leading-none italic font-serif">
               Encontre o melhor da<br />
-              <span className="text-brand-red relative">
-                {currentPhrase}
+              <span className="text-brand-red relative inline-block min-h-[1em]">
+                {currentPhrase || '\u200B'}
                 <span className="absolute -right-2 top-0 bottom-0 w-2 bg-brand-red animate-pulse"></span>
               </span>
             </h1>
