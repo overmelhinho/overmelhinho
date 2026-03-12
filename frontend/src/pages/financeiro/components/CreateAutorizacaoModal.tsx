@@ -162,9 +162,37 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
 
     const totals = calculateTotals();
 
+    const formatCurrency = (value: string) => {
+        const digits = value.replace(/\D/g, "");
+        const amount = parseFloat(digits) / 100;
+        if (isNaN(amount)) return "";
+        return amount.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    };
+
+    const parseCurrency = (value: string) => {
+        return value.replace(/\./g, "").replace(",", ".");
+    };
+
+    const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        const formatted = formatCurrency(value);
+        setForm(prev => ({ ...prev, [name]: formatted }));
+    };
+
     // Calculate Installments Preview and Sync with State
     useEffect(() => {
-        const { finalPayable } = calculateTotals();
+        const basePrice = parseFloat(parseCurrency(form.valor_total)) || 0;
+        const discountValue = parseFloat(form.desconto_valor) || 0;
+        const discountAmount = form.desconto_tipo === "fixed" ? discountValue : (basePrice * discountValue) / 100;
+        const priceAfterDiscount = Math.max(0, basePrice - discountAmount);
+        const taxa = parseFloat(form.taxa_cadastro) || 0;
+        const totalComTaxa = priceAfterDiscount + taxa;
+        const permuta = form.is_permuta ? parseFloat(parseCurrency(form.permuta_amount || "0")) : 0;
+        const finalPayable = Math.max(0, totalComTaxa - permuta);
+
         const num = parseInt(form.num_parcelas) || 1;
         const start = new Date(form.data_primeira_parcela);
 
@@ -180,7 +208,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
             numero: i + 1,
             vencimento: format(addMonths(start, i), "yyyy-MM-dd"), // internal state for input
             label: format(addMonths(start, i), "dd/MM/yyyy"), // display
-            valor: i === num - 1 ? (baseVal + diff).toFixed(2) : baseVal.toFixed(2)
+            valor: i === num - 1 ? (baseVal + diff).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : baseVal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })
         }));
 
         setParcelasPreview(newParcelas);
@@ -217,7 +245,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
             return;
         }
 
-        const valor = parseFloat(form.valor_total);
+        const valor = parseFloat(parseCurrency(form.valor_total));
         if (isNaN(valor) || valor <= 0) {
             toast.error("Por favor, informe um valor total válido.");
             return;
@@ -238,7 +266,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                 valor_total: valor,
                 taxa_cadastro: parseFloat(form.taxa_cadastro) || 0,
                 desconto_valor: parseFloat(form.desconto_valor || "0") || 0,
-                permuta_amount: parseFloat(form.permuta_amount || "0") || 0,
+                permuta_amount: parseFloat(parseCurrency(form.permuta_amount || "0")) || 0,
                 is_permuta: !!form.is_permuta,
                 parcelas: parcelasPreview.map(p => ({ vencimento: p.vencimento }))
             };
@@ -472,11 +500,11 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                             <div className="relative">
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">R$</span>
                                                 <Input
-                                                    type="number"
-                                                    step="0.01"
+                                                    type="text"
                                                     name="valor_total"
                                                     value={form.valor_total}
-                                                    onChange={handleChange}
+                                                    onChange={handleCurrencyChange}
+                                                    placeholder="0,00"
                                                     className="rounded-xl h-11 border-gray-200 pl-10 font-black text-gray-900 focus:ring-red-500"
                                                 />
                                             </div>
@@ -571,10 +599,10 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                                 <div className="relative">
                                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">R$</span>
                                                     <Input
-                                                        type="number"
+                                                        type="text"
                                                         name="permuta_amount"
                                                         value={form.permuta_amount}
-                                                        onChange={handleChange}
+                                                        onChange={handleCurrencyChange}
                                                         placeholder="Valor abatido por permuta"
                                                         className="pl-9 rounded-xl h-11 border-gray-200 font-bold"
                                                     />
