@@ -261,7 +261,7 @@ export default function ClientProfileClient() {
             </div>
 
             {/* 📸 HERO / COVER */}
-            <section className="relative h-[45vh] md:h-[60vh] overflow-hidden">
+            <section className="relative h-[46vh] overflow-hidden">
                 <img
                     src={client.galeria?.[0]?.url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&auto=format&fit=crop&q=80"}
                     className="w-full h-full object-cover"
