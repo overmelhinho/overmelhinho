@@ -91,8 +91,6 @@ class ClienteController extends Controller
                            ->orWhere('bairro', 'ilike', "%{$effectiveQ}%");
                     });
             });
-
-            });
         }
 
         // ✅ Filtro por Cidade (Geolocalização Contextual)
