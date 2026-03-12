@@ -92,10 +92,7 @@ class ClienteController extends Controller
                     });
             });
 
-            // Se usarmos similarity, vamos ordenar por ela para que o "match" mais próximo venha primeiro
-            if ($canUseSimilarity) {
-                $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
-            }
+            });
         }
 
         // ✅ Filtro por Cidade (Geolocalização Contextual)
@@ -123,32 +120,40 @@ class ClienteController extends Controller
         $query->with(['enderecos', 'segmentos', 'cidadesAtendidas', 'contatos']);
         $query->withCount(['reviews']);
         
-        // ✅ PRIORIDADE: Pagantes locais, depois pagantes que atendem a região, depois gratuitos
-        if ($cityId) {
-            $query->orderByRaw("
-                CASE 
-                    WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN
-                        CASE 
-                            WHEN EXISTS (
-                                SELECT 1 FROM enderecos 
-                                WHERE enderecos.cliente_id = clientes.id 
-                                AND enderecos.cidade ilike (SELECT nome FROM cidades WHERE id = ? LIMIT 1)
-                            ) THEN 0
-                            ELSE 1
-                        END
-                    ELSE 2
-                END ASC
-            ", [$cityId]);
-        } else {
-            $query->orderByRaw("
-                CASE 
-                    WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0 
-                    ELSE 1 
-                END ASC
-            ");
+        // ✅ ORDENAÇÃO INTELIGENTE (NEGÓCIO + RELEVÂNCIA)
+        // Hierarquia: Match Exato > Pagante Local > Pagante Geral > Similaridade > Gratuito
+        $qParam = $normalizedQ;
+        $orderCityId = $cityId ?: 0;
+
+        $query->orderByRaw("
+            CASE 
+                -- 1. Match Exato (Prioridade Absoluta)
+                WHEN nome_fantasia ilike ? THEN 0
+                WHEN nome_alternativo ilike ? THEN 0
+                
+                -- 2. Pagante Ativo na Cidade Buscada
+                WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' AND EXISTS (
+                    SELECT 1 FROM enderecos 
+                    WHERE enderecos.cliente_id = clientes.id 
+                    AND (
+                        enderecos.cidade ilike (SELECT nome FROM cidades WHERE id = ? LIMIT 1)
+                        OR EXISTS (SELECT 1 FROM cliente_cidade cc WHERE cc.cliente_id = clientes.id AND cc.cidade_id = ?)
+                    )
+                ) THEN 1
+
+                -- 3. Pagante Ativo Geral
+                WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 2
+
+                -- 4. Restante (Gratuitos ou Inativos)
+                ELSE 3
+            END ASC
+        ", [$q, $q, $orderCityId, $orderCityId]);
+
+        // Desempate por similaridade fonética
+        if ($canUseSimilarity) {
+            $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
         }
         
-        // Ordenação secundária por nome
         $query->orderBy('nome_fantasia');
 
         $clientes = $query->paginate($perPage);
@@ -211,7 +216,17 @@ class ClienteController extends Controller
                         });
                 });
             })
-            ->orderByRaw("CASE WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0 ELSE 1 END ASC")
+            // Ordenação do Autocomplete seguindo a mesma lógica
+            ->orderByRaw("
+                CASE 
+                    WHEN nome_fantasia ilike ? THEN 0
+                    WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 1
+                    ELSE 2
+                END ASC
+            ", [$q])
+            ->when($canUseSim, function($os) use ($normalizedQ) {
+                $os->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
+            })
             ->limit(5)
             ->get();
 
