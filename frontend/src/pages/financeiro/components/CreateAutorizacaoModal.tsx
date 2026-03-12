@@ -162,14 +162,14 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
 
     const totals = calculateTotals();
 
-    // Calculate Installments Preview
+    // Calculate Installments Preview and Sync with State
     useEffect(() => {
         const { finalPayable } = calculateTotals();
         const num = parseInt(form.num_parcelas) || 1;
         const start = new Date(form.data_primeira_parcela);
 
         if (finalPayable <= 0) {
-            setParcelasPreview([{ numero: 1, vencimento: format(start, "dd/MM/yyyy"), valor: "0.00" }]);
+            setParcelasPreview([{ numero: 1, vencimento: format(start, "yyyy-MM-dd"), label: format(start, "dd/MM/yyyy"), valor: "0.00" }]);
             return;
         }
 
@@ -178,12 +178,20 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
 
         const newParcelas = Array.from({ length: num }).map((_, i) => ({
             numero: i + 1,
-            vencimento: format(addMonths(start, i), "dd/MM/yyyy"),
+            vencimento: format(addMonths(start, i), "yyyy-MM-dd"), // internal state for input
+            label: format(addMonths(start, i), "dd/MM/yyyy"), // display
             valor: i === num - 1 ? (baseVal + diff).toFixed(2) : baseVal.toFixed(2)
         }));
 
         setParcelasPreview(newParcelas);
     }, [form.valor_total, form.taxa_cadastro, form.num_parcelas, form.data_primeira_parcela, form.desconto_valor, form.desconto_tipo, form.is_permuta, form.permuta_amount]);
+
+    const handleParcelaDateChange = (index: number, newDate: string) => {
+        const updated = [...parcelasPreview];
+        updated[index].vencimento = newDate;
+        updated[index].label = format(new Date(newDate), "dd/MM/yyyy");
+        setParcelasPreview(updated);
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -232,6 +240,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                 desconto_valor: parseFloat(form.desconto_valor || "0") || 0,
                 permuta_amount: parseFloat(form.permuta_amount || "0") || 0,
                 is_permuta: !!form.is_permuta,
+                parcelas: parcelasPreview.map(p => ({ vencimento: p.vencimento }))
             };
 
             console.log("[CreateAutorizacaoModal] Enviando payload:", payload);
@@ -261,7 +270,6 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
             setForm(prev => ({
                 ...prev,
                 plan_id: planId,
-                valor_total: plan.price,
                 titulo_anuncio: plan.name
             }));
         }
@@ -380,7 +388,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                                 <SelectContent className="rounded-xl border-gray-100 shadow-xl font-bold">
                                                     {plans.map(plan => (
                                                         <SelectItem key={plan.id} value={String(plan.id)}>
-                                                            {plan.name} - R$ {Number(plan.price).toLocaleString('pt-BR')}
+                                                            {plan.name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -622,6 +630,29 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    {/* Listagem Editável de Parcelas */}
+                                    {parseInt(form.num_parcelas) > 0 && parcelasPreview.length > 0 && (
+                                        <div className="pt-4 border-t border-gray-50">
+                                            <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block">Detalhamento de Vencimentos</Label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                {parcelasPreview.map((p, idx) => (
+                                                    <div key={idx} className="bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <span className="text-[9px] font-black text-gray-400 uppercase">{p.numero}ª Parcela</span>
+                                                            <span className="text-[9px] font-black text-red-600">R$ {p.valor}</span>
+                                                        </div>
+                                                        <Input
+                                                            type="date"
+                                                            value={p.vencimento}
+                                                            onChange={(e) => handleParcelaDateChange(idx, e.target.value)}
+                                                            className="h-8 text-xs font-bold border-gray-200 rounded-lg px-2"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Novo Resumo Financeiro */}
                                     <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-xl animate-in slide-in-from-bottom-2 duration-300">

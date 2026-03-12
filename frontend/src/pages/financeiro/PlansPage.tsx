@@ -28,7 +28,6 @@ export default function PlansPage() {
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
     const [formData, setFormData] = useState({
         name: "",
-        price: "",
         billing_cycle: "mensal",
         tiny_product_id: ""
     });
@@ -93,7 +92,6 @@ export default function PlansPage() {
             setEditingPlan(plan);
             setFormData({
                 name: plan.name,
-                price: plan.price.toString(),
                 billing_cycle: plan.billing_cycle,
                 tiny_product_id: plan.tiny_product_id || ""
             });
@@ -101,7 +99,6 @@ export default function PlansPage() {
             setEditingPlan(null);
             setFormData({
                 name: "",
-                price: "",
                 billing_cycle: "mensal",
                 tiny_product_id: ""
             });
@@ -167,19 +164,16 @@ export default function PlansPage() {
                             className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow group"
                         >
                             <div className="p-6 space-y-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-900 truncate max-w-[180px]" title={plan.name}>
+                                <div className="flex justify-between items-center">
+                                    <div className="flex-1">
+                                        <h3 className="text-xl font-bold text-gray-900 truncate" title={plan.name}>
                                             {plan.name}
                                         </h3>
-                                        <span className="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-600 rounded-md">
-                                            {getCycleLabel(plan.billing_cycle)}
-                                        </span>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-2xl font-black text-[#B70F0A]">
-                                            R$ {Number(plan.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                        </p>
+                                        <div className="mt-1 flex gap-2">
+                                            <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-red-50 text-red-700 rounded-md tracking-wider">
+                                                {getCycleLabel(plan.billing_cycle)}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -262,19 +256,7 @@ export default function PlansPage() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Valor (R$)</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={formData.price}
-                                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                            placeholder="0,00"
-                                            className="w-full rounded-2xl border-gray-200 focus:ring-[#B70F0A] focus:border-[#B70F0A] shadow-sm py-3 px-4"
-                                            required
-                                        />
-                                    </div>
+                                <div className="grid grid-cols-1 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Ciclo de Cobrança</label>
                                         <select

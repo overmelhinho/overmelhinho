@@ -68,6 +68,8 @@ class AutorizacaoController extends Controller
             'permuta_description'   => 'nullable|string',
             'desconto_tipo'         => 'nullable|string|in:fixed,percent',
             'desconto_valor'        => 'nullable|numeric|min:0',
+            'parcelas'              => 'nullable|array',
+            'parcelas.*.vencimento' => 'required|date',
         ]);
 
         $validated['numero']      = Autorizacao::proximoNumero();
@@ -78,8 +80,8 @@ class AutorizacaoController extends Controller
 
         $autorizacao = Autorizacao::create($validated);
 
-        // Gera parcelas automaticamente
-        $this->gerarParcelas($autorizacao);
+        // Gera parcelas (automatica ou customizada)
+        $this->gerarParcelas($autorizacao, $request->input('parcelas', []));
 
         return response()->json([
             'success' => true,
@@ -127,14 +129,16 @@ class AutorizacaoController extends Controller
             'permuta_description'   => 'nullable|string',
             'desconto_tipo'         => 'nullable|string|in:fixed,percent',
             'desconto_valor'        => 'nullable|numeric|min:0',
+            'parcelas'              => 'nullable|array',
+            'parcelas.*.vencimento' => 'required|date',
         ]);
 
         $autorizacao->update($validated);
 
         // Se mudar algo financeiro, regera as parcelas
-        if ($request->hasAny(['valor_total', 'taxa_cadastro', 'num_parcelas', 'is_permuta', 'permuta_amount', 'desconto_valor', 'desconto_tipo', 'data_primeira_parcela'])) {
+        if ($request->hasAny(['valor_total', 'taxa_cadastro', 'num_parcelas', 'is_permuta', 'permuta_amount', 'desconto_valor', 'desconto_tipo', 'data_primeira_parcela', 'parcelas'])) {
             $autorizacao->parcelas()->delete();
-            $this->gerarParcelas($autorizacao->fresh());
+            $this->gerarParcelas($autorizacao->fresh(), $request->input('parcelas', []));
         }
 
         return response()->json([
@@ -368,7 +372,7 @@ class AutorizacaoController extends Controller
 
     // ─── Helper: Gerar Parcelas ───────────────────────────────────────────────
 
-    protected function gerarParcelas(Autorizacao $autorizacao): void
+    protected function gerarParcelas(Autorizacao $autorizacao, array $customParcelas = []): void
     {
         $basePrice = $autorizacao->valor_total;
         $discountAmount = 0;
@@ -385,6 +389,10 @@ class AutorizacaoController extends Controller
 
         $numParcelas = max(1, $autorizacao->num_parcelas);
 
+        // Se foram enviadas parcelas customizadas, garantir que condiz com o num_parcelas
+        // Se não for compatível, ignoramos e geramos o padrão.
+        $hasCustomDates = count($customParcelas) === $numParcelas;
+
         // Parcelamento do valor Bruto (com taxa e após desconto)
         $valorParcelaBruta = round($totalComTaxa / $numParcelas, 2);
         $diferencaBruta    = round($totalComTaxa - ($valorParcelaBruta * $numParcelas), 2);
@@ -399,11 +407,16 @@ class AutorizacaoController extends Controller
             $vBruto   = $valorParcelaBruta + ($i === $numParcelas ? $diferencaBruta : 0);
             $vPermuta = $valorParcelaPermuta + ($i === $numParcelas ? $diferencaPermuta : 0);
             $vPayable = max(0, $vBruto - $vPermuta);
+            
+            // Define o vencimento: customizado ou sequencial (mensal)
+            $vencimento = $hasCustomDates 
+                ? Carbon::parse($customParcelas[$i-1]['vencimento'])->format('Y-m-d')
+                : $primeiroVenc->copy()->addMonths($i - 1)->format('Y-m-d');
 
             AutorizacaoParcela::create([
                 'autorizacao_id' => $autorizacao->id,
                 'numero'         => $i,
-                'vencimento'     => $primeiroVenc->copy()->addMonths($i - 1)->format('Y-m-d'),
+                'vencimento'     => $vencimento,
                 'valor'          => $vBruto,
                 'permuta_amount' => $vPermuta,
                 'payable_amount' => $vPayable,
