@@ -15,6 +15,34 @@ class GooglePlacesService
     }
 
     /**
+     * Busca uma lista de locais baseada em uma query.
+     */
+    public function searchPlaces(string $query): array
+    {
+        if (!$this->apiKey) return [];
+
+        try {
+            $response = Http::get("https://maps.googleapis.com/maps/api/place/textsearch/json", [
+                'query' => $query,
+                'key' => $this->apiKey,
+                'language' => 'pt-BR'
+            ]);
+
+            if (!$response->successful()) {
+                return [];
+            }
+
+            return $response->json('results') ?? [];
+        } catch (\Throwable $e) {
+            Log::error('[GooglePlacesService] Erro ao pesquisar locais', [
+                'query' => $query,
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
+    /**
      * Busca detalhes de um local, incluindo horários de funcionamento.
      */
     public function getDetailsByQuery(string $query): ?array

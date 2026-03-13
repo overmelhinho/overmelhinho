@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Sparkles, TrendingUp, Users, Target, Search, AlertTriangle, MessageCircle, Loader2, Check } from "lucide-react";
+import { Copy, Sparkles, TrendingUp, Users, Target, Search, AlertTriangle, MessageCircle, Loader2, Check, ExternalLink, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import axios from "@/services/api";
@@ -14,17 +14,39 @@ type Oportunidade = {
     status?: "pendente" | "prospectado";
 };
 
+type TargetAlvo = {
+    place_id: string;
+    name: string;
+    address: string;
+    rating: number;
+    user_ratings_total: number;
+    status?: "pendente" | "prospectado";
+};
+
 
 export default function OportunidadesPage() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [selectedOp, setSelectedOp] = useState<Oportunidade | null>(null);
     const [pitchText, setPitchText] = useState("");
+    const [page, setPage] = useState(1);
+    const [statusFilter, setStatusFilter] = useState<"all" | "pendente" | "prospectado">("all");
 
     const { data: radarData, isLoading, refetch } = useQuery({
-        queryKey: ["radar-oportunidades"],
+        queryKey: ["radar-oportunidades", page, statusFilter],
         queryFn: async () => {
-            const resp = await axios.get("/v1/radar/oportunidades");
+            const resp = await axios.get(`/v1/radar/oportunidades?page=${page}&status=${statusFilter}&per_page=6`);
             return resp.data;
         },
+    });
+
+    // Busca Alvos (Empresas Reais) no Google
+    const { data: targets, isLoading: isLoadingTargets, refetch: refetchTargets } = useQuery({
+        queryKey: ["radar-targets", selectedOp?.termo, selectedOp?.cidade],
+        enabled: !!selectedOp,
+        queryFn: async () => {
+            const resp = await axios.get(`/v1/radar/oportunidades/alvos?termo=${selectedOp?.termo}&cidade=${selectedOp?.cidade}`);
+            return resp.data.targets as TargetAlvo[];
+        }
     });
 
     const scriptMutation = useMutation({
@@ -57,14 +79,69 @@ export default function OportunidadesPage() {
         }
     });
 
+    const prospectTargetMutation = useMutation({
+        mutationFn: async (target: TargetAlvo & { phone?: string }) => {
+            await axios.post("/v1/radar/oportunidades/alvos/prospectar", {
+                place_id: target.place_id,
+                name: target.name,
+                phone: target.phone,
+                termo: selectedOp?.termo,
+                cidade: selectedOp?.cidade
+            });
+        },
+        onSuccess: () => {
+            refetchTargets();
+        }
+    });
+
+    const targetDetailsMutation = useMutation({
+        mutationFn: async (place_id: string) => {
+            const resp = await axios.get(`/v1/radar/oportunidades/alvos/detalhes?place_id=${place_id}`);
+            return resp.data.details;
+        }
+    });
+
     const handleProspectar = (op: Oportunidade) => {
         setSelectedId(op.id);
+        setSelectedOp(op);
         setPitchText(""); // Limpa o anterior enquanto carrega
         scriptMutation.mutate(op);
 
         // Se ainda não estiver prospectado, marca agora
         if (op.status !== "prospectado") {
             prospectMutation.mutate(op);
+        }
+    };
+
+    const handleCallTarget = async (target: TargetAlvo) => {
+        if (!pitchText) {
+            toast.error("Aguarde a geração do script...");
+            return;
+        }
+
+        const id = toast.loading(`Buscando contato de ${target.name}...`);
+        try {
+            const details = await targetDetailsMutation.mutateAsync(target.place_id);
+            toast.dismiss(id);
+
+            // Marca como prospectado no banco e cria LEAD no Kanban
+            if (target.status !== 'prospectado') {
+                prospectTargetMutation.mutate({
+                    ...target,
+                    phone: details.whatsapp || details.phone
+                });
+            }
+
+            if (details.whatsapp) {
+                const url = `https://wa.me/${details.whatsapp}?text=${encodeURIComponent(pitchText)}`;
+                window.open(url, '_blank');
+            } else {
+                toast.error("WhatsApp não encontrado. Tente o site ou telefone fixo.");
+                if (details.website) window.open(details.website, '_blank');
+            }
+        } catch (e) {
+            toast.dismiss(id);
+            toast.error("Erro ao obter detalhes da empresa.");
         }
     };
 
@@ -102,7 +179,7 @@ export default function OportunidadesPage() {
             </header>
 
             {/* BENTO GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 
                 {/* ── CARD SUPERIOR: Cockpit de IA (col-span-full) ── */}
                 <div className="md:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-8 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -139,7 +216,7 @@ export default function OportunidadesPage() {
                 </div>
 
                 {/* ── BLOCO PRINCIPAL: Lista de Gaps de Mercado (col-span-2) ── */}
-                <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-8 flex flex-col">
+                <div className="md:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-8 flex flex-col min-h-[500px]">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
                             <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500">
@@ -149,6 +226,22 @@ export default function OportunidadesPage() {
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Prospecção Ativa</p>
                                 <p className="text-sm font-black text-gray-900">Oportunidades Quentes</p>
                             </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Status:</span>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => {
+                                    setStatusFilter(e.target.value as any);
+                                    setPage(1);
+                                }}
+                                className="h-9 border-gray-200 rounded-xl text-xs font-bold bg-white px-3 focus:ring-2 focus:ring-[#C00000] focus:border-[#C00000] outline-none"
+                            >
+                                <option value="all">Todas</option>
+                                <option value="pendente">Pendentes</option>
+                                <option value="prospectado">Prospectadas</option>
+                            </select>
                         </div>
                     </div>
 
@@ -203,11 +296,41 @@ export default function OportunidadesPage() {
                                 </button>
                             </div>
                         ))}
+
+                        {radarData?.oportunidades?.length === 0 && !isLoading && (
+                            <div className="p-12 text-center text-gray-400">
+                                <Search size={48} className="mx-auto mb-4 opacity-10" />
+                                <p className="font-bold text-sm">Nenhuma oportunidade encontrada com este filtro.</p>
+                            </div>
+                        )}
                     </div>
+
+                    {/* Controles de Paginação */}
+                    {radarData?.pagination && radarData.pagination.last_page > 1 && (
+                        <div className="mt-8 flex items-center justify-center gap-4 border-t border-gray-100 pt-6">
+                            <button
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="px-4 py-2 text-xs font-black uppercase tracking-widest text-[#C00000] disabled:text-gray-300 transition-colors"
+                            >
+                                Anterior
+                            </button>
+                            <span className="text-xs font-black text-gray-500">
+                                {page} de {radarData.pagination.last_page}
+                            </span>
+                            <button
+                                onClick={() => setPage(p => Math.min(radarData.pagination.last_page, p + 1))}
+                                disabled={page === radarData.pagination.last_page}
+                                className="px-4 py-2 text-xs font-black uppercase tracking-widest text-[#C00000] disabled:text-gray-300 transition-colors"
+                            >
+                                Próxima
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* ── BLOCO LATERAL: Gerador de Pitch via IA (col-span-1) ── */}
-                <div className="md:col-span-1 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-8 flex flex-col h-full">
+                <div className="md:col-span-1 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-8 flex flex-col h-fit sticky top-24">
                     <div className="flex items-center gap-2 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
                             <MessageCircle size={20} />
@@ -220,13 +343,13 @@ export default function OportunidadesPage() {
 
                     <div className="flex-1 flex flex-col h-full bg-gray-50 rounded-xl border border-gray-100 overflow-hidden relative">
                         {scriptMutation.isPending ? (
-                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-gray-400">
+                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-gray-400 min-h-[150px]">
                                 <Loader2 size={32} className="animate-spin text-purple-400 mb-3" />
                                 <p className="text-xs font-medium text-purple-600">A Inteligência está formulando um pitch matador...</p>
                             </div>
                         ) : pitchText ? (
                             <>
-                                <div className="p-4 flex-1 text-sm text-gray-700 leading-relaxed overflow-y-auto w-full max-w-none break-words">
+                                <div className="p-4 flex-1 text-sm text-gray-700 leading-relaxed overflow-y-auto w-full max-w-none break-words max-h-[300px]">
                                     {pitchText.split('\n').map((line, idx) => (
                                         <span key={idx}>
                                             {line}
@@ -245,12 +368,76 @@ export default function OportunidadesPage() {
                                 </div>
                             </>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-gray-400">
+                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-gray-400 min-h-[150px]">
                                 <Target size={32} className="text-gray-200 mb-3" />
                                 <p className="text-xs font-medium">Selecione uma oportunidade na lista ao lado para gerar o script de prospecção ideal.</p>
                             </div>
                         )}
                     </div>
+
+                    {/* NOVOS ALVOS ENCONTRADOS */}
+                    {selectedOp && (
+                        <div className="mt-8 transition-all animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600">
+                                    <Users size={16} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Alvos no Google Maps</p>
+                                    <p className="text-xs font-black text-gray-900">Empresas para Prospectar</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                {isLoadingTargets ? (
+                                    <div className="flex items-center justify-center p-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                        <Loader2 className="animate-spin text-orange-400" size={20} />
+                                    </div>
+                                ) : targets && targets.length > 0 ? (
+                                    targets.map(target => (
+                                        <div key={target.place_id} className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:border-[#25D366]/30 transition-all group">
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <h4 className="text-[11px] font-black text-gray-900 uppercase leading-tight">{target.name}</h4>
+                                                {target.rating > 0 && (
+                                                    <span className="flex items-center gap-0.5 text-[9px] font-bold text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded-md">
+                                                        ★ {target.rating}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 mb-3 -mt-1 flex items-start gap-1">
+                                                <MapPin size={10} className="shrink-0 mt-0.5" />
+                                                <span className="truncate">{target.address}</span>
+                                            </p>
+                                            <button
+                                                onClick={() => handleCallTarget(target)}
+                                                className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border
+                                                    ${target.status === 'prospectado'
+                                                        ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm shadow-emerald-100'
+                                                        : 'bg-[#C00000] text-white border-red-700 hover:bg-red-700 hover:shadow-md'}
+                                                `}
+                                            >
+                                                {target.status === 'prospectado' ? (
+                                                    <>
+                                                        <Check size={14} />
+                                                        Prospectado
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <MessageCircle size={14} />
+                                                        Abrir WhatsApp
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-6 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                        <p className="text-[10px] font-bold text-gray-400">Nenhum alvo novo encontrado nesta região.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

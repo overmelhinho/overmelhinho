@@ -16,28 +16,27 @@ class RadarController extends Controller
     public function index(Request $request)
     {
         $thirtyDaysAgo = now()->subDays(30);
+        $perPage = (int) $request->input('per_page', 8);
+        $statusFilter = $request->input('status', 'all');
 
         // Puxa as buscas REAIS registradas no portal
-        $rawGaps = \App\Models\SearchLog::selectRaw('term, city, count(*) as buscas, max(results_count) as max_concorrentes')
+        $query = \App\Models\SearchLog::selectRaw('term, city, count(*) as buscas, max(results_count) as max_concorrentes')
             ->where('created_at', '>=', $thirtyDaysAgo)
             ->groupBy('term', 'city')
             // Oportunidades são termos que tem POUCOS CONCORRENTES (ex: <= 3 na região) e alto volume
             ->havingRaw('max(results_count) <= 3')
-            ->orderByDesc('buscas')
-            ->limit(20)
-            ->get();
+            ->orderByDesc('buscas');
 
-        $oportunidades = [];
-
-        // Pega as prospecções já feitas para bater com os termos
+        $rawGaps = $query->get(); // Pega todos para filtrar por status se necessário e calcular KPIs
+        
+        $oportunidadesTotal = [];
         $prospeccoes = \App\Models\RadarOportunidade::all()->groupBy(fn($item) => mb_strtolower($item->termo) . '|' . mb_strtolower($item->cidade));
 
         foreach ($rawGaps as $idx => $gap) {
             $buscas = (int) $gap->buscas;
             $concorrentes = (int) $gap->max_concorrentes;
 
-            // Temperatura comercial baseada na matemática
-            $temp = 'emergente'; // Baixo volume, mas sem ninguem
+            $temp = 'emergente';
             if ($buscas >= 100) $temp = 'alta';
             elseif ($buscas >= 50) $temp = 'media';
 
@@ -46,30 +45,48 @@ class RadarController extends Controller
 
             $key = mb_strtolower($gap->term) . '|' . mb_strtolower($gap->city ?? '');
             $prospectado = isset($prospeccoes[$key]);
+            $status = $prospectado ? 'prospectado' : 'pendente';
 
-            $oportunidades[] = [
+            // Aplica filtro de status se não for 'all'
+            if ($statusFilter !== 'all' && $status !== $statusFilter) {
+                continue;
+            }
+
+            $oportunidadesTotal[] = [
                 'id' => $idx + 1,
                 'termo' => $termDisplay,
                 'cidade' => $cityDisplay,
                 'buscas' => $buscas,
                 'concorrentes' => $concorrentes,
                 'temperatura' => $temp,
-                'status' => $prospectado ? 'prospectado' : 'pendente'
+                'status' => $status
             ];
         }
 
-        // 2. KPIs Automáticos
-        $gapsHojeCount = count($oportunidades);
-        $mrrPotencial = $gapsHojeCount * 299; // MRR Estimado (ticket médio R$299)
+        // Paginação manual
+        $total = count($oportunidadesTotal);
+        $page = (int) $request->input('page', 1);
+        $offset = ($page - 1) * $perPage;
+        $paginated = array_slice($oportunidadesTotal, $offset, $perPage);
+
+        // 2. KPIs Automáticos (Sempre do total sem filtro de status para manter contexto)
+        $gapsHojeCount = count($rawGaps);
+        $mrrPotencial = $gapsHojeCount * 299;
         $mrrString = "R$ " . number_format($mrrPotencial / 1000, 1, ',', '.') . "k";
 
         return response()->json([
             'kpis' => [
                 'gaps_hoje' => $gapsHojeCount,
                 'mrr_potencial' => $mrrString,
-                'convertidos' => 18 // Mock: Deals Won com origem Radar
+                'convertidos' => \App\Models\Lead::where('origem', 'Radar')->count()
             ],
-            'oportunidades' => $oportunidades
+            'oportunidades' => $paginated,
+            'pagination' => [
+                'total' => $total,
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'last_page' => ceil($total / $perPage)
+            ]
         ]);
     }
 
@@ -102,6 +119,143 @@ class RadarController extends Controller
         return response()->json([
             'success' => true,
             'oportunidade' => $oportunidade
+        ]);
+    }
+
+    /**
+     * Busca alvos potenciais no Google Maps baseados na oportunidade.
+     */
+    public function fetchTargets(Request $request, \App\Services\GooglePlacesService $googleService)
+    {
+        $request->validate([
+            'termo' => 'required|string',
+            'cidade' => 'required|string',
+        ]);
+
+        $termo = $request->termo;
+        $cidade = $request->cidade === 'Região Geral' ? '' : $request->cidade;
+
+        $query = $termo . ($cidade ? ' em ' . $cidade : '');
+        $places = $googleService->searchPlaces($query);
+
+        // Clientes existentes (para filtro de quem não está no portal)
+        $existingClients = \App\Models\Cliente::pluck('nome_fantasia')
+            ->map(fn($n) => mb_strtolower(trim($n)))
+            ->toArray();
+
+        // Alvos já prospectados
+        $prospectados = \App\Models\RadarAlvoProspectado::pluck('place_id')->toArray();
+
+        $targets = [];
+        foreach (array_slice($places, 0, 10) as $place) {
+            $name = $place['name'];
+            $placeId = $place['place_id'];
+            
+            // Filtro simplificado: se o nome bate com algum cliente, ignoramos
+            if (in_array(mb_strtolower(trim($name)), $existingClients)) {
+                continue;
+            }
+
+            $targets[] = [
+                'place_id' => $placeId,
+                'name' => $name,
+                'address' => $place['formatted_address'] ?? 'Endereço não informado',
+                'rating' => $place['rating'] ?? 0,
+                'user_ratings_total' => $place['user_ratings_total'] ?? 0,
+                'status' => in_array($placeId, $prospectados) ? 'prospectado' : 'pendente'
+            ];
+        }
+
+        return response()->json([
+            'targets' => $targets
+        ]);
+    }
+
+    /**
+     * Marca um alvo específico como prospectado.
+     */
+    public function markTargetAsProspected(Request $request)
+    {
+        $request->validate([
+            'place_id' => 'required|string',
+            'name' => 'required|string',
+            'termo' => 'required|string',
+            'cidade' => 'required|string',
+            'phone' => 'nullable|string',
+        ]);
+
+        $alvo = \App\Models\RadarAlvoProspectado::updateOrCreate(
+            ['place_id' => $request->place_id],
+            [
+                'nome_empresa' => $request->name,
+                'termo' => mb_strtolower(trim($request->termo)),
+                'cidade' => $request->cidade === 'Região Geral' ? '' : mb_strtolower(trim($request->cidade)),
+                'user_id' => $request->user()?->id
+            ]
+        );
+
+        // ✅ Integração Automática com Kanban de Leads
+        // Se o lead ainda não existe para este place_id (ou nome/telefone), criamos um novo
+        $existingLead = \App\Models\Lead::where('nome', $request->name)
+            ->orWhere('telefone', $request->phone)
+            ->first();
+
+        if (!$existingLead) {
+            \App\Models\Lead::create([
+                'nome' => $request->name,
+                'telefone' => $request->phone,
+                'origem' => 'Radar',
+                'status' => 'em_contato', // Já iniciou contato via WhatsApp
+                'responsavel' => $request->user()?->name ?? 'Sistema',
+                'observacoes' => "Gerado automaticamente via Radar de Oportunidades.\nTermo: {$request->termo}\nCidade: {$request->cidade}\nGoogle Place ID: {$request->place_id}"
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'alvo' => $alvo
+        ]);
+    }
+
+    /**
+     * Busca os detalhes (telefone/whats) de um alvo específico.
+     */
+    public function getTargetDetails(Request $request, \App\Services\GooglePlacesService $googleService)
+    {
+        $request->validate([
+            'place_id' => 'required|string',
+        ]);
+
+        $details = $googleService->getDetails($request->place_id);
+
+        if (!$details) {
+            return response()->json(['success' => false, 'message' => 'Detalhes não encontrados'], 404);
+        }
+
+        // Tenta limpar o telefone para formato internacional/whatsapp
+        $phone = $details['international_phone_number'] ?? $details['formatted_phone_number'] ?? null;
+        $whatsapp = null;
+
+        if ($phone) {
+            // Remove tudo que não é número
+            $cleanPhone = preg_replace('/\D/', '', $phone);
+            // Se for BR (começa com 55 ou tem 10/11 digitos), garante o 55
+            if (strlen($cleanPhone) <= 11) {
+                $whatsapp = '55' . $cleanPhone;
+            } else {
+                $whatsapp = $cleanPhone;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'details' => [
+                'name' => $details['name'],
+                'phone' => $phone,
+                'whatsapp' => $whatsapp,
+                'website' => $details['website'] ?? null,
+                'address' => $details['formatted_address'] ?? null,
+            ]
         ]);
     }
 

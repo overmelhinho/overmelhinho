@@ -257,6 +257,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/radar/oportunidades', [\App\Http\Controllers\Api\V1\RadarController::class, 'index']);
     Route::post('/radar/oportunidades/script', [\App\Http\Controllers\Api\V1\RadarController::class, 'generateScript']);
     Route::post('/radar/oportunidades/prospectar', [\App\Http\Controllers\Api\V1\RadarController::class, 'markAsProspected']);
+    Route::get('/radar/oportunidades/alvos', [\App\Http\Controllers\Api\V1\RadarController::class, 'fetchTargets']);
+    Route::get('/radar/oportunidades/alvos/detalhes', [\App\Http\Controllers\Api\V1\RadarController::class, 'getTargetDetails']);
+    Route::post('/radar/oportunidades/alvos/prospectar', [\App\Http\Controllers\Api\V1\RadarController::class, 'markTargetAsProspected']);
 });
 
 
