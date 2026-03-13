@@ -29,6 +29,9 @@ class RadarController extends Controller
 
         $oportunidades = [];
 
+        // Pega as prospecções já feitas para bater com os termos
+        $prospeccoes = \App\Models\RadarOportunidade::all()->groupBy(fn($item) => mb_strtolower($item->termo) . '|' . mb_strtolower($item->cidade));
+
         foreach ($rawGaps as $idx => $gap) {
             $buscas = (int) $gap->buscas;
             $concorrentes = (int) $gap->max_concorrentes;
@@ -41,13 +44,17 @@ class RadarController extends Controller
             $termDisplay = mb_convert_case($gap->term, MB_CASE_TITLE, "UTF-8");
             $cityDisplay = $gap->city ? mb_convert_case($gap->city, MB_CASE_TITLE, "UTF-8") : 'Região Geral';
 
+            $key = mb_strtolower($gap->term) . '|' . mb_strtolower($gap->city ?? '');
+            $prospectado = isset($prospeccoes[$key]);
+
             $oportunidades[] = [
                 'id' => $idx + 1,
                 'termo' => $termDisplay,
                 'cidade' => $cityDisplay,
                 'buscas' => $buscas,
                 'concorrentes' => $concorrentes,
-                'temperatura' => $temp
+                'temperatura' => $temp,
+                'status' => $prospectado ? 'prospectado' : 'pendente'
             ];
         }
 
@@ -63,6 +70,38 @@ class RadarController extends Controller
                 'convertidos' => 18 // Mock: Deals Won com origem Radar
             ],
             'oportunidades' => $oportunidades
+        ]);
+    }
+
+    /**
+     * Marca uma oportunidade como prospectada.
+     */
+    public function markAsProspected(Request $request)
+    {
+        $request->validate([
+            'termo' => 'required|string',
+            'cidade' => 'required|string',
+        ]);
+
+        // Normalização para bater com a index (lowercase)
+        $termoRaw = mb_strtolower(trim($request->termo));
+        $cidadeRaw = $request->cidade === 'Região Geral' ? '' : mb_strtolower(trim($request->cidade));
+
+        $oportunidade = \App\Models\RadarOportunidade::updateOrCreate(
+            [
+                'termo' => $termoRaw,
+                'cidade' => $cidadeRaw,
+            ],
+            [
+                'status' => 'prospectado',
+                'prospectado_em' => now(),
+                'user_id' => $request->user()?->id
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'oportunidade' => $oportunidade
         ]);
     }
 

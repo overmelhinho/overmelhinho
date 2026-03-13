@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Sparkles, TrendingUp, Users, Target, Search, AlertTriangle, MessageCircle, Loader2 } from "lucide-react";
+import { Copy, Sparkles, TrendingUp, Users, Target, Search, AlertTriangle, MessageCircle, Loader2, Check } from "lucide-react";
 import toast from "react-hot-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import axios from "@/services/api";
@@ -11,6 +11,7 @@ type Oportunidade = {
     buscas: number;
     concorrentes: number;
     temperatura: "alta" | "media" | "emergente";
+    status?: "pendente" | "prospectado";
 };
 
 
@@ -18,7 +19,7 @@ export default function OportunidadesPage() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [pitchText, setPitchText] = useState("");
 
-    const { data: radarData, isLoading } = useQuery({
+    const { data: radarData, isLoading, refetch } = useQuery({
         queryKey: ["radar-oportunidades"],
         queryFn: async () => {
             const resp = await axios.get("/v1/radar/oportunidades");
@@ -44,10 +45,27 @@ export default function OportunidadesPage() {
         }
     });
 
+    const prospectMutation = useMutation({
+        mutationFn: async (op: Oportunidade) => {
+            await axios.post("/v1/radar/oportunidades/prospectar", {
+                termo: op.termo,
+                cidade: op.cidade
+            });
+        },
+        onSuccess: () => {
+            refetch(); // Atualiza a lista para mostrar o botão verde
+        }
+    });
+
     const handleProspectar = (op: Oportunidade) => {
         setSelectedId(op.id);
         setPitchText(""); // Limpa o anterior enquanto carrega
         scriptMutation.mutate(op);
+
+        // Se ainda não estiver prospectado, marca agora
+        if (op.status !== "prospectado") {
+            prospectMutation.mutate(op);
+        }
     };
 
     const copyToWhatsApp = async () => {
@@ -167,15 +185,21 @@ export default function OportunidadesPage() {
                                         handleProspectar(op);
                                     }}
                                     disabled={scriptMutation.isPending && selectedId === op.id}
-                                    className={`px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50
-                                        ${selectedId === op.id
-                                            ? 'bg-red-100 text-[#C00000] border border-red-200'
-                                            : 'bg-[#C00000] text-white hover:bg-red-700 hover:shadow-md'}
+                                    className={`px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 min-w-[120px]
+                                        ${op.status === 'prospectado'
+                                            ? 'bg-emerald-500 text-white shadow-emerald-100 hover:bg-emerald-600'
+                                            : selectedId === op.id
+                                                ? 'bg-red-100 text-[#C00000] border border-red-200'
+                                                : 'bg-[#C00000] text-white hover:bg-red-700 hover:shadow-md'}
                                     `}
                                 >
                                     {(scriptMutation.isPending && selectedId === op.id) ? (
-                                        <span className="flex items-center gap-2"><Loader2 className="animate-spin" size={14} /> Gerando...</span>
-                                    ) : '🎯 Prospectar'}
+                                        <span className="flex items-center gap-2 justify-center"><Loader2 className="animate-spin" size={14} /> Gerando...</span>
+                                    ) : op.status === 'prospectado' ? (
+                                        <span className="flex items-center gap-2 justify-center"><Check size={14} /> Prospectado</span>
+                                    ) : (
+                                        <span className="flex items-center gap-2 justify-center">🎯 Prospectar</span>
+                                    )}
                                 </button>
                             </div>
                         ))}

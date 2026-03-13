@@ -256,6 +256,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ✅ Radar de Oportunidades (Gaps + IA)
     Route::get('/radar/oportunidades', [\App\Http\Controllers\Api\V1\RadarController::class, 'index']);
     Route::post('/radar/oportunidades/script', [\App\Http\Controllers\Api\V1\RadarController::class, 'generateScript']);
+    Route::post('/radar/oportunidades/prospectar', [\App\Http\Controllers\Api\V1\RadarController::class, 'markAsProspected']);
 });
 
 
