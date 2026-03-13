@@ -1,7 +1,7 @@
 # Módulo: Radar de Oportunidades (Gaps de Mercado)
 
 ## 📌 Visão Geral
-O **Radar de Oportunidades** é uma ferramenta comercial do painel Administrativo (SaaS) projetada para otimizar a prospecção da equipe de vendas d'O Vermelhinho. Ele utiliza dados de busca em tempo real e o cruza com a densidade de concorrentes ativos na plataforma para gerar listas de "Gaps" (Alta procura, Baixa oferta). Além disso, está integrado a Inteligência Artificial (OpenAI GTP-4o-mini) para formular discursos ('Pitch') de vendas de alta performance.
+O **Radar de Oportunidades** é uma ferramenta comercial do painel Administrativo (SaaS) projetada para otimizar a prospecção da equipe de vendas d'O Vermelhinho. Ele utiliza dados de busca em tempo real e o cruza com a densidade de concorrentes ativos na plataforma para gerar listas de "Gaps" (Alta procura, Baixa oferta). Além disso, está integrado a Inteligência Artificial (OpenAI GTP-4o-mini) para formular discursos ('Pitch') de vendas de alta performance e rastrear o retorno financeiro (ROI) das ações.
 
 ## 🏗 Arquitetura do Módulo
 
@@ -9,20 +9,31 @@ O **Radar de Oportunidades** é uma ferramenta comercial do painel Administrativ
 - **Caminho:** `frontend/src/pages/oportunidades/OportunidadesPage.tsx`
 - **Design System:** Usa a abordagem de *Bento Grid*, com estética *Light Skeuomorphism* e micro-interações *Gimme Gummy* (táteis e responsivas aos cliques).
 - **Consumo de Api:** O componente consome as rotas protegidas do Laravel via `axios` e as gerencia reativamente através do `@tanstack/react-query`.
-- **Paginação e Filtros:** Implementação de paginação no lado do servidor e filtros por status (`pendente`, `prospectado`).
+- **Cockpit de ROI**: Painel superior dinâmico que exibe a performance financeira e de conversão do módulo em tempo real.
 - **Painel Lateral Sticky:** O bloco de script de IA e alvos do Google Maps permanece fixo durante o scroll para melhor usabilidade.
 
 ### 2. Backend (Laravel API)
 - **Controller:** `backend/app/Http/Controllers/Api/V1/RadarController.php`
 - **Lógica de Gaps:** Consulta a tabela `search_logs` dos últimos 30 dias para identificar termos com alta busca e baixa oferta (resultados <= 3).
 - **Inteligência de Alvos:** Integrado ao **Google Places API** para buscar empresas reais que atendam ao gap detectado na cidade específica.
-- **Filtro Anti-Duplicação:** Cruza dados do Google Maps com a tabela de `clientes` para não sugerir prospecção de quem já está no portal.
+- **Métricas de ROI (`getROI`):** Endpoint que calcula conversão de leads, MRR real acumulado e ticket médio baseado nas vendas fechadas vinculadas ao Radar.
 - **Automação CRM:** O método `markTargetAsProspected` cria automaticamente um Lead no Kanban com a origem "Radar" e status "Em negociação" ao iniciar o contato via WhatsApp.
 
 ### 3. Banco de Dados / Persistência
 - **RadarOportunidade:** Rastreia o status de prospecção geral de um termo/cidade.
 - **RadarAlvoProspectado:** Rastreia individualmente cada empresa do Google Maps que foi contatada.
 - **SearchLog:** Motor de dados bruto das intenções de busca do usuário do portal.
+
+---
+
+## 📊 Fórmulas de KPI (Radar ROI)
+O sistema utiliza as seguintes lógicas para os indicadores de performance:
+
+- **Gaps Hoje**: Quantidade total de oportunidades únicas (termo + cidade) com buscas > 0 e concorrentes <= 3.
+- **MRR Potencial (Gap)**: `Gaps Hoje * R$ 299,00`. Representa a receita recorrente total que a empresa está deixando de capturar nos nichos vázios do portal.
+- **Taxa de Conversão**: `(Leads Radar Convertidos / Leads Radar Totais) * 100`.
+- **MRR Real**: Soma dos preços dos planos vinculados aos clientes que foram originados via Radar (rastreio feito via `lead_id` → `origem="Radar"`).
+- **Ticket Médio**: `MRR Real / Vendas Ganhas`.
 
 ---
 
@@ -39,6 +50,6 @@ O **Radar de Oportunidades** é uma ferramenta comercial do painel Administrativ
 - [x] **Integração Front-end Público**: Coleta orgânica via `/v1/tracking/search` ativa.
 - [x] **Conexão com CRM e Google Maps**: Busca inteligente e criação de leads automática.
 - [x] **Paginação e Organização**: Controle de volume de dados na UI.
+- [x] **Relatório de ROI do Radar**: Dashboard mostrando quanto de MRR o Radar gerou efetivamente.
 - [ ] **Integração Real-Time com Reverb**: Notificar a equipe comercial sobre "Mega Gaps" instantaneamente.
 - [ ] **Follow-up Inteligente**: IA que analisa se o prospectado do Radar converteu e ajusta os próximos scripts.
-- [ ] **Relatório de ROI do Radar**: Dashboard mostrando quanto de MRR o Radar gerou efetivamente.
