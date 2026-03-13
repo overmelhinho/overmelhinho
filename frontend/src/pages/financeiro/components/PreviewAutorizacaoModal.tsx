@@ -60,14 +60,6 @@ export default function PreviewAutorizacaoModal({
                             <Download size={16} />
                             Baixar PDF
                         </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all"
-                            onClick={onClose}
-                        >
-                            <X size={20} />
-                        </Button>
                     </div>
                 </DialogHeader>
 

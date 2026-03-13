@@ -27,7 +27,8 @@ import { useFormikContext } from "formik";
 import { cn } from "@/lib/utils";
 import CreateAutorizacaoModal from "../../../financeiro/components/CreateAutorizacaoModal";
 import PreviewAutorizacaoModal from "../../../financeiro/components/PreviewAutorizacaoModal";
-import { MoreHorizontal, Share2, Send, CheckCircle, DollarSign } from "lucide-react";
+import JustificarAssinaturaModal from "../../../financeiro/components/JustificarAssinaturaModal";
+import { MoreHorizontal, Share2, Send, CheckCircle, DollarSign, ShieldCheck } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -84,6 +85,7 @@ export default function TabFinanceiro() {
     // Autorização States
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [isJustifyOpen, setIsJustifyOpen] = useState(false);
     const [selectedAuth, setSelectedAuth] = useState<{ id: number, numero: number } | null>(null);
 
     // Discount States
@@ -505,12 +507,24 @@ export default function TabFinanceiro() {
                                                     )}
 
                                                     {auth.status === "aguardando_assinatura" && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleSendLink(auth.id)}
-                                                            className="rounded-lg font-bold text-xs gap-2 py-2 text-yellow-600 bg-yellow-50 cursor-pointer"
-                                                        >
-                                                            <LinkIcon size={14} /> Copiar Link p/ Envio Manual
-                                                        </DropdownMenuItem>
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleSendLink(auth.id)}
+                                                                className="rounded-lg font-bold text-xs gap-2 py-2 text-yellow-600 bg-yellow-50 cursor-pointer mb-1"
+                                                            >
+                                                                <LinkIcon size={14} /> Copiar Link p/ Envio Manual
+                                                            </DropdownMenuItem>
+
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setSelectedAuth({ id: auth.id, numero: auth.numero });
+                                                                    setIsJustifyOpen(true);
+                                                                }}
+                                                                className="rounded-lg font-bold text-xs gap-2 py-2 text-emerald-600 bg-emerald-50 cursor-pointer"
+                                                            >
+                                                                <ShieldCheck size={14} /> Justificar Assinatura
+                                                            </DropdownMenuItem>
+                                                        </>
                                                     )}
 
                                                     {auth.status === "assinado" && (
@@ -979,6 +993,17 @@ export default function TabFinanceiro() {
             <PreviewAutorizacaoModal
                 isOpen={isPreviewOpen}
                 onClose={() => setIsPreviewOpen(false)}
+                autorizacaoId={selectedAuth?.id || null}
+                numero={selectedAuth?.numero || null}
+            />
+
+            <JustificarAssinaturaModal
+                isOpen={isJustifyOpen}
+                onClose={() => setIsJustifyOpen(false)}
+                onSuccess={() => {
+                    refetchAuths();
+                    setIsJustifyOpen(false);
+                }}
                 autorizacaoId={selectedAuth?.id || null}
                 numero={selectedAuth?.numero || null}
             />

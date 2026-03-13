@@ -307,6 +307,54 @@ class AutorizacaoController extends Controller
         ]);
     }
 
+    // ─── Justificar Assinatura (Admin) ───────────────────────────────────────
+
+    public function justify(Request $request, $id)
+    {
+        $autorizacao = Autorizacao::findOrFail($id);
+
+        if ($autorizacao->status !== 'aguardando_assinatura') {
+            return response()->json(['message' => 'A autorização não está pendente de assinatura.'], 422);
+        }
+
+        $request->validate([
+            'justificativa' => 'required|string|min:5',
+        ]);
+
+        $autorizacao->update([
+            'status'                   => 'assinado',
+            'assinado_em'              => now(),
+            'justificativa_assinatura' => $request->justificativa,
+            'justificado_por'          => auth()->id(),
+            'assinatura_ip'            => $request->ip(),
+        ]);
+
+        // Gera PDF final com justificativa e salva
+        try {
+            $autorizacaoFull = $autorizacao->fresh()->load(['cliente.enderecos', 'cliente.contatos', 'vendedor', 'justificadoPor', 'parcelas']);
+            $pdf = Pdf::loadView('pdf.autorizacao', ['autorizacao' => $autorizacaoFull])
+                ->setPaper('a4', 'portrait');
+            $filename = "autorizacoes/autorizacao-{$autorizacao->numero}-justificada.pdf";
+            Storage::disk('public')->put($filename, $pdf->output());
+            $autorizacao->update(['pdf_path' => $filename]);
+        } catch (\Exception $e) {
+            Log::error('Erro ao gerar PDF pós-justificativa: ' . $e->getMessage());
+        }
+
+        // Automação: Gerar faturas no Tiny imediatamente
+        try {
+            $tinyService = app(TinyErpService::class);
+            $this->processInvoiceGeneration($autorizacao->fresh(['parcelas', 'cliente']), $tinyService);
+        } catch (\Exception $e) {
+            Log::error("Erro na automação pós-justificativa da autorização #{$autorizacao->id}: " . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contrato assinado via justificativa com sucesso!',
+        ]);
+    }
+
     // ─── Gerar Invoices após Assinatura (Admin ou Auto) ───────────────────────
 
     public function generateInvoices($id, TinyErpService $tinyService)
@@ -317,12 +365,15 @@ class AutorizacaoController extends Controller
             return response()->json(['message' => 'A autorização precisa estar assinada.'], 422);
         }
 
-        $created = $this->processInvoiceGeneration($autorizacao, $tinyService);
+        $result = $this->processInvoiceGeneration($autorizacao, $tinyService);
 
         return response()->json([
-            'success'          => true,
-            'invoices_criadas' => count($created),
-            'invoice_ids'      => $created,
+            'success'            => true,
+            'message'            => $result['total_processed'] > 0 ? 'Faturas processadas com sucesso.' : 'Todas as faturas já estavam sincronizadas.',
+            'invoices_criadas'   => count($result['created']),
+            'invoices_sincronizadas' => count($result['synced']),
+            'total_processed'    => $result['total_processed'],
+            'invoice_ids'        => array_merge($result['created'], $result['synced']),
         ]);
     }
 
@@ -331,43 +382,59 @@ class AutorizacaoController extends Controller
      */
     private function processInvoiceGeneration(Autorizacao $autorizacao, TinyErpService $tinyService): array
     {
-        $created = [];
+        $createdIds = [];
+        $syncedIds = [];
 
         foreach ($autorizacao->parcelas as $parcela) {
-            if ($parcela->invoice_id) continue; // já tem invoice
+            $invoice = null;
 
-            $invoice = Invoice::create([
-                'client_id'      => $autorizacao->cliente_id,
-                'plan_id'        => $autorizacao->plan_id,
-                'amount'         => $parcela->valor,
-                'payable_amount' => $parcela->payable_amount,
-                'is_permuta'     => $autorizacao->is_permuta,
-                'permuta_amount' => $parcela->permuta_amount,
-                'permuta_description' => $autorizacao->permuta_description,
-                'due_date'       => $parcela->vencimento,
-                'status'         => 'pending',
-                'payment_method' => $autorizacao->payment_method,
-                'parcel_number'  => $parcela->numero,
-                'total_parcels'  => $autorizacao->num_parcelas,
-                'group_id'       => 'autorizacao-' . $autorizacao->id,
-            ]);
-
-            // Envia ao Tiny
-            try {
-                $tinyData = $tinyService->createReceivable($invoice);
-                $invoice->update([
-                    'tiny_account_id' => $tinyData['tiny_account_id'],
-                    'payment_url'     => $tinyData['payment_url'],
-                ]);
-            } catch (\Exception $e) {
-                Log::error("Erro ao enviar parcela {$parcela->numero} da autorização #{$autorizacao->numero} ao Tiny: " . $e->getMessage());
+            if ($parcela->invoice_id) {
+                $invoice = Invoice::find($parcela->invoice_id);
             }
 
-            $parcela->update(['invoice_id' => $invoice->id, 'status' => 'pendente']);
-            $created[] = $invoice->id;
+            if (!$invoice) {
+                $invoice = Invoice::create([
+                    'client_id'      => $autorizacao->cliente_id,
+                    'plan_id'        => $autorizacao->plan_id,
+                    'amount'         => $parcela->valor,
+                    'payable_amount' => $parcela->payable_amount,
+                    'is_permuta'     => $autorizacao->is_permuta,
+                    'permuta_amount' => $parcela->permuta_amount,
+                    'permuta_description' => $autorizacao->permuta_description,
+                    'due_date'       => $parcela->vencimento,
+                    'status'         => 'pending',
+                    'payment_method' => $autorizacao->payment_method,
+                    'parcel_number'  => $parcela->numero,
+                    'total_parcels'  => $autorizacao->num_parcelas,
+                    'group_id'       => 'autorizacao-' . $autorizacao->id,
+                ]);
+                $parcela->update(['invoice_id' => $invoice->id, 'status' => 'pendente']);
+                $createdIds[] = $invoice->id;
+            }
+
+            // Envia ao Tiny se ainda não tiver ID lá
+            if ($invoice && !$invoice->tiny_account_id) {
+                try {
+                    $tinyData = $tinyService->createReceivable($invoice);
+                    $invoice->update([
+                        'tiny_account_id' => $tinyData['tiny_account_id'],
+                        'payment_url'     => $tinyData['payment_url'],
+                    ]);
+                    
+                    if (!in_array($invoice->id, $createdIds)) {
+                        $syncedIds[] = $invoice->id;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Erro ao enviar parcela {$parcela->numero} da autorização #{$autorizacao->numero} ao Tiny: " . $e->getMessage());
+                }
+            }
         }
 
-        return $created;
+        return [
+            'created' => $createdIds,
+            'synced'  => $syncedIds,
+            'total_processed' => count($createdIds) + count($syncedIds)
+        ];
     }
 
     // ─── Helper: Gerar Parcelas ───────────────────────────────────────────────

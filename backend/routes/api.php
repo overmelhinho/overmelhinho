@@ -240,6 +240,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::put('/{id}',      [AutorizacaoController::class, 'update']);
         Route::patch('/{id}/cancel', [AutorizacaoController::class, 'cancel']);
         Route::post('/{id}/send-link',       [AutorizacaoController::class, 'sendLink']);
+        Route::post('/{id}/justify',         [AutorizacaoController::class, 'justify']);
         Route::post('/{id}/generate-invoices', [AutorizacaoController::class, 'generateInvoices']);
     });
 

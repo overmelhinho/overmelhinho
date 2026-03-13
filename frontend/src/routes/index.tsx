@@ -79,6 +79,7 @@ import AutorizarPage from "@/pages/public/AutorizarPage";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
+  { path: "/login", element: <LoginPage /> },
 
   // ✅ Autorização - Público
   { path: "/autorizar/:token", element: <AutorizarPage /> },

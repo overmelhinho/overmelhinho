@@ -312,7 +312,7 @@
         </tr>
         <tr>
             <td>
-                <span class="label">Veredor Responsável</span>
+                <span class="label">Vendedor Responsável</span>
                 <span class="value">{{ $autorizacao->vendedor?->name ?? '—' }}</span>
             </td>
             <td>
@@ -436,17 +436,30 @@
     <div class="signature-area">
         @if($autorizacao->status === 'assinado')
             <div class="signature-box" style="border-top: none;">
-                @if($autorizacao->assinatura_base64)
-                    <img src="{{ $autorizacao->assinatura_base64 }}" class="signature-img">
+                @if($autorizacao->justificativa_assinatura)
+                    <div style="text-align: left; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 4px; background: #f8fafc;">
+                        <div class="label" style="color: #b91c1c; font-weight: bold; margin-bottom: 5px;">Aprovação por Justificativa Administrativa</div>
+                        <div class="value" style="font-weight: normal; margin-bottom: 8px;">"{{ $autorizacao->justificativa_assinatura }}"</div>
+                        <div class="label">Responsável: {{ $autorizacao->justificadoPor?->name ?? 'Sistema' }}</div>
+                        <div class="label">Data do Aceite: {{ $autorizacao->assinado_em->format('d/m/Y \à\s H:i') }}</div>
+                        
+                        <div style="margin-top: 10px; font-size: 7px; color: #94a3b8;">
+                            Este contrato foi marcado como assinado manualmente com base no aceite prévio do cliente via canal alternativo (WhatsApp/Presencial).
+                        </div>
+                    </div>
+                @else
+                    @if($autorizacao->assinatura_base64)
+                        <img src="{{ $autorizacao->assinatura_base64 }}" class="signature-img">
+                    @endif
+                    <div style="border-top: 1px solid #94a3b8; width: 100%; margin-top: 5px;"></div>
+                    <div class="value">{{ $autorizacao->cliente->razao_social ?: $autorizacao->cliente->nome_fantasia }}</div>
+                    <div class="label">Assinado em {{ $autorizacao->assinado_em->format('d/m/Y \à\s H:i') }}</div>
+                    
+                    <div class="digital-certified">
+                        🛡️ Documento assinado digitalmente | IP: {{ $autorizacao->assinatura_ip }}<br>
+                        ID Check: {{ substr(md5($autorizacao->id . 'overmelhinho'), 0, 12) }}
+                    </div>
                 @endif
-                <div style="border-top: 1px solid #94a3b8; width: 100%; margin-top: 5px;"></div>
-                <div class="value">{{ $autorizacao->cliente->razao_social ?: $autorizacao->cliente->nome_fantasia }}</div>
-                <div class="label">Assinado em {{ $autorizacao->assinado_em->format('d/m/Y \à\s H:i') }}</div>
-                
-                <div class="digital-certified">
-                    🛡️ Documento assinado digitalmente | IP: {{ $autorizacao->assinatura_ip }}<br>
-                    ID Check: {{ substr(md5($autorizacao->id . 'overmelhinho'), 0, 12) }}
-                </div>
             </div>
         @else
             <div class="signature-box">

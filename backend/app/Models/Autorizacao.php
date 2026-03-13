@@ -40,6 +40,8 @@ class Autorizacao extends Model
         'permuta_description',
         'desconto_tipo',
         'desconto_valor',
+        'justificativa_assinatura',
+        'justificado_por',
     ];
 
     protected $casts = [
@@ -69,6 +71,11 @@ class Autorizacao extends Model
     public function vendedor()
     {
         return $this->belongsTo(User::class, 'vendedor_id');
+    }
+
+    public function justificadoPor()
+    {
+        return $this->belongsTo(User::class, 'justificado_por');
     }
 
     public function parcelas()

@@ -131,9 +131,24 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         fetchPlans();
     }, []);
 
+    const formatCurrency = (value: string) => {
+        const digits = value.replace(/\D/g, "");
+        const amount = parseFloat(digits) / 100;
+        if (isNaN(amount)) return "";
+        return amount.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    };
+
+    const parseCurrency = (value: string) => {
+        if (!value) return "0";
+        return value.replace(/\./g, "").replace(",", ".");
+    };
+
     // Calculate Totals Logic
     const calculateTotals = () => {
-        const basePrice = parseFloat(form.valor_total) || 0;
+        const basePrice = parseFloat(parseCurrency(form.valor_total)) || 0;
         const discountValue = parseFloat(form.desconto_valor) || 0;
 
         const discountAmount = form.desconto_tipo === "fixed"
@@ -144,7 +159,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         const taxa = parseFloat(form.taxa_cadastro) || 0;
         const totalComTaxa = priceAfterDiscount + taxa;
 
-        const permuta = form.is_permuta ? parseFloat(form.permuta_amount || "0") : 0;
+        const permuta = form.is_permuta ? parseFloat(parseCurrency(form.permuta_amount || "0")) : 0;
         const finalPayable = Math.max(0, totalComTaxa - permuta);
 
         const numParcelas = parseInt(form.num_parcelas) || 1;
@@ -161,20 +176,6 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
     };
 
     const totals = calculateTotals();
-
-    const formatCurrency = (value: string) => {
-        const digits = value.replace(/\D/g, "");
-        const amount = parseFloat(digits) / 100;
-        if (isNaN(amount)) return "";
-        return amount.toLocaleString("pt-BR", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
-    };
-
-    const parseCurrency = (value: string) => {
-        return value.replace(/\./g, "").replace(",", ".");
-    };
 
     const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -194,7 +195,9 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         const finalPayable = Math.max(0, totalComTaxa - permuta);
 
         const num = parseInt(form.num_parcelas) || 1;
-        const start = new Date(form.data_primeira_parcela);
+        // Fix: Parse YYYY-MM-DD manually to avoid UTC shift
+        const [y, m, d] = form.data_primeira_parcela.split("-").map(Number);
+        const start = new Date(y, m - 1, d);
 
         if (finalPayable <= 0) {
             setParcelasPreview([{ numero: 1, vencimento: format(start, "yyyy-MM-dd"), label: format(start, "dd/MM/yyyy"), valor: "0.00" }]);
@@ -204,20 +207,25 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         const baseVal = Math.floor((finalPayable / num) * 100) / 100;
         const diff = finalPayable - (baseVal * num);
 
-        const newParcelas = Array.from({ length: num }).map((_, i) => ({
-            numero: i + 1,
-            vencimento: format(addMonths(start, i), "yyyy-MM-dd"), // internal state for input
-            label: format(addMonths(start, i), "dd/MM/yyyy"), // display
-            valor: i === num - 1 ? (baseVal + diff).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : baseVal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })
-        }));
+        const newParcelas = Array.from({ length: num }).map((_, i) => {
+            const date = addMonths(start, i);
+            return {
+                numero: i + 1,
+                vencimento: format(date, "yyyy-MM-dd"), // internal state for input
+                label: format(date, "dd/MM/yyyy"), // display
+                valor: (i === num - 1 ? (baseVal + diff) : baseVal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
+            };
+        });
 
         setParcelasPreview(newParcelas);
     }, [form.valor_total, form.taxa_cadastro, form.num_parcelas, form.data_primeira_parcela, form.desconto_valor, form.desconto_tipo, form.is_permuta, form.permuta_amount]);
 
     const handleParcelaDateChange = (index: number, newDate: string) => {
         const updated = [...parcelasPreview];
+        const [y, m, d] = newDate.split("-").map(Number);
+        const date = new Date(y, m - 1, d);
         updated[index].vencimento = newDate;
-        updated[index].label = format(new Date(newDate), "dd/MM/yyyy");
+        updated[index].label = format(date, "dd/MM/yyyy");
         setParcelasPreview(updated);
     };
 
@@ -659,12 +667,12 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                         </Select>
                                     </div>
 
-                                    {/* Listagem Editável de Parcelas */}
-                                    {parseInt(form.num_parcelas) > 0 && parcelasPreview.length > 0 && (
+                                    {/* Listagem Editável de Parcelas (apenas a partir da 2ª) */}
+                                    {parseInt(form.num_parcelas) > 1 && parcelasPreview.length > 1 && (
                                         <div className="pt-4 border-t border-gray-50">
-                                            <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block">Detalhamento de Vencimentos</Label>
+                                            <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block">Próximos Vencimentos</Label>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                                {parcelasPreview.map((p, idx) => (
+                                                {parcelasPreview.slice(1).map((p, idx) => (
                                                     <div key={idx} className="bg-gray-50 p-2 rounded-xl border border-gray-100">
                                                         <div className="flex justify-between items-center mb-1">
                                                             <span className="text-[9px] font-black text-gray-400 uppercase">{p.numero}ª Parcela</span>
@@ -673,7 +681,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                                         <Input
                                                             type="date"
                                                             value={p.vencimento}
-                                                            onChange={(e) => handleParcelaDateChange(idx, e.target.value)}
+                                                            onChange={(e) => handleParcelaDateChange(idx + 1, e.target.value)}
                                                             className="h-8 text-xs font-bold border-gray-200 rounded-lg px-2"
                                                         />
                                                     </div>
@@ -721,9 +729,9 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                             <div className="pt-2 mt-2 border-t border-white/5 flex justify-between items-center">
                                                 <span className="text-[11px] font-black uppercase text-red-500">Total a Receber</span>
                                                 <div className="text-right">
-                                                    <p className="text-xl font-black text-white leading-none">R$ {totals.finalPayable.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                    <p className="text-xl font-black text-white leading-none">R$ {totals.finalPayable.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                                     {totals.finalPayable > 0 && parseInt(form.num_parcelas) > 1 && (
-                                                        <p className="text-[9px] text-gray-400 font-bold pt-1">{form.num_parcelas}x de R$ {totals.valParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                        <p className="text-[9px] text-gray-400 font-bold pt-1">{form.num_parcelas}x de R$ {totals.valParcela.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                                     )}
                                                 </div>
                                             </div>

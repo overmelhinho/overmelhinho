@@ -370,9 +370,9 @@ class TinyErpService
     protected function mapPaymentMethod(?string $method): string
     {
         $map = [
-            'boleto' => 'Boleto Bancário',
-            'pix' => 'Pix',
-            'cartao' => 'Cartão de Crédito',
+            'boleto'   => 'Boleto Bancário',
+            'pix'      => 'PIX',
+            'cartao'   => 'Cartão de Crédito',
             'dinheiro' => 'Dinheiro',
         ];
 

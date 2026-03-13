@@ -80,12 +80,14 @@ interface Invoice {
     };
     justification?: string;
     action_date?: string;
+    tiny_account_id?: string | null;
 }
 
 export default function InvoicesTab() {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [syncFilter, setSyncFilter] = useState("all"); // all, synced, unsynced
     const [dateRange, setDateRange] = useState("all"); // all, 7, 15, 30, custom
     const [customStartDate, setCustomStartDate] = useState("");
     const [customEndDate, setCustomEndDate] = useState("");
@@ -199,7 +201,10 @@ export default function InvoicesTab() {
             }
         }
 
-        return matchesSearch && matchesStatus && matchesDate;
+        const matchesSync = syncFilter === "all" ||
+            (syncFilter === "synced" ? !!invoice.tiny_account_id : !invoice.tiny_account_id);
+
+        return matchesSearch && matchesStatus && matchesDate && matchesSync;
     });
 
     const getStatusBadge = (invoice: Invoice) => {
@@ -267,6 +272,20 @@ export default function InvoicesTab() {
                                 <SelectItem value="overdue">Atrasados ⚠️</SelectItem>
                                 <SelectItem value="paid">Pagos</SelectItem>
                                 <SelectItem value="canceled">Cancelados</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">ERP:</span>
+                        <Select value={syncFilter} onValueChange={setSyncFilter}>
+                            <SelectTrigger className="w-[140px] h-9 border-gray-200 rounded-xl text-xs font-bold">
+                                <SelectValue placeholder="ERP" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                                <SelectItem value="all">Ver Todas</SelectItem>
+                                <SelectItem value="synced">Sincronizadas</SelectItem>
+                                <SelectItem value="unsynced">Pendentes</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -348,6 +367,9 @@ export default function InvoicesTab() {
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                 Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                ERP
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                                 Ações
@@ -463,6 +485,17 @@ export default function InvoicesTab() {
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4">
                                             {getStatusBadge(invoice)}
+                                        </td>
+                                        <td className="whitespace-nowrap px-6 py-4">
+                                            {invoice.tiny_account_id ? (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
+                                                    <Check size={10} /> Sincronizada
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-600 border border-orange-100">
+                                                    <RefreshCw size={10} /> Pendente
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
