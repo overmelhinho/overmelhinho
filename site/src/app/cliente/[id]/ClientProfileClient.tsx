@@ -174,8 +174,40 @@ export default function ClientProfileClient() {
         }
     };
 
-    const tabs = ['Sobre', 'Fotos', 'Avaliações', 'Vagas'];
+    const contactInfo = client?.contatos?.[0];
+    let hasPhone = false;
+    let hasWhatsApp = false;
 
+    if (contactInfo) {
+        const isPrincipalHidden = contactInfo.telefone_principal_hidden_until
+            && new Date(contactInfo.telefone_principal_hidden_until) > new Date();
+
+        const priority = [
+            { key: 'telefone_principal', flag: 'exibir_tel_principal', hidden: isPrincipalHidden },
+            { key: 'celular', flag: 'exibir_celular', hidden: false },
+            { key: 'telefone_secundario', flag: 'exibir_tel_secundario', hidden: false },
+            { key: 'telefone_outro', flag: 'exibir_tel_outro', hidden: false }
+        ];
+
+        const foundPhone = priority.find(p => contactInfo[p.key] && contactInfo[p.flag] && !p.hidden);
+        const phone = foundPhone ? contactInfo[foundPhone.key] : (!isPrincipalHidden ? contactInfo.telefone_principal : contactInfo.celular);
+        hasPhone = !!phone;
+
+        let whatsapp = null;
+        if (contactInfo.whatsapp_selected && contactInfo[contactInfo.whatsapp_selected]) {
+            const isSelectedHidden = contactInfo.whatsapp_selected === 'telefone_principal' && isPrincipalHidden;
+            if (!isSelectedHidden) whatsapp = contactInfo[contactInfo.whatsapp_selected];
+        }
+        if (!whatsapp) {
+            const foundWa = priority.find(p => contactInfo[p.key] && !p.hidden);
+            if (foundWa) whatsapp = contactInfo[foundWa.key];
+        }
+        hasWhatsApp = !!whatsapp;
+    }
+
+    const tabs = ['Sobre', 'Fotos'];
+    if (client.reviews?.length > 0) tabs.push('Avaliações');
+    if (client.job_opportunities?.length > 0) tabs.push('Vagas');
     const daysMap: Record<number, string> = {
         1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado', 7: 'Domingo'
     };
@@ -206,21 +238,6 @@ export default function ClientProfileClient() {
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24 md:pb-0">
 
-            {/* 🖥️ DESKTOP NAVBAR */}
-            <header className="hidden md:flex sticky top-0 z-[100] bg-white border-b border-gray-100 px-8 py-4 items-center justify-between">
-                <div className="flex items-center space-x-12">
-                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => router.push('/')}>
-                        <div className="bg-brand-red w-8 h-8 rounded-xl flex items-center justify-center">
-                            <span className="text-white font-black italic">V</span>
-                        </div>
-                        <span className="font-black text-xl tracking-tighter font-serif">O Vermelhinho</span>
-                    </div>
-                </div>
-                <div className="flex items-center space-x-6">
-                    <button onClick={() => router.push('/')} className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-brand-red transition-all">Explorar</button>
-                    <button className="bg-brand-red text-white px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-red-100 active:scale-95 transition-all">Entrar</button>
-                </div>
-            </header>
 
             {/* 🤖 JSON-LD STRUCTURED DATA (Google LocalBusiness) */}
             <script
@@ -322,19 +339,33 @@ export default function ClientProfileClient() {
                             </div>
 
                             {/* CTAs DESKTOP */}
-                            <div className="hidden md:flex items-center space-x-3">
-                                <button
-                                    onClick={handleWhatsAppClick}
-                                    className="bg-brand-red text-white px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl shadow-red-100 flex items-center active:scale-95 transition-all hover:brightness-110"
-                                >
-                                    <MessageCircle size={20} className="mr-2" fill="currentColor" /> WhatsApp
-                                </button>
-                                <button
-                                    onClick={handleCallClick}
-                                    className="bg-gray-100 text-gray-900 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-gray-200"
-                                >
-                                    <Phone size={20} className="mr-2" /> Ligar Agora
-                                </button>
+                            <div className="hidden md:flex mt-4 md:mt-0 flex-wrap items-center gap-3">
+                                {hasWhatsApp && (
+                                    <button
+                                        onClick={handleWhatsAppClick}
+                                        className="bg-brand-red text-white px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl shadow-red-100 flex items-center active:scale-95 transition-all hover:brightness-110"
+                                    >
+                                        <MessageCircle size={20} className="mr-2" fill="currentColor" /> WhatsApp
+                                    </button>
+                                )}
+                                {hasPhone && (
+                                    <button
+                                        onClick={handleCallClick}
+                                        className="bg-gray-100 text-gray-900 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-gray-200"
+                                    >
+                                        <Phone size={20} className="mr-2" /> Ligar Agora
+                                    </button>
+                                )}
+                                {client.enderecos?.[0] && (
+                                    <a
+                                        href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="bg-blue-50 text-blue-600 border border-blue-100 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-blue-100"
+                                    >
+                                        <MapPin size={20} className="mr-2" fill="currentColor" /> Waze
+                                    </a>
+                                )}
                                 <button
                                     onClick={handleShareClick}
                                     className="p-5 bg-white border border-gray-100 rounded-[1.5rem] shadow-xl text-gray-400 hover:text-brand-red transition-all active:scale-75"
@@ -386,24 +417,89 @@ export default function ClientProfileClient() {
                                 >
                                     <section className="space-y-6">
                                         <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Sobre a Empresa</h2>
-                                        <p className="text-gray-500 leading-relaxed text-lg font-medium">
+                                        <p className="text-gray-500 leading-relaxed text-lg font-medium whitespace-pre-line">
                                             {client.descricao || `O ${client.nome_fantasia} oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.`}
                                         </p>
 
                                         {/* Info Boxes */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {client.data_fundacao && (
-                                                <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                                                <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
                                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Fundada em</p>
                                                     <p className="text-lg font-black text-gray-900 font-serif italic">{new Date(client.data_fundacao).getFullYear()}</p>
                                                 </div>
                                             )}
-                                            <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                                            <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Especialidade</p>
                                                 <p className="text-lg font-black text-gray-900 font-serif italic">{client.segmentos?.[0]?.nome || 'Negócio Local'}</p>
                                             </div>
                                         </div>
                                     </section>
+
+                                    {client.beneficios?.length > 0 && (
+                                        <section className="space-y-6">
+                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Benefícios</h2>
+                                            <div className="flex flex-wrap gap-4">
+                                                {client.beneficios.map((ben: any, i: number) => (
+                                                    <div key={i} className="bg-red-50 text-brand-red border border-red-100 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center shadow-sm">
+                                                        <CheckCircle2 size={18} className="mr-3" />
+                                                        {ben}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    {client.cidades_atendidas?.length > 0 && (
+                                        <section className="space-y-6">
+                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Cidades Atendidas</h2>
+                                            <div className="flex flex-wrap gap-3">
+                                                {client.cidades_atendidas.map((city: any, i: number) => (
+                                                    <div key={i} className="bg-white border border-gray-100 shadow-sm text-gray-500 px-5 py-3 rounded-2xl text-xs font-bold flex items-center">
+                                                        <MapPin size={14} className="mr-2 text-brand-red" />
+                                                        {city.nome} - {city.uf}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    {client.video && (
+                                        <section className="space-y-6">
+                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Apresentação</h2>
+                                            <div className="w-full aspect-video rounded-[3rem] overflow-hidden bg-gray-100 relative shadow-inner border-4 border-white gummy-card">
+                                                <iframe
+                                                    width="100%"
+                                                    height="100%"
+                                                    src={client.video.replace('watch?v=', 'embed/').split('&')[0]}
+                                                    title="Vídeo"
+                                                    frameBorder="0"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
+                                                ></iframe>
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    {client.portfolio_url && (
+                                        <section className="space-y-6">
+                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Materiais</h2>
+                                            <div className="bg-white p-8 rounded-[3rem] border-2 border-gray-50 shadow-xl gummy-card flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="w-16 h-16 bg-red-50 text-brand-red rounded-2xl flex items-center justify-center">
+                                                        <Briefcase size={28} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xl font-black font-serif italic text-gray-900">Catálogo & Preços</h4>
+                                                        <p className="text-xs font-bold text-gray-400 mt-1">Conheça mais sobre as ofertas</p>
+                                                    </div>
+                                                </div>
+                                                <a href={client.portfolio_url} target="_blank" rel="noopener noreferrer" className="bg-gray-900 text-white w-full md:w-auto px-8 py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all hover:bg-brand-red focus:outline-none flex whitespace-nowrap justify-center">
+                                                    <ExternalLink size={16} className="mr-2" /> Acessar Material
+                                                </a>
+                                            </div>
+                                        </section>
+                                    )}
 
                                     {/* MAP SECTION */}
                                     <section className="space-y-6">
@@ -557,21 +653,23 @@ export default function ClientProfileClient() {
                         </div>
 
                         {/* WhatsApp CTA */}
-                        <div className="relative group overflow-hidden bg-brand-red rounded-[3rem] p-10 text-white shadow-2xl shadow-red-200 gummy-card cursor-pointer" onClick={handleWhatsAppClick}>
-                            <div className="relative space-y-6">
-                                <div className="bg-white/20 w-14 h-14 rounded-2xl flex items-center justify-center">
-                                    <MessageCircle size={32} fill="white" className="text-brand-red" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h4 className="text-2xl font-black font-serif italic leading-none">Precisa de uma<br />resposta rápida?</h4>
-                                    <p className="text-white/70 text-xs font-bold font-sans">Entre em contato diretamente no WhatsApp.</p>
-                                </div>
-                                <div className="flex items-center space-x-2 text-xs font-black uppercase tracking-widest pt-4">
-                                    <span>Enviar Mensagem</span>
-                                    <ChevronRight size={16} />
+                        {hasWhatsApp && (
+                            <div className="relative group overflow-hidden bg-brand-red rounded-[3rem] p-10 text-white shadow-2xl shadow-red-200 gummy-card cursor-pointer" onClick={handleWhatsAppClick}>
+                                <div className="relative space-y-6">
+                                    <div className="bg-white/20 w-14 h-14 rounded-2xl flex items-center justify-center">
+                                        <MessageCircle size={32} fill="white" className="text-brand-red" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-2xl font-black font-serif italic leading-none">Precisa de uma<br />resposta rápida?</h4>
+                                        <p className="text-white/70 text-xs font-bold font-sans">Entre em contato diretamente no WhatsApp.</p>
+                                    </div>
+                                    <div className="flex items-center space-x-2 text-xs font-black uppercase tracking-widest pt-4">
+                                        <span>Enviar Mensagem</span>
+                                        <ChevronRight size={16} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Redes Sociais Dinâmicas */}
                         {client.redes_sociais?.length > 0 && (
@@ -654,23 +752,38 @@ export default function ClientProfileClient() {
             </footer>
 
             {/* 📱 MOBILE STICKY CONVERSION BAR */}
-            <footer className="md:hidden fixed bottom-0 left-0 right-0 p-6 z-[100] bg-gradient-to-t from-gray-50 via-gray-50/90 to-transparent">
-                <div className="flex space-x-3">
-                    <button
-                        onClick={handleCallClick}
-                        className="flex-[0.4] bg-white text-gray-900 py-6 rounded-[2.5rem] shadow-2xl border-2 border-white font-black text-xs uppercase tracking-widest flex items-center justify-center space-x-2 active:scale-90 transition-all font-sans"
-                    >
-                        <Phone size={20} />
-                        <span>Ligar</span>
-                    </button>
-                    <button
-                        onClick={handleWhatsAppClick}
-                        className="flex-1 bg-brand-red text-white py-6 rounded-[2.5rem] shadow-[0_25px_50px_-10px_rgba(239,68,68,0.4)] font-black text-lg flex items-center justify-center space-x-3 active:scale-95 transition-all overflow-hidden relative font-sans"
-                    >
-                        <div className="absolute inset-0 bg-white/20 translate-x-[-100%] active:translate-x-[100%] transition-transform duration-500"></div>
-                        <MessageCircle size={24} fill="white" />
-                        <span>WhatsApp</span>
-                    </button>
+            <footer className="md:hidden fixed bottom-0 left-0 right-0 p-6 z-[100] pointer-events-none">
+                <div className="flex space-x-3 pointer-events-auto">
+                    {hasPhone && (
+                        <button
+                            onClick={handleCallClick}
+                            className="flex-[0.4] bg-white text-gray-900 py-6 rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border-2 border-white font-black text-xs uppercase tracking-widest flex items-center justify-center space-x-2 active:scale-95 transition-all font-sans"
+                        >
+                            <Phone size={20} />
+                            <span>Ligar</span>
+                        </button>
+                    )}
+                    {hasWhatsApp && (
+                        <button
+                            onClick={handleWhatsAppClick}
+                            className="flex-1 bg-brand-red text-white py-6 rounded-[2rem] shadow-[0_25px_50px_-10px_rgba(239,68,68,0.5)] font-black text-lg flex items-center justify-center space-x-3 active:scale-95 transition-all overflow-hidden relative font-sans"
+                        >
+                            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] active:translate-x-[100%] transition-transform duration-500"></div>
+                            <MessageCircle size={24} fill="white" />
+                            <span>WhatsApp</span>
+                        </button>
+                    )}
+                    {(!hasPhone && !hasWhatsApp && client.enderecos?.[0]) && (
+                        <a
+                            href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 py-6 rounded-[2.5rem] shadow-2xl font-black text-lg flex items-center justify-center space-x-3 active:scale-95 transition-all overflow-hidden relative font-sans"
+                        >
+                            <MapPin size={24} fill="currentColor" />
+                            <span>Waze</span>
+                        </a>
+                    )}
                 </div>
             </footer>
 
