@@ -45,6 +45,7 @@ const cidadesSerra = [
 
 interface Props {
   nomeInicial: string;
+  cnpjInicial?: string;
   tipoCliente?: "gratuito" | "pagante";
   isOpen: boolean;
   onClose: () => void;
@@ -57,9 +58,68 @@ function onlyDigits(v: string) {
   return (v || "").replace(/\D/g, "");
 }
 
-function isValidCnpj(cnpj: string) {
-  // validação simples: 14 dígitos (sem cálculo de dígito verificador)
-  return onlyDigits(cnpj).length === 14;
+function isValidCPF(cpf: string): boolean {
+  const clean = cpf.replace(/[^\d]+/g, "");
+  if (clean.length !== 11) return false;
+  if (/^(\d)\1+$/.test(clean)) return false;
+
+  let sum = 0;
+  let remainder;
+
+  for (let i = 1; i <= 9; i++) sum += parseInt(clean.substring(i - 1, i)) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(clean.substring(9, 10))) return false;
+
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(clean.substring(i - 1, i)) * (12 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(clean.substring(10, 11))) return false;
+
+  return true;
+}
+
+function isValidCNPJ(cnpj: string): boolean {
+  const clean = cnpj.replace(/[^\d]+/g, "");
+  if (clean.length !== 14) return false;
+  if (/^(\d)\1+$/.test(clean)) return false;
+
+  let length = clean.length - 2;
+  let numbers = clean.substring(0, length);
+  const digits = clean.substring(length);
+  let sum = 0;
+  let pos = length - 7;
+
+  for (let i = length; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(length - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+
+  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (result !== parseInt(digits.charAt(0))) return false;
+
+  length = length + 1;
+  numbers = clean.substring(0, length);
+  sum = 0;
+  pos = length - 7;
+
+  for (let i = length; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(length - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+
+  result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (result !== parseInt(digits.charAt(1))) return false;
+
+  return true;
+}
+
+function isValidDocumento(v: string) {
+  const raw = onlyDigits(v);
+  if (raw.length === 11) return isValidCPF(raw);
+  if (raw.length === 14) return isValidCNPJ(raw);
+  return false;
 }
 
 function formatDateToBr(dateString: string) {
@@ -159,6 +219,7 @@ function parseEnderecoRobusto(enderecoCompleto: string, fallbackCidade?: string)
 
 export default function PreFetchModal({
   nomeInicial,
+  cnpjInicial = "",
   tipoCliente: tipoClienteInicial = "pagante",
   isOpen,
   onClose,
@@ -169,7 +230,7 @@ export default function PreFetchModal({
 
   const [cidade, setCidade] = useState("");
   const [nome, setNome] = useState(nomeInicial || "");
-  const [cnpj, setCnpj] = useState("");
+  const [cnpj, setCnpj] = useState(cnpjInicial || "");
 
   const [loading, setLoading] = useState(false);
   const [etapa, setEtapa] = useState<Etapa>(null);
@@ -180,17 +241,17 @@ export default function PreFetchModal({
   const [clienteExistente, setClienteExistente] = useState<{ id: number; nome: string } | null>(null);
   const [checkingCnpj, setCheckingCnpj] = useState(false);
 
-  // ✅ Sempre sincroniza o nome inicial mais recente (ex: usuário alterou no formulário e reabriu modal)
   useEffect(() => {
     setNome(nomeInicial || "");
-  }, [nomeInicial]);
+    setCnpj(cnpjInicial || "");
+  }, [nomeInicial, cnpjInicial]);
 
-  const cnpjValido = useMemo(() => (cnpj ? isValidCnpj(cnpj) : false), [cnpj]);
+  const docValido = useMemo(() => (cnpj ? isValidDocumento(cnpj) : false), [cnpj]);
 
-  // ✅ Verifica duplicidade ao completar 14 dígitos
+  // ✅ Verifica duplicidade ao completar 11 ou 14 dígitos
   useEffect(() => {
     const raw = onlyDigits(cnpj);
-    if (raw.length === 14) {
+    if (raw.length === 11 || raw.length === 14) {
       (async () => {
         setCheckingCnpj(true);
         try {
@@ -202,7 +263,7 @@ export default function PreFetchModal({
             setClienteExistente(null);
           }
         } catch (e) {
-          console.error("Erro ao checar CNPJ", e);
+          console.error("Erro ao checar documento", e);
         } finally {
           setCheckingCnpj(false);
         }
@@ -215,8 +276,8 @@ export default function PreFetchModal({
   const etapasUI = useMemo(
     () => [
       { id: "IA", label: "IA", icon: <Bot className="w-4 h-4" /> },
-      { id: "BrasilAPI", label: "Buscando pelo CNPJ", icon: <Database className="w-4 h-4" /> },
-      { id: "Receita", label: "Dados da Receita", icon: <Cloud className="w-4 h-4" /> },
+      { id: "BrasilAPI", label: "Fiscal (BrasilAPI)", icon: <Database className="w-4 h-4" /> },
+      { id: "Receita", label: "Fiscal (ReceitaWS)", icon: <Cloud className="w-4 h-4" /> },
       { id: "GooglePlaces", label: "Google Places", icon: <Cloud className="w-4 h-4" /> },
     ],
     []
@@ -236,11 +297,11 @@ export default function PreFetchModal({
     // Regras UX:
     // - com CNPJ: nome/cidade opcionais (mas ajudam no Places)
     // - sem CNPJ: precisa nome + cidade para Places/IA
-    if (!temCnpj && (!temNome || !temCidade)) {
-      return toast.error("Sem CNPJ: informe Nome e Cidade para buscar.");
+    if (!temNome || !temCidade) {
+      return toast.error("Nome e Cidade são obrigatórios para realizar a busca.");
     }
-    if (temCnpj && !cnpjValido) {
-      return toast.error("CNPJ inválido. Confira os 14 dígitos.");
+    if (temCnpj && !docValido) {
+      return toast.error("Documento inválido. Confira os dígitos (11 para CPF ou 14 para CNPJ).");
     }
 
     setLoading(true);
@@ -377,7 +438,7 @@ export default function PreFetchModal({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700">Cidade (opcional)</label>
+              <label className="text-sm font-medium text-gray-700">Cidade*</label>
               <select
                 value={cidade}
                 onChange={(e) => setCidade(e.target.value)}
@@ -391,51 +452,59 @@ export default function PreFetchModal({
                 ))}
               </select>
               <p className="mt-1 text-xs text-gray-500">
-                Sem CNPJ, a cidade é obrigatória para achar dados no Google Places.
+                A cidade ajuda a filtrar resultados locais e evitar homônimos em outros estados.
               </p>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700">CNPJ (opcional)</label>
-              <MaskedInput
-                mask="99.999.999/9999-99"
-                value={cnpj}
-                onChange={(e: any) => setCnpj(e.target.value)}
-                placeholder="00.000.000/0000-00"
-                className={`mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 outline-none transition ${clienteExistente ? "border-red-500 ring-red-100" : "focus:ring-[#B70F0A]"
-                  }`}
-              />
-              <div className="mt-1 flex flex-col gap-1">
-                {checkingCnpj && <span className="text-[10px] text-gray-400 animate-pulse">Verificando existência...</span>}
+            {/* CPF / CNPJ */}
+            <div className="space-y-1.5 flex-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">
+                CPF / CNPJ
+              </label>
+              <div className="relative group">
+                <MaskedInput
+                  mask={onlyDigits(cnpj).length <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
+                  maskChar=""
+                  formatChars={{ '9': '[0-9]' }}
+                  value={cnpj}
+                  onChange={(e: any) => setCnpj(e.target.value)}
+                  className={`w-full bg-gray-50 border-2 transition-all duration-200 rounded-xl px-4 py-3 text-gray-700 outline-none
+                  ${cnpj && !docValido ? "border-amber-200 focus:border-amber-400" : "border-gray-100 focus:border-[#B70F0A] focus:bg-white"}
+                `}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                />
+                <div className="mt-1 flex flex-col gap-1">
+                  {checkingCnpj && <span className="text-[10px] text-gray-400 animate-pulse">Verificando existência...</span>}
 
-                {clienteExistente && (
-                  <div className="bg-red-50 border border-red-200 p-2 rounded-lg mt-1">
-                    <p className="text-[10px] text-red-700 font-semibold mb-1">
-                      ⚠️ Este CNPJ já possui cadastro: <br />
-                      <span className="uppercase">{clienteExistente.nome}</span>
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/clientes/${clienteExistente.id}/editar`)}
-                      className="inline-flex items-center gap-1 text-[10px] bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      Ir para o Cliente
-                    </button>
-                  </div>
-                )}
-                <div className="text-xs text-gray-500 mt-0.5">
-                  {cnpj ? (
-                    cnpjValido ? (
-                      <span className="inline-flex items-center gap-1 text-green-700">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> CNPJ válido
-                      </span>
-                    ) : (
-                      <span className="text-red-500">CNPJ inválido</span>
-                    )
-                  ) : (
-                    "Se tiver o CNPJ, a precisão melhora."
+                  {clienteExistente && (
+                    <div className="bg-red-50 border border-red-200 p-2 rounded-lg mt-1">
+                      <p className="text-[10px] text-red-700 font-semibold mb-1">
+                        ⚠️ Este CNPJ já possui cadastro: <br />
+                        <span className="uppercase">{clienteExistente.nome}</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/clientes/${clienteExistente.id}/editar`)}
+                        className="inline-flex items-center gap-1 text-[10px] bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Ir para o Cliente
+                      </button>
+                    </div>
                   )}
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {cnpj ? (
+                      docValido ? ( // Changed cnpjValido to docValido
+                        <span className="inline-flex items-center gap-1 text-green-700">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Documento válido
+                        </span>
+                      ) : (
+                        <span className="text-red-500">Documento inválido</span>
+                      )
+                    ) : (
+                      "Se tiver o CNPJ/CPF, a precisão melhora."
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -443,7 +512,7 @@ export default function PreFetchModal({
 
           {/* Nome */}
           <div>
-            <label className="text-sm font-medium text-gray-700">Nome</label>
+            <label className="text-sm font-medium text-gray-700">Nome*</label>
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
@@ -451,7 +520,7 @@ export default function PreFetchModal({
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#B70F0A] outline-none"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Sem CNPJ: nome + cidade ajudam a encontrar telefone/endereço/website no Google Places.
+              Nome + Cidade ajudam a encontrar telefone/endereço/website no Google Places e validar dados fiscais.
             </p>
           </div>
 
@@ -491,7 +560,7 @@ export default function PreFetchModal({
             </div>
 
             <div className="text-xs text-gray-500">
-              {onlyDigits(cnpj) ? "Busca fiscal (CNPJ) + complemento do Google Places." : "Busca por Nome + Cidade (Google Places)."}
+              {onlyDigits(cnpj).length === 14 ? "Busca fiscal (CNPJ) + complemento do Google Places." : onlyDigits(cnpj).length === 11 ? "Busca por CPF + complemento do Google Places." : "Busca por Nome + Cidade (Google Places)."}
             </div>
           </div>
 

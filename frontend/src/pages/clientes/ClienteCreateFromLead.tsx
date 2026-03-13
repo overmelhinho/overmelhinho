@@ -653,7 +653,7 @@ export default function ClienteCreateFromLead() {
           >
             {({ values, setFieldValue }) => {
               const applyPrefetch = (dados: Record<string, any>, tipo: TipoCliente) => {
-                // ✅ atualiza tipo no state e no form
+                // ✅ Atualiza tipo no state e no form
                 setTipoCliente(tipo);
                 setFieldValue("tipoCliente", tipo);
 
@@ -661,8 +661,11 @@ export default function ClienteCreateFromLead() {
                 if (dados.nome_fantasia) setFieldValue("nome_fantasia", String(dados.nome_fantasia));
                 if (dados.razao_social) setFieldValue("razao_social", String(dados.razao_social));
 
-                // PreFetchModal retorna `cnpj` (digits) — nosso form usa `cnpj`
-                if (dados.cnpj) setFieldValue("cnpj", String(dados.cnpj));
+                // ✅ CNPJ: Garante que preencha mesmo que venha limpo mas presente no objeto de sugestão
+                const cnpjValue = dados.cnpj || dados.cpf_cnpj;
+                if (cnpjValue) {
+                  setFieldValue("cnpj", String(cnpjValue));
+                }
 
                 if (dados.inscricao_estadual)
                   setFieldValue("inscricao_estadual", String(dados.inscricao_estadual));
@@ -680,17 +683,16 @@ export default function ClienteCreateFromLead() {
                 if (dados.cidade) setFieldValue("cidade", String(dados.cidade));
                 if (dados.bairro) setFieldValue("bairro", String(dados.bairro));
                 if (dados.rua) setFieldValue("rua", String(dados.rua));
-                if (dados.numero) setFieldValue("numero", String(dados.numero)); // ✅ FIX: aqui estava corrompido
+                if (dados.numero) setFieldValue("numero", String(dados.numero));
                 if (dados.complemento) setFieldValue("complemento", String(dados.complemento));
 
-                // Redes sociais (quando vier)
-                const redes: any[] = [];
-                const map = ["instagram", "facebook", "linkedin", "youtube", "tiktok", "x"] as const;
-                for (const k of map) {
-                  const v = dados[k];
-                  if (v && typeof v === "string") redes.push({ tipo: k, url: v });
-                }
-                if (redes.length) setFieldValue("redes_sociais", redes);
+                // ✅ Redes Sociais: TabRedesSociais espera campos no root que são sincronizados pelo useEffect
+                const socialIds = ["instagram", "facebook", "linkedin", "youtube", "tiktok", "x"] as const;
+                socialIds.forEach((key) => {
+                  if (dados[key]) {
+                    setFieldValue(key, String(dados[key]));
+                  }
+                });
 
                 if (dados.descricao) setFieldValue("descricao", String(dados.descricao));
 
@@ -722,6 +724,7 @@ export default function ClienteCreateFromLead() {
                   {/* ✅ Modal IA */}
                   <PreFetchModal
                     nomeInicial={values.nome_fantasia || ""}
+                    cnpjInicial={values.cnpj || ""}
                     tipoCliente={tipoCliente}
                     isOpen={prefetchOpen}
                     onClose={() => setPrefetchOpen(false)}

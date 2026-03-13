@@ -1,17 +1,22 @@
 import { useFormikContext } from "formik";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "@/services/api";
-import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import { Layers, Loader2 } from "lucide-react";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function TabSegmentos() {
   const { values, setFieldValue } = useFormikContext<any>();
+  const queryClient = useQueryClient();
+  const [isCreating, setIsCreating] = useState(false);
 
   const { data: segmentos, isLoading } = useQuery({
     queryKey: ["segmentos"],
     queryFn: async () => {
       const { data } = await axios.get("/v1/segmentos");
-      return Array.isArray(data.data) ? data.data : data;
+      const list = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+      return list;
     },
   });
 
@@ -20,7 +25,33 @@ export default function TabSegmentos() {
     label: s.nome,
   }));
 
-  const selected = options.filter((o) => (values.segmentos || []).includes(o.value));
+  const selected = options.filter((o: any) => (values.segmentos || []).includes(o.value));
+
+  const handleCreate = async (inputValue: string) => {
+    setIsCreating(true);
+    try {
+      const { data } = await axios.post("/v1/segmentos", { nome: inputValue });
+      const newSegmento = data.data;
+
+      toast.success(`Segmento "${newSegmento.nome}" criado com sucesso!`);
+
+      // Atualiza o cache do react-query para incluir o novo segmento na lista
+      queryClient.setQueryData(["segmentos"], (old: any) => {
+        const list = Array.isArray(old) ? old : [];
+        return [...list, newSegmento];
+      });
+
+      // Adiciona o novo segmento aos selecionados
+      const currentSegmentos = values.segmentos || [];
+      setFieldValue("segmentos", [...currentSegmentos, newSegmento.id]);
+    } catch (error: any) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Erro ao criar segmento.";
+      toast.error(msg);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -28,26 +59,37 @@ export default function TabSegmentos() {
         <Layers className="w-5 h-5 text-[#B70F0A]" /> Segmentos de Atuação
       </h3>
 
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-gray-500 text-sm">
-          <Loader2 className="animate-spin w-4 h-4" /> Carregando segmentos...
-        </div>
-      ) : (
-        <Select
-          isMulti
-          name="segmentos"
-          options={options}
-          value={selected}
-          onChange={(sel) =>
-            setFieldValue(
-              "segmentos",
-              Array.isArray(sel) ? sel.map((s) => s.value) : []
-            )
-          }
-          className="w-full text-sm"
-          classNamePrefix="react-select"
-        />
-      )}
+      <div className="space-y-2">
+        <label className="text-sm text-gray-600">
+          Selecione um ou mais segmentos. Se não encontrar, basta digitar o nome e pressionar Enter para criar.
+        </label>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-gray-500 text-sm">
+            <Loader2 className="animate-spin w-4 h-4" /> Carregando segmentos...
+          </div>
+        ) : (
+          <CreatableSelect
+            isMulti
+            name="segmentos"
+            options={options}
+            value={selected}
+            isDisabled={isCreating}
+            isLoading={isCreating}
+            onCreateOption={handleCreate}
+            onChange={(sel) =>
+              setFieldValue(
+                "segmentos",
+                Array.isArray(sel) ? sel.map((s) => s.value) : []
+              )
+            }
+            placeholder="Selecione ou crie um novo segmento..."
+            loadingMessage={() => "Criando..."}
+            formatCreateLabel={(inputValue) => `Criar segmento "${inputValue}"`}
+            className="w-full text-sm"
+            classNamePrefix="react-select"
+          />
+        )}
+      </div>
     </div>
   );
 }

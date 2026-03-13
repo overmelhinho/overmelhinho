@@ -72,21 +72,29 @@ export default function ClientProfileClient() {
         const contact = client.contatos?.[0];
         if (!contact) return;
 
+        // Verifica se o telefone principal está temporariamente oculto
+        const isPrincipalHidden = contact.telefone_principal_hidden_until
+            && new Date(contact.telefone_principal_hidden_until) > new Date();
+
         let whatsapp = null;
 
+        // Usa o selecionado, mas ignora se for o principal oculto
         if (contact.whatsapp_selected && contact[contact.whatsapp_selected]) {
-            whatsapp = contact[contact.whatsapp_selected];
+            const isSelectedHidden = contact.whatsapp_selected === 'telefone_principal' && isPrincipalHidden;
+            if (!isSelectedHidden) {
+                whatsapp = contact[contact.whatsapp_selected];
+            }
         }
 
         if (!whatsapp) {
             const priority = [
-                { key: 'telefone_principal', flag: 'exibir_tel_principal', isWA: contact.whatsapp_principal },
-                { key: 'celular', flag: 'exibir_celular', isWA: true },
-                { key: 'telefone_secundario', flag: 'exibir_tel_secundario', isWA: contact.whatsapp_secundario },
-                { key: 'telefone_outro', flag: 'exibir_tel_outro', isWA: true }
+                { key: 'telefone_principal', flag: 'exibir_tel_principal', hidden: isPrincipalHidden },
+                { key: 'celular', flag: 'exibir_celular', hidden: false },
+                { key: 'telefone_secundario', flag: 'exibir_tel_secundario', hidden: false },
+                { key: 'telefone_outro', flag: 'exibir_tel_outro', hidden: false }
             ];
 
-            const found = priority.find(p => contact[p.key] && (contact[p.flag] || p.isWA));
+            const found = priority.find(p => contact[p.key] && !p.hidden);
             if (found) whatsapp = contact[found.key];
         }
 
@@ -101,15 +109,19 @@ export default function ClientProfileClient() {
         const contact = client.contatos?.[0];
         if (!contact) return;
 
+        // Verifica se o telefone principal está temporariamente oculto
+        const isPrincipalHidden = contact.telefone_principal_hidden_until
+            && new Date(contact.telefone_principal_hidden_until) > new Date();
+
         const priority = [
-            { key: 'telefone_principal', flag: 'exibir_tel_principal' },
-            { key: 'celular', flag: 'exibir_celular' },
-            { key: 'telefone_secundario', flag: 'exibir_tel_secundario' },
-            { key: 'telefone_outro', flag: 'exibir_tel_outro' }
+            { key: 'telefone_principal', flag: 'exibir_tel_principal', hidden: isPrincipalHidden },
+            { key: 'celular', flag: 'exibir_celular', hidden: false },
+            { key: 'telefone_secundario', flag: 'exibir_tel_secundario', hidden: false },
+            { key: 'telefone_outro', flag: 'exibir_tel_outro', hidden: false }
         ];
 
-        const found = priority.find(p => contact[p.key] && contact[p.flag]);
-        const phone = found ? contact[found.key] : (contact.telefone_principal || contact.celular);
+        const found = priority.find(p => contact[p.key] && contact[p.flag] && !p.hidden);
+        const phone = found ? contact[found.key] : (!isPrincipalHidden ? contact.telefone_principal : contact.celular);
 
         if (phone) window.location.href = `tel:${phone.replace(/\D/g, '')}`;
     };

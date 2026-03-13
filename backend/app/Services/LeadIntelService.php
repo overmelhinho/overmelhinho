@@ -52,7 +52,19 @@ class LeadIntelService
             // =====================================================
             // 2) Google Places (sempre roda) — pode sobrescrever campos “de vitrine”
             // =====================================================
-            $places = $this->consultarGooglePlaces($query);
+            // ✅ Melhora a query do Google incluindo a cidade para evitar resultados em outros estados
+            // ✅ Se temos o nome fiscal, usamos ele para garantir precisão
+            $nomeParaBusca = $query;
+            if (preg_match('/^[0-9.\-\/]+$/', $query)) {
+                $nomeParaBusca = $fiscal['nome_fantasia'] ?: ($fiscal['razao_social'] ?: $query);
+            }
+
+            $googleQuery = $nomeParaBusca;
+            if ($cidadePreferida && !str_contains(mb_strtolower($googleQuery), mb_strtolower($cidadePreferida))) {
+                $googleQuery .= " em {$cidadePreferida}";
+            }
+
+            $places = $this->consultarGooglePlaces($googleQuery);
             if (!empty($places)) {
                 // Campos “vitrine” que costumam estar mais vivos no Google
                 foreach (['nome_fantasia', 'telefone', 'endereco', 'website', 'horario_atendimento', 'google_place_id'] as $k) {
@@ -62,6 +74,7 @@ class LeadIntelService
                 }
 
                 // Se o fiscal não trouxe razão social, usa nome do places como fallback
+                // Mas se o fiscal JÁ TROUXE a razão social oficial, mantemos a oficial.
                 if (empty($dados['razao_social']) && !empty($dados['nome_fantasia'])) {
                     $dados['razao_social'] = $dados['nome_fantasia'];
                 }
@@ -118,6 +131,24 @@ class LeadIntelService
             }
 
             $dados['origem_dado'] = ($dados['origem_dado'] ?? 'Merged') . '+IA_Foundation';
+
+            // =====================================================
+            // 6) Enriquecimento Redes Sociais via IA (se ainda vazias)
+            // =====================================================
+            $hasSocial = !empty($dados['instagram']) || !empty($dados['facebook']) || !empty($dados['linkedin']);
+            if (!$hasSocial) {
+                $aiService = app(ClientAiService::class);
+                $redesIA = $aiService->predictSocialMedia(
+                    $dados['nome_fantasia'] ?: $query,
+                    $cidadePreferida ?: '',
+                    $dados['website'] ?: null
+                );
+                foreach ($redesIA as $rk => $rv) {
+                    if (!empty($rv) && empty($dados[$rk])) {
+                        $dados[$rk] = $rv;
+                    }
+                }
+            }
 
             Log::info("✅ [LeadIntel] Retorno", [
                 'nome_fantasia' => $dados['nome_fantasia'],

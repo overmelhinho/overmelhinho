@@ -17,6 +17,22 @@ class SegmentoController extends Controller
             $query->where('nome', 'LIKE', "%{$search}%");
         }
 
-        return response()->json($query->get());
+        return response()->json(['data' => $query->get()]);
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nome' => 'required|string|max:255|unique:segmentos,nome',
+        ]);
+
+        $segmento = Segmento::create([
+            'nome' => $request->nome,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $segmento
+        ], 201);
     }
 }

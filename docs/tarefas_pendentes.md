@@ -4,6 +4,24 @@ Este documento lista o status das tarefas em andamento e o que ainda precisa ser
 
 ---
 
+## ✅ Concluído Recentemente (Sprint: 2026-03-13)
+
+### Módulo de Clientes — CPF, Busca IA e Google Reviews
+
+- [x] **Suporte a CPF no Cadastro**: Campo de documento agora aceita CPF (11 dígitos) e CNPJ (14 dígitos) com máscara dinâmica automática.
+- [x] **Validação Matemática de CPF e CNPJ**: Implementado algoritmo de dígitos verificadores em `TabIdentificacao.tsx` e `PreFetchModal.tsx`, bloqueando documentos falsos (ex: `111.111.111-11`).
+- [x] **Verificação de Duplicidade para CPF**: Endpoint `check-cnpj` adaptado para detectar duplicadas tanto para CPF quanto para CNPJ.
+- [x] **PreFetchModal — CPF Suportado**: Modal de Busca IA pula etapas fiscais (BrasilAPI/ReceitaWS) automaticamente quando um CPF é detectado, focando em Google Places + IA.
+- [x] **PreFetchModal — Máscara Corrigida**: Corrigido formato de máscara de CPF (estava `999.999.999-999`, passou para `999.999.999-99`).
+- [x] **Google Reviews — Motor Híbrido de 3 Camadas**: Sistema busca reviews do Google, e se houver menos de 3 avaliações positivas (nota ≥ 4), ativa IA para encontrar depoimentos históricos da empresa.
+- [x] **Google Reviews — Inserção Manual**: Botão "+ Adicionar Manualmente" permite cadastrar qualquer depoimento diretamente na interface.
+- [x] **Google Reviews — Ordenação por Qualidade**: Lista sempre exibida com 5 estrelas no topo independente da fonte (Google, IA ou Manual).
+- [x] **Segmentos — Criação via Select**: Opção "+ Criar novo segmento" inline no select da aba de Segmentos.
+- [x] **Fix Migration Segmentos (Supabase)**: Coluna `id` da tabela `segmentos` configurada como IDENTITY (auto-incremento), corrigindo erro `NOT NULL violation` ao criar novos segmentos.
+- [x] **Fix Syntax Error ClientAiService**: Correção de chave `}` faltante no método `predictSocialMedia`, que causava `syntax error: unexpected token 'public'` ao carregar reviews.
+
+---
+
 ## ✅ Concluído Recentemente (Sprint: 2026-02-25)
 
 ### Módulo de Clientes — Enhancements

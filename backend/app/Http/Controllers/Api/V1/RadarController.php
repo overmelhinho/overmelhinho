@@ -323,4 +323,35 @@ class RadarController extends Controller
 
         return response()->json(['script' => $fallbackScript]);
     }
+    /**
+     * Calcula o Retorno sobre Investimento (ROI) das prospecções via Radar.
+     */
+    public function getROI()
+    {
+        $radarLeadsIds = \App\Models\Lead::where('origem', 'Radar')->pluck('id');
+        
+        $conversoesCount = \App\Models\Lead::where('origem', 'Radar')
+            ->where('status', 'convertido')
+            ->count();
+
+        // Cálculo de MRR Real (Somente de quem converteu e tem plano ativo)
+        $clientesDeRadar = \App\Models\Oportunidade::whereIn('lead_id', $radarLeadsIds)
+            ->whereNotNull('cliente_id')
+            ->where('status', 'ganha')
+            ->pluck('cliente_id');
+
+        $mrrReal = \App\Models\Cliente::whereIn('id', $clientesDeRadar)
+            ->with('plan')
+            ->get()
+            ->sum(fn($c) => $c->plan?->price ?? 0);
+
+        return response()->json([
+            'total_leads' => count($radarLeadsIds),
+            'conversoes' => $conversoesCount,
+            'taxa_conversao' => count($radarLeadsIds) > 0 ? round(($conversoesCount / count($radarLeadsIds)) * 100, 1) : 0,
+            'mrr_total' => $mrrReal,
+            'ticket_medio' => $conversoesCount > 0 ? round($mrrReal / $conversoesCount, 2) : 0,
+            'oportunidades_abertas' => \App\Models\Oportunidade::whereIn('lead_id', $radarLeadsIds)->where('status', 'aberta')->count()
+        ]);
+    }
 }

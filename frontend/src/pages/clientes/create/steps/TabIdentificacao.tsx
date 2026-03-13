@@ -73,7 +73,7 @@ export default function TabIdentificacao() {
 
   useMemo(() => {
     const raw = (values.cnpj || "").replace(/\D/g, "");
-    if (raw.length === 14) {
+    if (raw.length === 11 || raw.length === 14) {
       (async () => {
         setCheckingCnpj(true);
         try {
@@ -84,7 +84,7 @@ export default function TabIdentificacao() {
             setClienteExistente(null);
           }
         } catch (e) {
-          console.error("Erro ao checar CNPJ", e);
+          console.error("Erro ao checar documento", e);
         } finally {
           setCheckingCnpj(false);
         }
@@ -95,32 +95,92 @@ export default function TabIdentificacao() {
   }, [values.cnpj]);
 
   const handleGoogleLookup = async () => {
-    if (!values.nome_fantasia || !values.cidade) {
-      toast.error("Preencha Nome e Cidade para buscar no Google.");
+    if (!values.nome_fantasia && !values.cnpj) {
+      toast.error("Preencha Nome ou CNPJ para buscar.");
       return;
     }
     setIsLookingUpGoogle(true);
     try {
-      const query = `${values.nome_fantasia} ${values.cidade}`;
-      const { data } = await axios.get("/v1/clientes/google-lookup", { params: { query } });
+      // ✅ Agora usa o motor inteligente que combina CNPJ + Nome + Cidade
+      const { data } = await axios.get("/v1/lead-intel/fetch", {
+        params: {
+          query: values.nome_fantasia || values.cnpj,
+          cnpj: values.cnpj ? values.cnpj.replace(/\D/g, '') : undefined,
+          cidade: values.cidade || ""
+        }
+      });
 
-      if (data.success && data.details) {
-        setFieldValue("google_place_id", data.details.place_id);
+      if (data.status === 'ok' && data.dados) {
+        const d = data.dados;
+        if (d.google_place_id) setFieldValue("google_place_id", d.google_place_id);
+        if (d.nome_fantasia && !values.nome_fantasia) setFieldValue("nome_fantasia", d.nome_fantasia);
+        if (d.razao_social && !values.razao_social) setFieldValue("razao_social", d.razao_social);
+        if (d.cnpj && !values.cnpj) setFieldValue("cnpj", d.cnpj);
+        if (d.data_fundacao && !values.data_fundacao) setFieldValue("data_fundacao", d.data_fundacao);
+        if (d.descricao && !values.descricao) setFieldValue("descricao", d.descricao);
 
-        // WhatsApp/Phone autofill if empty
-        const phone = data.details.international_phone_number || data.details.formatted_phone_number;
-        if (!values.telefone_principal && phone) {
-          setFieldValue("telefone_principal", phone);
+        // Telefone
+        if (!values.telefone_principal && d.telefone) {
+          setFieldValue("telefone_principal", d.telefone);
         }
 
-        toast.success("Dados do Google sincronizados!");
+        toast.success("Busca inteligente concluída!");
       } else {
-        toast.error("Local não encontrado no Google Maps.");
+        toast.error("Nenhum dado detalhado encontrado.");
       }
     } catch (err) {
-      toast.error("Erro ao consultar Google Places.");
+      toast.error("Erro na busca inteligente.");
     } finally {
       setIsLookingUpGoogle(false);
+    }
+  };
+
+  const [isFullAiLoading, setIsFullAiLoading] = useState(false);
+
+  const handleFullAiLookup = async () => {
+    if (!values.nome_fantasia || !values.cidade) {
+      toast.error("Preencha Nome e Cidade para realizar a busca inteligente.");
+      return;
+    }
+    setIsFullAiLoading(true);
+    const t = toast.loading("Consultando bases fiscais e digitais...");
+    try {
+      const { data } = await axios.get("/v1/lead-intel/fetch", {
+        params: {
+          query: values.nome_fantasia || values.cnpj,
+          cnpj: values.cnpj ? values.cnpj.replace(/\D/g, '') : undefined,
+          cidade: values.cidade || ""
+        }
+      });
+
+      if (data.status === 'ok' && data.dados) {
+        const d = data.dados;
+        // Preenche TUDO que estiver vazio
+        if (d.nome_fantasia) setFieldValue("nome_fantasia", d.nome_fantasia);
+        if (d.razao_social) setFieldValue("razao_social", d.razao_social);
+        if (d.cnpj) setFieldValue("cnpj", d.cnpj);
+        if (d.google_place_id) setFieldValue("google_place_id", d.google_place_id);
+        if (d.data_fundacao) setFieldValue("data_fundacao", d.data_fundacao);
+        if (d.descricao && !values.descricao) setFieldValue("descricao", d.descricao);
+        if (d.telefone && !values.telefone_principal) setFieldValue("telefone_principal", d.telefone);
+        if (d.email && !values.email) setFieldValue("email", d.email);
+
+        // ✅ Redes Sociais
+        const socialIds = ["instagram", "facebook", "linkedin", "youtube", "tiktok", "x"] as const;
+        socialIds.forEach((key) => {
+          if (d[key] && !values[key]) {
+            setFieldValue(key, String(d[key]));
+          }
+        });
+
+        toast.success("Dados preenchidos via IA!", { id: t });
+      } else {
+        toast.error("IA não encontrou dados suficientes.", { id: t });
+      }
+    } catch (err) {
+      toast.error("Falha na consulta IA.", { id: t });
+    } finally {
+      setIsFullAiLoading(false);
     }
   };
 
@@ -151,6 +211,29 @@ export default function TabIdentificacao() {
   const removeAt = (idx: number) => {
     const next = tags.filter((_, i) => i !== idx);
     commitTags(next);
+  };
+
+  // 🔒 Validação CPF
+  const isValidCPF = (cpf: string): boolean => {
+    const clean = cpf.replace(/[^\d]+/g, "");
+    if (clean.length !== 11) return false;
+    if (/^(\d)\1+$/.test(clean)) return false;
+
+    let sum = 0;
+    let remainder;
+
+    for (let i = 1; i <= 9; i++) sum += parseInt(clean.substring(i - 1, i)) * (11 - i);
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(clean.substring(9, 10))) return false;
+
+    sum = 0;
+    for (let i = 1; i <= 10; i++) sum += parseInt(clean.substring(i - 1, i)) * (12 - i);
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(clean.substring(10, 11))) return false;
+
+    return true;
   };
 
   // 🔒 Validação CNPJ
@@ -189,9 +272,15 @@ export default function TabIdentificacao() {
     return true;
   };
 
-  const validateCNPJ = (value: string): string => {
+  const validateDocument = (value: string): string => {
     if (!value) return "";
     const clean = value.replace(/[^\d]+/g, "");
+
+    if (clean.length <= 11) {
+      if (clean.length < 11) return "CPF incompleto.";
+      return isValidCPF(clean) ? "" : "CPF inválido.";
+    }
+
     if (clean.length < 14) return "CNPJ incompleto.";
     return isValidCNPJ(clean) ? "" : "CNPJ inválido.";
   };
@@ -220,9 +309,20 @@ export default function TabIdentificacao() {
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div>
-          <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
-            <Tag className="w-4 h-4 text-[#B70F0A]" /> Nome Fantasia*
+        <div className="md:col-span-2">
+          <label className="text-sm font-medium text-gray-600 mb-1 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-[#B70F0A]" /> Nome Fantasia*
+            </span>
+            <button
+              type="button"
+              onClick={handleFullAiLookup}
+              disabled={isFullAiLoading}
+              className="text-[10px] uppercase font-black flex items-center gap-1.5 px-2 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all border border-indigo-100"
+            >
+              <Sparkles className={`w-3 h-3 ${isFullAiLoading ? 'animate-spin' : ''}`} />
+              Busca Inteligente (IA)
+            </button>
           </label>
           <input
             type="text"
@@ -249,19 +349,19 @@ export default function TabIdentificacao() {
 
         <div>
           <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
-            <Hash className="w-4 h-4 text-[#B70F0A]" /> CNPJ*
+            <Hash className="w-4 h-4 text-[#B70F0A]" /> CPF / CNPJ*
           </label>
           <MaskedInput
-            mask="99.999.999/9999-99"
+            mask={values.cnpj?.replace(/\D/g, "").length <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
             maskChar=""
+            formatChars={{ '9': '[0-9]' }}
             name="cnpj"
             value={values.cnpj || ""}
             onChange={(e: any) => {
               handleChange(e);
-              setCnpjError(validateCNPJ(e.target.value));
+              setCnpjError(validateDocument(e.target.value));
             }}
-            placeholder="00.000.000/0000-00"
-            maxLength={18}
+            placeholder="000.000.000-00 ou 00.000.000/0000-00"
             className={`border rounded-md px-3 py-2 w-full focus:ring-2 ${cnpjError ? "border-red-500 focus:ring-red-500" : "focus:ring-[#B70F0A]"
               }`}
           />

@@ -16,6 +16,7 @@ class Contato extends Model
         'telefone_outro',
         'whatsapp_selected',
         'exibir_tel_principal',
+        'telefone_principal_hidden_until',
         'exibir_tel_secundario',
         'exibir_celular',
         'exibir_tel_outro',
@@ -28,10 +29,11 @@ class Contato extends Model
     protected $casts = [
         'whatsapp_principal' => 'boolean',
         'whatsapp_secundario' => 'boolean',
-        'exibir_tel_principal' => 'boolean',
-        'exibir_tel_secundario' => 'boolean',
-        'exibir_celular' => 'boolean',
-        'exibir_tel_outro' => 'boolean',
+        'exibir_tel_principal'             => 'boolean',
+        'exibir_tel_secundario'            => 'boolean',
+        'exibir_celular'                   => 'boolean',
+        'exibir_tel_outro'                 => 'boolean',
+        'telefone_principal_hidden_until'   => 'datetime',
     ];
 
     public function cliente()

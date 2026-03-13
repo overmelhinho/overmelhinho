@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useFormikContext } from "formik";
-import { Star, RefreshCw, CheckCircle2, AlertCircle, Search, MapPin } from "lucide-react";
+import { Plus, Star, RefreshCw, CheckCircle2, AlertCircle, Search, MapPin } from "lucide-react";
 import axios from "@/services/api";
 import toast from "react-hot-toast";
 
@@ -70,7 +70,11 @@ export default function TabGoogleReviews() {
         setLoading(true);
         try {
             let endpoint = `/v1/clientes/${values.id}/google-reviews`;
-            let params = { place_id: placeId };
+            let params: any = {
+                place_id: placeId,
+                nome: values.nome_fantasia,
+                cidade: values.cidade
+            };
 
             if (isCreateMode) {
                 endpoint = `/v1/clientes/google-reviews-lookup`;
@@ -153,13 +157,37 @@ export default function TabGoogleReviews() {
                 </button>
             </div>
 
-            <div>
-                <h3 className="text-lg font-semibold text-[#B70F0A] flex items-center gap-2">
-                    <Star className="w-5 h-5" /> Comentários Disponíveis
-                </h3>
-                <p className="text-sm text-gray-500">
-                    Selecione os comentários que deseja exibir publicamente.
-                </p>
+            <div className="flex items-center justify-between w-full">
+                <div>
+                    <h3 className="text-lg font-semibold text-[#B70F0A] flex items-center gap-2">
+                        <Star className="w-5 h-5" /> Comentários Disponíveis
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                        Selecione ou adicione depoimentos de alta qualidade.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => {
+                        const author = prompt("Nome do Autor:");
+                        const text = prompt("Depoimento:");
+                        if (author && text) {
+                            const newReview = {
+                                author_name: author,
+                                text: text,
+                                rating: 5,
+                                relative_time_description: "Inserido manualmente",
+                                time: Date.now() / 1000
+                            };
+                            setReviews([newReview, ...reviews]);
+                            toggleSelection(newReview);
+                            toast.success("Depoimento adicionado!");
+                        }
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                >
+                    <Plus className="w-4 h-4" /> Adicionar Manualmente
+                </button>
             </div>
 
             {!placeId && (
@@ -177,57 +205,60 @@ export default function TabGoogleReviews() {
 
             {reviews.length > 0 && (
                 <div className="grid grid-cols-1 gap-4">
-                    {reviews.map((r, idx) => {
-                        const id = getReviewId(r);
-                        const isSelected = selectedIds.has(id);
-                        const photoUrl = r.author_photo_url || r.profile_photo_url || "";
+                    {[...reviews]
+                        .sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+                        .map((r, idx) => {
+                            const id = getReviewId(r);
+                            const isSelected = selectedIds.has(id);
+                            const photoUrl = r.author_photo_url || r.profile_photo_url || "";
+                            const rating = Number(r.rating || 0);
 
-                        return (
-                            <div
-                                key={id}
-                                onClick={() => toggleSelection(r)}
-                                className={`p-4 border rounded-xl cursor-pointer transition-all flex gap-4 ${isSelected ? "border-green-500 bg-green-50 shadow-sm" : "hover:border-gray-400 bg-white"
-                                    }`}
-                            >
-                                <div className="relative flex-shrink-0">
-                                    {photoUrl ? (
-                                        <img
-                                            src={photoUrl}
-                                            alt={r.author_name}
-                                            className="w-12 h-12 rounded-full border shadow-sm object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-12 h-12 rounded-full border bg-gray-100 flex items-center justify-center text-gray-400 font-bold">
-                                            {r.author_name?.charAt(0)}
-                                        </div>
-                                    )}
-                                    {isSelected && (
-                                        <CheckCircle2 className="w-5 h-5 text-green-600 absolute -top-1 -right-1 bg-white rounded-full" />
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-semibold text-sm">{r.author_name}</span>
-                                        <span className="text-xs text-gray-400">
-                                            {r.relative_time_description}
-                                        </span>
-                                    </div>
-                                    <div className="flex gap-0.5 my-1">
-                                        {[...Array(5)].map((_, i) => (
-                                            <Star
-                                                key={i}
-                                                className={`w-3 h-3 ${i < r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-                                                    }`}
+                            return (
+                                <div
+                                    key={id}
+                                    onClick={() => toggleSelection(r)}
+                                    className={`p-4 border rounded-xl cursor-pointer transition-all flex gap-4 ${isSelected ? "border-green-500 bg-green-50 shadow-sm" : "hover:border-gray-400 bg-white"
+                                        }`}
+                                >
+                                    <div className="relative flex-shrink-0">
+                                        {photoUrl ? (
+                                            <img
+                                                src={photoUrl}
+                                                alt={r.author_name}
+                                                className="w-12 h-12 rounded-full border shadow-sm object-cover"
                                             />
-                                        ))}
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-full border bg-gray-100 flex items-center justify-center text-gray-400 font-bold">
+                                                {r.author_name?.charAt(0)}
+                                            </div>
+                                        )}
+                                        {isSelected && (
+                                            <CheckCircle2 className="w-5 h-5 text-green-600 absolute -top-1 -right-1 bg-white rounded-full" />
+                                        )}
                                     </div>
-                                    <p className="text-sm text-gray-700 line-clamp-3 italic">
-                                        "{r.text}"
-                                    </p>
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-semibold text-sm">{r.author_name}</span>
+                                            <span className="text-xs text-gray-400">
+                                                {r.relative_time_description}
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-0.5 my-1">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star
+                                                    key={i}
+                                                    className={`w-3 h-3 ${i < rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
+                                                        }`}
+                                                />
+                                            ))}
+                                        </div>
+                                        <p className="text-sm text-gray-700 line-clamp-3 italic">
+                                            "{r.text}"
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
                 </div>
             )}
         </div>

@@ -1,19 +1,51 @@
 import { useFormikContext } from "formik";
-import { Phone, Mail, User, CheckCircle2 } from "lucide-react";
+import { Phone, Mail, User, CheckCircle2, EyeOff, Clock } from "lucide-react";
 import MaskedInput from "@/components/ui/masked-input";
+
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function isHiddenNow(hiddenUntil: string | null | undefined): boolean {
+  if (!hiddenUntil) return false;
+  return new Date(hiddenUntil) > new Date();
+}
 
 export default function TabContato() {
   const { values, setFieldValue, handleChange } = useFormikContext<any>();
 
   const phoneFields = [
-    { id: 'telefone_principal', label: 'Telefone Principal', mask: '(99) 9999-9999', placeholder: '(00) 0000-0000', showExibir: 'exibir_tel_principal' },
-    { id: 'telefone_secundario', label: 'Telefone Secundário', mask: '(99) 9999-9999', placeholder: '(00) 0000-0000', showExibir: 'exibir_tel_secundario' },
-    { id: 'celular', label: 'Celular', mask: '(99) 99999-9999', placeholder: '(00) 00000-0000', showExibir: 'exibir_celular' },
-    { id: 'telefone_outro', label: 'Outro Telefone / 0800', mask: null, placeholder: 'Digite o número', showExibir: 'exibir_tel_outro' },
+    { id: 'telefone_principal', label: 'Telefone Principal', mask: '(99) 9999-9999', placeholder: '(00) 0000-0000', showExibir: 'exibir_tel_principal', hasPrincipalHide: true },
+    { id: 'telefone_secundario', label: 'Telefone Secundário', mask: '(99) 9999-9999', placeholder: '(00) 0000-0000', showExibir: 'exibir_tel_secundario', hasPrincipalHide: false },
+    { id: 'celular', label: 'Celular', mask: '(99) 99999-9999', placeholder: '(00) 00000-0000', showExibir: 'exibir_celular', hasPrincipalHide: false },
+    { id: 'telefone_outro', label: 'Outro Telefone / 0800', mask: null, placeholder: 'Digite o número', showExibir: 'exibir_tel_outro', hasPrincipalHide: false },
   ];
 
   const handlePhoneChange = (name: string, value: string) => {
     setFieldValue(name, value);
+  };
+
+  const hiddenUntil: string | undefined = values.telefone_principal_hidden_until;
+  const isCurrentlyHidden = isHiddenNow(hiddenUntil);
+
+  const handleHideToggle = (checked: boolean) => {
+    if (checked) {
+      // Ocultar por 10 dias
+      const until = addDays(new Date(), 10);
+      setFieldValue("telefone_principal_hidden_until", until.toISOString());
+    } else {
+      // Desmarcar: exibe imediatamente
+      setFieldValue("telefone_principal_hidden_until", null);
+    }
   };
 
   return (
@@ -80,6 +112,34 @@ export default function TabContato() {
               />
               Exibir este número no site/aplicativo
             </label>
+
+            {/* Checkbox "Esconder por 10 dias" — apenas no Telefone Principal */}
+            {field.hasPrincipalHide && (
+              <div className="pt-1 border-t border-dashed border-gray-200 space-y-1">
+                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-orange-700 group">
+                  <input
+                    type="checkbox"
+                    checked={isCurrentlyHidden}
+                    onChange={(e) => handleHideToggle(e.target.checked)}
+                    className="accent-orange-500 h-3.5 w-3.5 rounded border-gray-300"
+                  />
+                  <EyeOff className="w-3.5 h-3.5 text-orange-500" />
+                  Esconder por 10 dias no site
+                </label>
+
+                {isCurrentlyHidden && hiddenUntil && (
+                  <p className="flex items-center gap-1 text-xs text-orange-600 pl-6">
+                    <Clock className="w-3 h-3" />
+                    Volta a exibir em:{" "}
+                    <span className="font-semibold">{formatDate(hiddenUntil)}</span>
+                  </p>
+                )}
+
+                {!isCurrentlyHidden && hiddenUntil && new Date(hiddenUntil) <= new Date() && (
+                  <p className="text-xs text-green-600 pl-6">✅ Período encerrado — número exibido normalmente.</p>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

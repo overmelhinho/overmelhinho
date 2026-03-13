@@ -32,7 +32,7 @@ class ClienteController extends Controller
         
         $query = Cliente::query()
             ->where(function($sub) {
-                $sub->where('status_assinatura', 'ativa')
+                $sub->whereIn('status_assinatura', ['ativa', 'ativo'])
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
@@ -131,7 +131,7 @@ class ClienteController extends Controller
                 WHEN nome_alternativo ilike ? THEN 0
                 
                 -- 2. Pagante Ativo na Cidade Buscada
-                WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' AND EXISTS (
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') AND EXISTS (
                     SELECT 1 FROM enderecos 
                     WHERE enderecos.cliente_id = clientes.id 
                     AND (
@@ -141,7 +141,7 @@ class ClienteController extends Controller
                 ) THEN 1
 
                 -- 3. Pagante Ativo Geral
-                WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 2
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 2
 
                 -- 4. Restante (Gratuitos ou Inativos)
                 ELSE 3
@@ -156,6 +156,17 @@ class ClienteController extends Controller
         $query->orderBy('nome_fantasia');
 
         $clientes = $query->paginate($perPage);
+
+        Log::info("BUSCA_PUBLIC DEBUG", [
+            'q' => $q,
+            'normQ' => $qParam ?? null,
+            'city_id' => $cityId,
+            'city_name' => $cityName,
+            'count' => $clientes->count(),
+            'total' => $clientes->total(),
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings()
+        ]);
 
         return ClienteResource::collection($clientes);
     }
@@ -206,7 +217,7 @@ class ClienteController extends Controller
                     $sub->orWhere('nome_fantasia', 'ilike', substr($normalizedQ, 0, 3) . "%");
                 }
             })
-            ->where(fn($sub) => $sub->where('status_assinatura', 'ativa')->orWhere('tipo_cliente', 'gratuito'))
+            ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo'])->orWhere('tipo_cliente', 'gratuito'))
             ->when($cityId, function($sq) use ($cityId) {
                 $sq->where(function($sub) use ($cityId) {
                     $sub->whereHas('cidadesAtendidas', fn($c) => $c->where('cidades.id', $cityId))
@@ -220,7 +231,7 @@ class ClienteController extends Controller
             ->orderByRaw("
                 CASE 
                     WHEN nome_fantasia ilike ? THEN 0
-                    WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 1
+                    WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 1
                     ELSE 2
                 END ASC
             ", [$q])
@@ -243,7 +254,7 @@ class ClienteController extends Controller
                 'title' => $c->nome_fantasia,
                 'image' => $c->logo_url,
                 'type' => 'client',
-                'priority' => ($c->tipo_cliente === 'pagante' && $c->status_assinatura === 'ativa')
+                'priority' => ($c->tipo_cliente === 'pagante' && in_array($c->status_assinatura, ['ativa', 'ativo']))
             ]),
             'categories' => $segmentos->map(fn($s) => [
                 'id' => $s->id,
@@ -660,8 +671,9 @@ public function historico(Request $request, int $id)
                 'contatos.*.celular'             => 'nullable|string|max:50',
                 'contatos.*.telefone_outro'      => 'nullable|string|max:50',
                 'contatos.*.whatsapp_selected'   => 'nullable|string|max:50',
-                'contatos.*.exibir_tel_principal' => 'nullable|boolean',
-                'contatos.*.exibir_tel_secundario' => 'nullable|boolean',
+                'contatos.*.exibir_tel_principal'              => 'nullable|boolean',
+                'contatos.*.telefone_principal_hidden_until'    => 'nullable|date',
+                'contatos.*.exibir_tel_secundario'             => 'nullable|boolean',
                 'contatos.*.exibir_celular'      => 'nullable|boolean',
                 'contatos.*.exibir_tel_outro'    => 'nullable|boolean',
                 'contatos.*.exibir_email'        => 'nullable|boolean',
@@ -1034,8 +1046,9 @@ public function historico(Request $request, int $id)
                 'contatos.*.celular'             => 'nullable|string|max:50',
                 'contatos.*.telefone_outro'      => 'nullable|string|max:50',
                 'contatos.*.whatsapp_selected'   => 'nullable|string|max:50',
-                'contatos.*.exibir_tel_principal' => 'nullable|boolean',
-                'contatos.*.exibir_tel_secundario' => 'nullable|boolean',
+                'contatos.*.exibir_tel_principal'              => 'nullable|boolean',
+                'contatos.*.telefone_principal_hidden_until'    => 'nullable|date',
+                'contatos.*.exibir_tel_secundario'             => 'nullable|boolean',
                 'contatos.*.exibir_celular'      => 'nullable|boolean',
                 'contatos.*.exibir_tel_outro'    => 'nullable|boolean',
                 'contatos.*.exibir_email'        => 'nullable|boolean',
@@ -1673,7 +1686,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
     /**
      * Busca reviews por um Place ID genérico (usado no cadastro de novos clientes)
      */
-    public function lookupGoogleReviews(Request $request, GooglePlacesService $googleService)
+    public function lookupGoogleReviews(Request $request, GooglePlacesService $googleService, ClientAiService $aiService)
     {
         $placeId = $request->input('place_id');
         if (!$placeId) {
@@ -1682,6 +1695,18 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
         try {
             $reviews = $googleService->getReviews($placeId);
+            
+            // Enriquecimento via IA caso os do Google estejam ruins ou poucos
+            $countHigh = collect($reviews)->filter(fn($r) => ($r['rating'] ?? 0) >= 4)->count();
+            if ($countHigh < 3) {
+                $name = $request->input('nome');
+                $city = $request->input('cidade');
+                if ($name && $city) {
+                    $aiReviews = $aiService->findPositiveReviews($name, $city);
+                    $reviews = array_merge($reviews, $aiReviews);
+                }
+            }
+
             return response()->json(['success' => true, 'reviews' => $reviews]);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => 'Erro ao consultar Google.'], 500);
@@ -1691,7 +1716,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
     /**
      * Sincroniza os reviews do Google para um cliente.
      */
-    public function getGoogleReviews(string $id, Request $request, GooglePlacesService $googleService)
+    public function getGoogleReviews(string $id, Request $request, GooglePlacesService $googleService, ClientAiService $aiService)
     {
         // Prioriza o ID que vem na request (caso o usuário tenha acabado de buscar no frontend e ainda não salvou no DB)
         $placeId = $request->query('place_id');
@@ -1707,6 +1732,16 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
         try {
             $reviews = $googleService->getReviews($placeId);
+
+            // Enriquecimento via IA caso os do Google estejam ruins ou poucos
+            $countHigh = collect($reviews)->filter(fn($r) => ($r['rating'] ?? 0) >= 4)->count();
+            if ($countHigh < 3) {
+                $cliente = Cliente::find($id);
+                if ($cliente) {
+                    $aiReviews = $aiService->findPositiveReviews($cliente->nome_fantasia, $cliente->cidade);
+                    $reviews = array_merge($reviews, $aiReviews);
+                }
+            }
 
             return response()->json([
                 'success' => true,

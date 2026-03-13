@@ -39,6 +39,14 @@ export default function OportunidadesPage() {
         },
     });
 
+    const { data: roiData, isLoading: isLoadingRoi } = useQuery({
+        queryKey: ["radar-roi"],
+        queryFn: async () => {
+            const resp = await axios.get("/v1/radar/roi");
+            return resp.data;
+        }
+    });
+
     // Busca Alvos (Empresas Reais) no Google
     const { data: targets, isLoading: isLoadingTargets, refetch: refetchTargets } = useQuery({
         queryKey: ["radar-targets", selectedOp?.termo, selectedOp?.cidade],
@@ -181,36 +189,76 @@ export default function OportunidadesPage() {
             {/* BENTO GRID */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 
-                {/* ── CARD SUPERIOR: Cockpit de IA (col-span-full) ── */}
-                <div className="md:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
-                            <Sparkles size={24} />
+                {/* ── CARD SUPERIOR: Cockpit de IA & ROI ── */}
+                <div className="md:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-8 flex flex-col items-center gap-8">
+                    <div className="flex flex-col md:flex-row items-center justify-between w-full gap-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
+                                <Sparkles size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-gray-900 tracking-tight">✨ Radar de Oportunidades & ROI</h2>
+                                <p className="text-xs text-gray-400 font-medium">Inteligência de mercado e performance comercial</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-lg font-black text-gray-900 tracking-tight">✨ Radar de Oportunidades com IA</h2>
-                            <p className="text-xs text-gray-400 font-medium">Buscando inteligência de mercado em tempo real</p>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1 max-w-4xl w-full">
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-center">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Gaps Hoje</p>
+                                <p className="text-xl font-black text-gray-900 tracking-tighter">
+                                    {isLoading ? "..." : (radarData?.kpis?.gaps_hoje || 0)}
+                                </p>
+                            </div>
+                            <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 text-center">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-1">Conversão</p>
+                                <p className="text-xl font-black text-emerald-900 tracking-tighter">
+                                    {isLoadingRoi ? "..." : `${roiData?.taxa_conversao || 0}%`}
+                                </p>
+                            </div>
+                            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">MRR Real</p>
+                                <p className="text-xl font-black text-blue-900 tracking-tighter">
+                                    {isLoadingRoi ? "..." : `R$ ${Intl.NumberFormat('pt-BR').format(roiData?.mrr_total || 0)}`}
+                                </p>
+                            </div>
+                            <div className="bg-purple-50 rounded-xl p-4 border border-purple-100 text-center">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-1">Ticket Médio</p>
+                                <p className="text-xl font-black text-purple-900 tracking-tighter">
+                                    {isLoadingRoi ? "..." : `R$ ${Intl.NumberFormat('pt-BR').format(roiData?.ticket_medio || 0)}`}
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 flex-1 max-w-2xl w-full">
-                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-center">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Gaps Hoje</p>
-                            <p className="text-2xl font-black text-gray-900 tracking-tighter">
-                                {isLoading ? "..." : (radarData?.kpis?.gaps_hoje || 0)}
-                            </p>
+                    <div className="w-full h-px bg-gray-100" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-red-50 text-red-600 rounded-xl">
+                                <Users size={20} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-gray-400">Leads Radar</p>
+                                <p className="text-lg font-black text-gray-900">{roiData?.total_leads || 0}</p>
+                            </div>
                         </div>
-                        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 text-center">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-1">MRR Potencial</p>
-                            <p className="text-2xl font-black text-emerald-900 tracking-tighter">
-                                {isLoading ? "..." : (radarData?.kpis?.mrr_potencial || "R$ 0")}
-                            </p>
+                        <div className="flex items-center gap-4 border-l border-gray-100 pl-8">
+                            <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
+                                <TrendingUp size={20} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-gray-400">MRR Potencial (Gap)</p>
+                                <p className="text-lg font-black text-gray-900">{radarData?.kpis?.mrr_potencial || "R$ 0"}</p>
+                            </div>
                         </div>
-                        <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">Convertidos</p>
-                            <p className="text-2xl font-black text-blue-900 tracking-tighter">
-                                {isLoading ? "..." : (radarData?.kpis?.convertidos || 0)}
-                            </p>
+                        <div className="flex items-center gap-4 border-l border-gray-100 pl-8">
+                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                                <Check size={20} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-gray-400">Vendas Ganhas</p>
+                                <p className="text-lg font-black text-gray-900">{roiData?.conversoes || 0}</p>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -108,4 +108,86 @@ class ClientAiService
             return null;
         }
     }
+
+    /**
+     * Tenta identificar as redes sociais da empresa via IA.
+     */
+    public function predictSocialMedia(string $name, string $city, ?string $website = null): array
+    {
+        if (!$this->openaiKey) return [];
+
+        $context = "Empresa: {$name} em {$city}.";
+        if ($website) $context .= " Website: {$website}.";
+
+        $prompt = "Identifique as redes sociais (Instagram, Facebook, LinkedIn, YouTube, TikTok e X) da empresa.\n" .
+                  "CONTEXTO: {$context}\n\n" .
+                  "Instruções:\n" .
+                  "- Retorne APENAS um JSON plano com as chaves: instagram, facebook, linkedin, youtube, tiktok, x.\n" .
+                  "- Se não encontrar o link oficial, deixe o valor da chave vazio (string vazia).\n" .
+                  "- Priorize links oficiais e verificados.";
+
+        try {
+            $response = Http::withToken($this->openaiKey)
+                ->timeout(20)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature' => 0.0
+                ]);
+
+            if (!$response->successful()) return [];
+
+            $json = $response->json('choices.0.message.content');
+            $data = is_string($json) ? json_decode($json, true) : $json;
+
+            return is_array($data) ? $data : [];
+
+        } catch (\Throwable $e) {
+            Log::error('[ClientAiService] Erro na predição de redes sociais', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+    /**
+     * Tenta identificar depoimentos/reviews positivos reais da empresa via IA.
+     * Útil quando a API do Google retorna apenas os 'relevantes' negativos.
+     */
+    public function findPositiveReviews(string $name, string $city): array
+    {
+        if (!$this->openaiKey) return [];
+
+        $prompt = "Encontre depoimentos ou reviews reais e positivos (4 ou 5 estrelas) da empresa '{$name}' em '{$city}'.\n" .
+                  "Instruções:\n" .
+                  "- Retorne APENAS um JSON com uma lista de objetos com as chaves: author_name, rating, text, relative_time_description.\n" .
+                  "- O campo 'text' deve ser o depoimento real, em português.\n" .
+                  "- Tente encontrar depoimentos que existem publicamente no Google ou redes sociais.\n" .
+                  "- Se não encontrar nada real, retorne um array vazio [].\n" .
+                  "- Limite de 5 reviews.";
+
+        try {
+            $response = Http::withToken($this->openaiKey)
+                ->timeout(20)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature' => 0.0
+                ]);
+
+            if (!$response->successful()) return [];
+
+            $json = $response->json('choices.0.message.content');
+            $data = is_string($json) ? json_decode($json, true) : $json;
+
+            return (isset($data['reviews']) && is_array($data['reviews'])) ? $data['reviews'] : ($data['items'] ?? []);
+
+        } catch (\Throwable $e) {
+            Log::error('[ClientAiService] Erro na busca de reviews positivos', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
 }

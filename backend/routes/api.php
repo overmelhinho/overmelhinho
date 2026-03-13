@@ -201,6 +201,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/comerciais', fn() => \App\Models\User::role('Comercial')->get(['id', 'name', 'email']));
 
+    Route::post('/segmentos', [SegmentoController::class , 'store']);
+
     // ✅ Vagas PRO - Rotas Protegidas (Admin)
     Route::apiResource('jobs', JobOpportunityController::class)->except(['create', 'edit']);
     Route::get('clients/{clientId}/candidates', [CandidateController::class , 'indexByClient']);
@@ -260,6 +262,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/radar/oportunidades/alvos', [\App\Http\Controllers\Api\V1\RadarController::class, 'fetchTargets']);
     Route::get('/radar/oportunidades/alvos/detalhes', [\App\Http\Controllers\Api\V1\RadarController::class, 'getTargetDetails']);
     Route::post('/radar/oportunidades/alvos/prospectar', [\App\Http\Controllers\Api\V1\RadarController::class, 'markTargetAsProspected']);
+    Route::get('/radar/roi', [\App\Http\Controllers\Api\V1\RadarController::class, 'getROI']);
 });
 
 

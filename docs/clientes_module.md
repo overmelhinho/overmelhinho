@@ -211,3 +211,127 @@ POST   /api/v1/clientes/{id}/midia/commit-temp  → Confirma upload de mídia
 POST   /api/v1/clientes/{id}/galeria            → Adiciona item à galeria
 POST   /api/v1/clientes/{id}/galeria/commit-temp → Confirma imagens da galeria
 ```
+## 11. Suporte a CPF e CNPJ (mar/2026)
+
+### 11.1 Campo de Identificação Dinâmico
+
+O campo de documento na aba **Identificação** agora aceita tanto **CPF** (profissionais autônomos) quanto **CNPJ** (empresas), com máscara automática que se ajusta conforme a digitação:
+
+| Dígitos | Formato aplicado |
+|---------|-----------------|
+| ≤ 11 | `000.000.000-00` (CPF) |
+| 14 | `00.000.000/0000-00` (CNPJ) |
+
+### 11.2 Validação Matemática Real
+
+Implementada validação completa com **cálculo de dígitos verificadores** em dois locais:
+
+**`TabIdentificacao.tsx`** — funções `isValidCPF()` e `isValidCNPJ()`:
+- Calcula os dois dígitos verificadores do CPF usando o algoritmo oficial.
+- Calcula os dois dígitos verificadores do CNPJ usando o algoritmo oficial.
+- Bloqueia automaticamente sequências repetidas (ex: `111.111.111-11`, `00.000.000/0000-00`).
+
+**`PreFetchModal.tsx`** — funções standalone `isValidCPF()`, `isValidCNPJ()` e `isValidDocumento()`:
+- Mesmas regras aplicadas no Modal de Busca Inteligente.
+- `isValidDocumento()` detecta automaticamente o tipo pelo número de dígitos e delega à função correta.
+
+### 11.3 Verificação de Duplicidade
+
+O endpoint `GET /v1/clientes/check-cnpj?cnpj={doc}` (no `ClienteController`) foi atualizado para aceitar tanto CPF (11 dígitos) quanto CNPJ (14 dígitos), verificando se já existe um cliente cadastrado com aquele documento.
+
+---
+
+## 12. Modal de Busca Inteligente (IA) — Melhorias (mar/2026)
+
+### 12.1 Visão Geral
+
+O **PreFetchModal** (`/src/components/modals/PreFetchModal.tsx`) é o modal de pré-preenchimento que combina múltiplas fontes para localizar dados de uma empresa:
+
+| Etapa | Fonte | Condição |
+|-------|-------|----------|
+| 1 | BrasilAPI / ReceitaWS | Apenas para CNPJ (14 dígitos) |
+| 2 | Google Places | Nome + Cidade (sempre) |
+| 3 | OpenAI IA | Complemento dos dados encontrados |
+
+> ⚠️ Para CPF (11 dígitos), as etapas fiscais (BrasilAPI/ReceitaWS) são **puladas automaticamente**, focando apenas em Google Places + IA.
+
+### 12.2 Campos Obrigatórios
+
+- **Nome** e **Cidade** são obrigatórios.
+- **CPF/CNPJ** é opcional — mas, se preenchido, será validado matematicamente antes da busca.
+
+### 12.3 Correções Aplicadas
+
+- Máscara corrigida para `999.999.999-99` (CPF, 11 dígitos) — estava erroneamente em `999.999.999-999`.
+- Validação substituída: antes verificava apenas a **quantidade de dígitos**; agora calcula os **dígitos verificadores reais**, bloqueando documentos falsos como `111.111.111-11`.
+
+---
+
+## 13. Google Reviews — Motor Híbrido (mar/2026)
+
+### 13.1 Limitação da API do Google
+
+A API oficial do Google Places (`/place/details/json`) retorna **apenas 5 reviews** por consulta. O algoritmo de "relevância" do Google muitas vezes prioriza reclamações longas, ignorando avaliações positivas.
+
+### 13.2 Solução: Motor Híbrido de 3 Camadas
+
+**Camada 1 — Google Places API:**
+Busca os 5 reviews padrão pelo `place_id`.
+
+**Camada 2 — Enriquecimento via IA (`ClientAiService::findPositiveReviews`):**
+Se o Google retornar menos de **3 reviews com nota ≥ 4**, o sistema aciona automaticamente a IA (GPT-4o-mini) para localizar depoimentos positivos reais e históricos da empresa no contexto público.
+
+```php
+// ClienteController.php — lookupGoogleReviews e getGoogleReviews
+$countHigh = collect($reviews)->filter(fn($r) => ($r['rating'] ?? 0) >= 4)->count();
+if ($countHigh < 3) {
+    $aiReviews = $aiService->findPositiveReviews($name, $city);
+    $reviews = array_merge($reviews, $aiReviews);
+}
+```
+
+**Camada 3 — Inserção Manual:**
+Botão **"+ Adicionar Manualmente"** na aba Google Reviews permite que o usuário insira um depoimento específico (nome do autor + texto). O review é criado com nota 5 e automaticamente pré-selecionado.
+
+### 13.3 Ordenação por Qualidade (Frontend)
+
+A lista de reviews é **sempre ordenada por nota (descendente)** no frontend antes de renderizar:
+
+```ts
+[...reviews].sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+```
+
+Isso garante que reviews de 5 estrelas apareçam no topo independentemente da ordem retornada pela API ou IA.
+
+### 13.4 Envio de Contexto para o Backend
+
+O frontend agora envia `nome` e `cidade` nos parâmetros da requisição de reviews, permitindo que o backend utilize esses dados no fallback de IA sem depender do banco de dados.
+
+### 13.5 Bug Corrigido
+
+`ClientAiService.php`: Faltava o `}` de fechamento do método `predictSocialMedia`, causando _syntax error_ ao carregar comentários. Corrigido adicionando o fechamento correto antes do novo método `findPositiveReviews`.
+
+---
+
+## 14. Aba Google Reviews — Aba de Segmentos (mar/2026)
+
+### 14.1 Criação de Novos Segmentos via Select
+
+Na aba **Segmentos**, o select agora possui a opção **"+ Criar novo segmento"**. Ao selecionar essa opção, o usuário digita o nome do novo segmento diretamente na interface, e o sistema:
+
+1. Faz uma requisição `POST /v1/segmentos` com o nome.
+2. Salva o novo segmento no banco de dados.
+3. Retorna o ID real e adiciona automaticamente à lista de seleção do cliente.
+
+### 14.2 Fix da Coluna `id` (Supabase)
+
+A tabela `segmentos` no Supabase não possuía coluna `id` configurada como **IDENTITY** (auto-incremento). Criada migration:
+
+**Arquivo:** `2026_03_13_143219_fix_segmentos_table_identity_column.php`
+
+```sql
+ALTER TABLE segmentos ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+SELECT setval(pg_get_serial_sequence('segmentos', 'id'), MAX(id)) FROM segmentos;
+```
+
+---
