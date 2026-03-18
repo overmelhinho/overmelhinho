@@ -1933,4 +1933,30 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
         return response()->json($query->paginate($request->input('per_page', 15)));
     }
+
+    public function auditStats()
+    {
+        $today = now()->startOfDay();
+        $yesterday = now()->subDay()->startOfDay();
+        $sevenDays = now()->subDays(7)->startOfDay();
+        $thirtyDays = now()->subDays(30)->startOfDay();
+
+        $stats = [
+            'hoje' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+                ->where('created_at', '>=', $today)
+                ->count(),
+            'ontem' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+                ->where('created_at', '>=', $yesterday)
+                ->where('created_at', '<', $today)
+                ->count(),
+            'sete_dias' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+                ->where('created_at', '>=', $sevenDays)
+                ->count(),
+            'trinta_dias' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+                ->where('created_at', '>=', $thirtyDays)
+                ->count(),
+        ];
+
+        return response()->json($stats);
+    }
 }

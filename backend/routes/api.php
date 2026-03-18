@@ -147,6 +147,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ✅ Auditoria Inteligente
     Route::get('audit/queue', [ClienteController::class, 'auditQueue']);
     Route::get('audit/history', [ClienteController::class, 'auditHistory']);
+    Route::get('audit/stats', [ClienteController::class, 'auditStats']);
 
     // Logo
     Route::post('clientes/{cliente}/logo/commit-temp', [ClienteController::class , 'commitLogoTemp']);

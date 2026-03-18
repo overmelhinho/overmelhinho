@@ -71,6 +71,15 @@ const AuditDashboardPage: React.FC = () => {
         enabled: tab === 'history'
     });
 
+    // 4. Busca Estatísticas de Auditoria
+    const { data: stats } = useQuery({
+        queryKey: ['audit-stats'],
+        queryFn: async () => {
+            const response = await api.get('/v1/audit/stats');
+            return response.data;
+        }
+    });
+
     return (
         <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8 font-sans">
             {/* Background Decoration */}
@@ -118,6 +127,30 @@ const AuditDashboardPage: React.FC = () => {
                     </motion.div>
                 </div>
             </header>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                    { label: 'Auditados Hoje', value: stats?.hoje, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                    { label: 'Auditados Ontem', value: stats?.ontem, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Últimos 7 dias', value: stats?.sete_dias, color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Últimos 30 dias', value: stats?.trinta_dias, color: 'text-slate-600', bg: 'bg-slate-50' },
+                ].map((s, i) => (
+                    <motion.div
+                        key={s.label}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center group hover:shadow-md transition-all"
+                    >
+                        <div className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
+                            <CheckCircle2 className={`w-5 h-5 ${s.color}`} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</span>
+                        <span className={`text-2xl font-black mt-1 ${s.color}`}>{s.value ?? 0}</span>
+                    </motion.div>
+                ))}
+            </div>
 
             {/* Navigation Tabs */}
             <nav className="flex items-center gap-8 px-2 border-b border-gray-50 bg-white/50 backdrop-blur-sm rounded-t-3xl">
