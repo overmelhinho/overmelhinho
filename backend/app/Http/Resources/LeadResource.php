@@ -25,7 +25,12 @@ class LeadResource extends JsonResource
                 'status'        => $this->status,
                 'responsavel'   => $this->responsavel,
                 'observacoes'   => $this->observacoes,
-                'motivo_perda'  => $this->motivo_perda, // ✅ NOVO CAMPO
+                'motivo_perda'  => $this->motivo_perda,
+                'google_place_id' => $this->google_place_id,
+                'endereco'      => $this->endereco,
+                'referencia'    => $this->referencia,
+                'interesse'     => $this->interesse,
+                'cidade'        => $this->cidade,
                 'created_at'    => optional($this->created_at)->toDateTimeString(),
                 'updated_at'    => optional($this->updated_at)->toDateTimeString(),
             ];

@@ -76,7 +76,13 @@ export default function Sidebar() {
     },
     {
       to: "/radar-oportunidades",
-      label: "Radar",
+      label: "Radar de Oportunidades",
+      icon: <LayoutDashboard size={18} />,
+      perms: ["view_dashboard"],
+    },
+    {
+      to: "/radar-prospeccao",
+      label: "Radar de Prospecção",
       icon: <Sparkles size={18} />,
       perms: ["view_dashboard"],
     },

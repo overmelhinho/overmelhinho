@@ -176,6 +176,16 @@ export default function ClienteCreateFromLead() {
     staleTime: 60_000,
   });
 
+  useEffect(() => {
+    if (lead) {
+      console.log('📦 [LEAD DATA] Chegou do banco:', {
+        nome: lead.nome,
+        cidade: lead.cidade,
+        id: lead.id
+      });
+    }
+  }, [lead]);
+
   const validationSchema = Yup.object({
     nome_fantasia: Yup.string().required("Nome fantasia é obrigatório"),
     cnpj: Yup.string().required("CPF/CNPJ é obrigatório"),
@@ -414,7 +424,7 @@ export default function ClienteCreateFromLead() {
 
               cep: "",
               estado: "",
-              cidade: "",
+              cidade: lead?.cidade || "",
               bairro: "",
               rua: "",
               numero: "",
@@ -727,6 +737,7 @@ export default function ClienteCreateFromLead() {
                   <PreFetchModal
                     nomeInicial={values.nome_fantasia || ""}
                     cnpjInicial={values.cnpj || ""}
+                    cidadeInicial={values.cidade || ""}
                     tipoCliente={tipoCliente}
                     isOpen={prefetchOpen}
                     onClose={() => setPrefetchOpen(false)}

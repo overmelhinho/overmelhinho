@@ -27,6 +27,11 @@ class Lead extends Model
         'data_follow_up',
         'lost_at',
         'motivo_perda',
+        'google_place_id',
+        'referencia',
+        'endereco',
+        'interesse',
+        'cidade',
     ];
 
     protected $fillable = [
@@ -39,7 +44,12 @@ class Lead extends Model
         'observacoes',
         'data_follow_up',
         'lost_at',
-        'motivo_perda'
+        'motivo_perda',
+        'google_place_id',
+        'referencia',
+        'endereco',
+        'interesse',
+        'cidade',
     ];
 
     protected $casts = [

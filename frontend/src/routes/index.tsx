@@ -77,6 +77,7 @@ import RenewalMagicLinkPage from "@/pages/public/RenewalMagicLinkPage";
 import AutorizarPage from "@/pages/public/AutorizarPage";
 import AuditMatchPage from "@/pages/AuditMatchPage";
 import AuditDashboardPage from "@/pages/AuditDashboardPage";
+import ProspectRadarPage from "@/pages/ProspectRadarPage";
 
 
 const router = createBrowserRouter([
@@ -167,6 +168,16 @@ const router = createBrowserRouter([
       <ProtectedRoute perms={["view_dashboard"]}>
         <DashboardLayout>
           <OportunidadesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/radar-prospeccao",
+    element: (
+      <ProtectedRoute perms={["view_dashboard"]}>
+        <DashboardLayout>
+          <ProspectRadarPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

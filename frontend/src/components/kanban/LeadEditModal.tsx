@@ -32,6 +32,7 @@ export default function LeadEditModal({ open, onClose, lead }) {
       telefone: lead?.telefone || '',
       origem: lead?.origem || '',
       responsavel: lead?.responsavel || '',
+      cidade: lead?.cidade || '',
       observacoes: lead?.observacoes || '',
       motivo_perda: lead?.motivo_perda || ''
     },
@@ -126,6 +127,12 @@ export default function LeadEditModal({ open, onClose, lead }) {
             name="responsavel"
             placeholder="Responsável"
             value={formik.values.responsavel}
+            onChange={formik.handleChange}
+          />
+          <Input
+            name="cidade"
+            placeholder="Cidade"
+            value={formik.values.cidade}
             onChange={formik.handleChange}
           />
           <Input

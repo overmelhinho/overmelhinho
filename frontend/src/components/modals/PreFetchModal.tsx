@@ -46,6 +46,7 @@ const cidadesSerra = [
 interface Props {
   nomeInicial: string;
   cnpjInicial?: string;
+  cidadeInicial?: string;
   tipoCliente?: "gratuito" | "pagante";
   isOpen: boolean;
   onClose: () => void;
@@ -220,6 +221,7 @@ function parseEnderecoRobusto(enderecoCompleto: string, fallbackCidade?: string)
 export default function PreFetchModal({
   nomeInicial,
   cnpjInicial = "",
+  cidadeInicial = "",
   tipoCliente: tipoClienteInicial = "pagante",
   isOpen,
   onClose,
@@ -228,7 +230,7 @@ export default function PreFetchModal({
   const navigate = useNavigate();
   const [tipoCliente, setTipoCliente] = useState<"gratuito" | "pagante">(tipoClienteInicial);
 
-  const [cidade, setCidade] = useState("");
+  const [cidade, setCidade] = useState(cidadeInicial || "");
   const [nome, setNome] = useState(nomeInicial || "");
   const [cnpj, setCnpj] = useState(cnpjInicial || "");
 
@@ -242,9 +244,17 @@ export default function PreFetchModal({
   const [checkingCnpj, setCheckingCnpj] = useState(false);
 
   useEffect(() => {
-    setNome(nomeInicial || "");
-    setCnpj(cnpjInicial || "");
-  }, [nomeInicial, cnpjInicial]);
+    if (isOpen) {
+      console.log('🏗️ [MODAL] Dados Iniciais Recv:', { nomeInicial, cnpjInicial, cidadeInicial });
+      setNome((nomeInicial || "").trim());
+      setCnpj((cnpjInicial || "").trim());
+
+      const cityClean = (cidadeInicial || "").trim();
+      if (cityClean) {
+        setCidade(cityClean);
+      }
+    }
+  }, [nomeInicial, cnpjInicial, cidadeInicial, isOpen]);
 
   const docValido = useMemo(() => (cnpj ? isValidDocumento(cnpj) : false), [cnpj]);
 

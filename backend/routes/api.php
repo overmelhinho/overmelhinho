@@ -216,6 +216,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('candidates/{id}/resume', [CandidateController::class , 'downloadResume']);
     Route::delete('candidates/{id}', [CandidateController::class , 'destroy']);
 
+    // 🎯 Radar de Prospecção
+    Route::get('prospect/search', [\App\Http\Controllers\Api\V1\ProspectController::class, 'search']);
+    Route::post('prospect/convert-to-lead', [\App\Http\Controllers\Api\V1\ProspectController::class, 'convertToLead']);
+
     // ✅ Financeiro
     Route::get('/plans', [\App\Http\Controllers\Api\V1\PlanController::class , 'index']);
     Route::post('/plans', [\App\Http\Controllers\Api\V1\PlanController::class , 'store']);
