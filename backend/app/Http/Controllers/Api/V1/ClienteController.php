@@ -1929,6 +1929,15 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
     {
         $query = \App\Models\AuditLog::where('action', 'ilike', '%audit%')
             ->with(['actor', 'cliente'])
+            ->when($request->input('user_id'), function($q, $uid) {
+                return $q->where('actor_user_id', $uid);
+            })
+            ->when($request->input('q'), function($q, $term) {
+                return $q->whereHas('cliente', function($sq) use ($term) {
+                    $sq->where('nome_fantasia', 'ilike', "%{$term}%")
+                       ->orWhere('razao_social', 'ilike', "%{$term}%");
+                });
+            })
             ->orderBy('created_at', 'desc');
 
         return response()->json($query->paginate($request->input('per_page', 15)));
@@ -1966,5 +1975,17 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             : 0;
 
         return response()->json($stats);
+    }
+
+    public function auditUsers()
+    {
+        $userIds = \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+            ->whereNotNull('actor_user_id')
+            ->pluck('actor_user_id')
+            ->unique();
+
+        $users = \App\Models\User::whereIn('id', $userIds)->get(['id', 'name']);
+
+        return response()->json($users);
     }
 }

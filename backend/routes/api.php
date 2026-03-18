@@ -148,6 +148,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('audit/queue', [ClienteController::class, 'auditQueue']);
     Route::get('audit/history', [ClienteController::class, 'auditHistory']);
     Route::get('audit/stats', [ClienteController::class, 'auditStats']);
+    Route::get('audit/users', [ClienteController::class, 'auditUsers']);
 
     // Logo
     Route::post('clientes/{cliente}/logo/commit-temp', [ClienteController::class , 'commitLogoTemp']);

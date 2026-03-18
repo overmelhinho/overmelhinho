@@ -34,6 +34,7 @@ const AuditDashboardPage: React.FC = () => {
     const page = parseInt(searchParams.get('page') || '1');
     const filterCity = searchParams.get('cidade') || '';
     const filterType = searchParams.get('tipo') || '';
+    const filterUser = searchParams.get('user_id') || '';
     const searchTerm = searchParams.get('q') || '';
 
     const updateFilter = (params: Record<string, string | number | null>) => {
@@ -54,7 +55,7 @@ const AuditDashboardPage: React.FC = () => {
         setSearchParams({ tab }); // Mantém apenas a tab
     };
 
-    const hasFilters = filterCity || filterType || searchTerm;
+    const hasFilters = filterCity || filterType || searchTerm || filterUser;
 
     // 1. Busca Cidades para o Filtro
     const { data: cities } = useQuery({
@@ -62,6 +63,15 @@ const AuditDashboardPage: React.FC = () => {
         queryFn: async () => {
             const response = await api.get('/v1/cidades');
             return response.data.data;
+        }
+    });
+
+    // 2.5. Busca Auditores (Quem já auditou)
+    const { data: auditors } = useQuery({
+        queryKey: ['audit-users'],
+        queryFn: async () => {
+            const response = await api.get('/v1/audit/users');
+            return response.data;
         }
     });
 
@@ -85,10 +95,14 @@ const AuditDashboardPage: React.FC = () => {
 
     // 3. Busca Histórico (Audit Logs)
     const { data: historyData, isLoading: loadingHistory } = useQuery({
-        queryKey: ['audit-history', page],
+        queryKey: ['audit-history', page, filterUser, searchTerm],
         queryFn: async () => {
             const response = await api.get('/v1/audit/history', {
-                params: { page }
+                params: {
+                    page,
+                    user_id: filterUser,
+                    q: searchTerm
+                }
             });
             return response.data;
         },
@@ -214,7 +228,7 @@ const AuditDashboardPage: React.FC = () => {
 
             {/* Filters Area */}
             <AnimatePresence mode="wait">
-                {tab === 'queue' && (
+                {(tab === 'queue' || tab === 'history') && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -232,30 +246,48 @@ const AuditDashboardPage: React.FC = () => {
                             />
                         </div>
 
-                        <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <MapPin className="w-4 h-4 text-slate-400" />
-                            <select
-                                value={filterCity}
-                                onChange={(e) => updateFilter({ cidade: e.target.value })}
-                                className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer min-w-[140px]"
-                            >
-                                <option value="">Cidades</option>
-                                {cities?.map((c: any) => (
-                                    <option key={c.id} value={c.nome}>{c.nome}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {tab === 'queue' && (
+                            <>
+                                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                                    <MapPin className="w-4 h-4 text-slate-400" />
+                                    <select
+                                        value={filterCity}
+                                        onChange={(e) => updateFilter({ cidade: e.target.value })}
+                                        className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer min-w-[140px]"
+                                    >
+                                        <option value="">Cidades</option>
+                                        {cities?.map((c: any) => (
+                                            <option key={c.id} value={c.nome}>{c.nome}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                                    <Users className="w-4 h-4 text-slate-400" />
+                                    <select
+                                        value={filterType}
+                                        onChange={(e) => updateFilter({ tipo: e.target.value })}
+                                        className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer"
+                                    >
+                                        <option value="">Tipos</option>
+                                        <option value="pagante">Pagantes</option>
+                                        <option value="gratuito">Gratuitos</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
 
                         <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <Users className="w-4 h-4 text-slate-400" />
+                            <ClipboardCheck className="w-4 h-4 text-slate-400" />
                             <select
-                                value={filterType}
-                                onChange={(e) => updateFilter({ tipo: e.target.value })}
-                                className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer"
+                                value={filterUser}
+                                onChange={(e) => updateFilter({ user_id: e.target.value })}
+                                className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer min-w-[130px]"
                             >
-                                <option value="">Tipos</option>
-                                <option value="pagante">Pagantes</option>
-                                <option value="gratuito">Gratuitos</option>
+                                <option value="">Auditor</option>
+                                {auditors?.map((u: any) => (
+                                    <option key={u.id} value={u.id}>{u.name}</option>
+                                ))}
                             </select>
                         </div>
 
