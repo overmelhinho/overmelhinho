@@ -398,6 +398,8 @@ export default function ClienteEdit() {
               google_place_id: values.google_place_id || null,
               horario_atendimento: values.horario_atendimento || [],
               reviews: values.reviews || [],
+              beneficios: values.beneficios || [],
+              tipo_arquivo_midia: values.tipo_arquivo_midia || "catalogo",
             };
 
             // ✅ UPDATE

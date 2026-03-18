@@ -9,7 +9,15 @@ interface LeadIntelData {
   email: string;
   endereco: string;
   instagram: string;
+  facebook?: string;
+  linkedin?: string;
+  youtube?: string;
+  tiktok?: string;
+  x?: string;
   descricao: string;
+  website?: string;
+  google_place_id?: string;
+  data_fundacao?: string;
 }
 
 export function useLeadIntel(query: string, enabled = true) {

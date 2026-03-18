@@ -17,6 +17,7 @@ import {
   Building2,
   BadgeCheck,
   AlertTriangle,
+  ClipboardCheck,
 } from "lucide-react";
 
 import {
@@ -273,7 +274,7 @@ export default function ClientesList() {
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
     staleTime: 60_000,
     queryFn: async () => {
       const resp = await axios.get("/v1/clientes", { params: { page, lite: true } });
@@ -598,6 +599,17 @@ export default function ClientesList() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
+                            className="px-3 py-1.5 rounded-lg border text-xs bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 transition font-semibold flex items-center gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/auditoria/${c.id}`);
+                            }}
+                          >
+                            <ClipboardCheck size={14} />
+                            Auditoria
+                          </button>
+                          <button
+                            type="button"
                             className="px-3 py-1.5 rounded-lg border text-xs hover:bg-red-50 hover:border-red-200 hover:text-[#C00000] transition font-semibold"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -718,6 +730,15 @@ export default function ClientesList() {
                     onClick={() => {
                       if (!selected) return;
                       window.location.href = `/clientes/${selected.id}/editar`;
+                    }}
+                  />
+
+                  <ActionButton
+                    label="Auditoria"
+                    icon={<ClipboardCheck className="w-4 h-4" />}
+                    onClick={() => {
+                      if (!selected) return;
+                      window.location.href = `/auditoria/${selected.id}`;
                     }}
                   />
 

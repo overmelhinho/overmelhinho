@@ -61,11 +61,17 @@ class ClienteResource extends JsonResource
 
             'video' => $this->video,
             'portfolio_url' => $this->portfolio_url,
+            'tipo_arquivo_midia' => $this->tipo_arquivo_midia ?? 'catalogo',
 
             'google_place_id' => $this->google_place_id,
             'data_fundacao' => $this->data_fundacao ? (is_string($this->data_fundacao) ? $this->data_fundacao : $this->data_fundacao->format('Y-m-d')) : null,
-            'google_rating' => $this->reviews_count ? round(5.0, 1) : null, // Mocking rating for now if not in DB
+            'google_rating' => $this->reviews_count ? round(5.0, 1) : null,
             'reviews_count' => $this->reviews_count ?? 0,
+
+            // ✅ Novos Campos de Auditoria
+            'audit_status' => $this->audit_status ?? 'ok',
+            'last_audit_at' => $this->last_audit_at ? (is_string($this->last_audit_at) ? $this->last_audit_at : $this->last_audit_at->toISOString()) : null,
+            'audit_differences' => is_string($this->audit_differences) ? json_decode($this->audit_differences, true) : $this->audit_differences,
         ];
     }
 }

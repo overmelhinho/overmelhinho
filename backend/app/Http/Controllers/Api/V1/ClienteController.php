@@ -634,6 +634,7 @@ public function historico(Request $request, int $id)
 
                 'video'         => 'nullable|string|max:500',
                 'portfolio_url' => 'nullable|string|max:500',
+                'tipo_arquivo_midia' => 'nullable|string|max:50|in:catalogo,portfolio,cardapio',
 
                 // ✅ tipo_cliente
                 'tipo_cliente' => [
@@ -694,6 +695,8 @@ public function historico(Request $request, int $id)
                 'data_fundacao'         => 'nullable|date',
                 'google_place_id'       => 'nullable|string|max:255',
                 'reviews'               => 'nullable|array',
+                'beneficios'            => 'nullable|array',
+                'beneficios.*'          => 'string|max:100',
             ]);
 
             $generate = $request->boolean('generate_seo_keywords', true);
@@ -740,6 +743,9 @@ public function historico(Request $request, int $id)
             if (Schema::hasColumn('clientes', 'portfolio_url')) {
                 $clienteData['portfolio_url'] = $validated['portfolio_url'] ?? null;
             }
+            if (Schema::hasColumn('clientes', 'tipo_arquivo_midia')) {
+                $clienteData['tipo_arquivo_midia'] = $validated['tipo_arquivo_midia'] ?? 'catalogo';
+            }
 
             // ✅ NOVOS campos
             if (Schema::hasColumn('clientes', 'tipo_cliente')) {
@@ -755,6 +761,10 @@ public function historico(Request $request, int $id)
 
             if (Schema::hasColumn('clientes', 'google_place_id')) {
                 $clienteData['google_place_id'] = $validated['google_place_id'] ?? null;
+            }
+
+            if (isset($validated['beneficios'])) {
+                $clienteData['beneficios'] = $validated['beneficios'];
             }
 
             $cliente = Cliente::create($clienteData);
@@ -910,6 +920,9 @@ public function historico(Request $request, int $id)
                 if (!Schema::hasColumn('clientes', 'beneficios')) {
                     DB::statement("ALTER TABLE clientes ADD COLUMN beneficios JSONB NULL");
                 }
+                if (!Schema::hasColumn('clientes', 'tipo_arquivo_midia')) {
+                    DB::statement("ALTER TABLE clientes ADD COLUMN tipo_arquivo_midia VARCHAR(50) DEFAULT 'catalogo' NULL");
+                }
             } catch (\Exception $e) {
                 Log::warning("Auto-healing schema warning: " . $e->getMessage());
             }
@@ -1010,6 +1023,7 @@ public function historico(Request $request, int $id)
 
                 'video'         => 'nullable|string|max:500',
                 'portfolio_url' => 'nullable|string|max:500',
+                'tipo_arquivo_midia' => 'nullable|string|max:50|in:catalogo,portfolio,cardapio',
 
                 'tipo_cliente' => [
                     'nullable',
@@ -1069,6 +1083,12 @@ public function historico(Request $request, int $id)
                 'data_fundacao'         => 'nullable|date',
                 'google_place_id'       => 'nullable|string|max:255',
                 'reviews'               => 'nullable|array',
+                'beneficios'            => 'nullable|array',
+                'beneficios.*'          => 'string|max:100',
+                'audit_status'          => 'nullable|string|in:ok,pending,scanning',
+                'last_audit_at'         => 'nullable|date',
+                'audit_differences'     => 'nullable',
+                'audit_action'          => 'nullable|string',
             ]);
 
             $generate = $request->boolean('generate_seo_keywords', true);
@@ -1094,7 +1114,13 @@ public function historico(Request $request, int $id)
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
                 'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
+                'audit_status'          => $validated['audit_status'] ?? $cliente->audit_status,
+                'audit_differences'     => $validated['audit_differences'] ?? $cliente->audit_differences,
             ];
+
+            if (isset($validated['last_audit_at'])) {
+                $clienteData['last_audit_at'] = $validated['last_audit_at'];
+            }
 
             if (Schema::hasColumn('clientes', 'horario_atendimento')) {
                 $clienteData['horario_atendimento'] = $validated['horario_atendimento'] ?? null;
@@ -1116,6 +1142,10 @@ public function historico(Request $request, int $id)
                 $clienteData['portfolio_url'] = $validated['portfolio_url'] ?? null;
             }
 
+            if (Schema::hasColumn('clientes', 'tipo_arquivo_midia')) {
+                $clienteData['tipo_arquivo_midia'] = $validated['tipo_arquivo_midia'] ?? 'catalogo';
+            }
+
             if (Schema::hasColumn('clientes', 'tipo_cliente')) {
                 $clienteData['tipo_cliente'] = $tipoCliente;
             }
@@ -1134,6 +1164,10 @@ public function historico(Request $request, int $id)
 
             if ($request->has('google_place_id')) {
                 $clienteData['google_place_id'] = $request->input('google_place_id');
+            }
+
+            if ($request->has('beneficios')) {
+                $clienteData['beneficios'] = $request->input('beneficios');
             }
 
             $cliente->update($clienteData);
@@ -1251,6 +1285,17 @@ public function historico(Request $request, int $id)
                     ->whereNotNull('google_review_id')
                     ->whereNotIn('google_review_id', $sentIds)
                     ->delete();
+            }
+
+            if ($request->filled('audit_action')) {
+                $this->audit(
+                    action: $request->input('audit_action'),
+                    entityType: 'cliente',
+                    entityId: (int) $cliente->id,
+                    fieldChanges: [], 
+                    clienteId: (int) $cliente->id,
+                    metadata: ['operator' => 'IA/User Audit']
+                );
             }
 
             DB::commit();
@@ -1846,5 +1891,46 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+    public function auditQueue(Request $request)
+    {
+        $status = $request->input('status', 'pending');
+        $cidade = $request->input('cidade');
+        $tipo = $request->input('tipo');
+
+        $query = Cliente::where('audit_status', $status)
+            ->with(['enderecos', 'contatos']);
+
+        if ($cidade) {
+            $query->whereHas('enderecos', function($q) use ($cidade) {
+                $q->where('cidade', 'ilike', "%{$cidade}%");
+            });
+        }
+
+        if ($tipo) {
+            $query->where('tipo_cliente', $tipo);
+        }
+
+        if ($request->filled('q')) {
+            $q = $request->input('q');
+            $query->where(function($sub) use ($q) {
+                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
+                    ->orWhere('razao_social', 'ilike', "%{$q}%");
+            });
+        }
+
+        $query->orderByRaw("CASE WHEN tipo_cliente = 'pagante' THEN 0 ELSE 1 END")
+              ->orderBy('last_audit_at', 'desc');
+
+        return ClienteResource::collection($query->paginate($request->input('per_page', 15)));
+    }
+
+    public function auditHistory(Request $request)
+    {
+        $query = \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+            ->with(['actor', 'cliente'])
+            ->orderBy('created_at', 'desc');
+
+        return response()->json($query->paginate($request->input('per_page', 15)));
     }
 }

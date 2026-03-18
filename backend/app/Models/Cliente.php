@@ -49,6 +49,10 @@ class Cliente extends Model
         'horario_atendimento',
         'google_place_id',
         'data_fundacao',
+        'tipo_arquivo_midia',
+        'last_audit_at',
+        'audit_status',
+        'audit_differences',
     ];
 
     public function renewals()
@@ -73,6 +77,8 @@ class Cliente extends Model
         'seo_keywords_updated_at' => 'datetime',
         'contract_ends_at' => 'date',
         'data_fundacao' => 'date',
+        'last_audit_at' => 'datetime',
+        'audit_differences' => 'array',
     ];
 
     public function setCpfCnpjAttribute($value): void

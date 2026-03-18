@@ -66,6 +66,10 @@ module.exports = {
           'system-ui',
           'sans-serif',
         ],
+        serif: [
+          'Playfair Display',
+          'serif',
+        ],
       },
 
 

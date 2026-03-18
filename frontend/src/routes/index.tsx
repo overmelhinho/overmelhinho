@@ -75,6 +75,8 @@ import ClientReportDashboard from "@/pages/reports/ClientReportDashboard";
 // ✅ Público
 import RenewalMagicLinkPage from "@/pages/public/RenewalMagicLinkPage";
 import AutorizarPage from "@/pages/public/AutorizarPage";
+import AuditMatchPage from "@/pages/AuditMatchPage";
+import AuditDashboardPage from "@/pages/AuditDashboardPage";
 
 
 const router = createBrowserRouter([
@@ -165,6 +167,26 @@ const router = createBrowserRouter([
       <ProtectedRoute perms={["view_dashboard"]}>
         <DashboardLayout>
           <OportunidadesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/auditoria/:id",
+    element: (
+      <ProtectedRoute perms={["view_dashboard", "view_client"]}>
+        <DashboardLayout>
+          <AuditMatchPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/auditoria",
+    element: (
+      <ProtectedRoute perms={["view_dashboard", "view_client"]}>
+        <DashboardLayout>
+          <AuditDashboardPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

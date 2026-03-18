@@ -175,14 +175,58 @@ export default function TabMidia() {
         </h3>
 
         <div className="flex flex-col gap-6">
-          {/* Toggle de Tipo */}
+          {/* Que tipo de material é */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">Tipo de Documento</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded-xl hover:bg-red-50 transition-all">
+                <input
+                  type="radio"
+                  name="tipo_arquivo_midia"
+                  value="catalogo"
+                  checked={values.tipo_arquivo_midia === "catalogo" || !values.tipo_arquivo_midia}
+                  onChange={(e) => setFieldValue("tipo_arquivo_midia", e.target.value)}
+                  className="accent-[#B70F0A]"
+                />
+                <span className="text-sm font-medium">Catálogo & Preços</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded-xl hover:bg-red-50 transition-all">
+                <input
+                  type="radio"
+                  name="tipo_arquivo_midia"
+                  value="portfolio"
+                  checked={values.tipo_arquivo_midia === "portfolio"}
+                  onChange={(e) => setFieldValue("tipo_arquivo_midia", e.target.value)}
+                  className="accent-[#B70F0A]"
+                />
+                <span className="text-sm font-medium">Portfólio / Apresentação</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded-xl hover:bg-red-50 transition-all">
+                <input
+                  type="radio"
+                  name="tipo_arquivo_midia"
+                  value="cardapio"
+                  checked={values.tipo_arquivo_midia === "cardapio"}
+                  onChange={(e) => setFieldValue("tipo_arquivo_midia", e.target.value)}
+                  className="accent-[#B70F0A]"
+                />
+                <span className="text-sm font-medium">Cardápio</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-200 my-2" />
+
+          {/* Toggle de Tipo Fisico ou Virtual */}
           <div className="flex bg-white p-1 rounded-xl border w-fit shadow-sm">
             <button
               type="button"
               onClick={() => setFieldValue("tipo_material", "file")}
               className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${values.tipo_material === "file"
-                  ? "bg-[#B70F0A] text-white shadow-md"
-                  : "text-gray-500 hover:bg-gray-50"
+                ? "bg-[#B70F0A] text-white shadow-md"
+                : "text-gray-500 hover:bg-gray-50"
                 }`}
             >
               <FileUp className="w-4 h-4" /> Arquivo (PDF/IMG)
@@ -191,8 +235,8 @@ export default function TabMidia() {
               type="button"
               onClick={() => setFieldValue("tipo_material", "link")}
               className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${values.tipo_material === "link"
-                  ? "bg-[#B70F0A] text-white shadow-md"
-                  : "text-gray-500 hover:bg-gray-50"
+                ? "bg-[#B70F0A] text-white shadow-md"
+                : "text-gray-500 hover:bg-gray-50"
                 }`}
             >
               <LinkIcon className="w-4 h-4" /> Link Externo (URL)

@@ -6,7 +6,8 @@ import {
     Briefcase, ChevronRight, CheckCircle2, ArrowLeft, Search,
     User, Menu, Info, ImageIcon, MessageSquare, Instagram,
     Facebook, Globe, ExternalLink, ChevronLeft, Linkedin, Youtube,
-    X, Maximize2, Copy, Check
+    X, Maximize2, Copy, Check, Bike, Utensils, CreditCard, DollarSign,
+    Smartphone, Banknote, Coins, FileText, BookOpen
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -172,6 +173,17 @@ export default function ClientProfileClient() {
         } finally {
             setIsSharing(false);
         }
+    };
+
+    const BENEFICIOS_MAP: Record<string, { label: string, icon: any }> = {
+        "24h": { label: "24 horas", icon: Clock },
+        "tele_entrega": { label: "Tele-entrega", icon: Bike },
+        "meio_dia": { label: "Aberto ao meio-dia", icon: Utensils },
+        "credito": { label: "Crédito", icon: CreditCard },
+        "debito": { label: "Débito", icon: DollarSign },
+        "pix": { label: "Pix", icon: Smartphone },
+        "boleto": { label: "Boleto Bancário", icon: Banknote },
+        "dinheiro": { label: "Dinheiro", icon: Coins },
     };
 
     const contactInfo = client?.contatos?.[0];
@@ -438,14 +450,24 @@ export default function ClientProfileClient() {
 
                                     {client.beneficios?.length > 0 && (
                                         <section className="space-y-6">
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Benefícios</h2>
-                                            <div className="flex flex-wrap gap-4">
-                                                {client.beneficios.map((ben: any, i: number) => (
-                                                    <div key={i} className="bg-red-50 text-brand-red border border-red-100 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center shadow-sm">
-                                                        <CheckCircle2 size={18} className="mr-3" />
-                                                        {ben}
-                                                    </div>
-                                                ))}
+                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Benefícios e Pagamentos</h2>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {client.beneficios.map((benId: string) => {
+                                                    const ben = BENEFICIOS_MAP[benId];
+                                                    if (!ben) return null;
+                                                    const Icon = ben.icon;
+                                                    return (
+                                                        <div key={benId} className="relative flex flex-col items-center justify-center border-2 border-red-50 bg-red-50/50 rounded-[2rem] p-6 shadow-sm">
+                                                            <div className="absolute top-4 right-4 text-brand-red">
+                                                                <CheckCircle2 size={16} />
+                                                            </div>
+                                                            <Icon className="w-8 h-8 mb-3 text-brand-red" />
+                                                            <span className="text-xs font-black uppercase tracking-widest text-brand-red text-center leading-tight">
+                                                                {ben.label}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </section>
                                     )}
@@ -487,10 +509,16 @@ export default function ClientProfileClient() {
                                             <div className="bg-white p-8 rounded-[3rem] border-2 border-gray-50 shadow-xl gummy-card flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                                                 <div className="flex items-center space-x-4">
                                                     <div className="w-16 h-16 bg-red-50 text-brand-red rounded-2xl flex items-center justify-center">
-                                                        <Briefcase size={28} />
+                                                        {client.tipo_arquivo_midia === 'cardapio' ? <Utensils size={28} /> :
+                                                            client.tipo_arquivo_midia === 'portfolio' ? <Briefcase size={28} /> :
+                                                                <BookOpen size={28} />}
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-xl font-black font-serif italic text-gray-900">Catálogo & Preços</h4>
+                                                        <h4 className="text-xl font-black font-serif italic text-gray-900">
+                                                            {client.tipo_arquivo_midia === 'cardapio' ? 'Cardápio Digital' :
+                                                                client.tipo_arquivo_midia === 'portfolio' ? 'Portfólio / Apresentação' :
+                                                                    'Catálogo & Preços'}
+                                                        </h4>
                                                         <p className="text-xs font-bold text-gray-400 mt-1">Conheça mais sobre as ofertas</p>
                                                     </div>
                                                 </div>

@@ -519,6 +519,8 @@ export default function ClienteCreateFromLead() {
                   google_place_id: values.google_place_id || null,
                   horario_atendimento: values.horario_atendimento || [],
                   reviews: values.selected_reviews || [],
+                  beneficios: values.beneficios || [],
+                  tipo_arquivo_midia: values.tipo_arquivo_midia || "catalogo",
                 };
 
                 // 1) cria cliente

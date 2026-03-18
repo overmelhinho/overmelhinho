@@ -17,3 +17,6 @@ Schedule::command('seo:check-rankings')->cron('0 2 */14 * *');
 
 // Renovação de Clientes: Gera renovações e tickets no dia 1 de cada mês
 Schedule::command('renewals:generate')->monthlyOn(1, '01:00');
+
+// Auditoria Inteligente: Varredura de dados na internet
+Schedule::command('audit:scan --limit=50')->dailyAt('02:00');

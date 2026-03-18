@@ -4,6 +4,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import AdminPage from "@/pages/AdminPage";
 import EditarUsuarioPage from "@/pages/EditarUsuarioPage";
 import PrivateRoute from "@/routes/PrivateRoute";
+import AuditMatchPage from "@/pages/AuditMatchPage";
 
 // IMPORTS dos CRUDs:
 import UserList from "@/components/User/UserList";
@@ -26,6 +27,7 @@ function App() {
         {/* Painel principal (usuário autenticado) */}
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/auditoria" element={<AuditMatchPage />} />
         </Route>
 
         {/* Rota exclusiva para admin */}

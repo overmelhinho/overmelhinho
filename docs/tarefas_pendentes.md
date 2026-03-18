@@ -6,6 +6,15 @@ Este documento lista o status das tarefas em andamento e o que ainda precisa ser
 
 ## ✅ Concluído Recentemente (Sprint: 2026-03-13)
 
+### Módulo de Auditoria (IA & Sincronização Web)
+
+- [x] **Motor de Varredura Noturna**: Comando `audit:scan` implementado para processar até 50 clientes/dia via cron, cruzando dados locais com Google Places.
+- [x] **Interface de Conciliação "Lado a Lado"**: Nova tela `AuditMatchPage.tsx` que destaca apenas discrepâncias reais, ignorando ruídos de formatação.
+- [x] **Diferenciação por Plano**: Lógica que limita a auditoria de clientes "Gratuitos" apenas ao Telefone, enquanto "Pagantes" validam Endereço, Site e Redes Sociais.
+- [x] **Parsing de Endereço Estruturado**: Migração do formato de string simples para objetos estruturados (Rua, Número, Bairro, CEP, etc.) via `address_components` do Google.
+- [x] **Validação com Fonte Original**: Ícones de links externos permitem ao operador abrir o Google Maps ou Instagram do cliente em nova aba para conferência humana instantânea.
+- [x] **Histórico e Logs**: Integração com a tabela `audit_logs` para rastrear quem autorizou cada mudança e qual era o valor anterior.
+
 ### Módulo de Clientes — CPF, Busca IA e Google Reviews
 
 - [x] **Suporte a CPF no Cadastro**: Campo de documento agora aceita CPF (11 dígitos) e CNPJ (14 dígitos) com máscara dinâmica automática.

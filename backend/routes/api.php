@@ -144,6 +144,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('clientes/{cliente}/galeria/upload-multiplos', [GaleriaImagemController::class , 'uploadMultiple']);
     Route::post('clientes/{cliente}/galeria/commit-temp', [GaleriaImagemController::class , 'commitTemp']);
 
+    // ✅ Auditoria Inteligente
+    Route::get('audit/queue', [ClienteController::class, 'auditQueue']);
+    Route::get('audit/history', [ClienteController::class, 'auditHistory']);
+
     // Logo
     Route::post('clientes/{cliente}/logo/commit-temp', [ClienteController::class , 'commitLogoTemp']);
 

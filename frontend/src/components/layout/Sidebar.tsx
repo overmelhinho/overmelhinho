@@ -31,8 +31,20 @@ function hasAnyPerm(userPerms: string[], perms?: string[]) {
   return userPerms.some((p) => perms.includes(p));
 }
 
+import { useQuery } from "@tanstack/react-query";
+import api from "@/services/api";
+
 export default function Sidebar() {
   const { user } = useAuth();
+
+  const { data: auditCount } = useQuery({
+    queryKey: ['audit-pending-count'],
+    queryFn: async () => {
+      const resp = await api.get('/v1/audit/queue', { params: { per_page: 1, status: 'pending' } });
+      return resp.data.meta?.total || 0;
+    },
+    refetchInterval: 1000 * 60 * 5 // 5 min
+  });
 
   const userPermissions: string[] = Array.isArray(user?.permissions)
     ? user!.permissions
@@ -56,6 +68,12 @@ export default function Sidebar() {
     { to: "/leads-kanban", label: "Leads", icon: <UserPlus size={18} />, perms: ["view_lead"] },
 
     { to: "/clientes", label: "Clientes", icon: <Users size={18} />, perms: ["view_client"] },
+    {
+      to: "/auditoria",
+      label: "Auditoria",
+      icon: <ShieldCheck size={18} />,
+      perms: ["view_dashboard"],
+    },
     {
       to: "/radar-oportunidades",
       label: "Radar",
@@ -98,6 +116,8 @@ export default function Sidebar() {
     const allowed = isAdmin || hasAnyPerm(userPermissions, it.perms);
     if (!allowed) return null;
 
+    const hasAuditBadge = it.to === '/auditoria' && auditCount > 0;
+
     return (
       <NavLink key={it.to} to={it.to} className="block">
         {({ isActive }) => (
@@ -118,7 +138,12 @@ export default function Sidebar() {
             >
               {it.icon}
             </span>
-            <span className="truncate">{it.label}</span>
+            <span className="truncate flex-1">{it.label}</span>
+            {hasAuditBadge && (
+              <span className="bg-white text-[#B70F0A] text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-[#B70F0A]/20">
+                {auditCount}
+              </span>
+            )}
           </div>
         )}
       </NavLink>

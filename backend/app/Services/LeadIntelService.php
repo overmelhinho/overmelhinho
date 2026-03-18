@@ -280,7 +280,7 @@ class LeadIntelService
                 [
                     'place_id' => $placeId,
                     'key' => $googleApiKey,
-                    'fields' => 'name,formatted_address,formatted_phone_number,website,opening_hours'
+                    'fields' => 'name,formatted_address,formatted_phone_number,website,opening_hours,address_components'
                 ]
             );
 
@@ -294,6 +294,7 @@ class LeadIntelService
                 'endereco' => $r['formatted_address'] ?? '',
                 'website' => $r['website'] ?? '',
                 'google_place_id' => $placeId,
+                'endereco_parts'  => $this->parseGoogleAddressComponents($r['address_components'] ?? [])
             ];
 
             // Mapear Horários
@@ -440,5 +441,39 @@ class LeadIntelService
             Log::warning('[LeadIntel][DescricaoIA] Erro', ['erro' => $e->getMessage()]);
             return '';
         }
+    }
+
+    private function parseGoogleAddressComponents(array $components): array
+    {
+        $map = [
+            'route' => 'rua',
+            'street_number' => 'numero',
+            'sublocality_level_1' => 'bairro',
+            'administrative_area_level_2' => 'cidade',
+            'administrative_area_level_1' => 'estado',
+            'postal_code' => 'cep',
+        ];
+
+        $out = [
+            'cep' => '',
+            'estado' => '',
+            'cidade' => '',
+            'bairro' => '',
+            'rua' => '',
+            'numero' => '',
+            'complemento' => '',
+        ];
+
+        foreach ($components as $c) {
+            foreach ($c['types'] as $type) {
+                if (isset($map[$type])) {
+                    $out[$map[$type]] = $c['long_name'];
+                    if ($type === 'administrative_area_level_1') {
+                        $out[$map[$type]] = $c['short_name']; // RS instead of Rio Grande do Sul
+                    }
+                }
+            }
+        }
+        return $out;
     }
 }
