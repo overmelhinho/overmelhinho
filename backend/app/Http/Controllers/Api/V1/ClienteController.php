@@ -1955,7 +1955,15 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             'trinta_dias' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
                 ->where('created_at', '>=', $thirtyDays)
                 ->count(),
+                
+            // Indicadores de Cobertura Total
+            'total_clientes' => \App\Models\Cliente::count(),
+            'clientes_auditados' => \App\Models\Cliente::whereNotNull('last_audit_at')->count(),
         ];
+
+        $stats['porcentagem_concluida'] = $stats['total_clientes'] > 0 
+            ? round(($stats['clientes_auditados'] / $stats['total_clientes']) * 100, 1) 
+            : 0;
 
         return response()->json($stats);
     }

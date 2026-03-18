@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ClipboardCheck,
     Filter,
@@ -17,7 +17,8 @@ import {
     CheckCircle2,
     SearchX,
     Building2,
-    CalendarDays
+    CalendarDays,
+    X
 } from 'lucide-react';
 import api from '@/services/api';
 import { format } from 'date-fns';
@@ -26,11 +27,34 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const AuditDashboardPage: React.FC = () => {
     const navigate = useNavigate();
-    const [tab, setTab] = useState<'queue' | 'history'>('queue');
-    const [page, setPage] = useState(1);
-    const [filterCity, setFilterCity] = useState('');
-    const [filterType, setFilterType] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Filtros persistentes na URL
+    const tab = (searchParams.get('tab') as 'queue' | 'history') || 'queue';
+    const page = parseInt(searchParams.get('page') || '1');
+    const filterCity = searchParams.get('cidade') || '';
+    const filterType = searchParams.get('tipo') || '';
+    const searchTerm = searchParams.get('q') || '';
+
+    const updateFilter = (params: Record<string, string | number | null>) => {
+        const newParams = new URLSearchParams(searchParams);
+        Object.entries(params).forEach(([key, val]) => {
+            if (val === null || val === '') newParams.delete(key);
+            else newParams.set(key, String(val));
+        });
+
+        // Se mudou tab ou filtro, volta pra página 1 (a menos que já estejamos definindo a página)
+        if (!params.page && (params.tab || params.cidade || params.tipo || params.q)) {
+            newParams.set('page', '1');
+        }
+        setSearchParams(newParams);
+    };
+
+    const clearFilters = () => {
+        setSearchParams({ tab }); // Mantém apenas a tab
+    };
+
+    const hasFilters = filterCity || filterType || searchTerm;
 
     // 1. Busca Cidades para o Filtro
     const { data: cities } = useQuery({
@@ -129,12 +153,19 @@ const AuditDashboardPage: React.FC = () => {
             </header>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {[
                     { label: 'Auditados Hoje', value: stats?.hoje, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                     { label: 'Auditados Ontem', value: stats?.ontem, color: 'text-blue-600', bg: 'bg-blue-50' },
                     { label: 'Últimos 7 dias', value: stats?.sete_dias, color: 'text-purple-600', bg: 'bg-purple-50' },
                     { label: 'Últimos 30 dias', value: stats?.trinta_dias, color: 'text-slate-600', bg: 'bg-slate-50' },
+                    {
+                        label: 'Cobertura Total',
+                        value: stats?.porcentagem_concluida + '%',
+                        color: 'text-red-600',
+                        bg: 'bg-red-50',
+                        sub: `(${stats?.clientes_auditados}/${stats?.total_clientes})`
+                    },
                 ].map((s, i) => (
                     <motion.div
                         key={s.label}
@@ -148,6 +179,7 @@ const AuditDashboardPage: React.FC = () => {
                         </div>
                         <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</span>
                         <span className={`text-2xl font-black mt-1 ${s.color}`}>{s.value ?? 0}</span>
+                        {s.sub && <span className="text-[9px] font-bold text-slate-400 mt-1">{s.sub}</span>}
                     </motion.div>
                 ))}
             </div>
@@ -155,7 +187,7 @@ const AuditDashboardPage: React.FC = () => {
             {/* Navigation Tabs */}
             <nav className="flex items-center gap-8 px-2 border-b border-gray-50 bg-white/50 backdrop-blur-sm rounded-t-3xl">
                 <button
-                    onClick={() => { setTab('queue'); setPage(1); }}
+                    onClick={() => updateFilter({ tab: 'queue' })}
                     className={`relative py-4 px-2 text-sm font-bold transition-all uppercase tracking-wider ${tab === 'queue' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     <div className="flex items-center gap-2">
@@ -167,7 +199,7 @@ const AuditDashboardPage: React.FC = () => {
                     )}
                 </button>
                 <button
-                    onClick={() => { setTab('history'); setPage(1); }}
+                    onClick={() => updateFilter({ tab: 'history' })}
                     className={`relative py-4 px-2 text-sm font-bold transition-all uppercase tracking-wider ${tab === 'history' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     <div className="flex items-center gap-2">
@@ -194,7 +226,7 @@ const AuditDashboardPage: React.FC = () => {
                             <input
                                 type="text"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => updateFilter({ q: e.target.value })}
                                 placeholder="Buscar por nome do cliente..."
                                 className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:border-red-200 transition-all outline-none text-sm placeholder:text-slate-400"
                             />
@@ -204,7 +236,7 @@ const AuditDashboardPage: React.FC = () => {
                             <MapPin className="w-4 h-4 text-slate-400" />
                             <select
                                 value={filterCity}
-                                onChange={(e) => setFilterCity(e.target.value)}
+                                onChange={(e) => updateFilter({ cidade: e.target.value })}
                                 className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer min-w-[140px]"
                             >
                                 <option value="">Cidades</option>
@@ -218,7 +250,7 @@ const AuditDashboardPage: React.FC = () => {
                             <Users className="w-4 h-4 text-slate-400" />
                             <select
                                 value={filterType}
-                                onChange={(e) => setFilterType(e.target.value)}
+                                onChange={(e) => updateFilter({ tipo: e.target.value })}
                                 className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer"
                             >
                                 <option value="">Tipos</option>
@@ -226,6 +258,16 @@ const AuditDashboardPage: React.FC = () => {
                                 <option value="gratuito">Gratuitos</option>
                             </select>
                         </div>
+
+                        {hasFilters && (
+                            <button
+                                onClick={clearFilters}
+                                className="flex items-center gap-2 px-4 py-3 text-slate-400 hover:text-red-600 transition-colors text-xs font-bold uppercase"
+                            >
+                                <X className="w-4 h-4" />
+                                Limpar
+                            </button>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -287,7 +329,9 @@ const AuditDashboardPage: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <span className="font-bold text-slate-800 text-lg block group-hover:text-[#B70F0A] transition-colors">{c.nome_fantasia}</span>
-                                                        <span className="text-xs font-bold text-slate-400 font-mono">CODE_{c.id.toString().padStart(4, '0')}</span>
+                                                        <span className="text-[10px] font-bold text-slate-400">
+                                                            {c.razao_social && c.razao_social !== c.nome_fantasia ? c.razao_social : (c.cpf_cnpj || 'Sem documento')}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -417,7 +461,7 @@ const AuditDashboardPage: React.FC = () => {
                             <div className="flex items-center gap-4">
                                 <button
                                     disabled={page === 1}
-                                    onClick={() => { setPage(p => p - 1); window.scrollTo(0, 0); }}
+                                    onClick={() => { updateFilter({ page: page - 1 }); window.scrollTo(0, 0); }}
                                     className="px-6 py-2.5 rounded-2xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:border-[#B70F0A] hover:text-[#B70F0A] disabled:opacity-30 disabled:hover:text-slate-600 transition-all shadow-sm"
                                 >
                                     Página Anterior
@@ -427,7 +471,7 @@ const AuditDashboardPage: React.FC = () => {
                                 </div>
                                 <button
                                     disabled={tab === 'queue' ? page >= queueData?.meta?.last_page : page >= historyData?.last_page}
-                                    onClick={() => { setPage(p => p + 1); window.scrollTo(0, 0); }}
+                                    onClick={() => { updateFilter({ page: page + 1 }); window.scrollTo(0, 0); }}
                                     className="px-6 py-2.5 rounded-2xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:border-[#B70F0A] hover:text-[#B70F0A] disabled:opacity-30 disabled:hover:text-slate-600 transition-all shadow-sm"
                                 >
                                     Próxima Página
