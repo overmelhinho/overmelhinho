@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1f50eb6c4c8fb63c7b271be71abd3577",
+    "content-hash": "21735d2d8c5f02952291241b2b3f22bc",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -1053,16 +1053,16 @@
         },
         {
             "name": "google/analytics-data",
-            "version": "v0.23.2",
+            "version": "v0.23.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/googleapis/php-analytics-data.git",
-                "reference": "e44d0767543112bfe3e92ad4d485afa6ce9f1c1a"
+                "reference": "7c043b2b26ab15bcc579122fe16244d61a48ed93"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/googleapis/php-analytics-data/zipball/e44d0767543112bfe3e92ad4d485afa6ce9f1c1a",
-                "reference": "e44d0767543112bfe3e92ad4d485afa6ce9f1c1a",
+                "url": "https://api.github.com/repos/googleapis/php-analytics-data/zipball/7c043b2b26ab15bcc579122fe16244d61a48ed93",
+                "reference": "7c043b2b26ab15bcc579122fe16244d61a48ed93",
                 "shasum": ""
             },
             "require": {
@@ -1097,9 +1097,9 @@
             ],
             "description": "Google Analytics Data Client for PHP",
             "support": {
-                "source": "https://github.com/googleapis/php-analytics-data/tree/v0.23.2"
+                "source": "https://github.com/googleapis/php-analytics-data/tree/v0.23.3"
             },
-            "time": "2026-01-09T18:56:46+00:00"
+            "time": "2026-03-17T23:07:39+00:00"
         },
         {
             "name": "google/apiclient",
@@ -11382,12 +11382,12 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
-    "platform-dev": [],
-    "plugin-api-version": "2.6.0"
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
 }

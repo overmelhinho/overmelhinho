@@ -5,7 +5,7 @@ import axios from "@/services/api";
 import {
     Eye, MessageCircle, MapPin, Ticket,
     ChevronRight, X, Settings, Building2,
-    TrendingUp, AlertCircle, CheckCircle2, Clock
+    TrendingUp, AlertCircle, CheckCircle2, Clock, FileText
 } from "lucide-react";
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
@@ -382,6 +382,16 @@ export default function ClientHubPage() {
                                     <Eye size={20} />
                                 </div>
                                 <span className="text-xs font-black text-gray-600 group-hover:text-blue-600">Performance</span>
+                            </button>
+
+                            <button
+                                onClick={() => navigate(`/clientes/${id}/relatorio`)}
+                                className="flex flex-col items-center gap-3 p-5 rounded-xl border border-gray-100 hover:border-amber-200 hover:bg-amber-50/50 active:scale-95 transition-all group"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
+                                    <FileText size={20} />
+                                </div>
+                                <span className="text-xs font-black text-gray-600 group-hover:text-amber-600">Gerar Relatório</span>
                             </button>
 
                             <button

@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\CampanhaMidiaController;
 use App\Http\Controllers\Api\V1\JobOpportunityController;
 use App\Http\Controllers\Api\V1\CandidateController;
 use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\ClientReportController;
 
 use App\Http\Controllers\Api\V1\RenewalController;
 use App\Http\Controllers\Api\V1\AutorizacaoController;
@@ -264,6 +265,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Dashboards e Relatórios
     Route::get('/clients/{id}/reports/dashboard', [ReportController::class, 'clientDashboard']);
     Route::get('/admin/reports/dashboard', [ReportController::class, 'adminDashboard']);
+    Route::get('/admin/reports/realtime', [ReportController::class, 'realtimeMetrics']);
+
+    // 📄 Relatórios de Performance do Cliente
+    Route::get('/clients/{id}/reports/preview', [ClientReportController::class, 'preview']);
+    Route::post('/clients/{id}/reports', [ClientReportController::class, 'store']);
+    Route::get('/clients/{id}/reports', [ClientReportController::class, 'index']);
+    Route::patch('/reports/{id}/sent', [ClientReportController::class, 'markAsSent']);
     
     // ✅ Radar de Oportunidades (Gaps + IA)
     Route::get('/radar/oportunidades', [\App\Http\Controllers\Api\V1\RadarController::class, 'index']);
@@ -280,6 +288,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);
 Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
 Route::post('/v1/tracking/search', [\App\Http\Controllers\Api\V1\TrackingController::class, 'search']);
+Route::get('/v1/public/reports/{token}', [ClientReportController::class, 'showPublic']);
 Route::get('/v1/public/search', [\App\Http\Controllers\Api\V1\ClienteController::class, 'indexPublic']);
 Route::get('/v1/public/search/suggestions', [\App\Http\Controllers\Api\V1\ClienteController::class, 'suggestions']);
 Route::get('/v1/public/clientes/{id}', [\App\Http\Controllers\Api\V1\ClienteController::class, 'showPublic']);

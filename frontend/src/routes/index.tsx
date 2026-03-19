@@ -71,6 +71,8 @@ import QuotesPage from "@/pages/quotes/QuotesPage";
 
 // ✅ Relatórios
 import ClientReportDashboard from "@/pages/reports/ClientReportDashboard";
+import ClientReportPreviewPage from "@/pages/reports/ClientReportPreviewPage";
+import ClientReportPublicPage from "@/pages/reports/ClientReportPublicPage";
 
 // ✅ Público
 import RenewalMagicLinkPage from "@/pages/public/RenewalMagicLinkPage";
@@ -283,6 +285,21 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+
+  // ✅ RELATÓRIO DE PERFORMANCE DO CLIENTE (Preview Editável)
+  {
+    path: "/clientes/:id/relatorio",
+    element: (
+      <ProtectedRoute perms={["view_client"]}>
+        <DashboardLayout>
+          <ClientReportPreviewPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ RELATÓRIO PÚBLICO (sem auth — link enviado ao cliente)
+  { path: "/relatorio/:token", element: <ClientReportPublicPage /> },
 
   // ✅ CAMPANHAS (LISTA)
   {
