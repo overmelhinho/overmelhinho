@@ -4,7 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, Sparkles, Menu, Search, User, Home as HomeIcon, Briefcase, Heart, MessageCircle, ArrowRight } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import Logo from '@/components/Logo';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
+
+function WhatsAppIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  );
+}
 
 export default function Home() {
   const router = useRouter();
@@ -17,7 +26,7 @@ export default function Home() {
   const [textIndex, setTextIndex] = useState(0);
   const [currentPhrase, setCurrentPhrase] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const phrases = ['sua região', 'sua cidade', 'seu bairro', 'sua rua'];
+  const phrases = ['da sua cidade', 'do seu bairro', 'da sua rua'];
   const typingSpeed = isDeleting ? 50 : 150;
 
   useEffect(() => {
@@ -43,9 +52,9 @@ export default function Home() {
 
   // Categorias
   const categories = [
-    { id: 1, name: 'Gastronomia', icon: '🍕', color: 'bg-[#FFF4E6]', desc: 'Sabor da região' },
     { id: 2, name: 'Saúde', icon: '🩺', color: 'bg-[#E6F9F4]', desc: 'Bem-estar' },
     { id: 3, name: 'Serviços', icon: '🛠️', color: 'bg-[#E6F0FF]', desc: 'Soluções' },
+    { id: 1, name: 'Gastronomia', icon: '🍕', color: 'bg-[#FFF4E6]', desc: 'Sabor da região' },
     { id: 4, name: 'Vagas', icon: '💼', color: 'bg-[#F3E8FF]', desc: 'Carreira' },
   ];
 
@@ -105,30 +114,18 @@ export default function Home() {
         {/* 2. HERO & VUI (Busca Conversacional) */}
         <section className="text-center space-y-10 py-6">
           <div className="space-y-4">
-            <h1 className="text-5xl md:text-8xl font-black text-gray-900 tracking-tighter leading-none italic font-serif">
-              Encontre o melhor da<br />
-              <span className="text-brand-red relative inline-block min-h-[1em]">
+            <h1 className="text-5xl md:text-8xl text-gray-900 tracking-tighter leading-none italic font-serif">
+              <span className="font-normal">Encontre o melhor</span><br />
+              <span className="text-brand-red font-black relative inline-block min-h-[1em]">
                 {currentPhrase || '\u200B'}
                 <span className="absolute -right-2 top-0 bottom-0 w-2 bg-brand-red animate-pulse"></span>
               </span>
             </h1>
-            <p className="text-gray-400 font-bold text-[10px] md:text-sm uppercase tracking-[0.4em] max-w-md mx-auto leading-relaxed">Milhares de empresas, serviços e profissionais perto de você em um só clique.</p>
+            <p className="text-gray-500 font-medium text-sm md:text-lg max-w-2xl mx-auto leading-relaxed font-sans">Milhares de empresas, serviços e profissionais perto de você em um só clique.</p>
           </div>
 
           <SearchAutocomplete />
 
-          {/* Shortcut Tags */}
-          <div className="flex space-x-3 overflow-x-auto pb-4 pt-2 no-scrollbar mask-fade-right justify-center">
-            {['Pizzaria', 'Pet Shop', 'Manutenção', 'Academia', 'Vagas'].map((tag) => (
-              <button
-                key={tag}
-                onClick={() => handleQuickSearch(tag)}
-                className="whitespace-nowrap bg-white border border-gray-100 px-8 py-4 rounded-full text-[11px] font-black text-gray-500 shadow-sm active:scale-95 transition-all hover:text-brand-red hover:border-brand-red/20 uppercase tracking-[0.2em] font-sans cursor-pointer"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
         </section>
 
         {/* 3. BENTO GRID CATEGORIAS */}
@@ -145,20 +142,24 @@ export default function Home() {
               <div
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
-                className={`gummy-card p-8 rounded-[4rem] flex flex-col justify-between cursor-pointer relative overflow-hidden transition-all duration-700 border-4 border-white ${cat.color} ${activeCategory === cat.id ? 'h-[18rem] col-span-2' : 'h-56'
-                  } ${cat.id === 1 && !activeCategory ? 'col-span-2' : ''}`}
+                className={`gummy-card p-6 md:p-8 rounded-[3rem] md:rounded-[4rem] flex flex-col justify-between cursor-pointer relative overflow-hidden transition-all duration-700 border-4 border-white ${cat.color} ${activeCategory === cat.id ? 'h-64 md:h-[18rem]' : 'h-40 md:h-56'
+                  }`}
               >
-                <div className={`bg-white/80 w-16 h-16 rounded-[1.8rem] flex items-center justify-center text-4xl shadow-xl transition-all duration-500 ${activeCategory === cat.id ? 'scale-125 rotate-12' : ''}`}>
+                <div className={`bg-white/80 w-12 h-12 md:w-16 md:h-16 rounded-[1.4rem] md:rounded-[1.8rem] flex items-center justify-center text-2xl md:text-4xl shadow-xl transition-all duration-500 ${activeCategory === cat.id ? 'scale-110 md:scale-125 rotate-12' : ''}`}>
                   {cat.icon}
                 </div>
                 <div className="relative z-10 transition-all duration-500">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1 font-sans">{cat.desc}</p>
-                  <h3 className="font-black text-2xl text-gray-900 tracking-tighter font-serif leading-none">{cat.name}</h3>
+                  <h3 className="font-black text-lg md:text-2xl text-gray-900 tracking-tighter font-serif leading-tight">{cat.name}</h3>
                   {activeCategory === cat.id && (
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleQuickSearch(cat.name);
+                        if (cat.name === 'Vagas') {
+                          router.push('/vagas');
+                        } else {
+                          handleQuickSearch(cat.name);
+                        }
                       }}
                       className="mt-4 flex items-center space-x-2 text-brand-red font-black text-sm uppercase animate-in fade-in slide-in-from-left-2 transition-all font-sans cursor-pointer"
                     >
@@ -166,6 +167,56 @@ export default function Home() {
                       <ArrowRight size={16} />
                     </div>
                   )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. MATCH PERFEITO */}
+        <section className="space-y-10 pb-20 pt-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="space-y-3">
+              <h2 className="text-3xl font-black text-gray-900 md:text-5xl tracking-tighter leading-none font-serif">O Match Perfeito</h2>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] max-w-md font-sans">
+                Nossa IA cruzou seu histórico com a proximidade para selecionar estas jóias.
+              </p>
+            </div>
+            <button className="bg-white text-brand-red px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest border-4 border-white shadow-xl hover:shadow-brand-red/10 transition-all active:scale-95 font-sans cursor-pointer">
+              Ver Favoritos
+            </button>
+          </div>
+
+          <div className="flex space-x-6 overflow-x-auto pb-16 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:space-x-0 md:gap-10">
+            {featured.map((item, idx) => (
+              <div key={idx} className="snap-center min-w-[92%] md:min-w-0 bg-white rounded-[4rem] overflow-hidden shadow-[0_40px_100px_-30px_rgba(0,0,0,0.15)] border-4 border-white flex flex-col gummy-card group">
+                <div className="relative h-72 overflow-hidden">
+                  <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                  <div className="absolute top-8 right-8 bg-white/95 backdrop-blur-md px-5 py-3 rounded-full flex items-center space-x-2 shadow-2xl">
+                    <span className="text-yellow-500 text-xl font-black">★</span>
+                    <span className="text-lg font-black text-gray-900">{item.rating}</span>
+                  </div>
+                  <div className="absolute bottom-8 left-8 bg-black/60 backdrop-blur-md text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 font-sans">
+                    Destaque Portal
+                  </div>
+                </div>
+                <div className="p-8 flex-1 flex flex-col justify-between space-y-6">
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.4em] font-sans">{item.category}</span>
+                    <h4 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter leading-none font-serif">{item.name}</h4>
+                    <p className="text-gray-400 font-bold tracking-tight font-sans">{item.location}</p>
+                    <p className="text-gray-400 font-medium text-sm mt-2">{item.desc}</p>
+                  </div>
+
+                  <a
+                    href={`https://wa.me/${item.whatsapp}?text=Olá! Vi sua empresa no portal O Vermelhinho e gostaria de saber mais.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#25D366] text-white py-4 md:py-5 rounded-2xl md:rounded-[2rem] font-black text-sm md:text-base active:scale-95 transition-all shadow-[0_20px_40px_-5px_rgba(37,211,102,0.4)] flex items-center justify-center space-x-3 border-b-4 border-[#128C7E]/40 hover:brightness-105 active:border-b-0 active:translate-y-1 font-sans"
+                  >
+                    <WhatsAppIcon size={20} />
+                    <span>Contato pelo WhatsApp</span>
+                  </a>
                 </div>
               </div>
             ))}
@@ -182,15 +233,15 @@ export default function Home() {
             {[
               { step: '01', icon: '🔍', title: 'Busque', desc: 'Digite o que precisa ou fale pelo microfone. Nossa IA entende sua intenção.' },
               { step: '02', icon: '📍', title: 'Encontre', desc: 'Veja empresas e serviços próximos a você, ordenados por relevância e avaliação.' },
-              { step: '03', icon: '💬', title: 'Conecte', desc: 'Entre em contato direto pelo WhatsApp sem intermediários. Simples e rápido.' },
+              { step: '03', icon: '💬', title: 'Conecte', desc: 'Entre em contato pelo WhatsApp. Simples e rápido.' },
             ].map((s) => (
-              <div key={s.step} className="bg-white rounded-[3rem] p-8 border border-gray-50 shadow-sm space-y-4 hover:shadow-lg hover:scale-[1.02] transition-all">
+              <div key={s.step} className="bg-white rounded-2xl md:rounded-[2.5rem] p-5 md:p-7 border border-gray-50 shadow-sm space-y-2 md:space-y-3 hover:shadow-lg hover:scale-[1.02] transition-all">
                 <div className="flex items-center justify-between">
-                  <div className="text-5xl">{s.icon}</div>
+                  <div className="text-3xl md:text-4xl">{s.icon}</div>
                   <span className="text-[10px] font-black text-gray-200 tracking-[0.3em]">{s.step}</span>
                 </div>
-                <h3 className="text-xl font-black text-gray-900 tracking-tight font-serif">{s.title}</h3>
-                <p className="text-gray-400 font-medium text-sm leading-relaxed">{s.desc}</p>
+                <h3 className="text-base md:text-lg font-black text-gray-900 tracking-tight font-serif">{s.title}</h3>
+                <p className="text-gray-400 font-medium text-xs md:text-sm leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -233,108 +284,25 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 5. MATCH PERFEITO */}
-        <section className="space-y-10 pt-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-black text-gray-900 md:text-5xl tracking-tighter leading-none font-serif">O Match Perfeito</h2>
-              <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] max-w-md font-sans">
-                Nossa IA cruzou seu histórico com a proximidade para selecionar estas jóias.
-              </p>
-            </div>
-            <button className="bg-white text-brand-red px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest border-4 border-white shadow-xl hover:shadow-brand-red/10 transition-all active:scale-95 font-sans cursor-pointer">
-              Ver Favoritos
-            </button>
-          </div>
 
-          <div className="flex space-x-6 overflow-x-auto pb-16 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:space-x-0 md:gap-10">
-            {featured.map((item, idx) => (
-              <div key={idx} className="snap-center min-w-[92%] md:min-w-0 bg-white rounded-[4.5rem] overflow-hidden shadow-[0_40px_100px_-30px_rgba(0,0,0,0.15)] border-4 border-white flex flex-col gummy-card group">
-                <div className="relative h-72 overflow-hidden">
-                  <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-                  <div className="absolute top-8 right-8 bg-white/95 backdrop-blur-md px-5 py-3 rounded-full flex items-center space-x-2 shadow-2xl">
-                    <span className="text-yellow-500 text-xl font-black">★</span>
-                    <span className="text-lg font-black text-gray-900">{item.rating}</span>
-                  </div>
-                  <div className="absolute bottom-8 left-8 bg-black/60 backdrop-blur-md text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 font-sans">
-                    Destaque Portal
-                  </div>
-                </div>
-                <div className="p-10 flex-1 flex flex-col justify-between space-y-6">
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.4em] font-sans">{item.category}</span>
-                    <h4 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter leading-none font-serif">{item.name}</h4>
-                    <p className="text-gray-400 font-bold tracking-tight font-sans">{item.location}</p>
-                    <p className="text-gray-400 font-medium text-sm mt-2">{item.desc}</p>
-                  </div>
-
-                  <a
-                    href={`https://wa.me/${item.whatsapp}?text=Olá! Vi sua empresa no portal O Vermelhinho e gostaria de saber mais.`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-[#25D366] text-white py-7 rounded-[2.5rem] font-black text-xl active:scale-95 transition-all shadow-[0_20px_40px_-5px_rgba(37,211,102,0.4)] flex items-center justify-center space-x-4 border-b-8 border-[#128C7E]/40 hover:brightness-105 active:border-b-0 active:translate-y-2 font-sans"
-                  >
-                    <MessageCircle fill="currentColor" size={28} />
-                    <span>Contato pelo WhatsApp</span>
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 7. CTA BANNER FINAL */}
-        <section className="mt-10 mb-20 px-2 font-sans">
-          <div className="bg-brand-red rounded-[6rem] p-10 md:p-20 text-center space-y-12 shadow-[0_50px_100px_-20px_rgba(192,0,0,0.3)] relative overflow-hidden group border-[15px] border-white/10 ring-1 ring-brand-red/50">
-            <div className="relative z-10 space-y-8">
-              <h2 className="text-4xl font-black text-white md:text-7xl tracking-tighter leading-[0.9] font-serif uppercase">
-                Sua empresa <br />em evidência.
-              </h2>
-              <p className="text-red-100 font-bold text-lg md:text-2xl max-w-sm mx-auto opacity-70 tracking-tight">
-                O único portal que conversa com o cliente.
-              </p>
-              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-8">
-                <button
-                  onClick={() => router.push('/anuncie')}
-                  className="bg-white text-brand-red px-10 md:px-16 py-5 md:py-8 rounded-[3rem] font-black text-xl md:text-3xl shadow-3xl active:scale-95 transition-all hover:bg-red-50 hover:scale-105 font-sans cursor-pointer"
-                >
-                  Anunciar
-                </button>
-                <a
-                  href="https://wa.me/5554326800002?text=Olá! Gostaria de uma consultoria sobre anúncios no Vermelhinho."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-black/20 text-white px-8 md:px-12 py-5 md:py-7 rounded-[2.5rem] font-black text-xs md:text-sm active:scale-95 border border-white/10 backdrop-blur-md uppercase tracking-[0.2em] font-sans flex items-center gap-2"
-                >
-                  💬 Consultoria
-                </a>
-              </div>
-            </div>
-
-            <div className="absolute -top-40 -left-40 w-[40rem] h-[40rem] bg-white opacity-[0.05] rounded-full blur-[120px] group-hover:scale-125 transition-transform duration-1000" />
-            <div className="absolute -bottom-40 -right-40 w-[40rem] h-[40rem] bg-black opacity-[0.1] rounded-full blur-[120px]" />
-          </div>
-        </section>
       </main>
 
       {/* 7. BOTTOM NAV */}
-      <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] md:hidden w-[94%] max-w-md">
-        <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[3.5rem] p-3 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around">
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] md:hidden w-[90%] max-w-sm">
+        <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[2.5rem] p-2 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around">
           {[
-            { icon: <HomeIcon size={28} strokeWidth={2.5} />, label: 'Portal', path: '/', active: true },
-            { icon: <Search size={28} strokeWidth={2.5} />, label: 'Busca', path: '/busca' },
-            { icon: <Briefcase size={28} strokeWidth={2.5} />, label: 'Vagas', path: '/busca?q=vagas' },
-            { icon: <Heart size={28} strokeWidth={2.5} />, label: 'Salvos', path: '#' },
-            { icon: <User size={28} strokeWidth={2.5} />, label: 'Conta', path: '#' },
+            { icon: <HomeIcon size={22} strokeWidth={2.5} />, label: 'Home', path: '/', active: true },
+            { icon: <Search size={22} strokeWidth={2.5} />, label: 'Busca', path: '/busca', active: false },
+            { icon: <Briefcase size={22} strokeWidth={2.5} />, label: 'Vagas', path: '/vagas', active: false },
           ].map((item, idx) => (
             <button
               key={idx}
               onClick={() => item.path !== '#' && router.push(item.path)}
-              className={`flex flex-col items-center justify-center p-4 transition-all active:scale-50 ${item.active ? 'text-brand-red bg-red-100/50 rounded-[2.5rem] px-8 shadow-inner' : 'text-gray-400'
-                } font-sans`}
+              className={`flex flex-col items-center justify-center p-3 transition-all active:scale-50 ${item.active ? 'text-brand-red bg-red-100/50 rounded-[1.8rem] px-8 shadow-inner' : 'text-gray-400'
+                } font-sans flex-1`}
             >
               {item.icon}
-              {item.active && <span className="text-[10px] font-black mt-2 uppercase tracking-tighter">{item.label}</span>}
+              <span className={`text-[9px] font-black mt-1.5 uppercase tracking-tighter ${item.active ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
             </button>
           ))}
         </div>

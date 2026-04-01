@@ -39,19 +39,19 @@ export default function SobrePage() {
         'Feliz', 'Flores da Cunha', 'Garibaldi', 'Gramado', 'Lajeado',
         'Monte Belo do Sul', 'Nova Prata', 'Nova Roma do Sul', 'Novo Hamburgo',
         'Pinto Bandeira', 'Salvador do Sul', 'São Marcos', 'São Pedro da Serra',
-        'São Vendelino', 'Veranópolis',
+        'São Sebastião do Caí', 'São Vendelino', 'Veranópolis',
     ];
 
     const valores = [
         {
             icon: '👩‍💼',
             title: 'Liderança Feminina',
-            desc: 'Apesar de ser "O" Vermelhinho, no masculino, somos liderados por mulheres. Todos os cargos são ocupados por elas. Somos uma empresa feminista e aqui quem manda são elas!'
+            desc: 'Apesar de ser "O" Vermelhinho no masculino, nossa equipe é composta integralmente por mulheres. Acreditamos na força da liderança feminina para guiar nossos negócios com competência e determinação.'
         },
         {
             icon: '🐾',
             title: 'Pet Friendly',
-            desc: 'Somos apaixonados por animais! Temos três gatinhos e um cachorro no escritório. Adoramos receber dogs e gatinhos que queiram nos visitar.'
+            desc: 'Somos apaixonados por animais! Nosso escritório é pet friendly e adoramos receber a visita de pets que queiram nos conhecer.'
         },
         {
             icon: '☕',
@@ -235,19 +235,19 @@ export default function SobrePage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                         <div className="space-y-6">
                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-red">Cobertura Regional</p>
-                            <h2 className="text-4xl md:text-5xl font-black tracking-tighter italic font-serif leading-none">
-                                Presente em mais de <br /><span className="text-brand-red">27 cidades</span> da Serra Gaúcha.
+                            <h2 className="text-3xl md:text-5xl font-black tracking-tighter italic font-serif leading-tight md:leading-none">
+                                Presente em mais de <br className="hidden md:block" /><span className="text-brand-red">28 cidades</span> da Serra Gaúcha.
                             </h2>
                             <p className="text-gray-400 font-medium leading-relaxed max-w-lg">
                                 De Farroupilha a Gramado, de Garibaldi a Novo Hamburgo — onde houver um negócio para encontrar, o Vermelhinho está lá para conectar.
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2 md:gap-3">
                             {cidades.map((cidade, i) => (
                                 <span
                                     key={i}
-                                    className="px-4 py-2 bg-white/5 hover:bg-brand-red hover:text-white text-gray-400 text-xs font-black uppercase tracking-widest rounded-xl border border-white/10 hover:border-brand-red transition-all cursor-default"
+                                    className="px-3 py-2.5 bg-white/5 hover:bg-brand-red hover:text-white text-gray-400 text-[9px] md:text-xs font-black uppercase tracking-widest rounded-xl border border-white/10 hover:border-brand-red transition-all cursor-default text-center flex items-center justify-center min-h-[44px] md:min-h-0"
                                 >
                                     {cidade}
                                 </span>

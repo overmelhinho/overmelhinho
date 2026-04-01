@@ -1,5 +1,13 @@
 'use client';
 
+function WhatsAppIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  );
+}
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import {
@@ -14,11 +22,12 @@ import {
     Home,
     Briefcase,
     Heart,
-    Menu,
     User,
     X,
     CheckCircle2,
-    Mic
+    Mic,
+    Map as MapIcon,
+    List as ListIcon
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -315,14 +324,14 @@ function SearchContent() {
                 {/* ============ LADO ESQUERDO: LISTA ============ */}
                 <div className={`flex-1 lg:w-[520px] lg:flex-shrink-0 lg:overflow-y-auto no-scrollbar lg:border-r border-gray-100 ${viewMode === 'map' ? 'hidden lg:block' : 'block'}`}>
 
-                    <header className="sticky top-0 z-50 bg-cloud-dancer/90 backdrop-blur-2xl border-b border-gray-100 p-4 space-y-4 shadow-sm">
+                    <header className="sticky top-0 z-50 bg-cloud-dancer/90 backdrop-blur-2xl border-b border-gray-100 p-3 space-y-3 shadow-sm">
                         <div className="flex items-center space-x-3">
-                            <button onClick={() => router.push('/')} className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-90 transition-all cursor-pointer text-gray-400 hover:text-brand-red">
-                                <ArrowLeft size={20} />
+                            <button onClick={() => router.push('/')} className="p-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-90 transition-all cursor-pointer text-gray-400 hover:text-brand-red">
+                                <ArrowLeft size={18} />
                             </button>
                             <div className="flex-1 relative group">
                                 <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                    <SearchIcon size={18} className={isListening ? 'text-brand-red animate-pulse' : 'text-brand-red'} />
+                                    <SearchIcon size={16} className={isListening ? 'text-brand-red animate-pulse' : 'text-brand-red'} />
                                 </div>
                                 <input
                                     ref={inputRef}
@@ -331,22 +340,22 @@ function SearchContent() {
                                     defaultValue={query}
                                     placeholder="O que você procura?"
                                     onKeyDown={handleNewSearch}
-                                    className={`w-full bg-white rounded-full py-4 pl-12 pr-14 shadow-sm border transition-all font-bold text-gray-900 text-sm outline-none ${isListening ? 'border-brand-red ring-8 ring-red-100/50' : 'border-gray-100 focus:ring-4 focus:ring-brand-red/5 focus:border-brand-red'
+                                    className={`w-full bg-white rounded-full py-3 pl-12 pr-14 shadow-sm border transition-all font-bold text-gray-900 text-sm outline-none ${isListening ? 'border-brand-red ring-8 ring-red-100/50' : 'border-gray-100 focus:ring-4 focus:ring-brand-red/5 focus:border-brand-red'
                                         }`}
                                 />
                                 <button
                                     onClick={startVoiceSearch}
-                                    className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all active:scale-75 ${isListening ? 'bg-brand-red text-white shadow-lg animate-bounce' : 'text-gray-400 hover:text-brand-red'
+                                    className={`absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all active:scale-75 ${isListening ? 'bg-brand-red text-white shadow-lg animate-bounce' : 'text-gray-400 hover:text-brand-red'
                                         }`}
                                 >
-                                    <Mic size={18} />
+                                    <Mic size={16} />
                                 </button>
                             </div>
                             <button
                                 onClick={() => setIsCityModalOpen(true)}
-                                className="hidden md:flex items-center space-x-2 px-5 py-4 bg-white rounded-full border border-gray-100 shadow-sm hover:border-brand-red transition-all active:scale-95 group"
+                                className="hidden md:flex items-center space-x-2 px-4 py-3 bg-white rounded-full border border-gray-100 shadow-sm hover:border-brand-red transition-all active:scale-95 group"
                             >
-                                <MapPin size={18} className="text-brand-red" />
+                                <MapPin size={16} className="text-brand-red" />
                                 <span className="text-sm font-black text-gray-900 truncate max-w-[100px]">{cityName || 'Cidade'}</span>
                             </button>
                         </div>
@@ -432,44 +441,44 @@ function SearchContent() {
                                 <div
                                     onMouseEnter={() => setHoveredResult(matchPerfeito.id)}
                                     onMouseLeave={() => setHoveredResult(null)}
-                                    className="relative bg-white rounded-[3.5rem] p-8 shadow-2xl border-4 border-white gummy-card overflow-hidden"
+                                    className="relative bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-5 md:p-8 shadow-2xl border-4 border-white gummy-card overflow-hidden"
                                 >
-                                    <div className="flex justify-between items-start mb-10">
-                                        <div className="bg-brand-red/5 px-5 py-2 rounded-full flex items-center space-x-2 border border-brand-red/10 shadow-sm">
-                                            <Sparkles size={16} className="text-brand-red animate-pulse" />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-red">Sugestão Inteligente</span>
+                                    <div className="flex justify-between items-start mb-4 md:mb-10">
+                                        <div className="bg-brand-red/5 px-4 py-1.5 rounded-full flex items-center space-x-2 border border-brand-red/10 shadow-sm">
+                                            <Sparkles size={14} className="text-brand-red animate-pulse" />
+                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-red">Sugestão Inteligente</span>
                                         </div>
-                                        <div className="flex flex-col items-end space-y-2">
+                                        <div className="flex flex-col items-end space-y-1">
                                             <div className="text-right">
-                                                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none">Afinidade</p>
-                                                <p className="text-3xl font-black text-brand-red font-serif italic tracking-tighter">98%</p>
+                                                <p className="text-[8px] md:text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none">Afinidade</p>
+                                                <p className="text-2xl md:text-3xl font-black text-brand-red font-serif italic tracking-tighter">98%</p>
                                             </div>
                                             {isExpansionClient(matchPerfeito) && (
-                                                <span className="bg-amber-100/80 backdrop-blur-sm text-amber-700 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-amber-200 shadow-sm animate-pulse">
-                                                    ✨ Atende na sua região
+                                                <span className="bg-amber-100/80 backdrop-blur-sm text-amber-700 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-amber-200">
+                                                    ✨ Regional
                                                 </span>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center space-x-8 mb-10 cursor-pointer group/item" onClick={() => router.push(`/cliente/${matchPerfeito.slug || matchPerfeito.id}`)}>
-                                        <div className="w-24 h-24 rounded-[2.5rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
+                                    <div className="flex items-center space-x-4 md:space-x-8 mb-4 md:mb-10 cursor-pointer group/item" onClick={() => router.push(`/cliente/${matchPerfeito.slug || matchPerfeito.id}`)}>
+                                        <div className="w-14 h-14 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-[2.5rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
                                             <img src={matchPerfeito.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200"} alt="" className="w-full h-full object-cover" />
                                         </div>
-                                        <div className="space-y-2">
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif italic leading-none">{matchPerfeito.nome_fantasia}</h2>
-                                            <div className="flex items-center text-xs font-bold text-gray-400 space-x-3">
-                                                <MapPin size={12} className="text-brand-red" />
-                                                <span className="truncate max-w-[140px]">{matchPerfeito.enderecos?.[0]?.bairro || 'Centro'}</span>
-                                                <span className="w-1.5 h-1.5 bg-gray-100 rounded-full"></span>
-                                                <span className="flex items-center text-yellow-500 font-black whitespace-nowrap"><Star size={12} className="mr-1 fill-yellow-500" /> 4.9</span>
+                                        <div className="space-y-0.5">
+                                            <h2 className="text-lg md:text-3xl font-black text-gray-900 tracking-tighter font-serif italic leading-tight">{matchPerfeito.nome_fantasia}</h2>
+                                            <div className="flex items-center text-[9px] md:text-[10px] font-bold text-gray-400 space-x-2">
+                                                <MapPin size={9} className="text-brand-red" />
+                                                <span className="truncate max-w-[110px] md:max-w-[140px] uppercase tracking-widest">{matchPerfeito.enderecos?.[0]?.bairro || 'Centro'}</span>
+                                                <span className="w-1 h-1 bg-gray-100 rounded-full"></span>
+                                                <span className="flex items-center text-yellow-500 font-black whitespace-nowrap"><Star size={10} className="mr-1 fill-yellow-500" /> 4.9</span>
                                             </div>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => handleWhatsApp(matchPerfeito.id, matchPerfeito.contatos?.[0]?.celular || '')}
-                                        className="w-full bg-brand-red text-white py-6 rounded-[2.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-[0_20px_60px_-15px_rgba(183,15,10,0.4)] hover:shadow-brand-red/60 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn cursor-pointer"
+                                        className="w-fit px-8 md:px-14 mx-auto bg-[#25D366] text-white py-3 md:py-5 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_-5px_rgba(37,211,102,0.3)] hover:shadow-green-500/40 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn cursor-pointer border-b-4 border-green-700/40"
                                     >
-                                        <MessageCircle fill="currentColor" size={20} />
+                                        <WhatsAppIcon size={20} />
                                         <span>Iniciar no WhatsApp</span>
                                         <ChevronRight size={18} className="translate-x-0 group-hover/btn:translate-x-2 transition-transform" />
                                     </button>
@@ -491,25 +500,25 @@ function SearchContent() {
                                             onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
                                             onMouseEnter={() => setHoveredResult(item.id)}
                                             onMouseLeave={() => setHoveredResult(null)}
-                                            className="bg-white rounded-[3.5rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer"
+                                            className="bg-white rounded-[2rem] md:rounded-[3.5rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer"
                                         >
-                                            <div className="h-52 overflow-hidden relative">
+                                            <div className="h-28 md:h-52 overflow-hidden relative">
                                                 <img src={item.galeria?.[0]?.url || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600"} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                                             </div>
-                                            <div className="px-8 pb-10 pt-1 relative">
-                                                <div className="absolute -top-12 left-8 w-24 h-24 rounded-[2.5rem] bg-white p-1 shadow-2xl border-4 border-white group-hover:-translate-y-4 transition-transform duration-500">
-                                                    <img src={item.logotipo_url || "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200"} className="w-full h-full object-cover rounded-[2rem]" alt="" />
+                                            <div className="px-4 pb-6 md:px-8 md:pb-10 pt-1 relative">
+                                                <div className="absolute -top-8 left-4 w-16 h-16 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[2.5rem] bg-white p-1 shadow-2xl border-2 border-white group-hover:-translate-y-4 transition-transform duration-500">
+                                                    <img src={item.logotipo_url || "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200"} className="w-full h-full object-cover rounded-[1rem] md:rounded-[2rem]" alt="" />
                                                 </div>
-                                                <div className="pt-16 space-y-4">
+                                                <div className="pt-10 md:pt-16 space-y-2 md:space-y-4">
                                                     <div className="flex justify-between items-center">
-                                                        <h4 className="text-2xl font-black text-gray-900 tracking-tight font-serif italic leading-none truncate max-w-[200px]">{item.nome_fantasia}</h4>
+                                                        <h4 className="text-lg md:text-2xl font-black text-gray-900 tracking-tight font-serif italic leading-none truncate max-w-[160px] md:max-w-[200px]">{item.nome_fantasia}</h4>
                                                         {isExpansionClient(item) ? (
                                                             <div className="flex flex-col items-end">
-                                                                <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">✨ ATENDE AQUI</span>
+                                                                <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">✨ ATENDE AQUI</span>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-xs font-black text-brand-red bg-brand-red/5 px-3 py-1.5 rounded-xl border border-brand-red/10">PREMIUM</span>
+                                                            <span className="text-[8px] md:text-xs font-black text-brand-red bg-brand-red/5 px-2 py-1 rounded-lg border border-brand-red/10">PREMIUM</span>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center text-[10px] font-bold text-gray-400 space-x-4 uppercase tracking-[0.1em]">
@@ -526,14 +535,14 @@ function SearchContent() {
 
                         {/* AD BANNER */}
                         <section className="relative px-2">
-                            <div className="bg-brand-red rounded-[4rem] p-12 text-white shadow-[0_45px_100px_-20px_rgba(183,15,10,0.35)] relative overflow-hidden group cursor-pointer active:scale-95 transition-all">
-                                <div className="relative z-10 space-y-8">
-                                    <h3 className="text-4xl md:text-5xl font-black tracking-tighter leading-none font-serif italic">Seja o próximo<br />Match Perfeito.</h3>
-                                    <p className="text-red-100 text-[10px] font-black uppercase tracking-[0.4em] opacity-80">Conecte sua empresa a novos clientes</p>
-                                    <button className="bg-white text-brand-red px-12 py-5 rounded-[1.8rem] font-black text-xs uppercase tracking-widest shadow-2xl group-hover:scale-105 transition-transform duration-300">Quero Posicionar</button>
+                            <div className="bg-brand-red rounded-[2.5rem] md:rounded-[3rem] p-8 md:p-10 text-white shadow-[0_30px_60px_-15px_rgba(183,15,10,0.3)] relative overflow-hidden group cursor-pointer active:scale-95 transition-all">
+                                <div className="relative z-10 space-y-4 md:space-y-6">
+                                    <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-tight font-serif italic uppercase">Seja o próximo<br />Match Perfeito</h3>
+                                    <p className="text-red-100 text-[8px] md:text-[9px] font-black uppercase tracking-[0.4em] opacity-80">Conecte sua empresa a novos clientes</p>
+                                    <button className="bg-white text-brand-red px-8 md:px-10 py-4 md:py-4.5 rounded-2xl md:rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl group-hover:scale-105 transition-transform duration-300">Quero Posicionar</button>
                                 </div>
-                                <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-white/10 rounded-full blur-[120px] group-hover:bg-white/20 transition-all duration-1000" />
-                                <Sparkles className="absolute top-10 right-10 rotate-12 opacity-10 group-hover:rotate-0 transition-transform duration-700" size={200} />
+                                <div className="absolute -bottom-20 -right-20 w-64 h-64 md:w-80 md:h-80 bg-white/10 rounded-full blur-[100px] group-hover:bg-white/20 transition-all duration-1000" />
+                                <Sparkles className="absolute top-6 right-6 md:top-8 md:right-8 rotate-12 opacity-10 group-hover:rotate-0 transition-transform duration-700" size={100} />
                             </div>
                         </section>
 
@@ -548,23 +557,29 @@ function SearchContent() {
 
                                         return (
                                             <React.Fragment key={item.id}>
-                                                <div
-                                                    onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
-                                                    onMouseEnter={() => setHoveredResult(item.id)}
-                                                    onMouseLeave={() => setHoveredResult(null)}
-                                                    className={`flex items-center justify-between p-7 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
-                                                >
-                                                    <div className="flex items-center space-x-6">
-                                                        <div className="w-16 h-16 rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
-                                                            <img src={item.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
+                                                    <div
+                                                        onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
+                                                        onMouseEnter={() => setHoveredResult(item.id)}
+                                                        onMouseLeave={() => setHoveredResult(null)}
+                                                        className={`flex items-center justify-between p-4 md:p-7 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
+                                                    >
+                                                        <div className="flex items-center space-x-4 md:space-x-6">
+                                                            <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
+                                                                <img src={item.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-lg md:text-xl leading-none">{item.nome_fantasia}</h5>
+                                                                <p className="text-[9px] md:text-[10px] font-medium text-gray-400 uppercase tracking-widest">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
+                                                            </div>
                                                         </div>
-                                                        <div className="space-y-1">
-                                                            <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-xl leading-none">{item.nome_fantasia}</h5>
-                                                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
-                                                        </div>
-                                                    </div>
-                                                    <button className="w-14 h-14 rounded-[1.8rem] bg-white shadow-sm border border-gray-100 text-brand-red flex items-center justify-center active:scale-90 transition-all hover:bg-brand-red hover:text-white group-hover:shadow-md">
-                                                        <Phone size={20} fill="currentColor" className="opacity-20 group-hover:opacity-100 transition-opacity" />
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleWhatsApp(item.id, item.contatos?.[0]?.celular || '');
+                                                        }}
+                                                        className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 text-[#25D366] flex items-center justify-center active:scale-90 transition-all hover:bg-[#25D366] hover:text-white group-hover:shadow-md"
+                                                    >
+                                                        <WhatsAppIcon size={20} />
                                                     </button>
                                                 </div>
 
@@ -711,50 +726,35 @@ function SearchContent() {
                 </div>
             </div>
 
-            {/* BOTÃO FLUTUANTE DE ALTERNÂNCIA (MODERN STYLE) */}
-            <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[110] lg:hidden">
-                <button
-                    onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-                    className="bg-gray-900 border-4 border-white text-white px-8 py-4 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all flex items-center space-x-3 group"
-                >
-                    {viewMode === 'list' ? (
-                        <>
-                            <MapPin size={18} className="text-brand-red group-hover:rotate-12 transition-transform" />
-                            <span>Ver Mapa</span>
-                        </>
-                    ) : (
-                        <>
-                            <Menu size={18} className="text-brand-red" />
-                            <span>Ver Lista</span>
-                        </>
-                    )}
-                </button>
-            </div>
 
             {/* BOTTOM NAV MOBILE */}
-            <nav className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] w-[94%] max-w-md lg:hidden">
-                <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[3.5rem] p-3 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around pointer-events-auto">
+            <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm lg:hidden">
+                <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[2.5rem] p-2 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around pointer-events-auto">
                     {[
-                        { icon: <Home size={28} strokeWidth={2.5} />, label: 'Portal', path: '/', active: false },
-                        { icon: <SearchIcon size={28} strokeWidth={2.5} />, label: 'Busca', path: '/busca', active: true },
-                        { icon: <Briefcase size={28} strokeWidth={2.5} />, label: 'Vagas', path: '/busca?q=vagas', active: false },
-                        { icon: <Heart size={28} strokeWidth={2.5} />, label: 'Salvos', path: '#', active: false },
-                        { icon: <User size={28} strokeWidth={2.5} />, label: 'Conta', path: '#', active: false },
+                        { icon: <Home size={22} strokeWidth={2.5} />, label: 'Home', path: '/', active: false },
+                        { icon: <SearchIcon size={22} strokeWidth={2.5} />, label: 'Busca', path: '/busca', active: true },
+                        { icon: viewMode === 'list' ? <MapIcon size={22} strokeWidth={2.5} /> : <ListIcon size={22} strokeWidth={2.5} />, label: viewMode === 'list' ? 'Mapa' : 'Lista', path: 'TOGGLE_VIEW', active: false },
+                        { icon: <Briefcase size={22} strokeWidth={2.5} />, label: 'Vagas', path: '/vagas', active: false },
                     ].map((item, idx) => (
                         <button
                             key={idx}
                             onClick={() => {
-                                if (item.path === '/busca') {
+                                if (item.path === 'TOGGLE_VIEW') {
+                                    setViewMode(viewMode === 'list' ? 'map' : 'list');
+                                } else if (item.path === '/busca') {
+                                    if (viewMode === 'map') setViewMode('list');
                                     if (inputRef.current) inputRef.current.focus();
                                 } else if (item.path !== '#') {
                                     router.push(item.path);
                                 }
                             }}
-                            className={`flex flex-col items-center justify-center p-4 transition-all active:scale-50 ${item.active ? 'text-brand-red bg-red-100/50 rounded-[2.5rem] px-8 shadow-inner' : 'text-gray-400'
-                                } font-sans`}
+                            className={`flex flex-col items-center justify-center p-3 transition-all active:scale-50 ${item.active ? 'text-brand-red' : 'text-gray-400'
+                                } font-sans flex-1`}
                         >
-                            {item.icon}
-                            {item.active && <span className="text-[10px] font-black mt-2 uppercase tracking-tighter">{item.label}</span>}
+                            <div className={item.active ? 'bg-red-100/50 rounded-2xl p-2 px-6 shadow-inner' : ''}>
+                                {item.icon}
+                            </div>
+                            <span className={`text-[9px] font-black mt-1.5 uppercase tracking-tighter ${item.active ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
                         </button>
                     ))}
                 </div>

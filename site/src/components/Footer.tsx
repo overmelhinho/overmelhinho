@@ -35,19 +35,13 @@ export default function Footer() {
         { TikTok: true, href: 'https://www.tiktok.com/@guiaovermelhinho', label: 'TikTok' },
     ];
 
-    const links = {
-        institucional: [
-            { label: 'Como Funciona', href: '/como-funciona' },
-            { label: 'Sobre Nós', href: '/sobre' },
-            { label: 'Planos e Preços', href: '/anuncie' },
-            { label: 'Blog da Região', href: '/blog' },
-        ],
-        servicos: [
-            { label: 'Anuncie sua Empresa', href: '/anuncie' },
-            { label: 'Vagas de Emprego', href: '/vagas' },
-            { label: 'Guia Comercial', href: '/busca' },
-        ],
-    };
+    const navLinks = [
+        { label: 'Anuncie', href: '/anuncie' },
+        { label: 'Como Funciona', href: '/como-funciona' },
+        { label: 'Vagas', href: '/vagas' },
+        { label: 'Blog', href: '/blog' },
+        { label: 'Sobre', href: '/sobre' },
+    ];
 
     return (
         <footer className="bg-white border-t border-gray-100 pt-24 pb-12 overflow-hidden relative">
@@ -65,7 +59,7 @@ export default function Footer() {
                         </div>
 
                         <p className="text-gray-400 text-sm font-medium leading-relaxed max-w-sm">
-                            Conectando pessoas aos melhores negócios e oportunidades da sua região através de tecnologia de busca inteligente e inteligência geográfica.
+                            Conectando pessoas aos melhores negócios e oportunidades da sua região através de tecnologia de busca inteligente.
                         </p>
 
                         <div className="flex items-center space-x-3">
@@ -90,10 +84,10 @@ export default function Footer() {
                     {/* Links Grid */}
                     <div className="lg:col-span-1 hidden lg:block"></div>
 
-                    <div className="lg:col-span-2 space-y-6">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-300">Plataforma</h4>
+                    <div className="lg:col-span-3 space-y-6 text-left">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-300">Acesso Rápido</h4>
                         <ul className="space-y-4">
-                            {links.institucional.map((link, i) => (
+                            {navLinks.map((link, i) => (
                                 <li key={i}>
                                     <a href={link.href} className="text-gray-500 hover:text-brand-red text-sm font-bold flex items-center group transition-colors">
                                         <ChevronRight size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all mr-1" />
@@ -104,21 +98,7 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    <div className="lg:col-span-2 space-y-6">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-300">Serviços</h4>
-                        <ul className="space-y-4">
-                            {links.servicos.map((link, i) => (
-                                <li key={i}>
-                                    <a href={link.href} className="text-gray-500 hover:text-brand-red text-sm font-bold flex items-center group transition-colors">
-                                        <ChevronRight size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all mr-1" />
-                                        {link.label}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div className="lg:col-span-3 space-y-8">
+                    <div className="lg:col-span-4 space-y-8">
                         <div className="bg-gray-50 rounded-[2.5rem] p-8 space-y-6 border border-gray-100/50">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Suporte Premium</h4>
                             <div className="space-y-4">
@@ -147,10 +127,10 @@ export default function Footer() {
                                     <div className="min-w-0 overflow-hidden">
                                         <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">E-mail</p>
                                         <a
-                                            href="mailto:contato@overmelhinho.com.br"
+                                            href="mailto:angelica@overmelhinho.com.br"
                                             className="text-sm font-black text-gray-900 hover:text-brand-red transition-colors break-all"
                                         >
-                                            contato@overmelhinho.com.br
+                                            angelica@overmelhinho.com.br
                                         </a>
                                     </div>
                                 </div>

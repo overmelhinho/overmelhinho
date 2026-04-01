@@ -1,14 +1,13 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import api from "@/services/api";
+
 import {
     Eye, MessageCircle, MapPin, TrendingUp, Globe,
     Clock, Users, Printer, BarChart2, Zap, Star, Building2,
     Calendar, ExternalLink, ChevronRight
 } from "lucide-react";
-
-const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 
 function formatTime(seconds: number): string {
     if (!seconds) return "0s";
@@ -28,7 +27,7 @@ function KpiCard({ icon, label, value, sub, color = "blue" }: {
         amber:  "bg-white border-white-50 text-amber-600 shadow-sm",
     };
     return (
-        <div className={`rounded-3xl border p-6 flex flex-col items-center text-center gap-2 ${colors[color]} print:shadow-none print:border-gray-200`}>
+        <div className={`rounded-3xl border p-6 flex flex-col items-center text-center gap-2 ${colors[color]} print:shadow-none print:border-gray-200 print:bg-white !print:color-adjust-exact`}>
             <div className="mb-2 p-3 rounded-2xl bg-gray-50 print:bg-white">{icon}</div>
             <p className="text-3xl font-black text-gray-900 tracking-tighter">
                 {typeof value === 'number' ? value.toLocaleString('pt-BR') : value}
@@ -45,7 +44,7 @@ export default function ClientReportPublicPage() {
     const { data, isLoading, error } = useQuery({
         queryKey: ["public-report", token],
         queryFn: async () => {
-            const res = await axios.get(`${API}/v1/public/reports/${token}`);
+            const res = await api.get(`/v1/public/reports/${token}`);
             return res.data;
         },
         enabled: !!token,
@@ -59,10 +58,10 @@ export default function ClientReportPublicPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center font-sans">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-gray-200 border-t-[#C00000] rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-xs font-black uppercase tracking-widest text-gray-400 animate-pulse">Carregando Relatório...</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-gray-400 animate-pulse tracking-widest">Carregando Relatório...</p>
                 </div>
             </div>
         );
@@ -70,10 +69,10 @@ export default function ClientReportPublicPage() {
 
     if (error || !data) {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6 text-center">
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6 text-center font-sans">
                 <div>
                     <h1 className="text-2xl font-black text-gray-900 mb-2 uppercase">Relatório não encontrado</h1>
-                    <p className="text-gray-500 text-sm">Link expirado ou token incorreto.</p>
+                    <p className="text-gray-500 text-sm">Este link pode ter expirado ou o token está incorreto.</p>
                 </div>
             </div>
         );
@@ -92,49 +91,65 @@ export default function ClientReportPublicPage() {
             
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
-                    body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                    .print-bg-red { background-color: #C00000 !important; color: white !important; }
+                    body { 
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important; 
+                        background-color: white !important;
+                    }
+                    .print-bg-red { 
+                        background-color: #C00000 !important; 
+                        color: white !important; 
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .print-text-white { color: white !important; }
                     .print-shadow-none { box-shadow: none !important; }
-                    .print-no-break { page-break-inside: avoid; }
-                    @page { margin: 0.5cm; }
+                    .print-no-break { page-break-inside: avoid; break-inside: avoid; }
+                    .print-hidden { display: none !important; }
+                    @page { margin: 1cm; size: A4; }
                 }
             `}} />
 
+            {/* ── Hero Headline ────────────────────────────────────────── */}
             <div className="bg-white border-b border-gray-100 shadow-sm relative overflow-hidden print-bg-red">
                 <div className="absolute top-0 right-0 p-20 bg-[#C00000]/5 rounded-full -translate-y-1/2 translate-x-1/2 print:hidden" />
                 <div className="max-w-4xl mx-auto px-6 py-12 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                     <div className="space-y-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-100 border border-gray-200 print:hidden">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-100 border border-gray-200 print-hidden">
                              <span className="w-1.5 h-1.5 rounded-full bg-[#C00000] animate-pulse" />
-                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Relatório de Performance Oficial</span>
+                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Relatório Exclusivo</span>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-none print:text-white">
+                        <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-none print:text-white print-text-white">
                             {cliente.nome_fantasia}
                         </h1>
-                        <p className="text-lg text-gray-400 font-medium print:text-white/80">
-                            Resultados oficiais coletados em <span className="text-gray-900 font-bold print:text-white">{report.period_label}</span>
+                        <p className="text-lg text-gray-400 font-medium print:text-white/80 print-text-white">
+                            Resultados oficiais coletados em <span className="text-gray-900 font-bold print:text-white print-text-white">{report.period_label}</span>
                         </p>
                     </div>
                     {cliente.logo_url && (
-                        <img src={cliente.logo_url} className="w-24 h-24 rounded-3xl object-cover border-4 border-white shadow-xl ring-1 ring-gray-100 print:shadow-none" />
+                        <div className="print-no-break">
+                            <img src={cliente.logo_url} className="w-24 h-24 rounded-3xl object-cover border-4 border-white shadow-xl ring-1 ring-gray-100 print:shadow-none" />
+                        </div>
                     )}
                 </div>
             </div>
 
             <div className="max-w-4xl mx-auto px-6 py-10 space-y-12">
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4">
+                {/* ── KPIs Hero ────────────────────────────────────────── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4 print-no-break">
                     <KpiCard icon={<Eye size={20} />} label="Visualizações" value={ga4.total_views ?? 0} sub="Acessos totais" color="blue" />
                     <KpiCard icon={<Users size={20} />} label="Pessoas Únicas" value={ga4.total_users ?? 0} sub="Visitantes distintos" color="purple" />
                     <KpiCard icon={<Clock size={20} />} label="Tempo Médio" value={formatTime(ga4.avg_time ?? 0)} sub="Duração da sessão" color="amber" />
                     <KpiCard icon={<Zap size={20} />} label="Interações" value={ga4.total_events ?? 0} sub="Ações registradas" color="green" />
                 </div>
 
+                {/* ── Seção Tabela Inteligente ─────────────────────────────── */}
                 <section className="print-no-break">
                     <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden p-2 print:border-gray-200 print:rounded-3xl">
                         <div className="px-8 py-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
-                                <div className="w-24 md:w-32 min-w-[120px] grayscale hover:grayscale-0 transition-all flex items-center justify-center">
+                                <div className="w-24 md:w-32 min-w-[120px] grayscale hover:grayscale-0 transition-all flex items-center justify-center print:grayscale-0">
                                     <img src="/ga4-logo.png" alt="Google Analytics" className="max-w-full h-auto object-contain block" />
                                 </div>
                                 <div className="h-10 w-[1px] bg-gray-200 hidden md:block" />
@@ -160,7 +175,7 @@ export default function ClientReportPublicPage() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-gray-50 text-[10px] font-black uppercase tracking-[0.1em] text-gray-400 print:bg-gray-100">
+                                    <tr className="bg-gray-50 text-[10px] font-black uppercase tracking-[0.1em] text-gray-400 print:bg-gray-100 print:text-gray-900">
                                         <th className="px-8 py-4">Cidade / Página</th>
                                         <th className="px-6 py-4 text-right">Views</th>
                                         <th className="px-6 py-4 text-right">Pessoas</th>
@@ -239,15 +254,17 @@ export default function ClientReportPublicPage() {
 
                 {report.notes && (
                     <section className="bg-[#C00000] rounded-[2.5rem] p-10 text-white shadow-2xl print-bg-red print-no-break">
-                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/50 mb-4 print:text-white">Mensagem da Equipe O Vermelhinho</h3>
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/50 mb-4 print:text-white print-text-white">Mensagem da Equipe O Vermelhinho</h3>
                         <p className="text-lg md:text-xl font-bold leading-relaxed">{report.notes}</p>
                     </section>
                 )}
 
-                <footer className="text-center pt-10 pb-10 space-y-4">
-                    <img src="https://www.overmelhinho.com.br/wp-content/uploads/2021/05/logo_v_red.png" className="h-8 mx-auto opacity-20 grayscale print:opacity-40" alt="Logo" />
-                    <div className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400">
-                        O Vermelhinho · Inteligência e Dados
+                <footer className="text-center pt-10 pb-10 space-y-4 print-no-break">
+                     <div className="text-[9px] font-black uppercase tracking-[0.4em] text-[#C00000] mb-2">
+                        O Vermelhinho
+                    </div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">
+                        Inteligência em Dados e Negócios
                     </div>
                 </footer>
 

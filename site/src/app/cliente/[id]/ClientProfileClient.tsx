@@ -1,5 +1,6 @@
 'use client';
 
+
 import { useState, useEffect } from 'react';
 import {
     MessageCircle, Phone, MapPin, Share2, Heart, Star, Clock,
@@ -14,6 +15,14 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/services/api';
+
+function WhatsAppIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  );
+}
 
 export default function ClientProfileClient() {
     const params = useParams();
@@ -302,35 +311,35 @@ export default function ClientProfileClient() {
             </div>
 
             {/* 📸 HERO / COVER */}
-            <section className="relative h-[46vh] overflow-hidden">
+            <section className="relative h-[32vh] md:h-[46vh] overflow-hidden">
                 <img
                     src={client.galeria?.[0]?.url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&auto=format&fit=crop&q=80"}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover escala-focus-top"
                     alt={client.nome_fantasia}
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 md:to-transparent"></div>
             </section>
 
             {/* 🏢 PROFILE AREA */}
-            <div className="max-w-7xl mx-auto px-6 lg:px-12 relative -mt-12 md:-mt-24 z-10">
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 relative -mt-16 md:-mt-24 z-10">
 
-                <div className="bg-white rounded-[3rem] md:rounded-[4rem] p-8 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.12)] border-2 border-white gummy-card relative">
+                <div className="bg-white rounded-[2.5rem] md:rounded-[4rem] p-7 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.12)] border-2 border-white gummy-card relative">
 
                     {/* Floating Profile Image */}
-                    <div className="absolute -top-12 md:-top-20 left-10 w-24 h-24 md:w-40 md:h-40 rounded-3xl md:rounded-full bg-brand-red p-1 shadow-2xl border-4 border-white overflow-hidden group bg-white">
+                    <div className="absolute -top-10 md:-top-20 left-8 md:left-10 w-20 h-20 md:w-40 md:h-40 rounded-3xl md:rounded-full bg-white p-1 shadow-2xl border-4 border-white overflow-hidden group">
                         <img
                             src={client.logotipo_url || "https://images.unsplash.com/photo-1599305090598-fe179d501227?w=400"}
-                            className="w-full h-full object-contain p-2 rounded-[1.2rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
+                            className="w-full h-full object-contain p-2 rounded-[1rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
                             alt="Logo"
                         />
                     </div>
 
-                    <div className="mt-12 md:mt-0 md:ml-48 space-y-4">
+                    <div className="mt-8 md:mt-0 md:ml-48 space-y-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-3">
-                                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tighter font-serif italic uppercase leading-none">{client.nome_fantasia}</h1>
-                                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-lg" title="Verificado">
+                                    <h1 className="text-2xl md:text-5xl font-black text-gray-900 tracking-tighter font-serif italic uppercase leading-tight">{client.nome_fantasia}</h1>
+                                    <div className="w-5 h-5 bg-blue-500 rounded-full flex-shrink-0 flex items-center justify-center shadow-lg" title="Verificado">
                                         <CheckCircle2 size={12} className="text-white" fill="white" />
                                     </div>
                                 </div>
@@ -355,7 +364,7 @@ export default function ClientProfileClient() {
                                 {hasWhatsApp && (
                                     <button
                                         onClick={handleWhatsAppClick}
-                                        className="bg-brand-red text-white px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl shadow-red-100 flex items-center active:scale-95 transition-all hover:brightness-110"
+                                        className="bg-[#25D366] text-white px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl shadow-green-100 flex items-center active:scale-95 transition-all hover:brightness-110 border-b-4 border-green-700"
                                     >
                                         <MessageCircle size={20} className="mr-2" fill="currentColor" /> WhatsApp
                                     </button>
@@ -481,6 +490,30 @@ export default function ClientProfileClient() {
                                                         <MapPin size={14} className="mr-2 text-brand-red" />
                                                         {city.nome} - {city.uf}
                                                     </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    {client.redes_sociais?.length > 0 && (
+                                        <section className="lg:hidden space-y-6">
+                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Redes Sociais</h2>
+                                            <div className="flex flex-wrap gap-4">
+                                                {client.redes_sociais.map((rede: any) => (
+                                                    <a
+                                                        key={rede.id}
+                                                        href={rede.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="w-14 h-14 bg-white shadow-xl rounded-2xl flex items-center justify-center text-gray-400 hover:text-brand-red border border-gray-50 active:scale-75 transition-all"
+                                                    >
+                                                        {rede.tipo?.toLowerCase().includes('instagram') && <Instagram size={24} />}
+                                                        {rede.tipo?.toLowerCase().includes('facebook') && <Facebook size={24} />}
+                                                        {rede.tipo?.toLowerCase().includes('linkedin') && <Linkedin size={24} />}
+                                                        {rede.tipo?.toLowerCase().includes('youtube') && <Youtube size={24} />}
+                                                        {(rede.tipo?.toLowerCase().includes('site') || rede.tipo?.toLowerCase().includes('globo') || rede.tipo?.toLowerCase().includes('website')) && <Globe size={24} />}
+                                                        {!['instagram', 'facebook', 'linkedin', 'youtube', 'site', 'globo', 'website'].some(t => rede.tipo?.toLowerCase().includes(t)) && <ExternalLink size={24} />}
+                                                    </a>
                                                 ))}
                                             </div>
                                         </section>
@@ -682,10 +715,10 @@ export default function ClientProfileClient() {
 
                         {/* WhatsApp CTA */}
                         {hasWhatsApp && (
-                            <div className="relative group overflow-hidden bg-brand-red rounded-[3rem] p-10 text-white shadow-2xl shadow-red-200 gummy-card cursor-pointer" onClick={handleWhatsAppClick}>
+                            <div className="relative group overflow-hidden bg-[#25D366] rounded-[3rem] p-10 text-white shadow-2xl shadow-green-100 gummy-card cursor-pointer border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all" onClick={handleWhatsAppClick}>
                                 <div className="relative space-y-6">
                                     <div className="bg-white/20 w-14 h-14 rounded-2xl flex items-center justify-center">
-                                        <MessageCircle size={32} fill="white" className="text-brand-red" />
+                                        <MessageCircle size={32} fill="white" className="text-green-500" />
                                     </div>
                                     <div className="space-y-2">
                                         <h4 className="text-2xl font-black font-serif italic leading-none">Precisa de uma<br />resposta rápida?</h4>
@@ -701,7 +734,7 @@ export default function ClientProfileClient() {
 
                         {/* Redes Sociais Dinâmicas */}
                         {client.redes_sociais?.length > 0 && (
-                            <div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
+                            <div className="hidden lg:block bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                                 <h3 className="text-xl font-black font-serif italic text-gray-900">Redes Sociais</h3>
                                 <div className="flex flex-wrap gap-4">
                                     {client.redes_sociais.map((rede: any) => (
@@ -794,10 +827,10 @@ export default function ClientProfileClient() {
                     {hasWhatsApp && (
                         <button
                             onClick={handleWhatsAppClick}
-                            className="flex-1 bg-brand-red text-white py-6 rounded-[2rem] shadow-[0_25px_50px_-10px_rgba(239,68,68,0.5)] font-black text-lg flex items-center justify-center space-x-3 active:scale-95 transition-all overflow-hidden relative font-sans"
+                            className="flex-1 bg-[#25D366] text-white py-6 rounded-[2rem] shadow-[0_25px_50px_-10px_rgba(37,211,102,0.5)] font-black text-lg flex items-center justify-center space-x-3 active:scale-95 transition-all overflow-hidden relative font-sans border-b-4 border-green-700"
                         >
                             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] active:translate-x-[100%] transition-transform duration-500"></div>
-                            <MessageCircle size={24} fill="white" />
+                            <WhatsAppIcon size={24} />
                             <span>WhatsApp</span>
                         </button>
                     )}

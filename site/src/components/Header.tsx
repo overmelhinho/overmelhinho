@@ -9,6 +9,7 @@ const navLinks = [
     { label: 'Anuncie', href: '/anuncie' },
     { label: 'Como Funciona', href: '/como-funciona' },
     { label: 'Vagas', href: '/vagas' },
+    { label: 'Blog', href: '/blog' },
     { label: 'Sobre', href: '/sobre' },
 ];
 
@@ -46,16 +47,17 @@ export default function Header() {
 
                     {/* CTA Desktop */}
                     <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-                        <button
+                        {/* Login Button Hidden */}
+                        {/* <button
                             onClick={() => router.push('/login')}
                             className="flex items-center gap-2 text-gray-900 bg-white px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 border border-gray-100 text-[11px] font-black uppercase tracking-widest"
                         >
                             <User size={16} className="text-brand-red" />
                             Login
-                        </button>
+                        </button> */}
                         <button
                             onClick={() => router.push('/anuncie')}
-                            className="px-5 py-2.5 bg-brand-red text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-md shadow-red-100 hover:scale-105 active:scale-95 transition-all"
+                            className="px-4 py-2 md:px-4 md:py-2 bg-brand-red text-white rounded-xl font-black text-[10px] md:text-[10px] uppercase tracking-widest shadow-md shadow-red-100 hover:scale-105 active:scale-95 transition-all outline-none"
                         >
                             Anunciar
                         </button>
@@ -94,17 +96,18 @@ export default function Header() {
                                 </button>
                             ))}
 
-                            <div className="pt-4 grid grid-cols-2 gap-3">
-                                <button
+                            <div className="pt-4">
+                                {/* Login Button Hidden */}
+                                {/* <button
                                     onClick={() => { router.push('/login'); setMenuOpen(false); }}
                                     className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-gray-100 font-black text-gray-700 hover:border-brand-red transition-colors"
                                 >
                                     <User size={18} className="text-brand-red" />
                                     Login
-                                </button>
+                                </button> */}
                                 <button
                                     onClick={() => { router.push('/anuncie'); setMenuOpen(false); }}
-                                    className="py-4 rounded-2xl bg-brand-red text-white font-black shadow-lg shadow-red-100 active:scale-95 transition-all"
+                                    className="w-full py-4 rounded-2xl bg-brand-red text-white font-black shadow-lg shadow-red-100 active:scale-95 transition-all text-center"
                                 >
                                     Anunciar
                                 </button>

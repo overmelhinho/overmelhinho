@@ -37,9 +37,10 @@ interface Job {
     requirements: string[];
     benefits: string[];
     contact: string;
+    logo?: string;
 }
 
-// ── DADOS (demonstração – integração com backend em breve) ─────────
+// ── DADOS ─────────────────────────────────────────────────────────
 const JOBS: Job[] = [
     {
         id: 1,
@@ -57,6 +58,7 @@ const JOBS: Job[] = [
         requirements: ['Ensino Médio completo', 'CNH categoria B', 'Experiência em vendas externas'],
         benefits: ['Vale Alimentação', 'Plano de Saúde', 'Comissões ilimitadas', 'Veículo da empresa'],
         contact: 'rh@grupofreitas.com.br',
+        logo: 'https://images.unsplash.com/photo-1549421263-5ec394a5ad4c?w=100&h=100&fit=crop',
     },
     {
         id: 2,
@@ -108,6 +110,7 @@ const JOBS: Job[] = [
         requirements: ['Cursando Marketing, Publicidade ou Comunicação', 'Conhecimento em Canva ou Figma', 'Criatividade e boa escrita'],
         benefits: ['Bolsa Auxílio', 'Vale Transporte', 'Horário Flexível', 'Home Office parcial'],
         contact: 'vagas@digitalintelligence.com.br',
+        logo: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=100&h=100&fit=crop',
     },
     {
         id: 5,
@@ -278,8 +281,6 @@ export default function VagasPage() {
     const [sortBy, setSortBy] = useState<'recentes' | 'salario'>('recentes');
     const [showFilters, setShowFilters] = useState(false);
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-    const [phone, setPhone] = useState('');
-    const [subscribed, setSubscribed] = useState(false);
 
     // Toggle categoria
     const toggleCategory = useCallback((cat: string) => {
@@ -314,11 +315,6 @@ export default function VagasPage() {
             count: JOBS.filter(j => j.category === cat).length
         })), []);
 
-    const handleSubscribe = () => {
-        const digits = phone.replace(/\D/g, '');
-        if (digits.length < 10) return alert('Informe um número válido.');
-        setSubscribed(true);
-    };
 
     return (
         <div className="min-h-screen bg-cloud-dancer font-sans">
@@ -339,7 +335,7 @@ export default function VagasPage() {
                                     Oportunidades de <span className="text-brand-red">Carreira.</span>
                                 </h1>
                                 <p className="text-gray-400 font-medium mt-3 max-w-lg">
-                                    Encontre vagas em Farroupilha e região. Os dados abaixo são exemplos — integração com backend em breve.
+                                    Encontre vagas em Farroupilha e região.
                                 </p>
                             </div>
                         </div>
@@ -495,8 +491,12 @@ export default function VagasPage() {
                                     >
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                             <div className="flex items-start gap-5">
-                                                <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-200 group-hover:bg-brand-red/5 group-hover:text-brand-red transition-colors flex-shrink-0">
-                                                    <Building2 size={28} />
+                                                <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-200 group-hover:bg-brand-red/5 group-hover:text-brand-red transition-colors flex-shrink-0 overflow-hidden">
+                                                    {job.logo ? (
+                                                        <img src={job.logo} alt={job.company} className="w-full h-full object-contain p-2 rounded-2xl" />
+                                                    ) : (
+                                                        <Building2 size={28} />
+                                                    )}
                                                 </div>
                                                 <div className="space-y-2 min-w-0">
                                                     <div className="flex items-center gap-3 flex-wrap">
@@ -551,37 +551,23 @@ export default function VagasPage() {
             <section className="bg-gray-900 py-24 rounded-t-[4rem] text-center">
                 <div className="max-w-xl mx-auto px-6 space-y-8">
                     <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter italic font-serif leading-none">
-                        Receba vagas no seu <span className="text-brand-red">WhatsApp.</span>
+                        Participe do nosso <span className="text-brand-red">Grupo de Vagas.</span>
                     </h2>
                     <p className="text-gray-400 font-medium">
-                        Não perca nenhuma oportunidade. Seja notificado no momento em que novas vagas forem publicadas.
+                        Entre no grupo oficial do Vermelhinho no WhatsApp e receba as melhores oportunidades de Farroupilha e região em tempo real.
                     </p>
 
-                    {subscribed ? (
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-8 space-y-2">
-                            <div className="text-4xl">✅</div>
-                            <p className="font-black text-emerald-400 text-lg">Inscrição realizada com sucesso!</p>
-                            <p className="text-gray-400 text-sm font-medium">Em breve você receberá as melhores vagas por lá.</p>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <input
-                                type="tel"
-                                inputMode="numeric"
-                                placeholder="(54) 9 9999-9999"
-                                className="flex-1 bg-white/10 border-2 border-transparent focus:border-brand-red focus:bg-white rounded-2xl py-5 px-8 outline-none font-bold text-white focus:text-gray-900 transition-all placeholder:text-gray-500"
-                                value={phone}
-                                onChange={e => setPhone(maskPhone(e.target.value))}
-                                maxLength={16}
-                            />
-                            <button
-                                onClick={handleSubscribe}
-                                className="bg-brand-red text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-2xl shadow-red-900/50 hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
-                            >
-                                Me Inscrever
-                            </button>
-                        </div>
-                    )}
+                    <div className="flex justify-center">
+                        <a
+                            href="https://chat.whatsapp.com/J8o6h1c8OCU4KZZB5MwSPD"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-brand-red text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-2xl shadow-red-900/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                        >
+                            <Phone size={20} />
+                            Entrar no Grupo Agora
+                        </a>
+                    </div>
                 </div>
             </section>
 
