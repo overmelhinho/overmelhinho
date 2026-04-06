@@ -44,7 +44,7 @@ export default function Footer() {
     ];
 
     return (
-        <footer className="bg-white border-t border-gray-100 pt-24 pb-12 overflow-hidden relative">
+        <footer className="bg-white border-t border-gray-100 pt-12 pb-12 overflow-hidden relative">
             {/* Elementos Decorativos */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-96 h-96 bg-brand-red/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
@@ -110,7 +110,7 @@ export default function Footer() {
                                     <div className="min-w-0">
                                         <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">WhatsApp</p>
                                         <a
-                                            href="https://wa.me/5554326800002"
+                                            href="https://api.whatsapp.com/send/?phone=555432680002&text&type=phone_number&app_absent=0"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-sm font-black text-gray-900 hover:text-brand-red transition-colors"

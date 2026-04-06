@@ -132,7 +132,7 @@ export default function AnunciePage() {
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {[
-                            { icon: Users, label: "Acessos Mensais", value: "85k+", desc: "Visitantes qualificados buscando serviços na sua região." },
+                            { icon: Users, label: "BUSCAS MENSAIS", value: "200k+", desc: "Visitantes qualificados buscando serviços na sua região." },
                             { icon: TrendingUp, label: "Taxa de Conversão", value: "24%", desc: "Média de cliques que se transformam em contato via WhatsApp." },
                             { icon: Target, label: "Geo Inteligência", value: "100%", desc: "Sua empresa aparece exatamente para quem está por perto." }
                         ].map((stat, i) => (
@@ -184,9 +184,9 @@ export default function AnunciePage() {
                     <div className="relative">
                         <div className="absolute inset-0 bg-brand-red/5 rounded-[3rem] -rotate-3 scale-105" />
                         <img
-                            src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1000&q=80"
-                            alt="Equipe trabalhando"
-                            className="relative rounded-[3rem] shadow-2xl"
+                            src="/parceiro-vermelhinho.jpg"
+                            alt="Parceiro Vermelhinho"
+                            className="relative rounded-[3rem] shadow-2xl w-full object-cover"
                         />
                     </div>
                 </div>

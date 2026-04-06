@@ -729,7 +729,7 @@ function SearchContent() {
 
             {/* BOTTOM NAV MOBILE */}
             <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm lg:hidden">
-                <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[2.5rem] p-2 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around pointer-events-auto">
+                <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[2.5rem] p-1.5 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around pointer-events-auto">
                     {[
                         { icon: <Home size={22} strokeWidth={2.5} />, label: 'Home', path: '/', active: false },
                         { icon: <SearchIcon size={22} strokeWidth={2.5} />, label: 'Busca', path: '/busca', active: true },
@@ -748,13 +748,13 @@ function SearchContent() {
                                     router.push(item.path);
                                 }
                             }}
-                            className={`flex flex-col items-center justify-center p-3 transition-all active:scale-50 ${item.active ? 'text-brand-red' : 'text-gray-400'
+                            className={`flex flex-col items-center justify-center py-1.5 px-3 transition-all active:scale-50 ${item.active ? 'text-brand-red' : 'text-gray-400'
                                 } font-sans flex-1`}
                         >
-                            <div className={item.active ? 'bg-red-100/50 rounded-2xl p-2 px-6 shadow-inner' : ''}>
+                            <div className={item.active ? 'bg-red-100/50 rounded-2xl py-1 px-5 shadow-inner' : ''}>
                                 {item.icon}
                             </div>
-                            <span className={`text-[9px] font-black mt-1.5 uppercase tracking-tighter ${item.active ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
+                            <span className={`text-[9px] font-black mt-0.5 uppercase tracking-tighter ${item.active ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
                         </button>
                     ))}
                 </div>

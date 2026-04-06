@@ -109,8 +109,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-cloud-dancer pb-32 font-sans">
-      <main className="px-4 py-10 max-w-6xl mx-auto space-y-20 md:px-6">
+    <div className="min-h-screen bg-cloud-dancer pb-0 font-sans">
+      <main className="px-4 pt-10 pb-0 max-w-6xl mx-auto space-y-20 md:px-6">
         {/* 2. HERO & VUI (Busca Conversacional) */}
         <section className="text-center space-y-10 py-6">
           <div className="space-y-4">
@@ -174,7 +174,7 @@ export default function Home() {
         </section>
 
         {/* 5. MATCH PERFEITO */}
-        <section className="space-y-10 pb-20 pt-10">
+        <section className="space-y-10 pb-0 pt-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-3">
               <h2 className="text-3xl font-black text-gray-900 md:text-5xl tracking-tighter leading-none font-serif">O Match Perfeito</h2>
@@ -187,7 +187,7 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="flex space-x-6 overflow-x-auto pb-16 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:space-x-0 md:gap-10">
+          <div className="flex space-x-6 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:space-x-0 md:gap-10">
             {featured.map((item, idx) => (
               <div key={idx} className="snap-center min-w-[92%] md:min-w-0 bg-white rounded-[4rem] overflow-hidden shadow-[0_40px_100px_-30px_rgba(0,0,0,0.15)] border-4 border-white flex flex-col gummy-card group">
                 <div className="relative h-72 overflow-hidden">
@@ -224,7 +224,7 @@ export default function Home() {
         </section>
 
         {/* 4. COMO FUNCIONA — 3 passos */}
-        <section className="space-y-8">
+        <section className="space-y-8 !mt-0">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter font-serif">Como Funciona</h2>
             <button onClick={() => router.push('/como-funciona')} className="text-[10px] font-black text-brand-red uppercase tracking-widest hover:underline">Ver mais →</button>
@@ -289,7 +289,7 @@ export default function Home() {
 
       {/* 7. BOTTOM NAV */}
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] md:hidden w-[90%] max-w-sm">
-        <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[2.5rem] p-2 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around">
+        <div className="bg-white/70 backdrop-blur-3xl border border-white/30 rounded-[2.5rem] p-1.5 shadow-[0_40px_100px_-10px_rgba(0,0,0,0.5)] flex items-center justify-around">
           {[
             { icon: <HomeIcon size={22} strokeWidth={2.5} />, label: 'Home', path: '/', active: true },
             { icon: <Search size={22} strokeWidth={2.5} />, label: 'Busca', path: '/busca', active: false },
@@ -298,11 +298,11 @@ export default function Home() {
             <button
               key={idx}
               onClick={() => item.path !== '#' && router.push(item.path)}
-              className={`flex flex-col items-center justify-center p-3 transition-all active:scale-50 ${item.active ? 'text-brand-red bg-red-100/50 rounded-[1.8rem] px-8 shadow-inner' : 'text-gray-400'
+              className={`flex flex-col items-center justify-center py-1.5 px-3 transition-all active:scale-50 ${item.active ? 'text-brand-red bg-red-100/50 rounded-[1.8rem] px-8 shadow-inner' : 'text-gray-400'
                 } font-sans flex-1`}
             >
               {item.icon}
-              <span className={`text-[9px] font-black mt-1.5 uppercase tracking-tighter ${item.active ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
+              <span className={`text-[9px] font-black mt-0.5 uppercase tracking-tighter ${item.active ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
             </button>
           ))}
         </div>

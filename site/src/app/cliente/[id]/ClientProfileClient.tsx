@@ -289,29 +289,31 @@ export default function ClientProfileClient() {
                 }}
             />
 
-            {/* 📱 MOBILE HEADER ACTIONS */}
-            <div className="md:hidden fixed top-0 left-0 right-0 z-[100] px-6 py-8 flex justify-between pointer-events-none">
-                <button onClick={() => router.back()} className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl border border-white/30 text-white flex items-center justify-center shadow-2xl active:scale-75 transition-all pointer-events-auto cursor-pointer">
-                    <ArrowLeft size={24} />
-                </button>
-                <div className="flex space-x-3 pointer-events-auto">
-                    <button
-                        onClick={handleShareClick}
-                        className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl border border-white/30 text-white flex items-center justify-center shadow-2xl active:scale-75 transition-all cursor-pointer"
-                    >
-                        <Share2 size={24} />
-                    </button>
-                    <button
-                        onClick={() => setIsFavorite(!isFavorite)}
-                        className={`w-12 h-12 backdrop-blur-xl rounded-2xl border border-white/30 flex items-center justify-center shadow-2xl active:scale-75 transition-all cursor-pointer ${isFavorite ? 'bg-brand-red text-white' : 'bg-white/20 text-white'}`}
-                    >
-                        <Heart size={24} fill={isFavorite ? "white" : "none"} />
-                    </button>
-                </div>
-            </div>
+
 
             {/* 📸 HERO / COVER */}
             <section className="relative h-[32vh] md:h-[46vh] overflow-hidden">
+                {/* 📱 MOBILE ACTIONS (Absolute instead of Fixed to avoid logo overlap) */}
+                <div className="md:hidden absolute top-4 left-0 right-0 z-[100] px-6 flex justify-between pointer-events-none">
+                    <button onClick={() => router.back()} className="w-10 h-10 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/30 text-white flex items-center justify-center shadow-2xl active:scale-75 transition-all pointer-events-auto cursor-pointer">
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div className="flex space-x-3 pointer-events-auto">
+                        <button
+                            onClick={handleShareClick}
+                            className="w-10 h-10 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/30 text-white flex items-center justify-center shadow-2xl active:scale-75 transition-all cursor-pointer"
+                        >
+                            <Share2 size={20} />
+                        </button>
+                        <button
+                            onClick={() => setIsFavorite(!isFavorite)}
+                            className={`w-10 h-10 backdrop-blur-xl rounded-2xl border border-white/30 flex items-center justify-center shadow-2xl active:scale-75 transition-all cursor-pointer ${isFavorite ? 'bg-brand-red text-white' : 'bg-black/20 text-white'}`}
+                        >
+                            <Heart size={20} fill={isFavorite ? "white" : "none"} />
+                        </button>
+                    </div>
+                </div>
+
                 <img
                     src={client.galeria?.[0]?.url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&auto=format&fit=crop&q=80"}
                     className="w-full h-full object-cover escala-focus-top"
