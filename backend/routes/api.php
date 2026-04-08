@@ -289,6 +289,7 @@ Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 
 Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
 Route::post('/v1/tracking/search', [\App\Http\Controllers\Api\V1\TrackingController::class, 'search']);
 Route::get('/v1/public/reports/{token}', [ClientReportController::class, 'showPublic']);
+Route::get('/v1/public/sitemap-data', [\App\Http\Controllers\Api\V1\ClienteController::class, 'sitemap']);
 Route::get('/v1/public/search', [\App\Http\Controllers\Api\V1\ClienteController::class, 'indexPublic']);
 Route::get('/v1/public/search/suggestions', [\App\Http\Controllers\Api\V1\ClienteController::class, 'suggestions']);
 Route::get('/v1/public/clientes/{id}', [\App\Http\Controllers\Api\V1\ClienteController::class, 'showPublic']);

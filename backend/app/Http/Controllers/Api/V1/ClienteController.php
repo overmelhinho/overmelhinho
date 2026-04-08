@@ -23,6 +23,17 @@ use App\Services\GooglePlacesService;
 
 class ClienteController extends Controller
 {
+    public function sitemap()
+    {
+        return Cliente::query()
+            ->select(['id', 'slug', 'updated_at'])
+            ->where(function ($sub) {
+                $sub->whereIn('status_assinatura', ['ativa', 'ativo'])
+                    ->orWhere('tipo_cliente', 'gratuito');
+            })
+            ->get();
+    }
+
     public function indexPublic(Request $request)
     {
         $q = trim((string) ($request->input('q') ?? ''));
