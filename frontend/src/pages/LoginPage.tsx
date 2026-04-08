@@ -20,8 +20,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
         <div className="text-center mb-6">
-          <img src="/logo.svg" alt="Logo" className="h-10 mx-auto mb-2" />
-          <h1 className="text-2xl font-bold text-red-600">O Vermelhinho</h1>
+          <img src="/logo-overmelhinho.png" alt="O Vermelhinho" className="h-[45px] mx-auto mb-4" />
           <p className="text-sm text-gray-600">Acesse o painel administrativo</p>
         </div>
 

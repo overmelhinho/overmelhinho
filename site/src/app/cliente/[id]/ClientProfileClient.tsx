@@ -401,7 +401,7 @@ export default function ClientProfileClient() {
                 </div>
 
                 {/* 📑 TABS NAVIGATION */}
-                <div className="mt-10 border-b border-gray-100 flex items-center space-x-10 md:space-x-16 overflow-x-auto no-scrollbar scroll-smooth">
+                <div className="mt-10 border-b border-gray-100 flex items-center space-x-10 md:space-x-16 overflow-x-auto no-scrollbar scroll-smooth max-w-full">
                     {tabs.map((tab) => (
                         <button
                             key={tab}
@@ -440,7 +440,7 @@ export default function ClientProfileClient() {
                                 >
                                     <section className="space-y-6">
                                         <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Sobre a Empresa</h2>
-                                        <p className="text-gray-500 leading-relaxed text-lg font-medium whitespace-pre-line">
+                                        <p className="text-gray-500 leading-relaxed text-lg font-medium whitespace-pre-line break-words">
                                             {client.descricao || `O ${client.nome_fantasia} oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.`}
                                         </p>
 

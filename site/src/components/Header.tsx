@@ -22,7 +22,7 @@ export default function Header() {
 
     return (
         <>
-            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+            <header className={`sticky top-0 z-[200] border-b border-gray-100 shadow-sm transition-colors duration-300 ${menuOpen ? 'bg-white' : 'bg-white/80 backdrop-blur-xl'}`}>
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-8">
 
                     {/* Logo */}
@@ -76,13 +76,13 @@ export default function Header() {
 
             {/* Mobile Menu */}
             {menuOpen && (
-                <div className="fixed inset-0 z-40 flex flex-col" onClick={() => setMenuOpen(false)}>
+                <div className="fixed inset-0 z-[150] flex flex-col" onClick={() => setMenuOpen(false)}>
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
 
                     {/* Drawer */}
                     <div
-                        className="absolute top-20 left-0 right-0 bg-white border-b border-gray-100 shadow-xl rounded-b-[3rem] overflow-hidden"
+                        className="absolute top-20 left-0 right-0 bg-white border-b border-gray-100 shadow-xl rounded-b-[3rem] overflow-hidden z-[160]"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="px-6 py-8 space-y-2">

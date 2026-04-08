@@ -126,7 +126,7 @@ export const SearchAutocomplete = () => {
     };
 
     return (
-        <div className="relative w-full max-w-2xl mx-auto z-[200]" ref={dropdownRef}>
+        <div className="relative w-full max-w-2xl mx-auto z-10" ref={dropdownRef}>
             {/* INPUT PRINCIPAL */}
             <div className={`relative gummy-card bg-white rounded-full p-2 flex items-center shadow-[0_40px_80px_-20px_rgba(0,0,0,0.12)] border-4 transition-all duration-700 ${isListening ? 'border-brand-red ring-[15px] ring-red-100/30' : 'border-white'} ${isOpen ? 'rounded-b-none' : ''}`}>
                 <input

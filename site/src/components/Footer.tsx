@@ -128,7 +128,7 @@ export default function Footer() {
                                         <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">E-mail</p>
                                         <a
                                             href="mailto:angelica@overmelhinho.com.br"
-                                            className="text-sm font-black text-gray-900 hover:text-brand-red transition-colors break-all"
+                                            className="text-[13px] sm:text-sm font-black text-gray-900 hover:text-brand-red transition-colors whitespace-nowrap"
                                         >
                                             angelica@overmelhinho.com.br
                                         </a>

@@ -17,15 +17,15 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
         return {
             title,
             description,
-            keywords: [client.nome_fantasia, city, segment, ...(client.seo_keywords || [])].join(', '),
+            keywords: [client.nome_fantasia, city, segment, ...(client.seo_keywords || [])].filter(Boolean).join(', '),
             openGraph: {
                 title,
                 description,
-                images: [client.logotipo_url || client.galeria?.[0]?.url || ''],
+                images: [client.logotipo_url, client.galeria?.[0]?.url].filter(Boolean).map(url => url as string),
                 type: 'website',
             },
             alternates: {
-                canonical: `https://www.overmelhinho.com.br/cliente/${client.slug || client.id}`,
+                canonical: `/cliente/${client.slug || client.id}`,
             }
         };
     } catch (e) {
