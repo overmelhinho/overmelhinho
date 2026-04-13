@@ -452,7 +452,7 @@ export default function TabFinanceiro() {
                     <div>
                         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                             <FileText className="text-red-600" size={20} />
-                            Contratos (Autorizações)
+                            Autorizações
                         </h3>
                         <p className="text-sm text-gray-500 font-medium uppercase tracking-tight text-[10px]">Gestão de contratos e assinaturas digitais.</p>
                     </div>
@@ -462,7 +462,7 @@ export default function TabFinanceiro() {
                         className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl hover:bg-black transition-colors font-bold text-xs shadow-sm"
                     >
                         <Plus size={18} />
-                        Gerar Contrato
+                        Gerar Autorização
                     </button>
                 </div>
 
@@ -470,7 +470,7 @@ export default function TabFinanceiro() {
                     <table className="w-full text-sm text-left text-gray-500">
                         <thead className="text-[10px] text-gray-400 uppercase font-black bg-gray-50/50 border-b border-gray-100">
                             <tr>
-                                <th className="px-6 py-4">Nº Contrato</th>
+                                <th className="px-6 py-4">Nº Autorização</th>
                                 <th className="px-6 py-4">Veiculação</th>
                                 <th className="px-6 py-4">Investimento</th>
                                 <th className="px-6 py-4">Vigência</th>
@@ -484,7 +484,7 @@ export default function TabFinanceiro() {
                             ) : autorizacoes?.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-8 text-center text-gray-400 italic font-medium">
-                                        Nenhum contrato gerado para este cliente.
+                                        Nenhuma autorização gerada para este cliente.
                                     </td>
                                 </tr>
                             ) : (
@@ -1047,10 +1047,10 @@ export default function TabFinanceiro() {
                             <AlertCircle size={32} />
                         </div>
                         <AlertDialogTitle className="text-2xl font-bold text-gray-900 text-center">
-                            Atenção: Contratos Pendentes
+                            Atenção: Autorizações Pendentes
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-gray-500 text-center text-sm mt-2 font-medium">
-                            Este cliente já possui contratos aguardando assinatura. <br/>
+                            Este cliente já possui autorizações aguardando assinatura. <br/>
                             Gerar uma cobrança manual agora pode resultar em <b>faturas duplicadas</b>. <br/><br/>
                             Deseja prosseguir mesmo assim?
                         </AlertDialogDescription>

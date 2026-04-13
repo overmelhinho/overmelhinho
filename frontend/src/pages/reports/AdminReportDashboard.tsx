@@ -36,7 +36,7 @@ import {
 import { useState } from "react";
 
 
-export default function AdminReportDashboard() {
+export default function AdminReportDashboard({ hideHeader = false }: { hideHeader?: boolean }) {
     const navigate = useNavigate();
     const [period, setPeriod] = useState("30d");
     const [startDate, setStartDate] = useState("");
@@ -81,20 +81,22 @@ export default function AdminReportDashboard() {
 
     return (
         <div className="p-6 bg-[#F2F2F2] min-h-screen">
-            <header className="mb-10 flex justify-between items-end">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tighter">Cockpit de Operação Admin</h1>
-                    <p className="text-gray-400 font-medium text-xs">Saúde financeira e operacional da rede "O Vermelhinho"</p>
-                </div>
-                <div className="bg-white px-6 py-3 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                    <div className="flex -space-x-2">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white" />
-                        ))}
+            {!hideHeader && (
+                <header className="mb-10 flex justify-between items-end">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900 tracking-tighter">Cockpit de Operação Admin</h1>
+                        <p className="text-gray-400 font-medium text-xs">Saúde financeira e operacional da rede "O Vermelhinho"</p>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#C00000]">3 Admins Online</span>
-                </div>
-            </header>
+                    <div className="bg-white px-6 py-3 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+                        <div className="flex -space-x-2">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white" />
+                            ))}
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#C00000]">3 Admins Online</span>
+                    </div>
+                </header>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-6 gap-6 auto-rows-[220px]">
 
@@ -126,7 +128,7 @@ export default function AdminReportDashboard() {
 
                     {/* Background Decor */}
                     <div className="absolute top-[-10%] right-[-10%] scale-150 opacity-[0.03] pointer-events-none text-gray-900">
-                        <TrendingUp size={400} />
+                        <LucideTrendingUp size={400} />
                     </div>
                 </div>
 

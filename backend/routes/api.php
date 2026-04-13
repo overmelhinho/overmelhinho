@@ -267,6 +267,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/clients/{id}/reports/dashboard', [ReportController::class, 'clientDashboard']);
     Route::get('/admin/reports/dashboard', [ReportController::class, 'adminDashboard']);
     Route::get('/admin/reports/realtime', [ReportController::class, 'realtimeMetrics']);
+    Route::get('/admin/reports/sales', [ReportController::class, 'salesReport']);
+    Route::get('/admin/reports/sales/pdf', [ReportController::class, 'exportSalesPdf']);
+    Route::get('/admin/reports/commissions', [ReportController::class, 'commissionReport']);
+    Route::get('/admin/reports/jobs', [ReportController::class, 'jobReport']);
 
     // 📄 Relatórios de Performance do Cliente
     Route::get('/clients/{id}/reports/preview', [ClientReportController::class, 'preview']);

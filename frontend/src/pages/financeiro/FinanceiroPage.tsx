@@ -1,6 +1,5 @@
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs-radix";
-import PlansPage from "./PlansPage";
 import InvoicesTab from "./InvoicesTab";
 import MetricsTab from "./MetricsTab";
 import RenewalsTab from "./RenewalsTab";
@@ -126,16 +125,13 @@ export default function FinanceiroPage() {
             <Tabs defaultValue="invoices" className="w-full space-y-6">
                 <TabsList className="bg-white p-1 border rounded-lg">
                     <TabsTrigger value="autorizacoes" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
-                        <FileText size={16} /> Contratos (Autorizações)
+                        <FileText size={16} /> Autorizações
                     </TabsTrigger>
                     <TabsTrigger value="invoices" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
                         <DollarSign size={16} /> Faturas
                     </TabsTrigger>
                     <TabsTrigger value="renewals" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
                         <RefreshCw size={16} /> Renovações
-                    </TabsTrigger>
-                    <TabsTrigger value="plans" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
-                        <CreditCard size={16} /> Planos de Assinatura
                     </TabsTrigger>
                     <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
                         <LayoutDashboard size={16} /> Métricas
@@ -152,10 +148,6 @@ export default function FinanceiroPage() {
 
                 <TabsContent value="renewals" className="focus-visible:outline-none">
                     <RenewalsTab />
-                </TabsContent>
-
-                <TabsContent value="plans" className="focus-visible:outline-none">
-                    <PlansPage />
                 </TabsContent>
 
                 <TabsContent value="dashboard" className="focus-visible:outline-none">

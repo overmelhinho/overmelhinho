@@ -45,4 +45,23 @@ class Invoice extends Model
     {
         return $this->belongsTo(Plan::class);
     }
+
+    public function autorizacao()
+    {
+        return $this->belongsTo(Autorizacao::class, 'group_id', 'id')
+            ->where('group_id', 'LIKE', 'autorizacao-%');
+    }
+
+    // Accessor para facilitar o acesso ao vendedor
+    public function vendedor()
+    {
+        return $this->hasOneThrough(
+            User::class,
+            Autorizacao::class,
+            'id', // Local key on autorizacoes
+            'id', // Local key on users
+            'group_id', // Foreign key on invoices (stored as autorizacao-ID)
+            'vendedor_id' // Foreign key on autorizacoes
+        );
+    }
 }

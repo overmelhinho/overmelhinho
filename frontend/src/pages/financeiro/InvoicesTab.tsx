@@ -81,6 +81,7 @@ interface Invoice {
     justification?: string;
     action_date?: string;
     tiny_account_id?: string | null;
+    autorizacao_numero?: string | null;
 }
 
 export default function InvoicesTab() {
@@ -170,7 +171,9 @@ export default function InvoicesTab() {
     const filteredInvoices = invoices?.filter((invoice) => {
         const matchesSearch =
             invoice.client.nome_fantasia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            invoice.client.cpf_cnpj?.includes(searchTerm);
+            invoice.client.cpf_cnpj?.includes(searchTerm) ||
+            invoice.autorizacao_numero?.includes(searchTerm) ||
+            (searchTerm && !isNaN(Number(searchTerm)) && invoice.autorizacao_numero?.includes(searchTerm.padStart(5, '0')));
 
         const isOverdue = invoice.status === "pending" && isBefore(new Date(invoice.due_date), startOfDay(new Date()));
 
@@ -354,6 +357,9 @@ export default function InvoicesTab() {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                Autorização
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                 Cliente
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -398,6 +404,9 @@ export default function InvoicesTab() {
 
                                 return (
                                     <tr key={invoice.id} className="hover:bg-gray-50">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-black text-gray-900">
+                                            {invoice.autorizacao_numero ? `#${invoice.autorizacao_numero}` : "-"}
+                                        </td>
                                         <td className="px-6 py-4">
                                             <Popover>
                                                 <PopoverTrigger asChild>

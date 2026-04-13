@@ -58,7 +58,6 @@ interface Autorizacao {
 
 export default function AutorizacoesTab() {
     const [searchTerm, setSearchTerm] = useState("");
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [dateStart, setDateStart] = useState("");
     const [dateEnd, setDateEnd] = useState("");
@@ -203,7 +202,7 @@ export default function AutorizacoesTab() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
                             type="text"
-                            placeholder="Buscar contrato ou cliente..."
+                            placeholder="Buscar autorização ou cliente..."
                             className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-red-500 focus:outline-none focus:ring-4 focus:ring-red-500/10 transition-all font-medium"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -257,13 +256,6 @@ export default function AutorizacoesTab() {
                             Baixar Selecionados ({selectedIds.length})
                         </Button>
                     )}
-                    <Button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-lg shadow-red-600/20 gap-2 h-11 px-6 group"
-                    >
-                        <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-                        Novo Contrato (Autorização)
-                    </Button>
                 </div>
             </div>
 
@@ -279,7 +271,7 @@ export default function AutorizacoesTab() {
                                     onChange={toggleSelectAll}
                                 />
                              </th>
-                             <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Contrato / Cliente</th>
+                             <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Autorização / Cliente</th>
                             <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Publicidade</th>
                             <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Investimento</th>
                             <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Vigência</th>
@@ -352,7 +344,7 @@ export default function AutorizacoesTab() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5 shadow-xl border-gray-100">
-                                                <DropdownMenuLabel className="text-[10px] uppercase font-black text-gray-400 px-3 tracking-widest py-2">Gestão de Contrato</DropdownMenuLabel>
+                                                <DropdownMenuLabel className="text-[10px] uppercase font-black text-gray-400 px-3 tracking-widest py-2">Gestão de Autorização</DropdownMenuLabel>
                                                 <DropdownMenuItem
                                                     onClick={() => {
                                                         setSelectedPreview({ id: a.id, numero: a.numero });
@@ -360,7 +352,7 @@ export default function AutorizacoesTab() {
                                                     }}
                                                     className="rounded-xl font-bold text-xs gap-2 py-2.5 cursor-pointer"
                                                 >
-                                                    <FileText size={16} /> Visualizar PDF (Contrato)
+                                                    <FileText size={16} /> Visualizar PDF (Autorização)
                                                 </DropdownMenuItem>
 
                                                 {a.status === "rascunho" && (
@@ -404,14 +396,6 @@ export default function AutorizacoesTab() {
                 </table>
             </div>
 
-            <CreateAutorizacaoModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSuccess={() => {
-                    setIsCreateModalOpen(false);
-                    refetch();
-                }}
-            />
 
             <PreviewAutorizacaoModal
                 isOpen={isPreviewOpen}

@@ -150,7 +150,8 @@ class FinancialController extends Controller
         $invoices->each(function($i) use ($auths) {
             if (str_starts_with($i->group_id ?? '', 'autorizacao-')) {
                 $id = (int) str_replace('autorizacao-', '', $i->group_id);
-                $i->autorizacao_numero = $auths[$id] ?? null;
+                $num = $auths[$id] ?? null;
+                $i->autorizacao_numero = $num ? str_pad($num, 5, '0', STR_PAD_LEFT) : null;
             } else {
                 $i->autorizacao_numero = null;
             }
@@ -180,7 +181,8 @@ class FinancialController extends Controller
         $invoices->each(function($i) use ($auths) {
             if (str_starts_with($i->group_id ?? '', 'autorizacao-')) {
                 $id = (int) str_replace('autorizacao-', '', $i->group_id);
-                $i->autorizacao_numero = $auths[$id] ?? null;
+                $num = $auths[$id] ?? null;
+                $i->autorizacao_numero = $num ? str_pad($num, 5, '0', STR_PAD_LEFT) : null;
             } else {
                 $i->autorizacao_numero = null;
             }

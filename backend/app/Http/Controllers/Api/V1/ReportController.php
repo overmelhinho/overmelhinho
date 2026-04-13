@@ -5,6 +5,17 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\Ga4ReportingService;
+use App\Models\Invoice;
+use App\Models\Autorizacao;
+use App\Models\Candidate;
+use App\Models\Cliente;
+use App\Models\Quote;
+use App\Models\ClientInteraction;
+use App\Models\SeoRanking;
+use App\Models\JobOpportunity;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
@@ -20,21 +31,18 @@ class ReportController extends Controller
      */
     public function clientDashboard($id)
     {
-        $cliente = \App\Models\Cliente::findOrFail($id);
+        $cliente = Cliente::findOrFail($id);
 
-        // 1. Visibilidade (Interações nos últimos 30 dias - Database)
-        $interactions = \App\Models\ClientInteraction::where('cliente_id', $id)
+        $interactions = ClientInteraction::where('cliente_id', $id)
             ->where('created_at', '>=', now()->subDays(30))
             ->selectRaw('interaction_type, count(*) as total')
             ->groupBy('interaction_type')
             ->get()
             ->pluck('total', 'interaction_type');
 
-        // 2. Tenta buscar dados REAIS do GA4 (Mais precisos para o cliente)
         $ga4Metrics = $this->ga4->getClientMetrics($id);
 
-        // Sparkline - Acessos diários últimos 7 dias
-        $sparkline = \App\Models\ClientInteraction::where('cliente_id', $id)
+        $sparkline = ClientInteraction::where('cliente_id', $id)
             ->where('interaction_type', 'page_view')
             ->where('created_at', '>=', now()->subDays(7))
             ->selectRaw('DATE(created_at) as date, count(*) as total')
@@ -42,27 +50,18 @@ class ReportController extends Controller
             ->orderBy('date')
             ->get();
 
-        // 3. Vagas (tabela usa client_id, não cliente_id)
-        $vagasAtivas = 0;
-        $totalCandidatos = 0;
-        try {
-            $vagasAtivas = \App\Models\JobOpportunity::where('client_id', $id)
-                ->where('status', 'published')
-                ->count();
+        $vagasAtivas = JobOpportunity::where('client_id', $id)
+            ->where('status', 'published')
+            ->count();
 
-            $totalCandidatos = \App\Models\Candidate::whereHas('jobOpportunity', function ($q) use ($id) {
-                $q->where('client_id', $id);
-            })->count();
-        } catch (\Exception $e) {
-            \Log::warning("clientDashboard Vagas Error for ID $id: " . $e->getMessage());
-        }
+        $totalCandidatos = Candidate::whereHas('jobOpportunity', function ($q) use ($id) {
+            $q->where('client_id', $id);
+        })->count();
 
-        // 4. SEO (Última checagem)
-        $seo = \App\Models\SeoRanking::where('cliente_id', $id)
+        $seo = SeoRanking::where('cliente_id', $id)
             ->orderBy('checked_at', 'desc')
             ->first();
 
-        // Calcula o total de views: prioriza GA4, cai para DB
         $dbViews = (int)($interactions['page_view'] ?? 0);
         $ga4Views = (int)($ga4Metrics['views'] ?? 0);
         $totalViews = $ga4Views > 0 ? $ga4Views : $dbViews;
@@ -100,31 +99,26 @@ class ReportController extends Controller
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
-        // 1. Financeiro (MRR e Inadimplência)
-        $mrr = \App\Models\Cliente::where('status_assinatura', 'ativo')
+        $mrr = Cliente::where('status_assinatura', 'ativo')
             ->join('plans', 'clientes.plan_id', '=', 'plans.id')
             ->sum('plans.price');
 
-        $revenue = \App\Models\Invoice::where('status', 'paid')->sum('amount');
+        $revenue = Invoice::where('status', 'paid')->sum('amount');
+        $pendente = Invoice::where('status', 'pending')->sum('amount');
+        $totalClientesAtivos = Cliente::where('status_assinatura', 'ativo')->count();
 
-        $pendente = \App\Models\Invoice::where('status', 'pending')->sum('amount');
-        $totalClientesAtivos = \App\Models\Cliente::where('status_assinatura', 'ativo')->count();
-
-        // 2. Operação (Orçamentos e Fila de Foco)
-        $totalQuotes = \App\Models\Quote::count();
-        $autoNotified = \App\Models\Quote::whereNotNull('notified_at')->count();
+        $totalQuotes = Quote::count();
+        $autoNotified = Quote::whereNotNull('notified_at')->count();
         
-        $tempoMedioResponse = \App\Models\Quote::where('status', 'replied')
+        $tempoMedioResponse = Quote::where('status', 'replied')
             ->selectRaw('AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 60) as avg_minutes')
             ->value('avg_minutes') ?? 0;
 
-        // 3. Top Clientes (Campeões de Audiência)
-        $topClientes = \App\Models\Cliente::withCount('interacoes')
+        $topClientes = Cliente::withCount('interacoes')
             ->orderBy('interacoes_count', 'desc')
             ->limit(5)
             ->get(['id', 'nome_fantasia']);
 
-        // 5. Inteligência de Tráfego (Híbrido)
         $ga4Global = $this->ga4->getGlobalMetrics($period, $startDate, $endDate);
         $topSegments = $this->ga4->getTopSegments(5, $period, $startDate, $endDate);
         $trafficSources = $this->ga4->getTrafficSources(5, $period, $startDate, $endDate);
@@ -132,7 +126,6 @@ class ReportController extends Controller
         $topContent = $this->ga4->getTopContent(10, $period, $startDate, $endDate);
         $realtime = $this->ga4->getRealtimeMetrics();
         
-        // Se GA4 falhar, tenta mock ou DB para segmentos
         if (empty($topSegments)) {
             $topSegments = [
                 ['name' => 'Restaurantes', 'users' => 1250],
@@ -143,26 +136,22 @@ class ReportController extends Controller
             ];
         }
 
-        // Conversões Totais (Database fallback ou complementar)
         if ($startDate && $endDate) {
-            $totalConversions = \App\Models\ClientInteraction::whereIn('interaction_type', ['whatsapp_click', 'waze_click'])
+            $totalConversions = ClientInteraction::whereIn('interaction_type', ['whatsapp_click', 'waze_click'])
                 ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
                 ->count();
         } else {
             $days = (int)str_replace('d', '', $period);
-            if ($days == 0) $days = 30; // Para períodos como 'this_month' etc
-
-            $totalConversions = \App\Models\ClientInteraction::whereIn('interaction_type', ['whatsapp_click', 'waze_click'])
+            if ($days == 0) $days = 30;
+            $totalConversions = ClientInteraction::whereIn('interaction_type', ['whatsapp_click', 'waze_click'])
                 ->where('created_at', '>=', now()->subDays($days))
                 ->count();
         }
             
-        // 6. Gaps de Busca (DADOS REAIS do portal)
-        // Buscamos termos que os usuários digitaram e que retornaram ZERO resultados (Gaps)
-        $searchGaps = \DB::table('search_logs')
+        $searchGaps = DB::table('search_logs')
             ->where('results_count', 0)
-            ->where('created_at', '>=', now()->subDays(60)) // Puxar últimos 60 dias para ter volume
-            ->select('term', \DB::raw('count(*) as count'))
+            ->where('created_at', '>=', now()->subDays(60))
+            ->select('term', DB::raw('count(*) as count'))
             ->groupBy('term')
             ->orderBy('count', 'desc')
             ->limit(5)
@@ -172,7 +161,6 @@ class ReportController extends Controller
                 'count' => (int)$item->count
             ]);
 
-        // Fallback para mock caso não haja buscas logadas ainda (evitar gráfico vazio)
         if ($searchGaps->isEmpty()) {
             $searchGaps = [
                 ['term' => 'Pet Shop', 'count' => 8],
@@ -212,14 +200,178 @@ class ReportController extends Controller
             'search_gaps' => $searchGaps
         ]);
     }
-    /**
-     * Endpoint específico para o Monitor de Tempo Real (GA4)
-     * Permite atualizações frequentes (ex: 30s) sem sobrecarregar o DB
-     */
+
     public function realtimeMetrics()
     {
         $realtime = $this->ga4->getRealtimeMetrics();
         return response()->json($realtime);
     }
-}
 
+    /**
+     * Obter dados de vendas (centralizado)
+     */
+    private function getSalesData(Request $request)
+    {
+        $query = Invoice::query()
+            ->with(['client:id,nome_fantasia,razao_social', 'plan:id,name']);
+
+        if ($request->filled('month') && $request->filled('year')) {
+            $query->whereMonth('due_date', $request->month)
+                ->whereYear('due_date', $request->year);
+        }
+
+        if ($request->filled('plan_id') && $request->plan_id !== 'all') {
+            $query->where('plan_id', $request->plan_id);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->collection_type === 'bank') {
+            $query->where('payment_method', 'boleto');
+        } elseif ($request->collection_type === 'card') {
+            $query->where('payment_method', 'cartao');
+        } elseif ($request->collection_type === 'pix') {
+            $query->where('payment_method', 'pix');
+        } elseif ($request->collection_type === 'cash') {
+            $query->where('payment_method', 'dinheiro');
+        } elseif ($request->collection_type === 'direct') {
+            $query->whereNotIn('payment_method', ['boleto', 'cartao']);
+        }
+
+        $invoices = $query->orderBy('due_date', 'desc')->get();
+
+        // Mapear vendedores e autorizações manualmente devido ao prefixo no group_id
+        $authIds = $invoices->filter(fn($i) => str_starts_with($i->group_id ?? '', 'autorizacao-'))
+            ->map(fn($i) => (int) str_replace('autorizacao-', '', $i->group_id))
+            ->unique();
+
+        $auths = Autorizacao::whereIn('id', $authIds)
+            ->with('vendedor:id,name')
+            ->get()
+            ->keyBy('id');
+
+        $data = $invoices->map(function ($inv) use ($auths) {
+            $authId = str_starts_with($inv->group_id ?? '', 'autorizacao-') 
+                ? (int) str_replace('autorizacao-', '', $inv->group_id) 
+                : null;
+            
+            $auth = $authId ? ($auths[$authId] ?? null) : null;
+
+            return [
+                'id' => $inv->id,
+                'cliente' => $inv->client->nome_fantasia ?? $inv->client->razao_social ?? 'N/A',
+                'plano' => $inv->plan->name ?? 'Avulso',
+                'vendedor' => $auth?->vendedor?->name ?? 'N/A',
+                'vendedor_id' => $auth?->vendedor_id,
+                'amount' => (float)$inv->amount,
+                'due_date' => $inv->due_date,
+                'status' => $inv->status,
+                'payment_method' => $inv->payment_method,
+                'autorizacao_numero' => $auth?->numero ? str_pad($auth->numero, 5, '0', STR_PAD_LEFT) : null,
+            ];
+        });
+
+        // Filtro de Vendedor (aplicado em memória para suportar o mapeamento via group_id)
+        if ($request->filled('vendedor_id') && $request->vendedor_id !== 'all') {
+            $data = $data->filter(fn($item) => $item['vendedor_id'] == $request->vendedor_id)->values();
+        }
+
+        $summary = [
+            'count' => $data->count(),
+            'total_amount' => $data->sum('amount'),
+            'paid_amount' => $data->where('status', 'paid')->sum('amount'),
+            'pending_amount' => $data->where('status', 'pending')->sum('amount'),
+        ];
+
+        return [
+            'data' => $data,
+            'summary' => $summary,
+            'filters' => [
+                'month' => $request->month,
+                'year' => $request->year,
+            ]
+        ];
+    }
+
+    public function salesReport(Request $request)
+    {
+        return response()->json($this->getSalesData($request));
+    }
+
+    public function exportSalesPdf(Request $request)
+    {
+        $data = $this->getSalesData($request);
+        $pdf = Pdf::loadView('pdf.sales_report', $data)
+            ->setPaper('a4', 'landscape');
+        
+        return $pdf->download('Relatorio_Vendas_' . now()->format('dmY_His') . '.pdf');
+    }
+
+    /**
+     * Relatório de Comissões
+     */
+    public function commissionReport(Request $request)
+    {
+        $month = $request->month ?? now()->month;
+        $year = $request->year ?? now()->year;
+
+        $invoices = Invoice::where('status', 'paid')
+            ->whereYear('due_date', $year)
+            ->whereMonth('due_date', $month)
+            ->with('vendedor:id,name')
+            ->get();
+
+        $vendedores = [];
+
+        foreach ($invoices as $i) {
+            $vendedor = $i->vendedor;
+
+            if ($vendedor) {
+                if (!isset($vendedores[$vendedor->id])) {
+                    $vendedores[$vendedor->id] = [
+                        'id' => $vendedor->id,
+                        'name' => $vendedor->name,
+                        'sales_count' => 0,
+                        'total_sold' => 0,
+                        'commission' => 0
+                    ];
+                }
+
+                $vendedores[$vendedor->id]['sales_count']++;
+                $vendedores[$vendedor->id]['total_sold'] += (float)$i->amount;
+                // Comissão fictícia de 10%
+                $vendedores[$vendedor->id]['commission'] += ((float)$i->amount * 0.10);
+            }
+        }
+
+        return response()->json(array_values($vendedores));
+    }
+
+    /**
+     * Relatório de Currículos
+     */
+    public function jobReport(Request $request)
+    {
+        $query = Candidate::with('jobOpportunity');
+
+        if ($request->start_date && $request->end_date) {
+            $query->whereBetween('created_at', [$request->start_date, $request->end_date]);
+        }
+
+        $candidates = $query->orderBy('created_at', 'desc')->get()->map(function($c) {
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'email' => $c->email,
+                'phone' => $c->phone,
+                'job' => $c->jobOpportunity->title ?? 'N/A',
+                'status' => $c->status,
+                'created_at' => $c->created_at->format('d/m/Y H:i'),
+            ];
+        });
+
+        return response()->json($candidates);
+    }
+}

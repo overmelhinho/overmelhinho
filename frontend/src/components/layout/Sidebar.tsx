@@ -114,7 +114,7 @@ export default function Sidebar() {
     { to: "/usuarios", label: "Usuários", icon: <UserCog size={18} />, perms: ["manage_users"] },
     { to: "/funcoes", label: "Cargos e Funções", icon: <ShieldCheck size={18} />, perms: ["manage roles", "manage_roles"] },
     { to: "/permissoes", label: "Permissões", icon: <KeyRound size={18} />, perms: ["manage permissions", "manage_permissions"] },
-    { to: "/planos", label: "Planos", icon: <CreditCard size={18} /> },
+    { to: "/planos", label: "Planos de Assinatura", icon: <CreditCard size={18} /> },
   ];
 
 
