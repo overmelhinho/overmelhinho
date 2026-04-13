@@ -292,14 +292,22 @@ export default function ClientesList() {
     onSearchDebounced(search);
   }, [search, onSearchDebounced]);
 
-  const queryKey = useMemo(() => ["clientes", { page, sort }], [page, sort]);
+  const queryKey = useMemo(() => ["clientes", { page, sort, searchDebounced, tipo }], [page, sort, searchDebounced, tipo]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey,
     placeholderData: (prev: any) => prev,
     staleTime: 60_000,
     queryFn: async () => {
-      const resp = await axios.get("/v1/clientes", { params: { page, lite: true, sort } });
+      const resp = await axios.get("/v1/clientes", {
+        params: {
+          page,
+          lite: true,
+          sort,
+          q: searchDebounced,
+          tipo: tipo !== "all" ? tipo : undefined,
+        },
+      });
       return resp?.data;
     },
   });
@@ -329,34 +337,8 @@ export default function ClientesList() {
   }, [clientesRaw]);
 
   const clientes = useMemo(() => {
-    let list = [...clientesRaw];
-
-    if (tipo !== "all") {
-      list = list.filter((c) => (c.tipo_cliente || "gratuito") === tipo);
-    }
-
-    const q = searchDebounced.trim().toLowerCase();
-    if (q) {
-      list = list.filter((c) => {
-        const cidadeUf = getCidadeUF(c).toLowerCase();
-        const cnpj = (c.cpf_cnpj || "").toLowerCase();
-        const nome = (c.nome_fantasia || "").toLowerCase();
-        const contato = formatContato(c).toLowerCase();
-        const enderecoLista = formatEnderecoLista(c).toLowerCase();
-        const tel = (c?.contatos?.[0]?.telefone_principal || "").toLowerCase();
-        return (
-          nome.includes(q) ||
-          cnpj.includes(q) ||
-          cidadeUf.includes(q) ||
-          contato.includes(q) ||
-          enderecoLista.includes(q) ||
-          tel.includes(q)
-        );
-      });
-    }
-
-    return list;
-  }, [clientesRaw, tipo, searchDebounced]);
+    return clientesRaw;
+  }, [clientesRaw]);
 
   const openDrawer = (c: ClienteLite) => {
     setSelected(c);
