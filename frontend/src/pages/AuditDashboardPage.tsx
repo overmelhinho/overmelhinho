@@ -35,6 +35,8 @@ const AuditDashboardPage: React.FC = () => {
     const filterCity = searchParams.get('cidade') || '';
     const filterType = searchParams.get('tipo') || '';
     const filterUser = searchParams.get('user_id') || '';
+    const filterDateStart = searchParams.get('date_start') || '';
+    const filterDateEnd = searchParams.get('date_end') || '';
     const searchTerm = searchParams.get('q') || '';
 
     const updateFilter = (params: Record<string, string | number | null>) => {
@@ -55,7 +57,7 @@ const AuditDashboardPage: React.FC = () => {
         setSearchParams({ tab }); // Mantém apenas a tab
     };
 
-    const hasFilters = filterCity || filterType || searchTerm || filterUser;
+    const hasFilters = filterCity || filterType || searchTerm || filterUser || filterDateStart || filterDateEnd;
 
     // 1. Busca Cidades para o Filtro
     const { data: cities } = useQuery({
@@ -101,6 +103,8 @@ const AuditDashboardPage: React.FC = () => {
                 params: {
                     page,
                     user_id: filterUser,
+                    date_start: filterDateStart,
+                    date_end: filterDateEnd,
                     q: searchTerm
                 }
             });
@@ -119,7 +123,7 @@ const AuditDashboardPage: React.FC = () => {
     });
 
     return (
-        <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8 font-sans">
+        <div className="p-6 md:p-10 max-w-[1600px] mx-auto space-y-8 font-sans">
             {/* Background Decoration */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
                 <div className="absolute -top-24 -right-24 w-96 h-96 bg-red-50 rounded-full blur-3xl opacity-50" />
@@ -140,7 +144,7 @@ const AuditDashboardPage: React.FC = () => {
                         <span className="text-xs font-bold uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded text-[#B70F0A]">Governance v2.0</span>
                     </motion.div>
                     <h1 className="text-4xl md:text-5xl font-serif text-slate-800 tracking-tight">
-                        Central de <span className="text-[#B70F0A]">Auditoria</span>
+                        Central de <span className="text-[#B70F0A]">Conferências</span>
                     </h1>
                     <p className="text-slate-500 max-w-lg leading-relaxed">
                         Sistema automatizado de integridade de dados via IA.
@@ -169,8 +173,8 @@ const AuditDashboardPage: React.FC = () => {
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {[
-                    { label: 'Auditados Hoje', value: stats?.hoje, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                    { label: 'Auditados Ontem', value: stats?.ontem, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Conferidos Hoje', value: stats?.hoje, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                    { label: 'Conferidos Ontem', value: stats?.ontem, color: 'text-blue-600', bg: 'bg-blue-50' },
                     { label: 'Últimos 7 dias', value: stats?.sete_dias, color: 'text-purple-600', bg: 'bg-purple-50' },
                     { label: 'Últimos 30 dias', value: stats?.trinta_dias, color: 'text-slate-600', bg: 'bg-slate-50' },
                     {
@@ -233,17 +237,38 @@ const AuditDashboardPage: React.FC = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-gray-100 flex flex-wrap items-center gap-4 shadow-sm"
+                        className="bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-gray-100 flex items-center gap-3 shadow-sm w-full overflow-x-auto"
                     >
-                        <div className="flex-1 min-w-[240px] relative group">
+                        <div className="flex-1 min-w-[200px] relative group">
                             <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#B70F0A]" />
                             <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => updateFilter({ q: e.target.value })}
-                                placeholder="Buscar por nome do cliente..."
+                                placeholder="Buscar por cliente ou telefone..."
                                 className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:border-red-200 transition-all outline-none text-sm placeholder:text-slate-400"
                             />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-100 rounded-2xl">
+                                <CalendarDays className="w-4 h-4 text-slate-400" />
+                                <input
+                                    type="date"
+                                    value={filterDateStart}
+                                    onChange={(e) => updateFilter({ date_start: e.target.value })}
+                                    className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 cursor-pointer"
+                                    title="Data inicial"
+                                />
+                                <span className="text-slate-300 text-xs">até</span>
+                                <input
+                                    type="date"
+                                    value={filterDateEnd}
+                                    onChange={(e) => updateFilter({ date_end: e.target.value })}
+                                    className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 cursor-pointer"
+                                    title="Data final"
+                                />
+                            </div>
                         </div>
 
                         {tab === 'queue' && (
@@ -284,7 +309,7 @@ const AuditDashboardPage: React.FC = () => {
                                 onChange={(e) => updateFilter({ user_id: e.target.value })}
                                 className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer min-w-[130px]"
                             >
-                                <option value="">Auditor</option>
+                                <option value="">Conferido por</option>
                                 {auditors?.map((u: any) => (
                                     <option key={u.id} value={u.id}>{u.name}</option>
                                 ))}
@@ -328,6 +353,7 @@ const AuditDashboardPage: React.FC = () => {
                                     <tr className="bg-slate-50/50 border-b border-slate-100">
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Identificação do Cliente</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Localização / Status</th>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Telefone</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Data Varredura</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Inconsistências</th>
                                         <th className="px-8 py-5 text-right">Ação</th>
@@ -368,14 +394,39 @@ const AuditDashboardPage: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
-                                                <div className="space-y-1.5">
+                                                <div className="space-y-2">
                                                     <div className="flex items-center gap-1.5 text-slate-600">
                                                         <MapPin className="w-3.5 h-3.5 text-red-400" />
                                                         <span className="text-sm font-semibold">{c.enderecos?.[0]?.cidade || 'S/ Cidade'}</span>
                                                     </div>
-                                                    <div className={`text-[10px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-tighter ${c.tipo_cliente === 'pagante' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                        {c.tipo_cliente}
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`text-[10px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-tighter ${c.tipo_cliente === 'pagante' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                            {c.tipo_cliente}
+                                                        </div>
+                                                        {c.audit_status === 'ok' ? (
+                                                            <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-tighter flex items-center gap-1">
+                                                                <CheckCircle2 className="w-2.5 h-2.5" />
+                                                                Conferido
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 uppercase tracking-tighter flex items-center gap-1">
+                                                                <AlertCircle className="w-2.5 h-2.5" />
+                                                                Aguardando
+                                                            </div>
+                                                        )}
                                                     </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-sm font-bold text-slate-700">
+                                                        {c.contatos?.[0]?.telefone_principal || '---'}
+                                                    </span>
+                                                    {c.contatos?.[0]?.celular && (
+                                                        <span className="text-[10px] text-slate-400 font-medium">
+                                                            {c.contatos[0].celular}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
@@ -400,9 +451,9 @@ const AuditDashboardPage: React.FC = () => {
                                                 <motion.button
                                                     whileHover={{ scale: 1.05 }}
                                                     whileTap={{ scale: 0.95 }}
-                                                    className="bg-slate-900 text-white hover:bg-[#B70F0A] px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 ml-auto shadow-lg shadow-slate-200 hover:shadow-red-200 transition-all"
+                                                    className={`px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 ml-auto shadow-lg transition-all ${c.audit_status === 'ok' ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-slate-100' : 'bg-slate-900 text-white hover:bg-[#B70F0A] shadow-slate-200 hover:shadow-red-200'}`}
                                                 >
-                                                    Analisar
+                                                    {c.audit_status === 'ok' ? 'Revisar' : 'Analisar'}
                                                     <ChevronRight className="w-4 h-4" />
                                                 </motion.button>
                                             </td>
@@ -428,7 +479,7 @@ const AuditDashboardPage: React.FC = () => {
                                     <tr>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cronologia</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Responsável</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cliente Auditado</th>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cliente Conferido</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Evento</th>
                                         <th className="px-8 py-5 text-right">Visualizar</th>
                                     </tr>
@@ -461,7 +512,7 @@ const AuditDashboardPage: React.FC = () => {
                                             <td className="px-8 py-6">
                                                 <span className="text-[10px] bg-emerald-50 text-emerald-700 font-black px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5 w-fit uppercase">
                                                     <CheckCircle2 className="w-3 h-3" />
-                                                    Auditoria Finalizada
+                                                    Conferência Finalizada
                                                 </span>
                                             </td>
                                             <td className="px-8 py-6 text-right">

@@ -41,7 +41,7 @@ trait Auditable
             );
         });
 
-        static::deleted(function ($model) {
+        static::deleting(function ($model) {
             app(AuditLogger::class)->logModelDelete($model);
         });
     }

@@ -29,6 +29,12 @@ class AutorizacaoController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
+        if ($request->filled('date_start')) {
+            $query->whereDate('created_at', '>=', $request->date_start);
+        }
+        if ($request->filled('date_end')) {
+            $query->whereDate('created_at', '<=', $request->date_end);
+        }
         if ($request->filled('cliente_id')) {
             $query->where('cliente_id', $request->cliente_id);
         }
@@ -37,6 +43,12 @@ class AutorizacaoController extends Controller
             $query->where(function ($sq) use ($q) {
                 $sq->where('titulo_anuncio', 'ilike', "%{$q}%")
                     ->orWhereHas('cliente', fn($c) => $c->where('nome_fantasia', 'ilike', "%{$q}%"));
+
+                // Busca por número do contrato (removendo # e zeros à esquerda para conferir com o integer no DB)
+                $numericQ = preg_replace('/\D/', '', $q);
+                if ($numericQ !== '') {
+                    $sq->orWhere('numero', (int)$numericQ);
+                }
             });
         }
 
@@ -435,6 +447,75 @@ class AutorizacaoController extends Controller
             'synced'  => $syncedIds,
             'total_processed' => count($createdIds) + count($syncedIds)
         ];
+    }
+    
+    // ─── Download em Lote (Zip) ────────────────────────────────────────────────
+    
+    public function downloadBatch(Request $request)
+    {
+        $ids = $request->input('ids');
+        if (!$ids || !is_array($ids)) {
+            return response()->json(['message' => 'Nenhum contrato selecionado.'], 422);
+        }
+
+        $autorizacoes = Autorizacao::with(['cliente.enderecos', 'cliente.contatos', 'vendedor', 'parcelas'])
+            ->whereIn('id', $ids)
+            ->get();
+
+        if ($autorizacoes->isEmpty()) {
+            return response()->json(['message' => 'Contratos não encontrados.'], 404);
+        }
+
+        $tempDir = storage_path('app/public/temp/' . now()->format('YmdHis') . '_' . uniqid());
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $pdfFiles = [];
+        foreach ($autorizacoes as $aut) {
+            $pdf = Pdf::loadView('pdf.autorizacao', ['autorizacao' => $aut])
+                ->setPaper('a4', 'portrait');
+            
+            $filename = "contrato_" . str_pad($aut->numero, 5, '0', STR_PAD_LEFT) . ".pdf";
+            $fullPath = $tempDir . DIRECTORY_SEPARATOR . $filename;
+            file_put_contents($fullPath, $pdf->output());
+            $pdfFiles[] = $fullPath;
+        }
+
+        $zipName = 'contratos_' . now()->format('YmdHis') . '.zip';
+        $zipPath = storage_path('app/public/temp/' . $zipName);
+
+        if (class_exists('\ZipArchive')) {
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
+                foreach ($pdfFiles as $path) {
+                    $zip->addFile($path, basename($path));
+                }
+                $zip->close();
+            }
+        } else {
+            // Fallback para Windows usando PowerShell se ZipArchive não estiver instalado
+            $quotedFiles = array_map(fn($f) => "'$f'", $pdfFiles);
+            $filesList = implode(',', $quotedFiles);
+            
+            $cmd = "powershell -Command \"Compress-Archive -Path $filesList -DestinationPath '$zipPath' -Force\"";
+            exec($cmd, $output, $returnCode);
+
+            if ($returnCode !== 0) {
+                Log::error("Falha ao criar ZIP via PowerShell", ['cmd' => $cmd, 'output' => $output]);
+                return response()->json(['message' => 'Falha ao gerar arquivo ZIP no servidor.'], 500);
+            }
+        }
+
+        // Limpa os arquivos individuais (mantendo a pasta principal de temp limpa)
+        foreach ($pdfFiles as $f) { @unlink($f); }
+        @rmdir($tempDir);
+
+        if (!file_exists($zipPath)) {
+            return response()->json(['message' => 'Arquivo ZIP não foi gerado.'], 500);
+        }
+
+        return response()->download($zipPath)->deleteFileAfterSend(true);
     }
 
     // ─── Helper: Gerar Parcelas ───────────────────────────────────────────────

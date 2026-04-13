@@ -120,16 +120,23 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
 
     // Fetch Plans
     useEffect(() => {
+        if (!isOpen) return;
+
         const fetchPlans = async () => {
             try {
+                console.log("[CreateAutorizacaoModal] Buscando planos...");
                 const response = await axios.get("/v1/plans");
-                setPlans(response.data || []);
+                // Algumas APIs retornam { data: [...] }, outras retornam [...] direto
+                const plansData = response.data?.data || response.data || [];
+                console.log("[CreateAutorizacaoModal] Planos carregados:", plansData);
+                setPlans(plansData);
             } catch (error) {
-                console.error("Erro ao buscar planos", error);
+                console.error("[CreateAutorizacaoModal] Erro ao buscar planos:", error);
+                toast.error("Erro ao carregar planos de serviço.");
             }
         };
         fetchPlans();
-    }, []);
+    }, [isOpen]);
 
     const formatCurrency = (value: string) => {
         const digits = value.replace(/\D/g, "");

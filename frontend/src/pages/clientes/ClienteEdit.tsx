@@ -199,6 +199,7 @@ export default function ClienteEdit() {
       cnpj: c?.cpf_cnpj || c?.cnpj || "",
 
       descricao: c?.descricao || "",
+      observacoes: c?.observacoes || "",
 
       inscricao_estadual: c?.inscricao_estadual || "",
       inscricao_municipal: c?.inscricao_municipal || "",
@@ -341,6 +342,7 @@ export default function ClienteEdit() {
               cpf_cnpj: values.cnpj,
               razao_social: values.razao_social || null,
               descricao: values.descricao || null,
+              observacoes: values.observacoes || null,
 
               inscricao_estadual: values.inscricao_estadual || null,
               inscricao_municipal: values.inscricao_municipal || null,

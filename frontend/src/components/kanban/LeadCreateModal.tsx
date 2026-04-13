@@ -99,6 +99,7 @@ export default function LeadCreateModal({ open, onClose }) {
                 <option value="telefone">Telefone</option>
                 <option value="indicacao_cliente">Indicação de cliente</option>
                 <option value="indicacao_parceiro">Indicação de parceiro</option>
+                <option value="renovacao">Renovação</option>
                 <option value="insercao_manual">Inserção manual</option>
               </optgroup>
               <optgroup label="Outros">

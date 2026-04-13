@@ -18,6 +18,7 @@ import {
   BadgeCheck,
   AlertTriangle,
   ClipboardCheck,
+  Trash2
 } from "lucide-react";
 
 import {
@@ -44,6 +45,7 @@ type ClienteLite = {
   logo_url?: string | null;
   tipo_cliente?: TipoCliente | string | null;
   status_assinatura?: StatusAssinatura | null;
+  observacoes?: string | null;
 
   seo_keywords?: any;
   galeria_imagens_count?: number;
@@ -243,10 +245,30 @@ export default function ClientesList() {
 
   const [searchDebounced, setSearchDebounced] = useState("");
   const [tipo, setTipo] = useState<"all" | TipoCliente>("all");
+  const [sort, setSort] = useState<string>("latest");
   const [page, setPage] = useState<number>(1);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selected, setSelected] = useState<ClienteLite | null>(null);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [clienteToDelete, setClienteToDelete] = useState<ClienteLite | null>(null);
+
+  const handleDelete = async () => {
+    if (!clienteToDelete) return;
+
+    try {
+      await axios.delete(`/v1/clientes/${clienteToDelete.id}`);
+      toast.success("Cliente excluído com sucesso!");
+      setDeleteModalOpen(false);
+      setClienteToDelete(null);
+      refetch();
+    } catch (error: any) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Erro ao excluir cliente.";
+      toast.error(msg);
+    }
+  };
 
   const copyToClipboard = async (text: string, msg = "Copiado!") => {
     try {
@@ -270,14 +292,14 @@ export default function ClientesList() {
     onSearchDebounced(search);
   }, [search, onSearchDebounced]);
 
-  const queryKey = useMemo(() => ["clientes", { page }], [page]);
+  const queryKey = useMemo(() => ["clientes", { page, sort }], [page, sort]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey,
     placeholderData: (prev: any) => prev,
     staleTime: 60_000,
     queryFn: async () => {
-      const resp = await axios.get("/v1/clientes", { params: { page, lite: true } });
+      const resp = await axios.get("/v1/clientes", { params: { page, lite: true, sort } });
       return resp?.data;
     },
   });
@@ -377,7 +399,7 @@ export default function ClientesList() {
   if (isLoading) return <Skeleton className="h-32 w-full" />;
 
   return (
-    <div className="p-4 max-w-7xl mx-auto space-y-4">
+    <div className="p-2 md:p-6 lg:p-10 w-full space-y-6">
       {/* Header “SaaS” */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -390,10 +412,7 @@ export default function ClientesList() {
         <div className="flex items-center gap-2">
           <button
             className="px-4 py-2 rounded-lg bg-[#B70F0A] text-white hover:bg-[#900B07] transition"
-            onClick={() => {
-              toast("Criação direta ainda não definida. Use a conversão por Lead.");
-              window.location.href = "/clientes/novo";
-            }}
+            onClick={() => navigate("/clientes/novo")}
           >
             + Novo cliente
           </button>
@@ -454,7 +473,7 @@ export default function ClientesList() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
               <Filter className="w-4 h-4 text-gray-500" />
               <select
@@ -462,9 +481,22 @@ export default function ClientesList() {
                 onChange={(e) => setTipo(e.target.value as any)}
                 className="text-sm outline-none"
               >
-                <option value="all">Todos</option>
-                <option value="pagante">Pagantes</option>
-                <option value="gratuito">Gratuitos</option>
+                <option value="all">Todos os tipos</option>
+                <option value="pagante">Apenas Pagantes</option>
+                <option value="gratuito">Apenas Gratuitos</option>
+              </select>
+            </div>
+
+            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="text-sm outline-none font-medium"
+              >
+                <option value="latest">✨ Recém Cadastrados</option>
+                <option value="oldest">Mais Antigos</option>
+                <option value="nome">Nome (A-Z)</option>
+                <option value="default">Ranking SaaS</option>
               </select>
             </div>
 
@@ -473,6 +505,7 @@ export default function ClientesList() {
               onClick={() => {
                 setSearch("");
                 setTipo("all");
+                setSort("latest");
                 setPage(1);
                 setTimeout(() => refetch(), 0);
                 toast.success("Filtros limpos.");
@@ -506,12 +539,12 @@ export default function ClientesList() {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-gray-600">
                 <tr>
-                  <th className="text-left font-medium px-4 py-3">Cliente</th>
-                  <th className="text-left font-medium px-4 py-3">Tipo</th>
-                  <th className="text-left font-medium px-4 py-3">Status</th>
-                  <th className="text-left font-medium px-4 py-3">Endereço</th>
-                  <th className="text-left font-medium px-4 py-3">Telefone</th>
-                  <th className="text-right font-medium px-4 py-3">Ações</th>
+                  <th className="text-left font-medium px-2 py-3">Cliente</th>
+                  <th className="text-left font-medium px-2 py-3 hidden md:table-cell">Tipo</th>
+                  <th className="text-left font-medium px-2 py-3">Status</th>
+                  <th className="text-left font-medium px-2 py-3 hidden md:table-cell">Endereço</th>
+                  <th className="text-left font-medium px-2 py-3 hidden md:table-cell">Telefone</th>
+                  <th className="text-right font-medium px-2 py-3">Ações</th>
                 </tr>
               </thead>
 
@@ -527,28 +560,27 @@ export default function ClientesList() {
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => openDrawer(c)}
                     >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg border bg-gray-50 overflow-hidden flex items-center justify-center">
+                      <td className="px-2 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg border bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
                             {c.logo_url ? (
                               <img src={c.logo_url} className="w-full h-full object-cover" />
                             ) : (
-                              <span className="text-xs text-gray-400">LOGO</span>
+                              <span className="text-[10px] text-gray-400 font-bold">LOGO</span>
                             )}
                           </div>
-
-                          <div>
-                            <div className="font-medium text-gray-900">{c.nome_fantasia}</div>
-                            <div className="text-xs text-gray-500">
-                              {cidadeUF || "—"} {c.cpf_cnpj ? `• ${c.cpf_cnpj}` : ""}
+                          <div className="min-w-0">
+                            <div className="font-medium text-gray-900 truncate max-w-[150px]">{c.nome_fantasia}</div>
+                            <div className="text-[10px] text-gray-500 truncate max-w-[150px]">
+                              {cidadeUF || "—"}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-3 hidden md:table-cell">
                         <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full border text-xs ${tipoChipClass(
+                          className={`inline-flex items-center px-2 py-1 rounded-full border text-[10px] ${tipoChipClass(
                             c
                           )}`}
                         >
@@ -556,9 +588,9 @@ export default function ClientesList() {
                         </span>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-3">
                         <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full border text-xs ${statusChipClass(
+                          className={`inline-flex items-center px-2 py-1 rounded-full border text-[10px] ${statusChipClass(
                             c.status_assinatura
                           )}`}
                         >
@@ -566,71 +598,83 @@ export default function ClientesList() {
                         </span>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-3 hidden md:table-cell">
                         <div
-                          className="text-sm text-gray-800 max-w-[420px] truncate"
+                          className="text-xs text-gray-500 max-w-[140px] truncate"
                           title={enderecoLista}
                         >
                           {enderecoLista}
                         </div>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-3 hidden md:table-cell">
                         {telefone ? (
                           <button
                             type="button"
-                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border bg-white hover:bg-gray-50 text-sm transition"
+                            className="inline-flex items-center gap-1.5 px-1.5 py-1 rounded-lg border bg-white hover:bg-gray-50 text-[11px] transition"
                             onClick={(e) => {
                               e.stopPropagation();
                               copyToClipboard(telefone, "Telefone copiado!");
                             }}
                             title="Clique para copiar"
                           >
-                            <Phone className="w-4 h-4 text-gray-500" />
+                            <Phone className="w-3.5 h-3.5 text-gray-500" />
                             <span>{telefone}</span>
-                            <Copy className="w-3.5 h-3.5 text-gray-500" />
                           </button>
                         ) : (
-                          <span className="text-sm text-gray-500">—</span>
+                          <span className="text-xs text-gray-500">—</span>
                         )}
                       </td>
 
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-2 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
-                            className="px-3 py-1.5 rounded-lg border text-xs bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 transition font-semibold flex items-center gap-1"
+                            className="px-2 py-1.5 rounded-lg border text-[10px] bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 transition font-bold flex items-center gap-1"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/auditoria/${c.id}`);
                             }}
                           >
-                            <ClipboardCheck size={14} />
-                            Auditoria
+                            <ClipboardCheck size={12} />
+                            <span className="hidden sm:inline">Conf.</span>
                           </button>
                           <button
                             type="button"
-                            className="px-3 py-1.5 rounded-lg border text-xs hover:bg-red-50 hover:border-red-200 hover:text-[#C00000] transition font-semibold"
+                            className="px-2 py-1.5 rounded-lg border text-[10px] bg-blue-50 border-blue-100 text-blue-700 hover:bg-blue-100 transition font-bold"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/clientes/${c.id}/hub`);
                             }}
                           >
-                            Hub ✦
+                            <span className="hidden sm:inline">Relatórios</span>
+                            <span className="sm:hidden">Relat.</span>
                           </button>
                           <button
                             type="button"
-                            className="px-3 py-1.5 rounded-lg border text-xs hover:bg-gray-50 transition"
+                            className="px-2 py-1.5 rounded-lg border text-[10px] hover:bg-gray-50 transition font-bold"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/clientes/${c.id}/editar`);
                             }}
                           >
-                            Editar <ExternalLink className="inline w-3 h-3 ml-1" />
+                            <span className="hidden sm:inline">Editar</span>
+                            <span className="sm:hidden">Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="px-2 py-1.5 rounded-lg border text-[10px] bg-red-50 border-red-100 text-red-700 hover:bg-red-100 transition font-bold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setClienteToDelete(c);
+                              setDeleteModalOpen(true);
+                            }}
+                          >
+                            <Trash2 size={12} className="sm:hidden" />
+                            <span className="hidden sm:inline">Excluir</span>
                           </button>
                         </div>
                       </td>
-
                     </tr>
                   );
                 })}
@@ -734,7 +778,7 @@ export default function ClientesList() {
                   />
 
                   <ActionButton
-                    label="Auditoria"
+                    label="Conferência"
                     icon={<ClipboardCheck className="w-4 h-4" />}
                     onClick={() => {
                       if (!selected) return;
@@ -750,6 +794,19 @@ export default function ClientesList() {
                       window.location.href = `/clientes/${selected.id}`;
                     }}
                   />
+
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700 hover:bg-red-100 transition-all duration-150 border border-red-200"
+                    onClick={() => {
+                      if (!selected) return;
+                      setClienteToDelete(selected);
+                      setDeleteModalOpen(true);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Excluir</span>
+                  </button>
                 </div>
               </div>
             </DialogHeader>
@@ -773,6 +830,16 @@ export default function ClientesList() {
                 <InfoCard title="Cidades atendidas" icon={<MapPin className="w-4 h-4" />}>
                   {(selected.cidades_atendidas || []).map((c) => c.nome).join(", ") || "—"}
                 </InfoCard>
+
+                {selected.observacoes && (
+                  <div className="md:col-span-2">
+                    <InfoCard title="Observações Internas" icon={<Search className="w-4 h-4" />}>
+                      <div className="whitespace-pre-line text-xs italic text-gray-600">
+                        {selected.observacoes}
+                      </div>
+                    </InfoCard>
+                  </div>
+                )}
               </div>
 
               <div className="border rounded-2xl p-4 bg-white">
@@ -825,6 +892,43 @@ export default function ClientesList() {
               <Skeleton className="h-24 w-full" />
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirmar Exclusão
+            </DialogTitle>
+            <DialogDescription className="py-4">
+              Você está prestes a excluir o cliente{" "}
+              <span className="font-bold text-gray-900">
+                {clienteToDelete?.nome_fantasia}
+              </span>
+              . <br />
+              Esta ação é <span className="text-red-600 font-bold uppercase">irreversível</span> e removerá
+              todos os dados vinculados (contatos, faturas, vagas, etc).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg border hover:bg-gray-50 text-sm font-medium transition"
+              onClick={() => setDeleteModalOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-medium transition"
+              onClick={handleDelete}
+            >
+              Sim, excluir permanentemente
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

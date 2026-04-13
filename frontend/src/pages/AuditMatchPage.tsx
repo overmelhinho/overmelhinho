@@ -184,7 +184,7 @@ const AuditMatchPage: React.FC = () => {
             return api.put(`/v1/clientes/${id}`, payload);
         },
         onSuccess: () => {
-            toast.success('Cadastro atualizado e auditoria registrada!');
+            toast.success('Cadastro atualizado e conferência registrada!');
             queryClient.invalidateQueries({ queryKey: ['cliente', id] });
             queryClient.invalidateQueries({ queryKey: ['audit-logs', id] });
             queryClient.invalidateQueries({ queryKey: ['audit-queue'] });
@@ -200,11 +200,6 @@ const AuditMatchPage: React.FC = () => {
     };
 
     const handleSave = () => {
-        const pendingCount = fields.filter(f => auditStatus[f.id] === 'pending' && f.new !== 'Não encontrado').length;
-        if (pendingCount > 0) {
-            toast.error(`Existem ${pendingCount} campos pendentes de revisão.`);
-            return;
-        }
 
         const payload: any = {
             nome_fantasia: client?.nome_fantasia,
@@ -311,7 +306,7 @@ const AuditMatchPage: React.FC = () => {
                         </div>
                         <div>
                             <h1 className="text-4xl font-serif text-slate-800 tracking-tight">
-                                Auditoria de <span className="text-[#B70F0A]">Dados</span>
+                                Conferência de <span className="text-[#B70F0A]">Dados</span>
                             </h1>
                             <p className="text-slate-500 font-medium">Resolvendo divergências para <span className="text-slate-900 font-bold">{client?.nome_fantasia}</span></p>
                         </div>
@@ -324,9 +319,9 @@ const AuditMatchPage: React.FC = () => {
                             <Calendar className="w-5 h-5" />
                         </div>
                         <div>
-                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block">Governança</span>
+                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest block">Auditado em</span>
                             <span className="text-sm font-bold text-slate-700">
-                                {client?.last_audit_at ? format(new Date(client.last_audit_at), "dd 'de' MMMM", { locale: ptBR }) : 'Nunca auditado'}
+                                {client?.last_audit_at ? format(new Date(client.last_audit_at), "dd 'de' MMMM", { locale: ptBR }) : 'Nunca conferido'}
                             </span>
                         </div>
                     </div>
@@ -526,7 +521,7 @@ const AuditMatchPage: React.FC = () => {
                             Publicar Alterações
                         </button>
 
-                        <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-tighter">Ao publicar, o status de auditoria será renovado por 180 dias.</p>
+                        <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-tighter">Ao publicar, o status de conferência será renovado por 180 dias.</p>
 
                         <div className="pt-6 border-t border-slate-100">
                             <div className="flex items-center gap-2 mb-4">
@@ -543,7 +538,7 @@ const AuditMatchPage: React.FC = () => {
                                     <div key={log.id} className="flex items-start gap-3">
                                         <div className="w-2 h-2 rounded-full bg-slate-200 mt-1.5" />
                                         <div>
-                                            <p className="text-xs font-bold text-slate-600">{log.action === 'audit_save' ? 'Auditoria Concluída' : 'Dados Atualizados'}</p>
+                                            <p className="text-xs font-bold text-slate-600">{log.action === 'audit_save' ? 'Conferência Concluída' : 'Dados Atualizados'}</p>
                                             <p className="text-[10px] text-slate-400 font-medium">Por {log.actor?.name || 'Sistema'}</p>
                                         </div>
                                     </div>

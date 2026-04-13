@@ -80,7 +80,7 @@ export default function JobManagerPage() {
             {/* Header */}
             <div className="mb-6 flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Vagas PRO</h1>
+                    <h1 className="text-2xl font-bold text-slate-800">Vagas de Emprego</h1>
                     <p className="text-sm text-slate-500">Gerencie as vagas e candidatos</p>
                 </div>
                 <Link

@@ -17,30 +17,34 @@ import MaskedInput from "@/components/ui/masked-input";
 import { useNavigate } from "react-router-dom";
 
 const cidadesSerra = [
-  "André da Rocha",
-  "Antônio Prado",
+  "Alto Feliz",
+  "Arroio do Sal",
+  "Barão",
   "Bento Gonçalves",
-  "Bom Jesus",
-  "Cambará do Sul",
+  "Boa Vista do Sul",
+  "Bom Princípio",
+  "Campo Bom",
+  "Canela",
   "Carlos Barbosa",
   "Caxias do Sul",
-  "Cotiporã",
+  "Coronel Pilar",
   "Farroupilha",
+  "Feliz",
   "Flores da Cunha",
   "Garibaldi",
   "Gramado",
-  "Nova Araçá",
-  "Nova Bassano",
-  "Nova Pádua",
-  "Nova Petrópolis",
+  "Lajeado",
+  "Monte Belo do Sul",
   "Nova Prata",
   "Nova Roma do Sul",
+  "Novo Hamburgo",
   "Pinto Bandeira",
-  "Protásio Alves",
-  "São Francisco de Paula",
-  "São José dos Ausentes",
+  "Salvador do Sul",
   "São Marcos",
-  "Veranópolis",
+  "São Pedro da Serra",
+  "São Sebastião do Caí",
+  "São Vendelino",
+  "Veranópolis"
 ];
 
 interface Props {
@@ -234,6 +238,18 @@ export default function PreFetchModal({
   const [nome, setNome] = useState(nomeInicial || "");
   const [cnpj, setCnpj] = useState(cnpjInicial || "");
 
+  useEffect(() => {
+    if (cidadeInicial) setCidade(cidadeInicial);
+  }, [cidadeInicial]);
+
+  useEffect(() => {
+    if (nomeInicial) setNome(nomeInicial);
+  }, [nomeInicial]);
+
+  useEffect(() => {
+    if (cnpjInicial) setCnpj(cnpjInicial);
+  }, [cnpjInicial]);
+
   const [loading, setLoading] = useState(false);
   const [etapa, setEtapa] = useState<Etapa>(null);
 
@@ -327,8 +343,7 @@ export default function PreFetchModal({
         params: {
           query: query || "empresa", // backend exige query
           cnpj: temCnpj ? onlyDigits(cnpj) : undefined,
-          location: "-29.2244,-51.3409",
-          radius: 80000,
+          cidade: cidade.trim(),
         },
       });
 
@@ -432,7 +447,7 @@ export default function PreFetchModal({
         )}
 
         {/* Conteúdo */}
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
           {/* Linha 1 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -473,7 +488,7 @@ export default function PreFetchModal({
               </label>
               <div className="relative group">
                 <MaskedInput
-                  mask={onlyDigits(cnpj).length <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
+                  mask={onlyDigits(cnpj).length < 11 ? "999.999.999-99" : "99.999.999/9999-99"}
                   maskChar=""
                   formatChars={{ '9': '[0-9]' }}
                   value={cnpj}
@@ -674,14 +689,7 @@ export default function PreFetchModal({
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500">Google Place ID</label>
-                    <input
-                      value={sugestoes.google_place_id || ""}
-                      readOnly
-                      className="w-full border rounded-md px-2 py-2 text-sm bg-gray-50"
-                    />
-                  </div>
+
 
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-gray-500">Endereço</label>

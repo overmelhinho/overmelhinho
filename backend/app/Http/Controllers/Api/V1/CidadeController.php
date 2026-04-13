@@ -18,9 +18,19 @@ class CidadeController extends Controller
             ->unique()
             ->values();
 
+        $operacionais = [
+            'Alto Feliz', 'Arroio do Sal', 'Barão', 'Bento Gonçalves', 'Boa Vista do Sul',
+            'Bom Princípio', 'Campo Bom', 'Canela', 'Carlos Barbosa', 'Caxias do Sul',
+            'Coronel Pilar', 'Farroupilha', 'Feliz', 'Flores da Cunha', 'Garibaldi',
+            'Gramado', 'Lajeado', 'Monte Belo do Sul', 'Nova Prata', 'Nova Roma do Sul',
+            'Novo Hamburgo', 'Pinto Bandeira', 'Salvador do Sul', 'São Marcos',
+            'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
+        ];
+
         $query = Cidade::query()
             ->select(['id', 'nome', 'uf'])
             ->where('uf', 'RS')
+            ->whereIn('nome', $operacionais)
             ->orderBy('nome');
 
         // Caso venha ids=1,2,3 (hidratar labels das selecionadas)

@@ -61,7 +61,7 @@ export default function Sidebar() {
     },
     {
       to: "/dashboard/foco",
-      label: "Fila de Foco",
+      label: "Materiais Pendentes",
       icon: <Target size={18} />,
     },
 
@@ -70,7 +70,7 @@ export default function Sidebar() {
     { to: "/clientes", label: "Clientes", icon: <Users size={18} />, perms: ["view_client"] },
     {
       to: "/auditoria",
-      label: "Auditoria",
+      label: "Conferências",
       icon: <ShieldCheck size={18} />,
       perms: ["view_dashboard"],
     },
@@ -107,12 +107,12 @@ export default function Sidebar() {
     },
     { to: "/relatorios", label: "Relatórios", icon: <FileText size={18} />, perms: ["view_report"] },
     { to: "/tickets", label: "Tickets", icon: <Ticket size={18} /> },
-    { to: "/vagas", label: "Vagas PRO", icon: <Briefcase size={18} /> },
+    { to: "/vagas", label: "Vagas de Emprego", icon: <Briefcase size={18} /> },
   ];
 
   const itemsBottom: Item[] = [
     { to: "/usuarios", label: "Usuários", icon: <UserCog size={18} />, perms: ["manage_users"] },
-    { to: "/funcoes", label: "Funções", icon: <ShieldCheck size={18} />, perms: ["manage roles", "manage_roles"] },
+    { to: "/funcoes", label: "Cargos e Funções", icon: <ShieldCheck size={18} />, perms: ["manage roles", "manage_roles"] },
     { to: "/permissoes", label: "Permissões", icon: <KeyRound size={18} />, perms: ["manage permissions", "manage_permissions"] },
     { to: "/planos", label: "Planos", icon: <CreditCard size={18} /> },
   ];

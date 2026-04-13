@@ -42,8 +42,8 @@ export default function CommandCenterKPIs() {
             {/* Header com Contexto */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">Centro de Comando</h1>
-                    <p className="text-gray-500 font-medium text-lg">Visão estratégica e inteligência em tempo real.</p>
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tight">Centro de Comando</h1>
+                    <p className="text-gray-500 font-medium text-xs">Visão estratégica e inteligência em tempo real.</p>
                 </div>
                 <div className="bg-white px-4 py-2 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -54,7 +54,7 @@ export default function CommandCenterKPIs() {
             {/* Top KPIs - Bento Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {/* 1. Faturamento */}
-                <div className="bg-white p-8 rounded-[38px] border border-white shadow-xl shadow-gray-200/50 group hover:scale-[1.02] transition-all">
+                <div className="bg-white p-6 rounded-[38px] border border-white shadow-xl shadow-gray-200/50 group hover:scale-[1.02] transition-all">
                     <div className="flex justify-between items-start mb-6">
                         <div className="bg-green-50 p-3 rounded-2xl text-green-600">
                             <DollarSign size={24} />
@@ -64,11 +64,11 @@ export default function CommandCenterKPIs() {
                         </div>
                     </div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Receita Mensal (Estimada)</p>
-                    <h3 className="text-3xl font-black text-gray-900">R$ {financial.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+                    <h3 className="text-xl font-black text-gray-900">R$ {financial.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
                 </div>
 
                 {/* 2. Conversão */}
-                <div className="bg-white p-8 rounded-[38px] border border-white shadow-xl shadow-gray-200/50 group hover:scale-[1.02] transition-all">
+                <div className="bg-white p-6 rounded-[38px] border border-white shadow-xl shadow-gray-200/50 group hover:scale-[1.02] transition-all">
                     <div className="flex justify-between items-start mb-6">
                         <div className="bg-blue-50 p-3 rounded-2xl text-blue-600">
                             <Target size={24} />
@@ -78,11 +78,11 @@ export default function CommandCenterKPIs() {
                         </div>
                     </div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Taxa de Conversão</p>
-                    <h3 className="text-3xl font-black text-gray-900">{sales.conversion_rate}%</h3>
+                    <h3 className="text-xl font-black text-gray-900">{sales.conversion_rate}%</h3>
                 </div>
 
                 {/* 3. Atendimento */}
-                <div className="bg-white p-8 rounded-[38px] border border-white shadow-xl shadow-gray-200/50 group hover:scale-[1.02] transition-all">
+                <div className="bg-white p-6 rounded-[38px] border border-white shadow-xl shadow-gray-200/50 group hover:scale-[1.02] transition-all">
                     <div className="flex justify-between items-start mb-6">
                         <div className="bg-orange-50 p-3 rounded-2xl text-orange-600">
                             <MessageSquare size={24} />
@@ -90,28 +90,28 @@ export default function CommandCenterKPIs() {
                         <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded-lg uppercase">Críticos: {sales.quotes_emergency}</span>
                     </div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Orçamentos Pendentes</p>
-                    <h3 className="text-3xl font-black text-gray-900">{sales.quotes_total}</h3>
+                    <h3 className="text-xl font-black text-gray-900">{sales.quotes_total}</h3>
                 </div>
 
                 {/* 4. Suporte */}
-                <div className="bg-white p-8 rounded-[38px] border border-white shadow-xl shadow-gray-200/50 group hover:scale-[1.02] transition-all">
+                <div className="bg-white p-6 rounded-[38px] border border-white shadow-xl shadow-gray-200/50 group hover:scale-[1.02] transition-all">
                     <div className="flex justify-between items-start mb-6">
                         <div className="bg-red-50 p-3 rounded-2xl text-[#C00000]">
                             <Briefcase size={24} />
                         </div>
                     </div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Tickets em Aberto</p>
-                    <h3 className="text-3xl font-black text-gray-900">{operational.open_tickets}</h3>
+                    <h3 className="text-xl font-black text-gray-900">{operational.open_tickets}</h3>
                 </div>
             </div>
 
             {/* Middle Section - Insights & Priority */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Lado Esquerdo: Funil e Performance (8 colunas) */}
-                <div className="lg:col-span-8 bg-white rounded-[44px] p-10 border border-white shadow-2xl">
+                {/* Lado Esquerdo: Funil e Performance (9 colunas) */}
+                <div className="lg:col-span-9 bg-white rounded-[44px] p-6 border border-white shadow-2xl">
                     <div className="flex justify-between items-center mb-10">
-                        <h4 className="text-xl font-black text-gray-900 flex items-center gap-3">
-                            <TrendingUp className="text-[#C00000]" />
+                        <h4 className="text-base font-black text-gray-900 flex items-center gap-3">
+                            <TrendingUp className="text-[#C00000] w-4 h-4" />
                             Performance de Conversão
                         </h4>
                         <div className="flex gap-2">
@@ -133,9 +133,9 @@ export default function CommandCenterKPIs() {
                                         <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{item.name}</span>
                                         <span className="text-sm font-black text-gray-900">{item.value}</span>
                                     </div>
-                                    <div className="h-14 bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 p-1">
+                                    <div className="h-8 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 p-1">
                                         <div
-                                            className="h-full bg-gradient-to-r from-[#C00000] to-[#E00000] rounded-xl shadow-lg transition-all duration-1000 ease-out"
+                                            className="h-full bg-gradient-to-r from-[#C00000] to-[#E00000] rounded-lg shadow-lg transition-all duration-1000 ease-out"
                                             style={{ width: `${maxWidths[idx]}%` }}
                                         />
                                     </div>
@@ -173,30 +173,30 @@ export default function CommandCenterKPIs() {
                     </div>
                 </div>
 
-                {/* Lado Direito: Próximas Renovações & Urgências (4 colunas) */}
-                <div className="lg:col-span-4 space-y-6">
+                {/* Lado Direito: Próximas Renovações & Urgências (3 colunas) */}
+                <div className="lg:col-span-3 space-y-6">
                     {/* Card de Renovações Prioritárias */}
-                    <div className="bg-gray-900 rounded-[44px] p-8 text-white shadow-2xl shadow-red-900/10 relative overflow-hidden group">
+                    <div className="bg-gray-900 rounded-[38px] p-6 text-white shadow-2xl shadow-red-900/10 relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
 
                         <div className="relative">
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="bg-white/10 p-2.5 rounded-xl">
-                                    <RefreshCw className="text-white" size={20} />
+                             <div className="flex items-center gap-3 mb-3">
+                                <div className="bg-white/10 p-1.5 rounded-xl">
+                                    <RefreshCw className="text-white" size={16} />
                                 </div>
-                                <h4 className="text-lg font-black tracking-tight">Vincendos (30 dias)</h4>
+                                <h4 className="text-sm font-black tracking-tight">Vincendos (30 dias)</h4>
                             </div>
 
-                            <div className="mb-10">
-                                <h2 className="text-5xl font-black mb-2">{financial.upcoming_renewals}</h2>
-                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest leading-relaxed">
-                                    Clientes aguardando o<br />envio do Magic Link.
+                            <div className="mb-4">
+                                <h2 className="text-2xl font-black mb-1">{financial.upcoming_renewals}</h2>
+                                <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest leading-relaxed">
+                                    Clientes aguardando o envio do Magic Link.
                                 </p>
                             </div>
 
-                            <a href="/financeiro" className="w-full h-14 bg-white text-gray-900 rounded-2xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest hover:bg-red-50 transition-all">
+                            <a href="/financeiro" className="w-full h-11 bg-white text-gray-900 rounded-xl flex items-center justify-center gap-2 font-black uppercase text-[9px] tracking-widest hover:bg-red-50 transition-all">
                                 Ir para Renovações
-                                <ChevronRight size={16} />
+                                <ChevronRight size={14} />
                             </a>
                         </div>
                     </div>

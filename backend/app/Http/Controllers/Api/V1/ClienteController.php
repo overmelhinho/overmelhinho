@@ -302,6 +302,7 @@ class ClienteController extends Controller
                 'status_assinatura',
                 'possui_publicidade',
                 'seo_keywords',
+                'observacoes',
                 'created_at',
                 'updated_at',
             ]);
@@ -389,15 +390,26 @@ class ClienteController extends Controller
             });
         }
 
-        // ✅ Ordenação SaaS
-        $query->orderByRaw("
-            CASE
-                WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0
-                WHEN tipo_cliente = 'pagante' THEN 1
-                ELSE 2
-            END ASC
-        ");
-        $query->orderBy('updated_at', 'desc');
+        // ✅ Ordenação
+        $sort = $request->input('sort');
+
+        if ($sort === 'latest') {
+            $query->orderBy('created_at', 'desc');
+        } elseif ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+        } elseif ($sort === 'nome' || $sort === 'name') {
+            $query->orderBy('nome_fantasia', 'asc');
+        } else {
+            // ✅ Default: Ordenação SaaS (Rank de pagamento) + updated_at
+            $query->orderByRaw("
+                CASE
+                    WHEN tipo_cliente = 'pagante' AND status_assinatura = 'ativa' THEN 0
+                    WHEN tipo_cliente = 'pagante' THEN 1
+                    ELSE 2
+                END ASC
+            ");
+            $query->orderBy('updated_at', 'desc');
+        }
 
         $clientes = $query->paginate($perPage);
 
@@ -1909,25 +1921,33 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         $cidade = $request->input('cidade');
         $tipo = $request->input('tipo');
 
-        $query = Cliente::where('audit_status', $status)
+        $query = Cliente::query()
             ->with(['enderecos', 'contatos']);
 
+        // Se houver busca (q), traz todas independente do status. Senão, filtra pelo status (pending/ok).
+        if ($request->filled('q')) {
+            $q = $request->input('q');
+            $query->where(function($sub) use ($q) {
+                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
+                    ->orWhere('razao_social', 'ilike', "%{$q}%")
+                    ->orWhereHas('contatos', function($cq) use ($q) {
+                        $cq->where('telefone_principal', 'ilike', "%{$q}%")
+                           ->orWhere('celular', 'ilike', "%{$q}%")
+                           ->orWhere('telefone_secundario', 'ilike', "%{$q}%");
+                    });
+            });
+        } else {
+            $query->where('audit_status', $status);
+        }
+
         if ($cidade) {
-            $query->whereHas('enderecos', function($q) use ($cidade) {
-                $q->where('cidade', 'ilike', "%{$cidade}%");
+            $query->whereHas('enderecos', function($qSearch) use ($cidade) {
+                $qSearch->where('cidade', 'ilike', "%{$cidade}%");
             });
         }
 
         if ($tipo) {
             $query->where('tipo_cliente', $tipo);
-        }
-
-        if ($request->filled('q')) {
-            $q = $request->input('q');
-            $query->where(function($sub) use ($q) {
-                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
-                    ->orWhere('razao_social', 'ilike', "%{$q}%");
-            });
         }
 
         $query->orderByRaw("CASE WHEN tipo_cliente = 'pagante' THEN 0 ELSE 1 END")
@@ -1943,10 +1963,21 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             ->when($request->input('user_id'), function($q, $uid) {
                 return $q->where('actor_user_id', $uid);
             })
+            ->when($request->input('date_start'), function($q, $start) {
+                return $q->whereDate('created_at', '>=', $start);
+            })
+            ->when($request->input('date_end'), function($q, $end) {
+                return $q->whereDate('created_at', '<=', $end);
+            })
             ->when($request->input('q'), function($q, $term) {
                 return $q->whereHas('cliente', function($sq) use ($term) {
                     $sq->where('nome_fantasia', 'ilike', "%{$term}%")
-                       ->orWhere('razao_social', 'ilike', "%{$term}%");
+                       ->orWhere('razao_social', 'ilike', "%{$term}%")
+                       ->orWhereHas('contatos', function($cq) use ($term) {
+                           $cq->where('telefone_principal', 'ilike', "%{$term}%")
+                              ->orWhere('celular', 'ilike', "%{$term}%")
+                              ->orWhere('telefone_secundario', 'ilike', "%{$term}%");
+                       });
                 });
             })
             ->orderBy('created_at', 'desc');
@@ -1998,5 +2029,42 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         $users = \App\Models\User::whereIn('id', $userIds)->get(['id', 'name']);
 
         return response()->json($users);
+    }
+    /**
+     * ✅ Excluir Cliente e todas as suas relações
+     */
+    public function destroy($id)
+    {
+        $cliente = Cliente::findOrFail($id);
+
+        DB::beginTransaction();
+        try {
+            // Remove relações para evitar erros de constraint (dependendo do DB)
+            $cliente->enderecos()->delete();
+            $cliente->contatos()->delete();
+            $cliente->redesSociais()->delete();
+            $cliente->galeriaImagens()->delete();
+            $cliente->reviews()->delete();
+            $cliente->renewals()->delete();
+            $cliente->invoices()->delete();
+            $cliente->interacoes()->delete();
+            $cliente->jobOpportunities()->delete();
+
+            // Tabelas pivot
+            $cliente->segmentos()->detach();
+            $cliente->cidadesAtendidas()->detach();
+
+            $cliente->delete();
+
+            DB::commit();
+
+            Log::info("CLIENTE_DELETADO", ['id' => $id, 'nome' => $cliente->nome_fantasia]);
+
+            return response()->json(['message' => 'Cliente excluído com sucesso!']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("ERRO_AO_DELETAR_CLIENTE", ['id' => $id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Erro ao excluir cliente. Verifique se existem vínculos que impedem a exclusão.'], 500);
+        }
     }
 }

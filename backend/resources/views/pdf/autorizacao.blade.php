@@ -6,16 +6,16 @@
     <title>Autorização nº {{ $autorizacao->numero }}</title>
     <style>
         @page {
-            margin: 1cm;
+            margin: 1.5cm 2.5cm;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 10px;
-            color: #334155;
+            font-size: 11px;
+            color: #000;
             background: #fff;
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         .container {
@@ -40,9 +40,9 @@
             letter-spacing: 0.5px;
         }
         .empresa-info p {
-            font-size: 9px;
-            color: #64748b;
-            line-height: 1.5;
+            font-size: 10px;
+            color: #000;
+            line-height: 1.6;
         }
         .doc-info {
             text-align: right;
@@ -83,16 +83,17 @@
             vertical-align: top;
         }
         .label {
-            font-size: 8px;
-            color: #94a3b8;
+            font-size: 9px;
+            color: #000;
+            font-weight: bold;
             text-transform: uppercase;
             display: block;
             margin-bottom: 2px;
         }
         .value {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 600;
-            color: #1e293b;
+            color: #000;
         }
 
         /* ── TABLES ─────── */
@@ -106,16 +107,16 @@
         }
         table.styled-table th {
             background-color: #f1f5f9;
-            color: #475569;
+            color: #000;
             text-align: left;
             padding: 8px 12px;
-            font-size: 9px;
+            font-size: 10px;
             text-transform: uppercase;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #000;
         }
         table.styled-table td {
             padding: 8px 12px;
-            font-size: 10px;
+            font-size: 11px;
             border-bottom: 1px solid #f1f5f9;
         }
         .text-right { text-align: right; }
@@ -247,7 +248,7 @@
                    @endphp
                    <span class="badge {{ $statusClass }}">{{ $autorizacao->status_label }}</span>
                 </div>
-                <div style="font-size: 9px; color: #64748b; margin-top: 5px;">
+                <div style="font-size: 10px; color: #000; margin-top: 5px;">
                     Emitido em: {{ $autorizacao->created_at->format('d/m/Y H:i') }}
                 </div>
             </td>
@@ -289,8 +290,12 @@
         <tr>
             <td>
                 @php $end = $autorizacao->cliente->enderecos->first(); @endphp
-                <span class="label">Cidade / Estado</span>
-                <span class="value">{{ $end?->cidade ?? '—' }} / {{ $end?->estado ?? '—' }}</span>
+                <span class="label">Endereço Completo</span>
+                <span class="value">
+                    {{ $end?->logradouro ?? '—' }}{{ $end?->numero ? ', ' . $end->numero : '' }}
+                    {{ $end?->complemento ? ' (' . $end->complemento . ')' : '' }} - {{ $end?->bairro ?? '---' }}<br>
+                    CEP: {{ $end?->cep ?? '—' }} • {{ $end?->cidade ?? '—' }}/{{ $end?->estado ?? '—' }}
+                </span>
             </td>
             <td>
                 <span class="label">Telefones</span>
@@ -424,11 +429,20 @@
 
     {{-- Observações --}}
     @if($autorizacao->observacoes_anuncio || $autorizacao->observacoes_financeiro)
-    <div style="margin-top: 10px;">
-        <span class="label">Observações Adicionais</span>
-        <p style="font-size: 9px; color: #475569;">
-            {{ $autorizacao->observacoes_anuncio }} {{ $autorizacao->observacoes_financeiro }}
-        </p>
+    <div style="margin-top: 20px;">
+        @if($autorizacao->observacoes_anuncio)
+            <div style="margin-bottom: 15px;">
+                <span class="label">Observações do Anúncio</span>
+                <p style="font-size: 11px; color: #000; line-height: 1.6; white-space: pre-wrap;">{{ $autorizacao->observacoes_anuncio }}</p>
+            </div>
+        @endif
+
+        @if($autorizacao->observacoes_financeiro)
+            <div>
+                <span class="label">Observações sobre o Financeiro</span>
+                <p style="font-size: 11px; color: #000; line-height: 1.6; white-space: pre-wrap;">{{ $autorizacao->observacoes_financeiro }}</p>
+            </div>
+        @endif
     </div>
     @endif
 

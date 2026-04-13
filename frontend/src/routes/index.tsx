@@ -51,7 +51,7 @@ import CampanhaCreate from "@/pages/campanhas/CampanhaCreate/index";
 import CampanhaDetails from "@/pages/campanhas/CampanhaDetails";
 import CampanhaEdit from "@/pages/campanhas/CampanhaWizard/CampanhaEditWizard";
 
-// ✅ Vagas PRO
+// ✅ Vagas de Emprego
 import JobManagerPage from "@/pages/vagas/JobManagerPage";
 import JobCreatePage from "@/pages/vagas/JobCreatePage";
 import JobEditPage from "@/pages/vagas/JobEditPage";
@@ -455,7 +455,7 @@ const router = createBrowserRouter([
     ),
   },
 
-  // ✅ Vagas PRO - Público (sem auth e sem layout)
+  // ✅ Vagas de Emprego - Público (sem auth e sem layout)
   { path: "/oportunidades", element: <PublicJobList /> },
   { path: "/oportunidades/:id", element: <PublicJobDetail /> },
 
@@ -466,11 +466,11 @@ const router = createBrowserRouter([
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password/:token", element: <ResetPasswordPage /> },
 
-  // ✅ Vagas PRO - Público (sem autenticação)
+  // ✅ Vagas de Emprego - Público (sem autenticação)
   // NOTA: O site público (overmelhinho.com.br) é um frontend separado.
   // Aqui ficam apenas as rotas do painel admin (dash.overmelhinho.com.br).
 
-  // ✅ Vagas PRO - Admin
+  // ✅ Vagas de Emprego - Admin
   {
     path: "/vagas",
     element: (

@@ -349,10 +349,10 @@ export default function TabIdentificacao() {
 
         <div>
           <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
-            <Hash className="w-4 h-4 text-[#B70F0A]" /> CPF / CNPJ*
+            <Hash className="w-4 h-4 text-[#B70F0A]" /> CPF / CNPJ
           </label>
           <MaskedInput
-            mask={values.cnpj?.replace(/\D/g, "").length <= 11 ? "999.999.999-99" : "99.999.999/9999-99"}
+            mask={values.cnpj?.replace(/\D/g, "").length < 11 ? "999.999.999-99" : "99.999.999/9999-99"}
             maskChar=""
             formatChars={{ '9': '[0-9]' }}
             name="cnpj"
@@ -460,30 +460,7 @@ export default function TabIdentificacao() {
           </div>
         </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-[#B70F0A]" /> Google Place ID
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              name="google_place_id"
-              placeholder="Chave única do Google Maps"
-              value={values.google_place_id || ""}
-              onChange={handleChange}
-              className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
-            />
-            <button
-              type="button"
-              onClick={handleGoogleLookup}
-              disabled={isLookingUpGoogle}
-              className="p-2 border rounded-md hover:bg-gray-50 text-[#B70F0A]"
-              title="Buscar no Google Maps"
-            >
-              <Search className={`w-4 h-4 ${isLookingUpGoogle ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
+
 
         {/* ✅ SEO Keywords moderno */}
         <div className="md:col-span-2 space-y-2">
@@ -705,6 +682,21 @@ export default function TabIdentificacao() {
               A IA já pode preencher automaticamente quando você usar “Buscar com IA”.
             </span>
           </div>
+        </div>
+
+        {/* Observações */}
+        <div className="md:col-span-2">
+          <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+            <Search className="w-4 h-4 text-[#B70F0A]" /> Observações (Uso Interno)
+          </label>
+          <textarea
+            name="observacoes"
+            value={values.observacoes || ""}
+            onChange={handleChange}
+            rows={4}
+            placeholder="Informações úteis para uso interno do sistema..."
+            className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] resize-none"
+          />
         </div>
       </div>
     </div>

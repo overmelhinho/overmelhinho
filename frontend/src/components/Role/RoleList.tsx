@@ -34,7 +34,7 @@ export default function RoleList() {
     <Card>
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-red-700">Funções (Roles)</h2>
+          <h2 className="text-xl font-semibold text-red-700">Cargos e Funções</h2>
           <Button onClick={handleNew} className="bg-[#D62828] text-white rounded-full">
             <Plus size={16} className="mr-2" /> Nova Função
           </Button>

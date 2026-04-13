@@ -255,6 +255,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/send-link',       [AutorizacaoController::class, 'sendLink']);
         Route::post('/{id}/justify',         [AutorizacaoController::class, 'justify']);
         Route::post('/{id}/generate-invoices', [AutorizacaoController::class, 'generateInvoices']);
+        Route::post('/download-batch', [AutorizacaoController::class, 'downloadBatch']);
     });
 
     // ✅ Orçamentos com IA

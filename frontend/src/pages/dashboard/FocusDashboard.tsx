@@ -77,7 +77,7 @@ export default function FocusDashboard() {
         <div className="min-h-screen bg-[#F2F2F2] p-4 md:p-8">
             <header className="mb-8">
                 <h1 className="text-sm font-bold uppercase tracking-widest text-[#B70F0A]">Meu Dia</h1>
-                <p className="text-3xl font-bold text-gray-900">Fila de Foco</p>
+                <p className="text-xl font-bold text-gray-900">Fila de Foco</p>
             </header>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -93,7 +93,7 @@ export default function FocusDashboard() {
                         </div>
 
                         <div className="mt-8">
-                            <h2 className="text-4xl font-black leading-tight text-gray-900">{mainTicket.titulo}</h2>
+                            <h2 className="text-xl font-black leading-tight text-gray-900">{mainTicket.titulo}</h2>
                             <div className="mt-6 flex flex-wrap gap-4">
                                 <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-4 py-2">
                                     <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
@@ -110,7 +110,7 @@ export default function FocusDashboard() {
                             </div>
 
                             <div className="mt-8 border-t border-gray-100 pt-8">
-                                <p className="text-lg leading-relaxed text-gray-600 line-clamp-3">
+                                <p className="text-sm leading-relaxed text-gray-600 line-clamp-3">
                                     {mainTicket.descricao || "Sem descrição disponível para esta tarefa."}
                                 </p>
                             </div>
@@ -119,14 +119,14 @@ export default function FocusDashboard() {
                                 <button
                                     onClick={handleFinish}
                                     disabled={!!finishingId}
-                                    className="flex min-w-[200px] items-center justify-center gap-2 rounded-2xl bg-[#B70F0A] py-5 px-8 text-lg font-bold text-white shadow-xl shadow-red-900/20 transition-all hover:scale-[1.02] hover:bg-[#8e0d08] active:scale-95 disabled:scale-100 disabled:opacity-50"
+                                    className="flex min-w-[200px] items-center justify-center gap-2 rounded-2xl bg-[#B70F0A] py-3 px-8 text-sm font-bold text-white shadow-xl shadow-red-900/20 transition-all hover:scale-[1.02] hover:bg-[#8e0d08] active:scale-95 disabled:scale-100 disabled:opacity-50"
                                 >
-                                    {finishingId ? <Loader className="animate-spin" /> : <CheckCircle2 />}
+                                    {finishingId ? <Loader className="animate-spin" /> : <CheckCircle2 size={18} />}
                                     CONCLUIR TAREFA
                                 </button>
                                 <button
                                     onClick={() => navigate(`/tickets/${mainTicket.id}`)}
-                                    className="rounded-2xl border border-gray-200 bg-white py-5 px-8 text-lg font-bold text-gray-700 transition-all hover:bg-gray-50"
+                                    className="rounded-2xl border border-gray-200 bg-white py-3 px-8 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50"
                                 >
                                     VER DETALHES
                                 </button>
@@ -168,10 +168,10 @@ export default function FocusDashboard() {
                     {/* Status Card */}
                     <div className="rounded-[2rem] bg-gray-900 p-8 text-white shadow-lg">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Progresso</h3>
-                            <span className="text-3xl font-black text-[#B70F0A]">{tickets.length}</span>
+                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Progresso</h3>
+                            <span className="text-xl font-black text-[#B70F0A]">{tickets.length}</span>
                         </div>
-                        <p className="mt-2 text-sm text-gray-400">Tickets pendentes sob sua responsabilidade hoje.</p>
+                        <p className="mt-1 text-[10px] text-gray-400">Tickets pendentes sob sua responsabilidade hoje.</p>
 
                         <div className="mt-8 flex h-2 w-full overflow-hidden rounded-full bg-gray-800">
                             <div className="h-full bg-[#B70F0A]" style={{ width: '30%' }} />

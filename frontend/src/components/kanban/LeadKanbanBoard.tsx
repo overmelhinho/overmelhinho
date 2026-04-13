@@ -9,18 +9,18 @@ import LostDropZone from './LostDropZone';
 
 const STATUS = [
   'novo',
-  'em_contato',
   'qualificado',
   'proposta_enviada',
+  'em_contato',
   'preparando_publicacao'
 ];
 
 const statusLabels = {
   novo: 'Novo',
-  em_contato: 'Em negociação',
   qualificado: 'Qualificado',
   proposta_enviada: 'Proposta enviada',
-  preparando_publicacao: 'Preparando Publicação'
+  em_contato: 'Em negociação',
+  preparando_publicacao: 'Preparando publicações'
 };
 
 export default function LeadKanbanBoard() {

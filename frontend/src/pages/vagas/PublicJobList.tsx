@@ -57,7 +57,7 @@ export default function PublicJobList() {
             {/* Hero */}
             <div className="px-6 py-16 text-center text-white">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/80 ring-1 ring-white/20">
-                    ✨ Over Vagas PRO
+                    ✨ Over Vagas de Emprego
                 </div>
                 <h1 className="mb-4 text-4xl font-black tracking-tight md:text-5xl">
                     Encontre sua próxima oportunidade

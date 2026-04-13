@@ -31,6 +31,7 @@ class ClienteResource extends JsonResource
             'inscricao_municipal' => $this->inscricao_municipal,
             'registro_profissional' => $this->registro_profissional,
             'descricao' => $this->descricao,
+            'observacoes' => $this->observacoes,
 
             // ✅ Atributos Consolidados (Removido checks de Schema p/ performance)
             'tipo_cliente' => $this->tipo_cliente ?? 'gratuito',

@@ -155,7 +155,7 @@ export default function ClientHubPage() {
                 {/* Header */}
                 <header className="mb-8 flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Hub do Cliente</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Relatórios do Cliente</p>
                         <h1 className="text-2xl font-black text-gray-900 tracking-tighter">
                             {cliente?.nome_fantasia ?? "Carregando..."}
                         </h1>
@@ -361,7 +361,7 @@ export default function ClientHubPage() {
                                 <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-[#C00000] group-hover:scale-110 transition-transform">
                                     <Ticket size={20} />
                                 </div>
-                                <span className="text-xs font-black text-gray-600 group-hover:text-[#C00000]">Vagas PRO</span>
+                                <span className="text-xs font-black text-gray-600 group-hover:text-[#C00000]">Vagas de Emprego</span>
                             </button>
 
                             <button

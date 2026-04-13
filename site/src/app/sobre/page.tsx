@@ -29,7 +29,7 @@ export default function SobrePage() {
         { value: '30+', label: 'Anos de mercado', icon: Star },
         { value: '200k+', label: 'Usuários/mês', icon: Users },
         { value: '2M+', label: 'Buscas/ano', icon: Search },
-        { value: '30+', label: 'Cidades atendidas', icon: MapPin },
+        { value: '28', label: 'Cidades atendidas', icon: MapPin },
     ];
 
     const cidades = [

@@ -104,7 +104,7 @@ export default function QuotesPage() {
         const fone = contatoPrincipal.replace(/\D/g, "");
 
         if (!fone) {
-            toast.error(`O lojista ${lojistaNome} não possui celular cadastrado.`);
+            toast.error(`A empresa ${lojistaNome} não possui celular cadastrado.`);
             return;
         }
 
@@ -112,7 +112,7 @@ export default function QuotesPage() {
         const url = `https://wa.me/55${fone}?text=${encodeURIComponent(msg)}`;
 
         window.open(url, "_blank");
-        toast.success(`WhatsApp aberto para cobrar ${lojistaNome}`);
+        toast.success(`WhatsApp aberto para cobrar a empresa ${lojistaNome}`);
     };
 
     return (
@@ -325,7 +325,7 @@ export default function QuotesPage() {
                                                                 }`}
                                                         >
                                                             <Smartphone size={16} />
-                                                            {alreadyNotified ? 'Cobrar Manualmente' : 'Cobrar Lojista'}
+                                                            {alreadyNotified ? 'Cobrar Manualmente' : 'Cobrar Empresa'}
                                                         </button>
                                                     );
                                                 }
