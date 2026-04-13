@@ -66,10 +66,26 @@
                 </tr>
             </thead>
             <tbody>
+                @php
+                    $firstInvoice = $invoices->first();
+                    $groupId = $firstInvoice->group_id ?? '';
+                    $autorizacao = null;
+                    if (str_starts_with($groupId, 'autorizacao-')) {
+                        $authId = str_replace('autorizacao-', '', $groupId);
+                        $autorizacao = \App\Models\Autorizacao::find($authId);
+                    }
+                @endphp
+
                 @foreach($invoices as $invoice)
                 <tr>
                     <td style="font-weight: bold;">{{ $invoice->parcel_number }}/{{ $invoice->total_parcels }}</td>
-                    <td>{{ $invoice->plan->name ?? 'Serviço Avulso' }}</td>
+                    <td>
+                        @if($autorizacao)
+                            Autorização #{{ $autorizacao->numero }}
+                        @else
+                            {{ $invoice->plan->name ?? 'Serviço Avulso' }}
+                        @endif
+                    </td>
                     <td>{{ \Carbon\Carbon::parse($invoice->due_date)->format('d/m/Y') }}</td>
                     <td style="font-weight: bold;">R$ {{ number_format($invoice->amount, 2, ',', '.') }}</td>
                     <td><span class="badge">{{ strtoupper($invoice->payment_method) }}</span></td>

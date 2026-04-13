@@ -136,8 +136,25 @@ class FinancialController extends Controller
     {
         $invoices = Invoice::where('client_id', $clientId)
             ->with('plan')
-            ->orderBy('due_date', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
+
+        // Mapear números de autorização via group_id
+        $authIds = $invoices->filter(fn($i) => str_starts_with($i->group_id ?? '', 'autorizacao-'))
+            ->map(fn($i) => (int) str_replace('autorizacao-', '', $i->group_id))
+            ->unique()
+            ->toArray();
+
+        $auths = \App\Models\Autorizacao::whereIn('id', $authIds)->pluck('numero', 'id');
+
+        $invoices->each(function($i) use ($auths) {
+            if (str_starts_with($i->group_id ?? '', 'autorizacao-')) {
+                $id = (int) str_replace('autorizacao-', '', $i->group_id);
+                $i->autorizacao_numero = $auths[$id] ?? null;
+            } else {
+                $i->autorizacao_numero = null;
+            }
+        });
 
         return response()->json($invoices);
     }
@@ -151,6 +168,23 @@ class FinancialController extends Controller
             ->orderBy('due_date', 'desc')
             ->limit(100)
             ->get();
+
+        // Mapear números de autorização via group_id
+        $authIds = $invoices->filter(fn($i) => str_starts_with($i->group_id ?? '', 'autorizacao-'))
+            ->map(fn($i) => (int) str_replace('autorizacao-', '', $i->group_id))
+            ->unique()
+            ->toArray();
+
+        $auths = \App\Models\Autorizacao::whereIn('id', $authIds)->pluck('numero', 'id');
+
+        $invoices->each(function($i) use ($auths) {
+            if (str_starts_with($i->group_id ?? '', 'autorizacao-')) {
+                $id = (int) str_replace('autorizacao-', '', $i->group_id);
+                $i->autorizacao_numero = $auths[$id] ?? null;
+            } else {
+                $i->autorizacao_numero = null;
+            }
+        });
 
         return response()->json($invoices);
     }

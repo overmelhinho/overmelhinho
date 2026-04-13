@@ -38,6 +38,16 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Plan {
     id: number;
@@ -60,6 +70,7 @@ interface Invoice {
     is_permuta?: boolean;
     permuta_amount?: number;
     payable_amount?: number;
+    autorizacao_numero?: number;
 }
 
 interface Autorizacao {
@@ -97,6 +108,8 @@ export default function TabFinanceiro() {
     const [isPermuta, setIsPermuta] = useState(false);
     const [permutaAmount, setPermutaAmount] = useState<number>(0);
     const [permutaDescription, setPermutaDescription] = useState("");
+
+    const [isWarningOpen, setIsWarningOpen] = useState(false);
 
     // Fetch Invoices
     const { data: invoices, isLoading: isLoadingInvoices } = useQuery<Invoice[]>({
@@ -144,6 +157,7 @@ export default function TabFinanceiro() {
         onSuccess: () => {
             toast.success("Cobrança(s) gerada(s) com sucesso!");
             queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+            queryClient.refetchQueries({ queryKey: ["client-invoices", id] });
             setIsModalOpen(false);
             setInstallments(1);
             setIsPermuta(false);
@@ -155,12 +169,26 @@ export default function TabFinanceiro() {
         },
     });
 
-    const handleGenerateInvoice = (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleGenerateInvoice = (e?: React.MouseEvent | React.FormEvent) => {
+        if (e) e.preventDefault();
+        
         if (!selectedPlan) {
-            toast.error("Selecione um plano.");
+            toast.error("Por favor, selecione um plano primeiro.");
             return;
         }
+
+        if (isPermuta && permutaDescription.trim().length === 0) {
+            toast.error("Por favor, descreva os detalhes da permuta.");
+            return;
+        }
+
+        console.log("🚀 [Invoice] Iniciando geração:", {
+            plan_id: selectedPlan,
+            due_date: dueDate,
+            installments: installments,
+            client_id: id
+        });
+
         createInvoiceMutation.mutate({
             plan_id: selectedPlan,
             due_date: dueDate,
@@ -561,11 +589,10 @@ export default function TabFinanceiro() {
                     onClick={() => {
                         const hasPendingAuth = autorizacoes?.some(a => ['rascunho', 'aguardando_assinatura'].includes(a.status));
                         if (hasPendingAuth) {
-                            if (!window.confirm("Atenção: Este cliente possui contratos pendentes de assinatura. Gerar uma cobrança manual agora pode causar duplicidade. Deseja continuar mesmo assim?")) {
-                                return;
-                            }
+                            setIsWarningOpen(true);
+                        } else {
+                            setIsModalOpen(true);
                         }
-                        setIsModalOpen(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 transition-colors font-bold text-xs shadow-sm"
                 >
@@ -600,8 +627,12 @@ export default function TabFinanceiro() {
                                         <td className="px-6 py-4 font-medium text-gray-900">
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-bold">#{invoice.id}</span>
-                                                    {invoice.total_parcels && invoice.total_parcels > 1 && (
+                                                    <span className="text-xs font-bold">
+                                                        {invoice.autorizacao_numero 
+                                                            ? `${invoice.autorizacao_numero.toString().padStart(5, '0')}/${invoice.parcel_number}` 
+                                                            : `#${invoice.id}`}
+                                                    </span>
+                                                    {!invoice.autorizacao_numero && invoice.total_parcels && invoice.total_parcels > 1 && (
                                                         <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-black uppercase">
                                                             {invoice.parcel_number}/{invoice.total_parcels}
                                                         </span>
@@ -966,7 +997,7 @@ export default function TabFinanceiro() {
                                 <button
                                     type="button"
                                     onClick={handleGenerateInvoice}
-                                    disabled={createInvoiceMutation.isPending || !selectedPlan || (isPermuta && permutaDescription.trim().length === 0)}
+                                    disabled={createInvoiceMutation.isPending}
                                     className="flex-[2] h-14 bg-[#B70F0A] text-white rounded-2xl hover:bg-[#8e0c08] font-black uppercase text-[10px] sm:text-xs transition-all disabled:opacity-50 shadow-lg shadow-red-200 flex items-center justify-center gap-1.5"
                                 >
                                     {createInvoiceMutation.isPending
@@ -1007,6 +1038,39 @@ export default function TabFinanceiro() {
                 autorizacaoId={selectedAuth?.id || null}
                 numero={selectedAuth?.numero || null}
             />
+
+            {/* Aviso de Duplicidade Elegante */}
+            <AlertDialog open={isWarningOpen} onOpenChange={setIsWarningOpen}>
+                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md">
+                    <AlertDialogHeader>
+                        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                            <AlertCircle size={32} />
+                        </div>
+                        <AlertDialogTitle className="text-2xl font-bold text-gray-900 text-center">
+                            Atenção: Contratos Pendentes
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-500 text-center text-sm mt-2 font-medium">
+                            Este cliente já possui contratos aguardando assinatura. <br/>
+                            Gerar uma cobrança manual agora pode resultar em <b>faturas duplicadas</b>. <br/><br/>
+                            Deseja prosseguir mesmo assim?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-8 flex gap-3 sm:justify-start">
+                        <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-gray-100 font-bold text-xs uppercase text-gray-400 hover:bg-gray-50 transition-all">
+                            Cancelar e Voltar
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={() => {
+                                setIsWarningOpen(false);
+                                setIsModalOpen(true);
+                            }}
+                            className="flex-1 h-12 rounded-2xl bg-[#B70F0A] hover:bg-[#8e0c08] font-bold text-xs uppercase text-white shadow-lg shadow-red-200 transition-all"
+                        >
+                            Prosseguir
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
