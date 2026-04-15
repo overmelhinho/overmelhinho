@@ -36,7 +36,7 @@ export default function GlobalPopup() {
     // Rastreia a visualização quando o popup abre
     useEffect(() => {
         if (isOpen && ad && !trackedView) {
-            trackAdInteraction(ad.id, 'view', 'POPUP_GLOBAL', ad.cliente_id);
+            trackAdInteraction(ad.id, 'view', 'POPUP_GLOBAL', ad.cliente.id);
             setTrackedView(true);
         }
     }, [isOpen, ad, trackedView]);
@@ -100,7 +100,7 @@ export default function GlobalPopup() {
                             <div className="flex gap-3">
                                 <button 
                                     onClick={() => {
-                                        trackAdInteraction(ad.id, 'click', 'POPUP_GLOBAL', ad.cliente_id);
+                                        trackAdInteraction(ad.id, 'click', 'POPUP_GLOBAL', ad.cliente.id);
                                         if (ad.cliente.whatsapp) {
                                             window.open(`https://wa.me/55${ad.cliente.whatsapp.replace(/\D/g, '')}`, '_blank');
                                         }

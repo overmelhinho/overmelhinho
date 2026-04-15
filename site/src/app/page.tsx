@@ -303,7 +303,7 @@ export default function Home() {
                             <button
                                 onClick={() => {
                                     if (scrollyAd) {
-                                        trackAdInteraction(scrollyAd.id, 'click', 'HOME_TOP', scrollyAd.cliente_id);
+                                        trackAdInteraction(scrollyAd.id, 'click', 'HOME_TOP', scrollyAd.cliente.id);
                                         if (scrollyAd.cliente.whatsapp) window.open(`https://wa.me/55${scrollyAd.cliente.whatsapp.replace(/\D/g, '')}`, '_blank');
                                         else router.push(`/cliente/${scrollyAd.cliente.slug}`);
                                     } else {
