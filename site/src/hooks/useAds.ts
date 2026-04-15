@@ -16,6 +16,7 @@ export interface Ad {
     };
   };
   cliente: {
+    id: number;
     nome: string;
     slug: string | null;
     whatsapp: string | null;

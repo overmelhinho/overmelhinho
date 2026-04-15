@@ -129,7 +129,7 @@ export default function Home() {
     // Tracking de Impressão do Banner Home
     useEffect(() => {
         if (scrollyAd && !trackedHomeAd) {
-            trackAdInteraction(scrollyAd.id, 'view', 'HOME_TOP', scrollyAd.cliente_id);
+            trackAdInteraction(scrollyAd.id, 'view', 'HOME_TOP', scrollyAd.cliente.id);
             setTrackedHomeAd(true);
         }
     }, [scrollyAd, trackedHomeAd]);
