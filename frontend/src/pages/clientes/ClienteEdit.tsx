@@ -1,6 +1,6 @@
 // /var/www/frontend/src/pages/clientes/ClienteEdit.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
@@ -92,8 +92,14 @@ export default function ClienteEdit() {
   const { id } = useParams();
   const clienteId = Number(id);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [step, setStep] = useState(0);
+  const initialStep = useMemo(() => {
+    const s = searchParams.get("step");
+    return s ? Number(s) : 0;
+  }, [searchParams]);
+
+  const [step, setStep] = useState(initialStep);
   const [tipoCliente, setTipoCliente] = useState<TipoCliente>("pagante");
 
   const formikRef = useRef<any>(null);

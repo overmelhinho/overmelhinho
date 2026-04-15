@@ -215,9 +215,8 @@ class ReportController extends Controller
         $query = Invoice::query()
             ->with(['client:id,nome_fantasia,razao_social', 'plan:id,name']);
 
-        if ($request->filled('month') && $request->filled('year')) {
-            $query->whereMonth('due_date', $request->month)
-                ->whereYear('due_date', $request->year);
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('due_date', [$request->start_date, $request->end_date]);
         }
 
         if ($request->filled('plan_id') && $request->plan_id !== 'all') {
@@ -289,8 +288,8 @@ class ReportController extends Controller
             'data' => $data,
             'summary' => $summary,
             'filters' => [
-                'month' => $request->month,
-                'year' => $request->year,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
             ]
         ];
     }
@@ -309,17 +308,13 @@ class ReportController extends Controller
         return $pdf->download('Relatorio_Vendas_' . now()->format('dmY_His') . '.pdf');
     }
 
-    /**
-     * Relatório de Comissões
-     */
     public function commissionReport(Request $request)
     {
-        $month = $request->month ?? now()->month;
-        $year = $request->year ?? now()->year;
+        $startDate = $request->start_date ?? now()->startOfMonth()->format('Y-m-d');
+        $endDate = $request->end_date ?? now()->endOfMonth()->format('Y-m-d');
 
         $invoices = Invoice::where('status', 'paid')
-            ->whereYear('due_date', $year)
-            ->whereMonth('due_date', $month)
+            ->whereBetween('due_date', [$startDate, $endDate])
             ->with('vendedor:id,name')
             ->get();
 

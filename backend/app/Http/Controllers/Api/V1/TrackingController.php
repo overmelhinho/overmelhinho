@@ -105,4 +105,46 @@ class TrackingController extends Controller
             'data' => $interaction
         ], 201);
     }
+
+    public function adInteraction(Request $request)
+    {
+        $request->validate([
+            'campanha_id' => 'required',
+            'type' => 'required|in:view,click',
+            'placement' => 'nullable|string',
+        ]);
+
+        // Salva no banco local
+        $log = \Illuminate\Support\Facades\DB::table('campanha_interacoes')->insert([
+            'campanha_id' => $request->campanha_id,
+            'cliente_id' => $request->cliente_id,
+            'type' => $request->type,
+            'placement' => $request->placement,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'created_at' => now(),
+        ]);
+
+        // Envia para o GA4
+        try {
+            // Busca dados da campanha para o GA
+            $camp = \Illuminate\Support\Facades\DB::table('campanhas as c')
+                ->leftJoin('clientes as cli', 'c.cliente_id', '=', 'cli.id')
+                ->where('c.id', $request->campanha_id)
+                ->first(['c.nome', 'cli.nome_fantasia']);
+
+            $this->ga4->sendAdEvent(
+                $request->campanha_id,
+                $camp->nome ?? 'Campanha #' . $request->campanha_id,
+                $request->placement ?? 'general',
+                $request->type,
+                $request->cliente_id,
+                $camp->nome_fantasia ?? null
+            );
+        } catch (\Exception $e) {
+            \Log::error('Erro ao processar GA4 para anúncios: ' . $e->getMessage());
+        }
+
+        return response()->json(['message' => 'OK'], 201);
+    }
 }

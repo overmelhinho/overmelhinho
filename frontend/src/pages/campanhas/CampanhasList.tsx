@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Filter, ExternalLink, Info, ChevronDown, CheckCircle, Calendar, AlertCircle, Plus, Settings } from "lucide-react";
+import { Search, Filter, ExternalLink, Info, ChevronDown, CheckCircle, Calendar, AlertCircle, Plus, Settings, Trash2, X, MoreHorizontal } from "lucide-react";
 import Skeleton from "@/components/ui/skeleton";
-import { useCampanhas, Campanha, CampanhaStatus, CampanhaTipo } from "@/hooks/useCampanhas";
+import { useCampanhas, useUpdateCampanha, useDeleteCampanha, Campanha, CampanhaStatus, CampanhaTipo } from "@/hooks/useCampanhas";
+import toast from "react-hot-toast";
+import api from "@/services/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 /**
  * A listagem do backend traz campos adicionais via join/select:
@@ -24,7 +27,7 @@ function Badge({
   tone = "neutral",
 }: {
   children: any;
-  tone?: "neutral" | "info" | "warn" | "danger" | "success";
+  tone?: "neutral" | "info" | "warn" | "danger" | "success" | "purple";
 }) {
   const cls =
     tone === "danger"
@@ -35,7 +38,9 @@ function Badge({
           ? "border-green-300 bg-green-50 text-green-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
           : tone === "info"
             ? "border-blue-300 bg-blue-50 text-blue-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
-            : "border-slate-300 bg-white text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]";
+            : tone === "purple"
+              ? "border-purple-300 bg-purple-50 text-purple-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
+              : "border-slate-300 bg-white text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]";
 
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${cls} shadow-sm`}>
@@ -125,9 +130,46 @@ function canShowOnSite(c: CampanhaRow) {
   return campStatus === "ativa" && finOk;
 }
 
+function StatusToggle({ id, initialStatus }: { id: number, initialStatus: string }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const isAtiva = initialStatus === 'ativa';
+
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBusy(true);
+    try {
+      const nextStatus = isAtiva ? 'rascunho' : 'ativa';
+      await api.patch(`/v1/campanhas/${id}/status`, { status: nextStatus });
+      await qc.invalidateQueries({ queryKey: ["campanhas"] });
+      toast.success(`Campanha ${nextStatus === 'ativa' ? 'ativada' : 'desativada'} com sucesso.`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Erro ao alterar status.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleToggle}
+      disabled={busy}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#B70F0A] focus:ring-offset-2 ${isAtiva ? 'bg-green-500' : 'bg-gray-200'
+        } ${busy ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <span
+        className={`${isAtiva ? 'translate-x-6' : 'translate-x-1'
+          } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+      />
+    </button>
+  );
+}
+
 export default function CampanhasList() {
   const navigate = useNavigate();
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [deleteRequest, setDeleteRequest] = useState<{ id: number, nome: string } | null>(null);
+  const deleteMutation = useDeleteCampanha();
   const [filters, setFilters] = useState<{
     search: string;
     status: "" | CampanhaStatus;
@@ -397,12 +439,18 @@ export default function CampanhasList() {
                         <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{tipoLabelPt(c.tipo)}</div>
                       </td>
 
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-2">
+                        <td className="px-8 py-6">
+                        <div className="flex items-center gap-3">
+                          <StatusToggle id={c.id} initialStatus={c.status} />
                           <Badge tone={statusTone(c.status)}>{statusLabelPt(c.status)}</Badge>
                           {finStatus && (
                             <Badge tone={financeiroTone(finStatus)}>
                               {financeiroLabelPt(finStatus)}
+                            </Badge>
+                          )}
+                          {!!c.is_institucional && (
+                            <Badge tone="purple">
+                              Institucional
                             </Badge>
                           )}
                           {show && (
@@ -414,8 +462,20 @@ export default function CampanhasList() {
                       </td>
 
                       <td className="px-8 py-6 text-right">
-                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-50 text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all transform group-hover:rotate-12">
-                          <ExternalLink size={18} />
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setDeleteRequest({ id: c.id, nome: c.nome }); 
+                            }}
+                            className="p-2 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                            title="Excluir Campanha"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                          <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-50 text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all transform group-hover:rotate-12">
+                            <ExternalLink size={18} />
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -458,6 +518,55 @@ export default function CampanhasList() {
           </div>
         )}
       </div>
+
+      {/* Centralized Delete Modal */}
+      {deleteRequest && (
+        <div 
+          onClick={(e) => { e.stopPropagation(); setDeleteRequest(null); }}
+          className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mb-6">
+              <Trash2 size={32} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">Excluir Campanha?</h3>
+            <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
+              Você está prestes a excluir a campanha <span className="font-bold text-slate-900">"{deleteRequest.nome}"</span>. Esta ação é irreversível e removerá todos os dados associados.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={(e) => { e.stopPropagation(); setDeleteRequest(null); }}
+                className="flex-1 h-12 rounded-2xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-colors"
+                disabled={deleteMutation.isPending}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!deleteRequest) return;
+                  
+                  deleteMutation.mutate(deleteRequest.id, {
+                    onSuccess: () => {
+                      setDeleteRequest(null);
+                    },
+                    onSettled: () => {
+                      setDeleteRequest(null);
+                    }
+                  });
+                }}
+                className="flex-1 h-12 rounded-2xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Excluindo..." : "Excluir Agora"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

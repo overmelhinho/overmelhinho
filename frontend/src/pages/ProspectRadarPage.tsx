@@ -170,7 +170,7 @@ const ProspectRadarPage: React.FC = () => {
                         animate={{ opacity: 1, x: 0 }}
                         className="text-4xl md:text-6xl font-serif font-bold text-slate-800 tracking-tight"
                     >
-                        Radar de <span className="text-[#B70F0A]">Prospecção</span>
+                        Radar <span className="text-[#B70F0A]">Google</span>
                     </motion.h1>
                     <p className="text-slate-500 text-lg md:text-xl font-medium">Encontre empresas que ainda não estão no nosso radar.</p>
                 </header>

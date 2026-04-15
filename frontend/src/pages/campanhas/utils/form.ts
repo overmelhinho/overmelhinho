@@ -1,4 +1,4 @@
-// /var/www/frontend/src/pages/campanhas/CampanhaCreate/utils/form.ts
+// /src/pages/campanhas/utils/form.ts
 import type { PlanoCampanha } from "@/hooks/useCampanhas";
 
 export function toISODate(v: string) {

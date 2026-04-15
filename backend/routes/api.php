@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\V1\ClientReportController;
 
 use App\Http\Controllers\Api\V1\RenewalController;
 use App\Http\Controllers\Api\V1\AutorizacaoController;
+use App\Http\Controllers\Api\V1\PublicAdController;
 
 Route::post('/v1/upload-temp', [UploadTempController::class , 'uploadTemp']);
 
@@ -166,9 +167,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('clientes/{cliente}/midia/commit-temp', [ClienteController::class , 'commitMidiaTemp']);
 
     // Campanhas
-    Route::apiResource('campanhas', CampanhaController::class)->only(['index', 'store', 'show', 'update']);
+    Route::apiResource('campanhas', CampanhaController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::post('campanhas/{campanha}/encerrar', [CampanhaController::class , 'encerrar']);
     Route::post('campanhas/{campanha}/renovar', [CampanhaController::class , 'renovar']);
+    Route::patch('campanhas/{campanha}/status', [CampanhaController::class , 'updateStatus']);
 
     // ✅ Mídias de Campanha + Commit Temp
     Route::get('campanhas/{campanha}/midias', [CampanhaMidiaController::class , 'index']);
@@ -292,6 +294,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 // ✅ Rotas Públicas de Orçamentos e Tracking
 Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);
 Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
+Route::post('/v1/tracking/ad-interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'adInteraction']);
 Route::post('/v1/tracking/search', [\App\Http\Controllers\Api\V1\TrackingController::class, 'search']);
 Route::get('/v1/public/reports/{token}', [ClientReportController::class, 'showPublic']);
 Route::get('/v1/public/sitemap-data', [\App\Http\Controllers\Api\V1\ClienteController::class, 'sitemap']);
@@ -299,3 +302,6 @@ Route::get('/v1/public/search', [\App\Http\Controllers\Api\V1\ClienteController:
 Route::get('/v1/public/search/suggestions', [\App\Http\Controllers\Api\V1\ClienteController::class, 'suggestions']);
 Route::get('/v1/public/clientes/{id}', [\App\Http\Controllers\Api\V1\ClienteController::class, 'showPublic']);
 Route::get('/v1/public/clientes/{id}/recommendations', [\App\Http\Controllers\Api\V1\ClienteController::class, 'recommendations']);
+
+// ✅ Campanhas e Anúncios Públicos
+Route::get('/v1/public/ads', [PublicAdController::class, 'index']);

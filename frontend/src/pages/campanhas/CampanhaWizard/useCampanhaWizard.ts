@@ -23,7 +23,7 @@ import {
   parseKeywords,
   keywordLimitByPlano,
   toISODate,
-} from "@/pages/campanhas/CampanhaCreate/utils/form";
+} from "../utils/form";
 
 // ✅ helpers de temp_path (evita 404 no copy)
 import {
@@ -42,6 +42,8 @@ export type CampanhaWizardFormState = {
 
   data_inicio: string;
   data_fim: string;
+  url: string;
+  is_institucional: boolean;
 
   cidades_ids: number[];
   placements: PlacementType[];
@@ -260,6 +262,8 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
 
     data_inicio: "",
     data_fim: "",
+    url: "",
+    is_institucional: false,
 
     cidades_ids: [],
     placements: [],
@@ -267,7 +271,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
 
     keywords_text: "",
 
-    financeiro_status: "",
+    financeiro_status: "AGUARDANDO_PAGAMENTO",
     financeiro_forma: "",
     financeiro_valor: "",
     financeiro_vencimento: "",
@@ -305,6 +309,87 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
       (camp as any)?.plano ?? (camp as any)?.plano_nome ?? (camp as any)?.planoNome;
     const plano = (planoRaw ? String(planoRaw) : "basico") as PlanoCampanha;
 
+    // Mídias: Coleta resiliente e sem sobreposição
+    let desktopUrl = "";
+    let mobileUrl = "";
+
+    const extractUrl = (m: any) => {
+      if (!m) return "";
+      return m.public_url || m.url || m.file_url || m.desktop_url || m.mobile_url || "";
+    };
+
+    const firstPlacement = placements[0];
+    const tiposMap: Record<string, string> = {
+      HOME_TOP: "banner_topo",
+      POPUP_GLOBAL: "popup",
+      SEARCH_RESULT: "banner_keyword",
+      SEGMENT_LISTING: "banner_segmento",
+    };
+    const tipoDesejado = firstPlacement ? tiposMap[firstPlacement] : null;
+
+    // 1. Tenta via midias_ativas (mapeamento tipo -> {desktop, mobile})
+    if (tipoDesejado && d.midias_ativas?.[tipoDesejado]) {
+      const activeGroup = d.midias_ativas[tipoDesejado];
+      desktopUrl = extractUrl(activeGroup.desktop);
+      mobileUrl = extractUrl(activeGroup.mobile);
+    }
+
+    // 2. Fallback: Lista geral (por slot favorável)
+    if (!desktopUrl || !mobileUrl) {
+      const list = Array.isArray(d.midias) ? d.midias : [];
+
+      // Tenta achar especificamente desktop
+      const deskItem = list.find((m: any) => 
+        String(m.slot).toLowerCase() === "desktop" || 
+        String(m.device).toLowerCase() === "desktop"
+      );
+      if (deskItem) desktopUrl = extractUrl(deskItem);
+
+      // Tenta achar especificamente mobile
+      const mobItem = list.find((m: any) => 
+        String(m.slot).toLowerCase() === "mobile" || 
+        String(m.device).toLowerCase() === "mobile" ||
+        String(m.device).toLowerCase() === "smartphone"
+      );
+      if (mobItem) mobileUrl = extractUrl(mobItem);
+
+      // 3. Fallback de Desespero: Se ainda falta algum mas temos itens na lista
+      if (list.length > 0) {
+        // Ordena por ID para ter consistência (assumindo que desktop costuma ser o primeiro upload)
+        const sorted = [...list].sort((a, b) => (a.id || 0) - (b.id || 0));
+        
+        const m0 = sorted[0];
+        const m1 = sorted[1];
+
+        // Função interna para checar se parece desktop (proporção ou nome)
+        const isLikelyDesktop = (m: any) => {
+           const name = String(m?.meta_json?.original_name || m?.public_url || "").toLowerCase();
+           return name.includes("desktop") || m?.meta_json?.width > m?.meta_json?.height;
+        };
+
+        if (!desktopUrl && !mobileUrl) {
+          if (sorted.length >= 2) {
+             // Se temos dois, tentamos ver qual "parece" desktop
+             if (isLikelyDesktop(m1) && !isLikelyDesktop(m0)) {
+                desktopUrl = extractUrl(m1);
+                mobileUrl = extractUrl(m0);
+             } else {
+                desktopUrl = extractUrl(m0);
+                mobileUrl = extractUrl(m1);
+             }
+          } else {
+             desktopUrl = extractUrl(m0);
+          }
+        } else if (!desktopUrl && mobileUrl) {
+          const other = sorted.find((m: any) => extractUrl(m) !== mobileUrl);
+          if (other) desktopUrl = extractUrl(other);
+        } else if (desktopUrl && !mobileUrl) {
+          const other = sorted.find((m: any) => extractUrl(m) !== desktopUrl);
+          if (other) mobileUrl = extractUrl(other);
+        }
+      }
+    }
+
     setForm((prev) => ({
       ...prev,
 
@@ -315,6 +400,8 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
 
       data_inicio: String(camp?.data_inicio ?? ""),
       data_fim: String(camp?.data_fim ?? ""),
+      url: String(camp?.url ?? ""),
+      is_institucional: !!camp?.is_institucional,
 
       cidades_ids,
 
@@ -333,12 +420,12 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
       financeiro_pago_em: String(camp?.financeiro_pago_em ?? ""),
       financeiro_observacao: String((camp as any)?.financeiro_observacao ?? ""),
 
-      // mídia temp começa vazio (edit: opcional anexar novas)
+      // mídia temp
       midia_desktop_temp_path: "",
-      midia_desktop_public_url: "",
+      midia_desktop_public_url: desktopUrl,
       midia_desktop_name: "",
       midia_mobile_temp_path: "",
-      midia_mobile_public_url: "",
+      midia_mobile_public_url: mobileUrl,
       midia_mobile_name: "",
     }));
   }, [mode, detalhe.data]);
@@ -462,7 +549,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
             temp_path: desktopTemp,
             tipo,
             slot: "desktop",
-            status: "rascunho",
+            status: "publicado",
             meta_json: {
               original_name: form.midia_desktop_name || "desktop",
               placement_tipos: tipos,
@@ -479,7 +566,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
             temp_path: mobileTemp,
             tipo,
             slot: "mobile",
-            status: "rascunho",
+            status: "publicado",
             meta_json: {
               original_name: form.midia_mobile_name || "mobile",
               placement_tipos: tipos,
@@ -572,11 +659,13 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
       origem: form.origem ? (form.origem as CampanhaOrigem) : null,
       data_inicio: toISODate(form.data_inicio),
       data_fim: toISODate(form.data_fim),
+      url: form.url.trim() || null,
+      is_institucional: form.is_institucional,
 
       placements: form.placements,
       plano: form.plano,
 
-      cidades_ids: hasGlobalPlacement ? undefined : form.cidades_ids,
+      cidades_ids: form.cidades_ids,
       keywords: keywordsParsed,
 
       financeiro: {
@@ -591,6 +680,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
       gerar_tickets: !!form.gerar_tickets,
       prioridade: form.prioridade,
       due_at: form.due_at || undefined,
+      status: mode === "create" ? "ativa" : undefined,
     };
 
     if (mode === "create") {

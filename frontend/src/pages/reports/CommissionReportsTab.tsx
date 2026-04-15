@@ -12,22 +12,20 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { DateRangePicker } from "@/components/reports/DateRangePicker";
 
 export default function CommissionReportsTab() {
-    const [month, setMonth] = useState(new Date().getMonth() + 1 + "");
-    const [year, setYear] = useState(new Date().getFullYear() + "");
+    const today = new Date();
+    const firstDay = format(new Date(today.getFullYear(), today.getMonth(), 1), "yyyy-MM-dd");
+    const lastDay = format(new Date(today.getFullYear(), today.getMonth() + 1, 0), "yyyy-MM-dd");
+
+    const [startDate, setStartDate] = useState(firstDay);
+    const [endDate, setEndDate] = useState(lastDay);
 
     const { data: commissions, isLoading } = useQuery({
-        queryKey: ["commission-report", month, year],
+        queryKey: ["commission-report", startDate, endDate],
         queryFn: async () => {
-            const params = new URLSearchParams({ month, year });
+            const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
             const resp = await axios.get(`/v1/admin/reports/commissions?${params.toString()}`);
             return resp.data;
         }
@@ -42,32 +40,15 @@ export default function CommissionReportsTab() {
     return (
         <div className="p-6 bg-[#F8F9FC] min-h-screen space-y-6">
             <div className="flex justify-between items-center">
-                <div className="flex gap-4">
-                    <Select value={month} onValueChange={setMonth}>
-                        <SelectTrigger className="w-40 rounded-xl border-gray-100 bg-white">
-                            <SelectValue placeholder="Mês" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {[
-                                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-                                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-                            ].map((monthName, i) => (
-                                <SelectItem key={i + 1} value={(i + 1).toString()}>
-                                    {monthName}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={year} onValueChange={setYear}>
-                        <SelectTrigger className="w-32 rounded-xl border-gray-100 bg-white">
-                            <SelectValue placeholder="Ano" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="2024">2024</SelectItem>
-                            <SelectItem value="2025">2025</SelectItem>
-                            <SelectItem value="2026">2026</SelectItem>
-                        </SelectContent>
-                    </Select>
+                <div className="w-80">
+                    <DateRangePicker 
+                        startDate={startDate} 
+                        endDate={endDate} 
+                        onRangeChange={(start, end) => {
+                            setStartDate(start);
+                            setEndDate(end);
+                        }}
+                    />
                 </div>
                 <Button variant="outline" className="rounded-xl bg-white border-gray-100 text-xs font-bold gap-2">
                     <Download size={14} />

@@ -397,3 +397,21 @@ export function useRenovarCampanha(id: number) {
     },
   });
 }
+
+// Excluir campanha
+export function useDeleteCampanha() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/v1/campanhas/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["campanhas"] });
+      toast.success("Campanha excluída com sucesso.");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Erro ao excluir campanha.");
+    },
+  });
+}

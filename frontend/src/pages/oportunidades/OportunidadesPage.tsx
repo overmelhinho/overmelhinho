@@ -197,7 +197,7 @@ export default function OportunidadesPage() {
                                 <Sparkles size={24} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-black text-gray-900 tracking-tight">✨ Radar de Oportunidades & ROI</h2>
+                                <h2 className="text-lg font-black text-gray-900 tracking-tight">✨ Radar O Vermelhinho & ROI</h2>
                                 <p className="text-xs text-gray-400 font-medium">Inteligência de mercado e performance comercial</p>
                             </div>
                         </div>

@@ -39,7 +39,7 @@ class CampanhaWizardService
 
     private function deriveCampaignStatusFromFinance(string $finStatus): string
     {
-        return in_array($finStatus, [self::FIN_PAGO, self::FIN_CORTESIA], true)
+        return in_array($finStatus, [self::FIN_PAGO, self::FIN_CORTESIA, self::FIN_AGUARDANDO], true)
             ? self::CAMP_ATIVA
             : self::CAMP_PENDENTE;
     }
@@ -70,6 +70,120 @@ class CampanhaWizardService
         );
 
         return ['id' => $id];
+    }
+
+    private function createFromWizard(array $payload, int $actorUserId): int
+    {
+        return DB::transaction(function () use ($payload, $actorUserId) {
+            $now = now();
+
+            if (empty($payload['cliente_id'])) abort(422, 'cliente_id é obrigatório.');
+            if (empty($payload['nome'])) abort(422, 'nome é obrigatório.');
+            if (empty($payload['tipo'])) abort(422, 'tipo é obrigatório.');
+
+            $clienteId = (int) $payload['cliente_id'];
+
+            // 1) FINANCEIRO STATUS
+            $fin = is_array($payload['financeiro'] ?? null) ? $payload['financeiro'] : [];
+            $finStatus = $this->normalizeFinanceStatus($fin['status'] ?? null);
+            $campanhaStatus = $this->deriveCampaignStatusFromFinance($finStatus);
+
+            // 2) PLACEMENTS (JSON)
+            $placementsJson = null;
+            if (!empty($payload['placements']) && is_array($payload['placements'])) {
+                $placementsJson = json_encode(array_values($payload['placements']), JSON_UNESCAPED_UNICODE);
+            }
+
+            // 3) CREATE CAMPANHA
+            $insert = [
+                'cliente_id'  => $clienteId,
+                'nome'        => (string) $payload['nome'],
+                'tipo'        => (string) $payload['tipo'],
+                'origem'      => $payload['origem'] ?? null,
+                'status'      => $campanhaStatus,
+                'data_inicio' => $payload['data_inicio'],
+                'data_fim'    => $payload['data_fim'],
+                'url'         => $payload['url'] ?? null,
+                'is_institucional' => (bool) ($payload['is_institucional'] ?? false),
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ];
+
+            if (Schema::hasColumn('campanhas', 'placements_json')) {
+                $insert['placements_json'] = $placementsJson;
+            } elseif (Schema::hasColumn('campanhas', 'placements')) {
+                $insert['placements'] = $placementsJson;
+            }
+
+            if (Schema::hasColumn('campanhas', 'created_by')) {
+                $insert['created_by'] = $actorUserId > 0 ? $actorUserId : null;
+            }
+
+            $campanhaId = DB::table('campanhas')->insertGetId($insert);
+
+            // 4) CIDADES
+            if (!empty($payload['cidades_ids']) && Schema::hasTable('campanha_cidades')) {
+                $cidadesRows = collect($payload['cidades_ids'])
+                    ->map(fn($id) => (int)$id)
+                    ->filter(fn($id) => $id > 0)
+                    ->unique()
+                    ->map(fn($cidadeId) => [
+                        'campanha_id' => $campanhaId,
+                        'cidade_id'   => $cidadeId,
+                        'created_at'  => $now,
+                        'updated_at'  => $now,
+                    ])->all();
+
+                if (!empty($cidadesRows)) {
+                    DB::table('campanha_cidades')->insert($cidadesRows);
+                }
+            }
+
+            // 5) KEYWORDS
+            if (!empty($payload['keywords']) && Schema::hasTable('campanha_keywords')) {
+                $keywordsRows = collect($payload['keywords'])
+                    ->filter(fn($k) => is_string($k) && trim($k) !== '')
+                    ->map(function ($k) {
+                        $original = trim((string)$k);
+                        $normalizada = $this->normalizeKeyword($original);
+                        return [$original, $normalizada];
+                    })
+                    ->filter(fn($pair) => $pair[1] !== '')
+                    ->unique(fn($pair) => $pair[1])
+                    ->map(fn($pair) => [
+                        'campanha_id'         => $campanhaId,
+                        'keyword_original'    => $pair[0],
+                        'keyword_normalizada' => $pair[1],
+                        'created_at'          => $now,
+                        'updated_at'          => $now,
+                    ])->all();
+
+                if (!empty($keywordsRows)) {
+                    DB::table('campanha_keywords')->insert($keywordsRows);
+                }
+            }
+
+            // 6) FINANCEIRO
+            if (Schema::hasTable('campanha_financeiro')) {
+                $finData = [
+                    'campanha_id' => $campanhaId,
+                    'status'      => $finStatus,
+                    'forma'       => $fin['forma'] ?? null,
+                    'valor'       => isset($fin['valor']) ? (float)$fin['valor'] : 0,
+                    'vencimento'  => $fin['vencimento'] ?? null,
+                    'pago_em'     => $fin['pago_em'] ?? null,
+                    'observacao'  => $fin['observacao'] ?? null,
+                    'created_at'  => $now,
+                    'updated_at'  => $now,
+                ];
+                if (Schema::hasColumn('campanha_financeiro', 'created_by')) {
+                    $finData['created_by'] = $actorUserId > 0 ? $actorUserId : null;
+                }
+                DB::table('campanha_financeiro')->insert($finData);
+            }
+
+            return $campanhaId;
+        });
     }
 
     /* =========================================================
@@ -112,6 +226,8 @@ class CampanhaWizardService
                 'status'      => $campanhaStatus,
                 'data_inicio' => $payload['data_inicio'],
                 'data_fim'    => $payload['data_fim'],
+                'url'         => $payload['url'] ?? null,
+                'is_institucional' => (bool) ($payload['is_institucional'] ?? false),
                 'updated_at'  => $now,
             ];
 

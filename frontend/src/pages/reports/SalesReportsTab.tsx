@@ -15,7 +15,6 @@ import {
     FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
     Select,
     SelectContent,
@@ -24,20 +23,25 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { DateRangePicker } from "@/components/reports/DateRangePicker";
 import { cn } from "@/lib/utils";
 
 export default function SalesReportsTab() {
-    const [month, setMonth] = useState(new Date().getMonth() + 1 + "");
-    const [year, setYear] = useState(new Date().getFullYear() + "");
+    const today = new Date();
+    const firstDay = format(new Date(today.getFullYear(), today.getMonth(), 1), "yyyy-MM-dd");
+    const lastDay = format(new Date(today.getFullYear(), today.getMonth() + 1, 0), "yyyy-MM-dd");
+
+    const [startDate, setStartDate] = useState(firstDay);
+    const [endDate, setEndDate] = useState(lastDay);
     const [planId, setPlanId] = useState("all");
     const [vendedorId, setVendedorId] = useState("all");
     const [collectionType, setCollectionType] = useState("all");
     const [status, setStatus] = useState("all");
 
     const { data: salesData, isLoading } = useQuery({
-        queryKey: ["sales-report", month, year, planId, vendedorId, collectionType, status],
+        queryKey: ["sales-report", startDate, endDate, planId, vendedorId, collectionType, status],
         queryFn: async () => {
-            const params = new URLSearchParams({ month, year });
+            const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
             if (planId !== "all") params.append("plan_id", planId);
             if (vendedorId !== "all") params.append("vendedor_id", vendedorId);
             if (collectionType !== "all") params.append("collection_type", collectionType);
@@ -91,7 +95,7 @@ export default function SalesReportsTab() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `Relatorio_Vendas_${month}_${year}.csv`);
+        link.setAttribute("download", `Relatorio_Vendas_${startDate}_${endDate}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -100,7 +104,7 @@ export default function SalesReportsTab() {
 
     const handleExportPDF = async () => {
         try {
-            const params = new URLSearchParams({ month, year });
+            const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
             if (planId !== "all") params.append("plan_id", planId);
             if (vendedorId !== "all") params.append("vendedor_id", vendedorId);
             if (collectionType !== "all") params.append("collection_type", collectionType);
@@ -128,38 +132,17 @@ export default function SalesReportsTab() {
                     <h2 className="text-sm font-black uppercase tracking-widest text-gray-900">Filtros do Relatório</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mês</label>
-                        <Select value={month} onValueChange={setMonth}>
-                            <SelectTrigger className="rounded-xl border-gray-100 bg-gray-50/50">
-                                <SelectValue placeholder="Selecione o mês" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {[
-                                    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-                                    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-                                ].map((monthName, i) => (
-                                    <SelectItem key={i + 1} value={(i + 1).toString()}>
-                                        {monthName}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Ano</label>
-                        <Select value={year} onValueChange={setYear}>
-                            <SelectTrigger className="rounded-xl border-gray-100 bg-gray-50/50">
-                                <SelectValue placeholder="Ano" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="2024">2024</SelectItem>
-                                <SelectItem value="2025">2025</SelectItem>
-                                <SelectItem value="2026">2026</SelectItem>
-                            </SelectContent>
-                        </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                    <div className="space-y-2 lg:col-span-2">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Período</label>
+                        <DateRangePicker 
+                            startDate={startDate} 
+                            endDate={endDate} 
+                            onRangeChange={(start, end) => {
+                                setStartDate(start);
+                                setEndDate(end);
+                            }}
+                        />
                     </div>
 
                     <div className="space-y-2">

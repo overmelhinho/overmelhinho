@@ -42,7 +42,7 @@ class CampanhaController extends Controller
 
     private function deriveCampaignStatusFromFinance(string $finStatus): string
     {
-        if (in_array($finStatus, [self::FIN_PAGO, self::FIN_CORTESIA], true)) {
+        if (in_array($finStatus, [self::FIN_PAGO, self::FIN_CORTESIA, self::FIN_AGUARDANDO], true)) {
             return self::CAMP_ATIVA;
         }
         return self::CAMP_PENDENTE;
@@ -89,6 +89,10 @@ class CampanhaController extends Controller
             'cli.id as cliente_id',
             'cli.nome_fantasia as cliente_nome',
         ];
+
+        if (Schema::hasColumn('campanhas', 'is_institucional')) {
+            $select[] = 'c.is_institucional';
+        }
 
         if ($hasFinanceiro) {
             $select[] = 'fin.status as financeiro_status';
@@ -362,6 +366,8 @@ class CampanhaController extends Controller
             'origem' => $validated['origem'] ?? null,
             'data_inicio' => $validated['data_inicio'],
             'data_fim' => $validated['data_fim'],
+            'url' => $validated['url'] ?? null,
+            'is_institucional' => (bool) ($validated['is_institucional'] ?? false),
             'updated_at' => $now,
         ];
 
@@ -562,6 +568,27 @@ if (Schema::hasTable('audit_logs') && $actorId > 0) {
         }
     }
 
+    public function updateStatus(Request $request, int $campanha)
+    {
+        $status = $request->input('status');
+        if (!in_array($status, ['rascunho', 'ativa', 'encerrada', 'cancelada'])) {
+            return response()->json(['message' => 'Status inválido.'], 422);
+        }
+
+        $updated = DB::table('campanhas')
+            ->where('id', $campanha)
+            ->update([
+                'status' => $status,
+                'updated_at' => now(),
+            ]);
+
+        if (!$updated) {
+            return response()->json(['message' => 'Campanha não encontrada.'], 404);
+        }
+
+        return response()->json(['message' => 'Status atualizado com sucesso.']);
+    }
+
     public function encerrar(Request $request, int $campanha)
     {
         $actorId = (int) optional($request->user())->id;
@@ -606,5 +633,40 @@ if (Schema::hasTable('audit_logs') && $actorId > 0) {
     public function renovar(Request $request, int $campanha)
     {
         return response()->json(['message' => 'Em breve.'], 501);
+    }
+
+    public function destroy(int $campanha)
+    {
+        DB::beginTransaction();
+        try {
+            // Remove relações primeiro (se existirem tabelas)
+            if (Schema::hasTable('campanha_cidades')) {
+                DB::table('campanha_cidades')->where('campanha_id', $campanha)->delete();
+            }
+            if (Schema::hasTable('campanha_keywords')) {
+                DB::table('campanha_keywords')->where('campanha_id', $campanha)->delete();
+            }
+            if (Schema::hasTable('campanha_midias')) {
+                DB::table('campanha_midias')->where('campanha_id', $campanha)->delete();
+            }
+
+            // Remove a campanha
+            $deleted = DB::table('campanhas')->where('id', $campanha)->delete();
+
+            if (!$deleted) {
+                DB::rollBack();
+                return response()->json(['message' => 'Campanha não encontrada.'], 404);
+            }
+
+            DB::commit();
+            return response()->json(['message' => 'Campanha excluída com sucesso.']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+            return response()->json([
+                'message' => 'Erro ao excluir campanha.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

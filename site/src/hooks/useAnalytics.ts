@@ -37,8 +37,25 @@ export const useAnalytics = () => {
         }
     };
 
+    /**
+     * Rastreia uma interação com anúncio (banner/popup)
+     */
+    const trackAdInteraction = async (campanhaId: number, type: 'view' | 'click', placement?: string, clienteId?: number) => {
+        try {
+            await api.post('/tracking/ad-interaction', {
+                campanha_id: campanhaId,
+                type,
+                placement,
+                cliente_id: clienteId
+            });
+        } catch (error) {
+            console.error('Erro ao rastrear interação de anúncio:', error);
+        }
+    };
+
     return {
         trackInteraction,
-        trackSearch
+        trackSearch,
+        trackAdInteraction
     };
 };

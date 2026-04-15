@@ -55,4 +55,40 @@ class Ga4MeasurementProtocolService
             Log::error('Erro ao enviar evento para o GA4: ' . $e->getMessage());
         }
     }
+    /**
+     * Envia um evento de anúncio (impressão ou clique) para o GA4.
+     */
+    public function sendAdEvent($adId, $adName, $placement, $type, $clientId = null, $clientName = null)
+    {
+        if (!$this->measurementId || !$this->apiSecret) return;
+
+        $url = "https://www.google-analytics.com/mp/collect?measurement_id={$this->measurementId}&api_secret={$this->apiSecret}";
+
+        $eventName = $type === 'view' ? 'ad_impression' : 'ad_click';
+
+        $payload = [
+            'client_id' => 'server.ad.' . $adId . '.' . time(),
+            'events' => [
+                [
+                    'name' => $eventName,
+                    'params' => [
+                        'ad_id' => (string) $adId,
+                        'ad_name' => (string) $adName,
+                        'ad_placement' => (string) $placement,
+                        'ad_format' => 'banner',
+                        'client_id' => (string) $clientId,
+                        'client_name' => (string) $clientName,
+                        'engagement_time_msec' => '100',
+                        'source' => 'server_side'
+                    ]
+                ]
+            ]
+        ];
+
+        try {
+            Http::post($url, $payload);
+        } catch (\Exception $e) {
+            Log::error('Erro ao enviar evento de anúncio para o GA4: ' . $e->getMessage());
+        }
+    }
 }

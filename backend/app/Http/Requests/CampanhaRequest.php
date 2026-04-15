@@ -21,6 +21,8 @@ class CampanhaRequest extends FormRequest
 
             'data_inicio' => ['required', 'date'],
             'data_fim' => ['required', 'date', 'after_or_equal:data_inicio'],
+            'url' => ['nullable', 'string', 'url', 'max:255'],
+            'is_institucional' => ['nullable', 'boolean'],
 
             /**
              * ✅ cidades_ids agora é opcional (placements globais não exigem cidades).

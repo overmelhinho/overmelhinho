@@ -46,7 +46,7 @@ import TicketDetailsPage from "@/pages/TicketDetailsPage";
 import CampanhasList from "@/pages/campanhas/CampanhasList";
 
 // ✅ IMPORT CORRIGIDO (evita loop com CampanhaCreate.tsx)
-import CampanhaCreate from "@/pages/campanhas/CampanhaCreate/index";
+import CampanhaCreate from "@/pages/campanhas/CampanhaWizard";
 
 import CampanhaDetails from "@/pages/campanhas/CampanhaDetails";
 import CampanhaEdit from "@/pages/campanhas/CampanhaWizard/CampanhaEditWizard";

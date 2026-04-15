@@ -27,7 +27,8 @@ import {
     CheckCircle2,
     Mic,
     Map as MapIcon,
-    List as ListIcon
+    List as ListIcon,
+    ExternalLink
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -35,6 +36,7 @@ import api from '@/services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from '@/contexts/LocationContext';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { useAds } from '@/hooks/useAds';
 import 'leaflet/dist/leaflet.css';
 
 // Importação dinâmica do mapa (sem SSR, obrigatório para Leaflet)
@@ -95,6 +97,7 @@ function SearchContent() {
         return ['📍 Aberto Agora', '🚚 Entrega Grátis', '✨ Com IA', '⭐ Melhores Notas'];
     }, [query]);
 
+
     const activeFilters = useMemo(() => getDynamicFilters(), [getDynamicFilters]);
 
     // ✅ Verifica se o cliente atende a região selecionada (mas é de fora da cidade)
@@ -108,83 +111,84 @@ function SearchContent() {
         return !clientCity.includes(normalizedSearchCity) && normalizedSearchCity !== clientCity;
     }, [cityName]);
 
-    // ✅ Lógica de Campanhas de Hero Banner (Patrocinadores de Categorias/Keywords)
+    // ✅ Campanhas de Banners (Busca)
+    const { data: searchAds } = useAds({
+        city_id: cityId,
+        keywords: query,
+        tipo: 'BANNER'
+    });
+
+    // 1. Hero Ad (Topo) - Prioriza SEARCH_RESULT
     const heroAd = useMemo(() => {
-        if (!query && !cityName) return null;
+        if (!searchAds || searchAds.length === 0) return null;
+        
+        // Tenta encontrar um que seja especificamente para busca
+        const ad = searchAds.find(a => a.placements?.includes('SEARCH_RESULT')) || searchAds[0];
+        const midia = ad.midias['BANNER'] || ad.midias['banner_topo'] || Object.values(ad.midias)[0] || {};
+        
+        return {
+            id: ad.id,
+            title: ad.nome,
+            image: (typeof window !== 'undefined' && window.innerWidth < 768) 
+                ? (midia.mobile?.url || midia.desktop?.url) 
+                : (midia.desktop?.url || midia.mobile?.url),
+            link: ad.url || null,
+        };
+    }, [searchAds]);
 
-        const q = query?.toLowerCase() || "";
-        const city = cityName?.toLowerCase() || "";
+    // 2. Listing Ad (Meio) - Prioriza SEGMENT_LISTING
+    const listAd = useMemo(() => {
+        if (!searchAds || searchAds.length === 0) return null;
 
-        // Mock de campanhas (Isso viria de uma tabela 'banners_busca' no futuro)
-        const campaigns = [
-            {
-                id: 1,
-                keywords: ['pizza', 'comida', 'fome', 'lanche', 'restaurante'],
-                segments: ['Alimentação', 'Gastronomia'],
-                cities: ['farroupilha', 'caxias do sul'],
-                title: "Bateu a fome?",
-                subtitle: "As melhores pizzas da região com entrega grátis hoje!",
-                image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80",
-                cta: "Pedir Agora",
-                link: "https://wa.me/5554999999999",
-                color: "#ff4d4d"
-            },
-            {
-                id: 2,
-                keywords: ['vaga', 'emprego', 'trabalho', 'oportunidade'],
-                segments: ['Vagas', 'RH'],
-                cities: [], // Todas as cidades
-                title: "Sua nova carreira começa aqui",
-                subtitle: "Confira as vagas exclusivas do RH Conecta de hoje.",
-                image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80",
-                cta: "Ver Vagas",
-                link: "/vagas",
-                color: "#2d3436"
-            }
-        ];
+        // Tenta encontrar um que seja para listagem e que não seja o mesmo do hero
+        const ad = searchAds.find(a => a.placements?.includes('SEGMENT_LISTING') && a.id !== heroAd?.id) 
+                 || searchAds.find(a => a.placements?.includes('SEGMENT_LISTING'))
+                 || (searchAds.length > 1 ? searchAds[1] : null);
 
-        return campaigns.find(c => {
-            const matchKeyword = c.keywords.some(k => q.includes(k));
-            const matchCity = c.cities.length === 0 || c.cities.includes(city);
-            return matchKeyword && matchCity;
-        });
-    }, [query, cityName]);
+        if (!ad) return null;
+        const midia = ad.midias['BANNER'] || ad.midias['banner_topo'] || Object.values(ad.midias)[0] || {};
 
-    // ✅ Banners Intersticiais (Aparecem no meio da lista de resultados)
+        return {
+            id: ad.id,
+            title: ad.nome,
+            image: (typeof window !== 'undefined' && window.innerWidth < 768) 
+                ? (midia.mobile?.url || midia.desktop?.url) 
+                : (midia.desktop?.url || midia.mobile?.url),
+            link: ad.url || null,
+        };
+    }, [searchAds, heroAd]);
+
     const interstitialAds = useMemo(() => {
-        const ads = [
-            {
-                id: 101,
-                title: "Anuncie no O Vermelhinho",
-                description: "Sua empresa em destaque para quem realmente procura.",
-                image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-                cta: "Saber Mais",
-                link: "https://overmelhinho.com.br/anuncie",
-                bgColor: "bg-indigo-600"
-            },
-            {
-                id: 102,
-                title: "Baixe nosso App",
-                description: "Tenha a cidade na palma da sua mão. Rápido e grátis.",
-                image: "https://images.unsplash.com/photo-1512428559083-a4979b2b91ef?w=800&q=80",
-                cta: "Download",
-                link: "#",
-                bgColor: "bg-emerald-600"
-            }
-        ];
-        return ads;
-    }, []);
-
-    useEffect(() => {
-        let q = searchParams.get('q');
-        if (!q && typeof window !== 'undefined') {
-            const raw = window.location.search;
-            if (raw.includes('q-')) q = raw.split('q-')[1]?.split('&')[0];
+        if (!searchAds || searchAds.length < 2) {
+            // Fallback para ads internos se não houver campanhas suficientes
+            return [
+                {
+                    id: 101,
+                    title: "Anuncie no O Vermelhinho",
+                    description: "Sua empresa em destaque para quem realmente procura.",
+                    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+                    cta: "Saber Mais",
+                    link: "https://overmelhinho.com.br/anuncie",
+                    bgColor: "bg-indigo-600"
+                }
+            ];
         }
-        setQuery(q || '');
-    }, [searchParams]);
-
-    const { trackSearch, trackInteraction } = useAnalytics();
+        
+        return searchAds.slice(1).map(ad => {
+            const midia = ad.midias['BANNER'] || ad.midias['banner_topo'] || Object.values(ad.midias)[0] || {};
+            return {
+                id: ad.id,
+                title: ad.nome,
+                description: `Destaque de ${ad.cliente.nome}`,
+                image: (typeof window !== 'undefined' && window.innerWidth < 768) 
+                    ? (midia.mobile?.url || midia.desktop?.url) 
+                    : (midia.desktop?.url || midia.mobile?.url),
+                cta: "Saber Mais",
+                link: ad.cliente.whatsapp ? `https://wa.me/55${ad.cliente.whatsapp.replace(/\D/g, '')}` : `/cliente/${ad.cliente.slug}`,
+                bgColor: "bg-brand-red"
+            };
+        });
+    }, [searchAds, heroAd, listAd]);
 
     const {
         data,
@@ -223,6 +227,36 @@ function SearchContent() {
             return true;
         });
     }, [data]);
+ 
+    const { trackSearch, trackInteraction, trackAdInteraction: trackAd } = useAnalytics();
+ 
+    useEffect(() => {
+        let q = searchParams.get('q');
+        if (!q && typeof window !== 'undefined') {
+            const raw = window.location.search;
+            if (raw.includes('q-')) q = raw.split('q-')[1]?.split('&')[0];
+        }
+        setQuery(q || '');
+    }, [searchParams]);
+ 
+    // Tracking de busca
+    useEffect(() => {
+        if (!isLoading && (query || cityName)) {
+            trackSearch(query || cityName || 'Busca Geral', cityName || 'Geral', allResults.length);
+        }
+    }, [isLoading, query, cityName, allResults.length]);
+ 
+    useEffect(() => {
+        if (heroAd) {
+            trackAd(heroAd.id, 'view', 'SEARCH_RESULT');
+        }
+    }, [heroAd?.id]);
+ 
+    useEffect(() => {
+        if (listAd) {
+            trackAd(listAd.id, 'view', 'SEGMENT_LISTING');
+        }
+    }, [listAd?.id]);
 
     // Intersection Observer para scroll infinito
     useEffect(() => {
@@ -387,32 +421,31 @@ function SearchContent() {
                     <main className="px-5 py-6 space-y-12 pb-40">
 
                         {/* HERO AD BANNER (PATROCINADO) */}
-                        {!isLoading && heroAd && (
+                        {heroAd && heroAd.image && (
                             <motion.section
                                 initial={{ opacity: 0, y: -20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="relative group cursor-pointer"
-                                onClick={() => window.open(heroAd.link, heroAd.link.startsWith('http') ? '_blank' : '_self')}
+                                className={`relative group ${heroAd.link ? 'cursor-pointer' : 'cursor-default'}`}
+                                onClick={() => {
+                                    if (heroAd.link) {
+                                        trackAd(heroAd.id, 'click', 'SEARCH_RESULT');
+                                        window.open(heroAd.link, heroAd.link.startsWith('http') ? '_blank' : '_self');
+                                    }
+                                }}
                             >
-                                <div className="relative h-64 md:h-80 rounded-[4rem] overflow-hidden shadow-2xl border-4 border-white group-hover:scale-[1.02] transition-transform duration-700">
-                                    <img src={heroAd.image} className="w-full h-full object-cover" alt="" />
-                                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-center px-10 space-y-4">
-                                        <div className="bg-white/20 backdrop-blur-md self-start px-4 py-1.5 rounded-full border border-white/30">
-                                            <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Patrocinado</span>
+                                <div className={`relative h-auto md:h-auto rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl border-4 border-white transition-transform duration-700 ${heroAd.link ? 'group-hover:scale-[1.01]' : ''}`}>
+                                    <img 
+                                        src={heroAd.image} 
+                                        className="w-full h-full object-contain" 
+                                        alt={heroAd.title} 
+                                    />
+                                    {/* Link Indicator (Optional but subtle) */}
+                                    {heroAd.link && (
+                                        <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
+                                            <ExternalLink size={16} className="text-white" />
                                         </div>
-                                        <h2 className="text-4xl md:text-5xl font-black text-white font-serif italic tracking-tighter leading-none">{heroAd.title}</h2>
-                                        <p className="text-white/80 text-sm font-bold max-w-xs leading-relaxed">{heroAd.subtitle}</p>
-                                        <div className="flex items-center space-x-4 pt-4">
-                                            <button className="bg-white text-gray-900 px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl group-hover:bg-brand-red group-hover:text-white transition-all">
-                                                {heroAd.cta}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/10 backdrop-blur-3xl flex items-center justify-center border border-white/20">
-                                        <Sparkles className="text-white animate-pulse" size={24} />
-                                    </div>
+                                    )}
                                 </div>
-                                <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-brand-red/10 rounded-full blur-[60px] pointer-events-none" />
                             </motion.section>
                         )}
 
@@ -533,17 +566,43 @@ function SearchContent() {
                             </section>
                         )}
 
-                        {/* AD BANNER */}
+                        {/* AD BANNER (DINÂMICO OU FALLBACK) */}
                         <section className="relative px-2">
-                            <div className="bg-brand-red rounded-[2.5rem] md:rounded-[3rem] p-8 md:p-10 text-white shadow-[0_30px_60px_-15px_rgba(183,15,10,0.3)] relative overflow-hidden group cursor-pointer active:scale-95 transition-all">
-                                <div className="relative z-10 space-y-4 md:space-y-6">
-                                    <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-tight font-serif italic uppercase">Seja o próximo<br />Match Perfeito</h3>
-                                    <p className="text-red-100 text-[8px] md:text-[9px] font-black uppercase tracking-[0.4em] opacity-80">Conecte sua empresa a novos clientes</p>
-                                    <button className="bg-white text-brand-red px-8 md:px-10 py-4 md:py-4.5 rounded-2xl md:rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl group-hover:scale-105 transition-transform duration-300">Quero Posicionar</button>
+                            {listAd ? (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true }}
+                                    className={`relative rounded-[2.5rem] md:rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white transition-all transform ${listAd.link ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'}`}
+                                    onClick={() => {
+                                        if (listAd.link) {
+                                            trackAd(listAd.id, 'click', 'SEGMENT_LISTING');
+                                            window.open(listAd.link, listAd.link.startsWith('http') ? '_blank' : '_self');
+                                        }
+                                    }}
+                                >
+                                    <img 
+                                        src={listAd.image} 
+                                        className="w-full h-full object-contain" 
+                                        alt={listAd.title} 
+                                    />
+                                    {listAd.link && (
+                                        <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity border border-white/30">
+                                            <ExternalLink size={16} className="text-white" />
+                                        </div>
+                                    )}
+                                </motion.div>
+                            ) : (
+                                <div className="bg-brand-red rounded-[2.5rem] md:rounded-[3rem] p-8 md:p-10 text-white shadow-[0_30px_60px_-15px_rgba(183,15,10,0.3)] relative overflow-hidden group cursor-pointer active:scale-95 transition-all">
+                                    <div className="relative z-10 space-y-4 md:space-y-6">
+                                        <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-tight font-serif italic uppercase">Seja o próximo<br />Match Perfeito</h3>
+                                        <p className="text-red-100 text-[8px] md:text-[9px] font-black uppercase tracking-[0.4em] opacity-80">Conecte sua empresa a novos clientes</p>
+                                        <button className="bg-white text-brand-red px-8 md:px-10 py-4 md:py-4.5 rounded-2xl md:rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl group-hover:scale-105 transition-transform duration-300">Quero Posicionar</button>
+                                    </div>
+                                    <div className="absolute -bottom-20 -right-20 w-64 h-64 md:w-80 md:h-80 bg-white/10 rounded-full blur-[100px] group-hover:bg-white/20 transition-all duration-1000" />
+                                    <Sparkles className="absolute top-6 right-6 md:top-8 md:right-8 rotate-12 opacity-10 group-hover:rotate-0 transition-transform duration-700" size={100} />
                                 </div>
-                                <div className="absolute -bottom-20 -right-20 w-64 h-64 md:w-80 md:h-80 bg-white/10 rounded-full blur-[100px] group-hover:bg-white/20 transition-all duration-1000" />
-                                <Sparkles className="absolute top-6 right-6 md:top-8 md:right-8 rotate-12 opacity-10 group-hover:rotate-0 transition-transform duration-700" size={100} />
-                            </div>
+                            )}
                         </section>
 
                         {/* 4. TODOS OS RESULTADOS + SCROLL INFINITO */}
@@ -585,7 +644,15 @@ function SearchContent() {
 
                                                 {showAd && (
                                                     <div className="mx-4 my-8">
-                                                        <div className={`relative ${ad.bgColor} rounded-[3rem] p-8 overflow-hidden group/ad cursor-pointer`}>
+                                                        <div 
+                                                            className={`relative ${ad.bgColor} rounded-[3rem] p-8 overflow-hidden group/ad cursor-pointer`}
+                                                            onClick={() => {
+                                                                if (ad.link) {
+                                                                    trackAd(ad.id, 'click', 'INTERSTITIAL');
+                                                                    window.open(ad.link, ad.link.startsWith('http') ? '_blank' : '_self');
+                                                                }
+                                                            }}
+                                                        >
                                                             <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
                                                                 <div className="flex-1 space-y-2 text-center md:text-left">
                                                                     <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">Publicidade</span>

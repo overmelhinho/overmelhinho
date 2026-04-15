@@ -510,6 +510,7 @@ class CampanhaMidiaController extends Controller
             'em_revisao',
             'aprovado',
             'reprovado',
+            'publicado',
             'arquivado',
         ];
 
