@@ -6,6 +6,8 @@ export interface Ad {
   id: number;
   nome: string;
   tipo: string;
+  url: string | null;
+  is_institucional: boolean;
   placements: string[];
   midias: {
     [key: string]: {
