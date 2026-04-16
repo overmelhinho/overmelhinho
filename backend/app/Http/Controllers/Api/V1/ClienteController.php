@@ -358,10 +358,27 @@ class ClienteController extends Controller
         if ($q !== '') {
             $qDigits = preg_replace('/\D+/', '', $q) ?? $q;
 
-            $query->where(function ($sub) use ($q, $qDigits) {
-                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
-                    ->orWhere('razao_social', 'ilike', "%{$q}%")
-                    ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+            // Verificação de disponibilidade do unaccent (cacheada estaticamente)
+            static $unaccentExists = null;
+            if ($unaccentExists === null) {
+                try {
+                    DB::select('SELECT unaccent(\'a\')');
+                    $unaccentExists = true;
+                } catch (\Exception $e) {
+                    $unaccentExists = false;
+                }
+            }
+
+            $query->where(function ($sub) use ($q, $qDigits, $unaccentExists) {
+                if ($unaccentExists) {
+                    $sub->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$q}%"])
+                        ->orWhereRaw("unaccent(razao_social) ilike unaccent(?)", ["%{$q}%"])
+                        ->orWhereRaw("unaccent(nome_alternativo) ilike unaccent(?)", ["%{$q}%"]);
+                } else {
+                    $sub->where('nome_fantasia', 'ilike', "%{$q}%")
+                        ->orWhere('razao_social', 'ilike', "%{$q}%")
+                        ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+                }
 
                 // cpf/cnpj: tenta por dígitos e por texto também (caso venha mascarado)
                 if ($qDigits !== '') {
@@ -378,11 +395,18 @@ class ClienteController extends Controller
                 });
 
                 // endereços
-                $sub->orWhereHas('enderecos', function ($eq) use ($q) {
-                    $eq->where('cidade', 'ilike', "%{$q}%")
-                       ->orWhere('estado', 'ilike', "%{$q}%")
-                       ->orWhere('bairro', 'ilike', "%{$q}%")
-                       ->orWhere('rua', 'ilike', "%{$q}%");
+                $sub->orWhereHas('enderecos', function ($eq) use ($q, $unaccentExists) {
+                    if ($unaccentExists) {
+                        $eq->whereRaw("unaccent(cidade) ilike unaccent(?)", ["%{$q}%"])
+                           ->orWhereRaw("unaccent(estado) ilike unaccent(?)", ["%{$q}%"])
+                           ->orWhereRaw("unaccent(bairro) ilike unaccent(?)", ["%{$q}%"])
+                           ->orWhereRaw("unaccent(rua) ilike unaccent(?)", ["%{$q}%"]);
+                    } else {
+                        $eq->where('cidade', 'ilike', "%{$q}%")
+                           ->orWhere('estado', 'ilike', "%{$q}%")
+                           ->orWhere('bairro', 'ilike', "%{$q}%")
+                           ->orWhere('rua', 'ilike', "%{$q}%");
+                    }
                 });
 
                 // segmentos
@@ -395,8 +419,16 @@ class ClienteController extends Controller
         // ✅ Ordenação
         $sort = $request->input('sort');
 
-        if ($q !== '') {
-            // Se houver busca, a relevância do NOME vem primeiro, independente do sort selecionado
+        if ($q !== '' && ($unaccentExists ?? false)) {
+            // Se houver busca e unaccent disponível, a relevância do NOME (sem acento) vem primeiro
+            $query->orderByRaw("
+                CASE 
+                    WHEN unaccent(nome_fantasia) ilike unaccent(?) THEN 0
+                    WHEN unaccent(nome_fantasia) ilike unaccent(?) THEN 1
+                    ELSE 2
+                END ASC
+            ", [$q, "%{$q}%"]);
+        } elseif ($q !== '') {
             $query->orderByRaw("
                 CASE 
                     WHEN nome_fantasia ilike ? THEN 0

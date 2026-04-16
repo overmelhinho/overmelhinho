@@ -552,8 +552,8 @@ export default function ClientesList() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-medium text-gray-900 truncate max-w-[150px]">{c.nome_fantasia}</div>
-                            <div className="text-[10px] text-gray-500 truncate max-w-[150px]">
+                            <div className="font-medium text-gray-900">{c.nome_fantasia}</div>
+                            <div className="text-[10px] text-gray-500">
                               {cidadeUF || "—"}
                             </div>
                           </div>
