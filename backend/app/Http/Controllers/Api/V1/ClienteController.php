@@ -395,6 +395,17 @@ class ClienteController extends Controller
         // ✅ Ordenação
         $sort = $request->input('sort');
 
+        if ($q !== '') {
+            // Se houver busca, a relevância do NOME vem primeiro, independente do sort selecionado
+            $query->orderByRaw("
+                CASE 
+                    WHEN nome_fantasia ilike ? THEN 0
+                    WHEN nome_fantasia ilike ? THEN 1
+                    ELSE 2
+                END ASC
+            ", [$q, "%{$q}%"]);
+        }
+
         if ($sort === 'latest') {
             $query->orderBy('created_at', 'desc');
         } elseif ($sort === 'oldest') {
