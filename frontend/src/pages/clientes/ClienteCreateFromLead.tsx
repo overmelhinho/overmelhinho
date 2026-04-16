@@ -503,6 +503,7 @@ export default function ClienteCreateFromLead() {
                     rua: e.rua,
                     numero: e.numero,
                     complemento: e.complemento || null,
+                    telefone: e.telefone || null,
                     link_maps: e.link_maps || null,
                     link_waze: e.link_waze || null,
                   })),
