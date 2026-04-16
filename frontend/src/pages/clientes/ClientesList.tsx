@@ -279,18 +279,16 @@ export default function ClientesList() {
     }
   };
 
-  const onSearchDebounced = useMemo(
-    () =>
-      debounce<string>((v) => {
-        setSearchDebounced(v);
-        setPage(1);
-      }, 350),
-    []
-  );
+  const handleSearchTrigger = (v: string) => {
+    setSearchDebounced(v);
+    setPage(1);
+  };
 
-  useEffect(() => {
-    onSearchDebounced(search);
-  }, [search, onSearchDebounced]);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearchTrigger(search);
+    }
+  };
 
   const queryKey = useMemo(() => ["clientes", { page, sort, searchDebounced, tipo }], [page, sort, searchDebounced, tipo]);
 
@@ -450,7 +448,8 @@ export default function ClientesList() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome, CNPJ, rua/bairro, email ou telefone..."
+              onKeyDown={handleKeyDown}
+              placeholder="Digite e aperte Enter para buscar..."
               className="w-full border rounded-xl pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-[#B70F0A] outline-none"
             />
           </div>
@@ -486,6 +485,7 @@ export default function ClientesList() {
               className="px-3 py-2 border rounded-xl text-sm hover:bg-gray-50 transition"
               onClick={() => {
                 setSearch("");
+                setSearchDebounced("");
                 setTipo("all");
                 setSort("latest");
                 setPage(1);
