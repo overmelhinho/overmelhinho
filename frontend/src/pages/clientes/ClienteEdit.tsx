@@ -167,7 +167,8 @@ export default function ClienteEdit() {
   const initialValues = useMemo(() => {
     const c = data || {};
 
-    const endereco = Array.isArray(c?.enderecos) ? c.enderecos[0] : c?.endereco;
+    const enderecos = Array.isArray(c?.enderecos) ? c.enderecos : (c?.endereco ? [c.endereco] : []);
+    const endereco0 = enderecos[0] || {};
     const contato = Array.isArray(c?.contatos) ? c.contatos[0] : c?.contato;
 
     const tipo = (c?.tipo_cliente || "pagante").toString().toLowerCase();
@@ -225,13 +226,29 @@ export default function ClienteEdit() {
       exibir_email: !!contato?.exibir_email,
       responsavel: contato?.nome_contato || c?.responsavel || "",
 
-      cep: endereco?.cep || "",
-      estado: endereco?.estado || "",
-      cidade: endereco?.cidade || "",
-      bairro: endereco?.bairro || "",
-      rua: endereco?.rua || "",
-      numero: endereco?.numero || "",
-      complemento: endereco?.complemento || "",
+      // LEGACY (opcional, para não quebrar componentes que ainda usam campo único)
+      cep: endereco0?.cep || "",
+      estado: endereco0?.estado || "",
+      cidade: endereco0?.cidade || "",
+      bairro: endereco0?.bairro || "",
+      rua: endereco0?.rua || "",
+      numero: endereco0?.numero || "",
+      complemento: endereco0?.complemento || "",
+
+      // NOVO
+      enderecos: enderecos.map((e: any) => ({
+        id: e?.id || null,
+        nome_unidade: e?.nome_unidade || "",
+        cep: e?.cep || "",
+        estado: e?.estado || "",
+        cidade: e?.cidade || "",
+        bairro: e?.bairro || "",
+        rua: e?.rua || "",
+        numero: e?.numero || "",
+        complemento: e?.complemento || "",
+        link_maps: e?.link_maps || "",
+        link_waze: e?.link_waze || "",
+      })),
 
       segmentos: Array.isArray(c?.segmentos) ? c.segmentos.map((s: any) => s.id ?? s) : [],
       cidades_atendidas: Array.isArray(c?.cidades_atendidas)
@@ -357,15 +374,18 @@ export default function ClienteEdit() {
               segmentos: values.segmentos,
               cidades_atendidas: values.cidades_atendidas,
 
-              endereco: {
-                cep: values.cep,
-                estado: values.estado,
-                cidade: values.cidade,
-                bairro: values.bairro,
-                rua: values.rua,
-                numero: values.numero,
-                complemento: values.complemento || null,
-              },
+              enderecos: values.enderecos.map((e: any) => ({
+                nome_unidade: e.nome_unidade || null,
+                cep: e.cep,
+                estado: e.estado,
+                cidade: e.cidade,
+                bairro: e.bairro,
+                rua: e.rua,
+                numero: e.numero,
+                complemento: e.complemento || null,
+                link_maps: e.link_maps || null,
+                link_waze: e.link_waze || null,
+              })),
 
               contatos: [
                 {

@@ -107,15 +107,17 @@ class ClienteController extends Controller
 
         // ✅ Filtro por Cidade (Geolocalização Contextual)
         if ($cityId) {
-            $query->where(function($sub) use ($cityId) {
+            $cityObj = \App\Models\Cidade::find($cityId);
+            $query->where(function($sub) use ($cityId, $cityObj) {
                 $sub->whereHas('cidadesAtendidas', function($c) use ($cityId) {
                     $c->where('cidades.id', $cityId);
-                })->orWhereHas('enderecos', function($e) use ($cityId) {
-                    $city = \App\Models\Cidade::find($cityId);
-                    if ($city) {
-                        $e->where('cidade', 'ilike', "%{$city->nome}%");
-                    }
                 });
+                
+                if ($cityObj) {
+                    $sub->orWhereHas('enderecos', function($e) use ($cityObj) {
+                        $e->where('cidade', 'ilike', "%{$cityObj->nome}%");
+                    });
+                }
             });
         } elseif ($cityName) {
             $query->where(function($sub) use ($cityName) {
@@ -680,14 +682,29 @@ public function historico(Request $request, int $id)
                 'cidades_atendidas'   => 'nullable|array',
                 'cidades_atendidas.*' => 'integer|exists:cidades,id',
 
-                'endereco'             => 'nullable|array',
-                'endereco.cep'         => 'required_with:endereco|string',
-                'endereco.estado'      => 'required_with:endereco|string',
-                'endereco.cidade'      => 'required_with:endereco|string',
-                'endereco.bairro'      => 'required_with:endereco|string',
-                'endereco.rua'         => 'required_with:endereco|string',
-                'endereco.numero'      => 'required_with:endereco|string',
-                'endereco.complemento' => 'nullable|string',
+                'endereco'                 => 'nullable|array',
+                'endereco.nome_unidade'    => 'nullable|string|max:255',
+                'endereco.telefone'        => 'nullable|string|max:50',
+                'endereco.cep'             => 'required_with:endereco|string',
+                'endereco.estado'          => 'required_with:endereco|string',
+                'endereco.cidade'          => 'required_with:endereco|string',
+                'endereco.bairro'          => 'required_with:endereco|string',
+                'endereco.rua'             => 'required_with:endereco|string',
+                'endereco.numero'          => 'required_with:endereco|string',
+                'endereco.complemento'     => 'nullable|string',
+
+                'enderecos'                => 'nullable|array',
+                'enderecos.*.nome_unidade' => 'nullable|string|max:255',
+                'enderecos.*.telefone'     => 'nullable|string|max:50',
+                'enderecos.*.cep'          => 'required|string',
+                'enderecos.*.estado'       => 'required|string',
+                'enderecos.*.cidade'       => 'required|string',
+                'enderecos.*.bairro'       => 'required|string',
+                'enderecos.*.rua'          => 'required|string',
+                'enderecos.*.numero'       => 'required|string',
+                'enderecos.*.complemento'  => 'nullable|string',
+                'enderecos.*.link_maps'    => 'nullable|string|max:500',
+                'enderecos.*.link_waze'    => 'nullable|string|max:500',
 
                 'contatos'                      => 'nullable|array|min:1',
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
@@ -800,8 +817,16 @@ public function historico(Request $request, int $id)
                 $cliente->cidadesAtendidas()->sync($validated['cidades_atendidas']);
             }
 
-            if (!empty($validated['endereco']) && is_array($validated['endereco'])) {
-                $cliente->enderecos()->create($validated['endereco']);
+            // endereços (múltiplos)
+            $enderecos = $validated['enderecos'] ?? [];
+            if (empty($enderecos) && !empty($validated['endereco'])) {
+                $enderecos = [$validated['endereco']];
+            }
+
+            if (!empty($enderecos)) {
+                foreach ($enderecos as $end) {
+                    $cliente->enderecos()->create($end);
+                }
             }
 
             if (!empty($validated['contatos']) && is_array($validated['contatos'])) {
@@ -1068,14 +1093,28 @@ public function historico(Request $request, int $id)
                 'cidades_atendidas'   => 'nullable|array',
                 'cidades_atendidas.*' => 'integer|exists:cidades,id',
 
-                'endereco'             => 'nullable|array',
-                'endereco.cep'         => 'required_with:endereco|string',
-                'endereco.estado'      => 'required_with:endereco|string',
-                'endereco.cidade'      => 'required_with:endereco|string',
-                'endereco.bairro'      => 'required_with:endereco|string',
-                'endereco.rua'         => 'required_with:endereco|string',
-                'endereco.numero'      => 'required_with:endereco|string',
-                'endereco.complemento' => 'nullable|string',
+                'endereco'                 => 'nullable|array',
+                'endereco.nome_unidade'    => 'nullable|string|max:255',
+                'endereco.cep'             => 'required_with:endereco|string',
+                'endereco.estado'          => 'required_with:endereco|string',
+                'endereco.cidade'          => 'required_with:endereco|string',
+                'endereco.bairro'          => 'required_with:endereco|string',
+                'endereco.rua'             => 'required_with:endereco|string',
+                'endereco.numero'          => 'required_with:endereco|string',
+                'endereco.complemento'     => 'nullable|string',
+
+                'enderecos'                => 'nullable|array',
+                'enderecos.*.nome_unidade' => 'nullable|string|max:255',
+                'enderecos.*.telefone'     => 'nullable|string|max:50',
+                'enderecos.*.cep'          => 'required|string',
+                'enderecos.*.estado'       => 'required|string',
+                'enderecos.*.cidade'       => 'required|string',
+                'enderecos.*.bairro'       => 'required|string',
+                'enderecos.*.rua'          => 'required|string',
+                'enderecos.*.numero'       => 'required|string',
+                'enderecos.*.complemento'  => 'nullable|string',
+                'enderecos.*.link_maps'    => 'nullable|string|max:500',
+                'enderecos.*.link_waze'    => 'nullable|string|max:500',
 
                 'contatos'                      => 'nullable|array|min:1',
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
@@ -1206,13 +1245,18 @@ public function historico(Request $request, int $id)
                 $cliente->cidadesAtendidas()->sync($validated['cidades_atendidas'] ?? []);
             }
 
-            // endereço: atualiza o primeiro, senão cria
-            if (!empty($validated['endereco']) && is_array($validated['endereco'])) {
-                $e = $cliente->enderecos()->orderBy('id', 'asc')->first();
-                if ($e) {
-                    $e->update($validated['endereco']);
-                } else {
-                    $cliente->enderecos()->create($validated['endereco']);
+            // endereço: sincroniza múltiplos
+            if ($request->has('enderecos') || $request->has('endereco')) {
+                $enderecos = $validated['enderecos'] ?? [];
+                if (empty($enderecos) && !empty($validated['endereco'])) {
+                    $enderecos = [$validated['endereco']];
+                }
+
+                if (!empty($enderecos)) {
+                    $cliente->enderecos()->delete();
+                    foreach ($enderecos as $end) {
+                        $cliente->enderecos()->create($end);
+                    }
                 }
             }
 

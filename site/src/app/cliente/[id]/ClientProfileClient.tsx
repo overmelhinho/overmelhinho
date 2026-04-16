@@ -260,34 +260,6 @@ export default function ClientProfileClient() {
         <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24 md:pb-0">
 
 
-            {/* 🤖 JSON-LD STRUCTURED DATA (Google LocalBusiness) */}
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                        "@context": "https://schema.org",
-                        "@type": "LocalBusiness",
-                        "name": client.nome_fantasia,
-                        "image": client.logotipo_url || client.galeria?.[0]?.url,
-                        "description": client.descricao,
-                        "address": {
-                            "@type": "PostalAddress",
-                            "streetAddress": `${client.enderecos?.[0]?.rua}, ${client.enderecos?.[0]?.numero}`,
-                            "addressLocality": client.enderecos?.[0]?.cidade,
-                            "addressRegion": client.enderecos?.[0]?.estado,
-                            "postalCode": client.enderecos?.[0]?.cep,
-                            "addressCountry": "BR"
-                        },
-                        "geo": {
-                            "@type": "GeoCoordinates",
-                            "latitude": client.enderecos?.[0]?.latitude,
-                            "longitude": client.enderecos?.[0]?.longitude
-                        },
-                        "url": `https://overmelhinho.com.br/cliente/${client.slug || client.id}`,
-                        "telephone": client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular
-                    })
-                }}
-            />
 
 
 
@@ -355,7 +327,7 @@ export default function ClientProfileClient() {
                                     <p className="text-gray-400 flex items-center">
                                         <MapPin size={14} className="mr-1.5 text-brand-red" />
                                         {client.enderecos?.[0]
-                                            ? `${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].cidade}`
+                                            ? `${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].cidade}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`
                                             : 'Endereço não informado'}
                                     </p>
                                 </div>
@@ -564,24 +536,63 @@ export default function ClientProfileClient() {
                                         </section>
                                     )}
 
-                                    {/* MAP SECTION */}
-                                    <section className="space-y-6">
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Localização</h2>
-                                        <div className="h-72 md:h-96 w-full rounded-[3rem] overflow-hidden bg-gray-100 relative shadow-inner border-4 border-white gummy-card">
-                                            {client.enderecos?.[0] ? (
-                                                <iframe
-                                                    width="100%"
-                                                    height="100%"
-                                                    style={{ border: 0 }}
-                                                    loading="lazy"
-                                                    allowFullScreen
-                                                    referrerPolicy="no-referrer-when-downgrade"
-                                                    src={`https://www.google.com/maps?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}&t=&z=16&ie=UTF8&iwloc=&output=embed`}
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex flex-col items-center justify-center space-y-4 text-gray-400 font-bold italic">
-                                                    <MapPin size={32} />
-                                                    <p>Endereço não informado</p>
+                                    <section className="space-y-8">
+                                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Onde nos Encontrar</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {client.enderecos?.length > 0 ? client.enderecos.map((end: any, i: number) => (
+                                                <div key={i} className="bg-white p-6 rounded-[2.5rem] border-2 border-gray-50 shadow-xl gummy-card group hover:border-brand-red/30 transition-all flex flex-col justify-between">
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 bg-red-50 text-brand-red rounded-2xl flex items-center justify-center font-black">
+                                                                    {i + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-black text-gray-900 uppercase tracking-widest text-[10px] leading-tight">
+                                                                        {end.nome_unidade || (i === 0 ? 'Matriz' : `Unidade ${i + 1}`)}
+                                                                    </h4>
+                                                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{end.cidade} - {end.estado}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                                                            {end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
+                                                            {end.bairro} • {end.cep}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                                                        {(i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone) && (
+                                                            <a 
+                                                                href={`tel:${(i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone).replace(/\D/g, '')}`}
+                                                                className="col-span-full md:col-span-1 bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2 mb-1"
+                                                            >
+                                                                <Phone size={12} /> Ligar: {i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone}
+                                                            </a>
+                                                        )}
+                                                        <a 
+                                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
+                                                        >
+                                                            Google Maps
+                                                        </a>
+                                                        <a 
+                                                            href={`https://waze.com/ul?q=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
+                                                        >
+                                                            Waze
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-100 rounded-[3rem]">
+                                                    <MapPin size={32} className="mb-3 opacity-20" />
+                                                    <p className="font-bold italic">Nenhum endereço cadastrado</p>
                                                 </div>
                                             )}
                                         </div>

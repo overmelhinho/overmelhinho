@@ -422,13 +422,20 @@ export default function ClienteCreateFromLead() {
               celular: "",
               responsavel: lead?.responsavel || "",
 
-              cep: "",
-              estado: "",
-              cidade: lead?.cidade || "",
-              bairro: "",
-              rua: "",
-              numero: "",
-              complemento: "",
+              enderecos: [
+                {
+                  nome_unidade: "Matriz",
+                  cep: "",
+                  estado: "",
+                  cidade: lead?.cidade || "",
+                  bairro: "",
+                  rua: "",
+                  numero: "",
+                  complemento: "",
+                  link_maps: "",
+                  link_waze: ""
+                }
+              ],
 
               segmentos: [],
               cidades_atendidas: [],
@@ -487,15 +494,18 @@ export default function ClienteCreateFromLead() {
                   segmentos: values.segmentos,
                   cidades_atendidas: values.cidades_atendidas,
 
-                  endereco: {
-                    cep: values.cep,
-                    estado: values.estado,
-                    cidade: values.cidade,
-                    bairro: values.bairro,
-                    rua: values.rua,
-                    numero: values.numero,
-                    complemento: values.complemento || null,
-                  },
+                  enderecos: values.enderecos.map((e: any) => ({
+                    nome_unidade: e.nome_unidade || null,
+                    cep: e.cep,
+                    estado: e.estado,
+                    cidade: e.cidade,
+                    bairro: e.bairro,
+                    rua: e.rua,
+                    numero: e.numero,
+                    complemento: e.complemento || null,
+                    link_maps: e.link_maps || null,
+                    link_waze: e.link_waze || null,
+                  })),
 
                   contatos: [
                     {
@@ -689,14 +699,14 @@ export default function ClienteCreateFromLead() {
                 if (dados.telefone) setFieldValue("telefone_principal", String(dados.telefone));
                 if (dados.responsavel) setFieldValue("responsavel", String(dados.responsavel));
 
-                // Endereço
-                if (dados.cep) setFieldValue("cep", String(dados.cep));
-                if (dados.estado) setFieldValue("estado", String(dados.estado));
-                if (dados.cidade) setFieldValue("cidade", String(dados.cidade));
-                if (dados.bairro) setFieldValue("bairro", String(dados.bairro));
-                if (dados.rua) setFieldValue("rua", String(dados.rua));
-                if (dados.numero) setFieldValue("numero", String(dados.numero));
-                if (dados.complemento) setFieldValue("complemento", String(dados.complemento));
+                // Endereço (Primeira Unidade)
+                if (dados.cep) setFieldValue("enderecos[0].cep", String(dados.cep));
+                if (dados.estado) setFieldValue("enderecos[0].estado", String(dados.estado));
+                if (dados.cidade) setFieldValue("enderecos[0].cidade", String(dados.cidade));
+                if (dados.bairro) setFieldValue("enderecos[0].bairro", String(dados.bairro));
+                if (dados.rua) setFieldValue("enderecos[0].rua", String(dados.rua));
+                if (dados.numero) setFieldValue("enderecos[0].numero", String(dados.numero));
+                if (dados.complemento) setFieldValue("enderecos[0].complemento", String(dados.complemento));
 
                 // ✅ Redes Sociais: TabRedesSociais espera campos no root que são sincronizados pelo useEffect
                 const socialIds = ["instagram", "facebook", "linkedin", "youtube", "tiktok", "x"] as const;

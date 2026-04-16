@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useAds } from '@/hooks/useAds';
 import { useLocation } from '@/contexts/LocationContext';
-import { X, ExternalLink } from 'lucide-react';
+import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
@@ -78,41 +78,21 @@ export default function GlobalPopup() {
                         <X size={24} />
                     </button>
 
-                    <div className="relative aspect-square md:aspect-[4/5] overflow-hidden">
+                    <div 
+                        className="relative aspect-square md:aspect-[4/5] overflow-hidden cursor-pointer"
+                        onClick={() => {
+                            if (ad.url) {
+                                trackAdInteraction(ad.id, 'click', 'POPUP_GLOBAL', ad.cliente.id);
+                                window.open(ad.url, '_blank');
+                            }
+                            handleClose();
+                        }}
+                    >
                         <img 
                             src={imageUrl} 
                             alt={ad.nome} 
                             className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                        
-                        <div className="absolute bottom-10 left-10 right-10 space-y-4">
-                            <div className="space-y-1">
-                                <span className="text-[10px] font-black text-brand-red bg-white px-3 py-1 rounded-full uppercase tracking-widest shadow-xl">
-                                    Destaque Regional
-                                </span>
-                                <h3 className="text-3xl md:text-4xl font-black text-white font-serif italic tracking-tighter leading-tight">
-                                    {ad.nome}
-                                </h3>
-                                <p className="text-white/70 text-sm font-medium">Oferecido por {ad.cliente.nome}</p>
-                            </div>
-
-                            <div className="flex gap-3">
-                                <button 
-                                    onClick={() => {
-                                        trackAdInteraction(ad.id, 'click', 'POPUP_GLOBAL', ad.cliente.id);
-                                        if (ad.cliente.whatsapp) {
-                                            window.open(`https://wa.me/55${ad.cliente.whatsapp.replace(/\D/g, '')}`, '_blank');
-                                        }
-                                        handleClose();
-                                    }}
-                                    className="flex-1 bg-white text-gray-900 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    <span>Aproveitar Agora</span>
-                                    <ExternalLink size={14} />
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </motion.div>
             </div>

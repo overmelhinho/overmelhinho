@@ -75,28 +75,36 @@ export default async function Page({ params }: { params: { id: string } }) {
         ]
     };
 
-    const localBusinessJsonLd = {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": client.nome_fantasia,
-        "image": client.logotipo_url || client.galeria?.[0]?.url,
-        "description": client.descricao,
-        "address": {
-            "@type": "PostalAddress",
-            "streetAddress": `${client.enderecos?.[0]?.rua || ''}, ${client.enderecos?.[0]?.numero || ''}`,
-            "addressLocality": client.enderecos?.[0]?.cidade || '',
-            "addressRegion": client.enderecos?.[0]?.estado || '',
-            "postalCode": client.enderecos?.[0]?.cep || '',
-            "addressCountry": "BR"
-        },
-        "geo": {
-            "@type": "GeoCoordinates",
-            "latitude": client.enderecos?.[0]?.latitude,
-            "longitude": client.enderecos?.[0]?.longitude
-        },
-        "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
-        "telephone": client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular
-    };
+    const localBusinessJsonLd = client.enderecos?.length > 0 
+        ? client.enderecos.map((end: any, index: number) => ({
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            "name": client.enderecos.length > 1 ? `${client.nome_fantasia} - ${end.nome_unidade || `Unidade ${index + 1}`}` : client.nome_fantasia,
+            "image": client.logotipo_url || client.galeria?.[0]?.url,
+            "description": client.descricao,
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": `${end.rua || ''}, ${end.numero || ''}`,
+                "addressLocality": end.cidade || '',
+                "addressRegion": end.estado || '',
+                "postalCode": end.cep || '',
+                "addressCountry": "BR"
+            },
+            "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": end.latitude,
+                "longitude": end.longitude
+            },
+            "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
+            "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone)
+        }))
+        : {
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            "name": client.nome_fantasia,
+            "description": client.descricao,
+            "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
+        };
 
     return (
         <>
