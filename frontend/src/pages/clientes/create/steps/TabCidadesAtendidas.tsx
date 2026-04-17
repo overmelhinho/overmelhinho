@@ -24,8 +24,8 @@ export default function TabCidadesAtendidas() {
     ? values.cidades_atendidas
     : [];
 
-  const cidadeEnderecoNome: string = (values?.cidade || "").trim();
-  const cidadeEnderecoUF: string = (values?.estado || "").trim();
+  const cidadeEnderecoNome: string = (values?.enderecos?.[0]?.cidade || "").trim();
+  const cidadeEnderecoUF: string = (values?.enderecos?.[0]?.estado || "").trim();
 
   const [search, setSearch] = useState("");
   const [chipsExpanded, setChipsExpanded] = useState(false);
