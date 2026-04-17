@@ -690,11 +690,12 @@ public function historico(Request $request, int $id)
                 'nome_fantasia' => 'required|string|max:255',
 
                 'cpf_cnpj' => [
-                    'required',
+                    'nullable',
                     'string',
                     'max:20',
                     Rule::unique('clientes', 'cpf_cnpj'),
                     function ($attribute, $value, $fail) {
+                        if (empty($value)) return;
                         $exists = Cliente::query()
                             ->select(['id', 'nome_fantasia', 'cpf_cnpj'])
                             ->where('cpf_cnpj', $value)
@@ -1103,11 +1104,12 @@ public function historico(Request $request, int $id)
                 'nome_fantasia' => 'required|string|max:255',
 
                 'cpf_cnpj' => [
-                    'required',
+                    'nullable',
                     'string',
                     'max:20',
                     Rule::unique('clientes', 'cpf_cnpj')->ignore($cliente->id),
                     function ($attribute, $value, $fail) use ($cliente) {
+                        if (empty($value)) return;
                         $exists = Cliente::query()
                             ->select(['id', 'nome_fantasia', 'cpf_cnpj'])
                             ->where('cpf_cnpj', $value)
