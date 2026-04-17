@@ -11,55 +11,55 @@
         
         body {
             font-family: 'Arial', 'Helvetica', sans-serif;
-            font-size: 8.2px;
+            font-size: 10px;
             color: #1F2937;
             background: #ffffff;
             line-height: 1.3;
-            padding: 40px 30px 20px 30px;
+            padding: 35px 30px 20px 30px;
         }
 
         table { width: 100%; border-collapse: collapse; }
         td, th { vertical-align: top; }
 
         /* ── HEADER ── */
-        .header-table { border-bottom: 2px solid #E5E7EB; padding-bottom: 4px; margin-bottom: 8px; }
-        .logo-img { max-height: 35px; }
-        .header-company { text-align: right; font-size: 8px; color: #6B7280; line-height: 1.1; }
-        .header-company strong { color: #111827; font-size: 10px; display: block; margin-bottom: 1px; text-transform: uppercase; }
+        .header-table { border-bottom: 2px solid #E5E7EB; padding-bottom: 5px; margin-bottom: 10px; }
+        .logo-img { max-height: 40px; }
+        .header-company { text-align: right; font-size: 9px; color: #6B7280; line-height: 1.2; }
+        .header-company strong { color: #111827; font-size: 11px; display: block; margin-bottom: 2px; text-transform: uppercase; }
 
         /* ── TITLE ── */
-        .doc-title { text-align: center; font-size: 12px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .doc-title { text-align: center; font-size: 14px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
 
         /* ── SECTIONS ── */
-        .section-title { font-size: 9px; font-weight: bold; color: #B70F0A; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;}
+        .section-title { font-size: 11px; font-weight: bold; color: #B70F0A; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px;}
         
-        .info-table { margin-bottom: 8px; }
-        .info-table td { padding: 4px 6px; border: 1px solid #F3F4F6; width: 50%; }
-        .info-table .label { display: block; font-size: 7px; font-weight: bold; color: #9CA3AF; text-transform: uppercase; margin-bottom: 1px; }
-        .info-table .value { display: block; font-size: 9.5px; font-weight: bold; color: #111827; }
-        .info-table .value-desc { font-size: 9px; font-weight: normal; color: #374151; }
+        .info-table { margin-bottom: 10px; }
+        .info-table td { padding: 5px 8px; border: 1px solid #F3F4F6; width: 50%; }
+        .info-table .label { display: block; font-size: 8.5px; font-weight: bold; color: #9CA3AF; text-transform: uppercase; margin-bottom: 2px; }
+        .info-table .value { display: block; font-size: 11.5px; font-weight: bold; color: #111827; }
+        .info-table .value-desc { font-size: 10.5px; font-weight: normal; color: #374151; }
 
         /* ── PAYMENT & INSTALLMENTS ── */
-        .pay-summary { margin-bottom: 5px; }
-        .pay-summary td { border: 1px solid #E5E7EB; background: #F9FAFB; padding: 5px; text-align: center; width: 25%; }
-        .pay-summary .val { font-size: 10px; font-weight: bold; color: #111827; margin-top: 1px; }
+        .pay-summary { margin-bottom: 8px; }
+        .pay-summary td { border: 1px solid #E5E7EB; background: #F9FAFB; padding: 8px; text-align: center; width: 25%; }
+        .pay-summary .val { font-size: 12px; font-weight: bold; color: #111827; margin-top: 3px; }
         .pay-summary .val.red { color: #B70F0A; }
 
-        .installments-table th { background: #F3F4F6; padding: 3px; font-size: 7.5px; color: #4B5563; text-transform: uppercase; border: 1px solid #E5E7EB; }
-        .installments-table td { padding: 3px; font-size: 9px; color: #111827; border: 1px solid #E5E7EB; text-align: center; font-weight: bold; }
+        .installments-table th { background: #F3F4F6; padding: 5px; font-size: 9px; color: #4B5563; text-transform: uppercase; border: 1px solid #E5E7EB; }
+        .installments-table td { padding: 5px; font-size: 10.5px; color: #111827; border: 1px solid #E5E7EB; text-align: center; font-weight: bold; }
 
         /* ── OBS ── */
-        .obs-box { border: 1px solid #F3F4F6; background: #FAFAFA; padding: 5px; margin-bottom: 8px; border-radius: 4px; font-size: 8px; color: #374151; }
-        .obs-box p { margin-bottom: 1px; }
+        .obs-box { border: 1px solid #F3F4F6; background: #FAFAFA; padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 9.5px; color: #374151; }
+        .obs-box p { margin-bottom: 3px; }
         .obs-box p:last-child { margin-bottom: 0; }
 
         /* ── SIGNATURES ── */
-        .signature-area { margin-top: 15px; page-break-inside: avoid; }
-        .sign-table td { width: 50%; padding: 0 10px; text-align: center; }
-        .sign-line { border-top: 1px solid #6B7280; width: 90%; margin: 15px auto 3px auto; }
-        .sign-label { font-size: 8px; font-weight: bold; color: #111827; text-transform: uppercase; }
+        .signature-area { margin-top: 20px; page-break-inside: avoid; }
+        .sign-table td { width: 50%; padding: 0 15px; text-align: center; }
+        .sign-line { border-top: 1px solid #6B7280; width: 90%; margin: 25px auto 4px auto; }
+        .sign-label { font-size: 9.5px; font-weight: bold; color: #111827; text-transform: uppercase; }
         
-        .legal-footer { margin-top: 10px; padding-top: 4px; border-top: 1px solid #E5E7EB; font-size: 6.8px; color: #9CA3AF; text-align: justify; line-height: 1.2; page-break-inside: avoid; }
+        .legal-footer { margin-top: 15px; padding-top: 8px; border-top: 1px solid #E5E7EB; font-size: 7.8px; color: #9CA3AF; text-align: justify; line-height: 1.25; page-break-inside: avoid; }
     </style>
 </head>
 <body>
