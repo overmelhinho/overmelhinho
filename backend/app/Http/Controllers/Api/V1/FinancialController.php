@@ -122,6 +122,96 @@ class FinancialController extends Controller
         return $pdf->download('Carne_O_Vermelhinho_' . $client->id . '_' . now()->format('d-m-Y') . '.pdf');
     }
 
+    /**
+     * Exportar Recibo de Pagamento (PDF Único)
+     */
+    public function exportReceipt($id)
+    {
+        $invoice = Invoice::with(['client', 'plan'])->findOrFail($id);
+
+        if ($invoice->status !== 'paid') {
+            return response()->json(['message' => 'Recibo disponível apenas para faturas pagas.'], 400);
+        }
+
+        // Buscar número da autorização se existir no group_id
+        $authNumero = null;
+        if (str_starts_with($invoice->group_id ?? '', 'autorizacao-')) {
+            $authId = (int) str_replace('autorizacao-', '', $invoice->group_id);
+            $authNumero = \App\Models\Autorizacao::where('id', $authId)->value('numero');
+        }
+
+        $generatedAt = \Carbon\Carbon::now()->format('d/m/Y H:i');
+        $payableAmount = $invoice->payable_amount ?? $invoice->amount;
+        $payableAmount_extenso = $this->valorPorExtenso($payableAmount);
+
+        // Carregar Logo em Base64 para o PDF
+        $logoPath = public_path('logo-contract.png');
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoData = base64_encode(file_get_contents($logoPath));
+            $logoBase64 = 'data:image/png;base64,' . $logoData;
+        }
+
+        $data = [
+            'invoice' => $invoice,
+            'client' => $invoice->client,
+            'authNumero' => $authNumero ? str_pad($authNumero, 5, '0', STR_PAD_LEFT) : null,
+            'generatedAt' => $generatedAt,
+            'payableAmount_extenso' => $payableAmount_extenso,
+            'logoBase64' => $logoBase64
+        ];
+
+        $pdf = Pdf::loadView('reports.receipt', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
+
+        return $pdf->download('Recibo_O_Vermelhinho_' . $invoice->id . '.pdf');
+    }
+
+    /**
+     * Converte um valor numérico para extenso (Moeda Real)
+     */
+    private function valorPorExtenso($valor = 0) {
+        $singular = array("centavo", "real", "mil", "milhão", "bilhão", "trilhão", "quatrilhão");
+        $plural = array("centavos", "reais", "mil", "milhões", "bilhões", "trilhões", "quatrilhões");
+
+        $c = array("", "cem", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos");
+        $d = array("", "dez", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitocenta", "noventa");
+        $d10 = array("dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove");
+        $u = array("", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove");
+
+        $z = 0;
+        $valor = number_format($valor, 2, ".", ".");
+        $inteiro = explode(".", $valor);
+        for ($i = 0; $i < count($inteiro); $i++) {
+            for ($ii = strlen($inteiro[$i]); $ii < 3; $ii++) {
+                $inteiro[$i] = "0" . $inteiro[$i];
+            }
+        }
+
+        $rt = "";
+        $fim = count($inteiro) - ($inteiro[count($inteiro) - 1] > 0 ? 1 : 2);
+        for ($i = 0; $i < count($inteiro); $i++) {
+            $valor = $inteiro[$i];
+            $rc = (($valor > 100) && ($valor < 200)) ? "cento" : $c[$valor[0]];
+            $rd = ($valor[1] < 2) ? "" : $d[$valor[1]];
+            $ru = ($valor > 0) ? (($valor[1] == 1) ? $d10[$valor[2]] : $u[$valor[2]]) : "";
+
+            $r = $rc . (($rc && ($rd || $ru)) ? " e " : "") . $rd . (($rd && $ru) ? " e " : "") . $ru;
+            $t = count($inteiro) - 1 - $i;
+            $r .= $r ? " " . ($valor > 1 ? $plural[$t] : $singular[$t]) : "";
+            if ($valor == "000")
+                $z++;
+            elseif ($z > 0)
+                $z--;
+            if (($t == 1) && ($z > 0) && ($inteiro[0] > 0))
+                $r .= (($z > 1) ? " de " : "") . $plural[$t];
+            if ($r)
+                $rt .= ((($i > 0) && ($i <= $fim) && ($inteiro[0] > 0) && ($z < 1)) ? ( ($i < $fim) ? ", " : " e ") : " ") . $r;
+        }
+
+        return (($rt) ? $rt : "zero");
+    }
 
     /**
      * Listar planos disponíveis
@@ -335,15 +425,22 @@ class FinancialController extends Controller
         $invoice = Invoice::findOrFail($id);
 
         $validated = $request->validate([
-            'status' => 'required|in:paid,canceled',
-            'justification' => 'required|string|min:5',
+            'status'         => 'required|in:paid,canceled',
+            'justification'  => 'required|string|min:5',
+            'payment_method' => 'nullable|string|in:pix,dinheiro,cartao,boleto',
         ]);
 
-        $invoice->update([
-            'status' => $validated['status'],
+        $updateData = [
+            'status'        => $validated['status'],
             'justification' => $validated['justification'],
-            'action_date' => now(),
-        ]);
+            'action_date'   => now(),
+        ];
+
+        if (!empty($validated['payment_method'])) {
+            $updateData['payment_method'] = $validated['payment_method'];
+        }
+
+        $invoice->update($updateData);
 
         // Se marcou como pago, ativa a assinatura do cliente e sincroniza com o Tiny
         if ($validated['status'] === 'paid') {

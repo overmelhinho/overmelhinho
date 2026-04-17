@@ -239,6 +239,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/financial/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'indexAllInvoices']);
     Route::get('/financial/export-pdf', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportReport']);
     Route::get('/financial/group/{groupId}/carnet', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportCarnet']);
+    Route::get('/financial/invoices/{id}/receipt', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportReceipt']);
     Route::post('/financial/invoices/sync', [\App\Http\Controllers\Api\V1\FinancialController::class , 'syncInvoices']);
     Route::post('/financial/invoices/resend-to-tiny', [\App\Http\Controllers\Api\V1\FinancialController::class , 'resendToTiny']);
     Route::patch('/financial/invoices/{id}/status', [\App\Http\Controllers\Api\V1\FinancialController::class , 'updateStatus']);

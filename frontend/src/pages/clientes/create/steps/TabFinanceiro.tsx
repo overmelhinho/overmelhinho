@@ -99,6 +99,11 @@ export default function TabFinanceiro() {
     const [isJustifyOpen, setIsJustifyOpen] = useState(false);
     const [selectedAuth, setSelectedAuth] = useState<{ id: number, numero: number } | null>(null);
 
+    // Payment Confirmation Modal States
+    const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+    const [invoiceToPay, setInvoiceToPay] = useState<number | null>(null);
+    const [manualPaymentMethod, setManualPaymentMethod] = useState("pix");
+
     // Discount States
     const [showDiscount, setShowDiscount] = useState(false);
     const [discountValue, setDiscountValue] = useState(0);
@@ -168,6 +173,32 @@ export default function TabFinanceiro() {
             toast.error(error?.response?.data?.message || "Erro ao gerar cobrança.");
         },
     });
+    
+    // Mutation para Dar Baixa (Pago)
+    const payInvoiceMutation = useMutation({
+        mutationFn: async (invoiceId: number) => {
+            const resp = await axios.patch(`/v1/financial/invoices/${invoiceId}/status`, {
+                status: 'paid',
+                payment_method: manualPaymentMethod,
+                justification: `Baixa manual confirmada pelo administrador via ${manualPaymentMethod}`
+            });
+            return resp.data;
+        },
+        onSuccess: () => {
+            toast.success("Fatura liquidada com sucesso! Sincronizado com Tiny ERP.");
+            queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+            queryClient.invalidateQueries({ queryKey: ["cliente-hub", id] });
+            queryClient.invalidateQueries({ queryKey: ["cliente", Number(id)] });
+        },
+        onError: (error: any) => {
+            toast.error(error?.response?.data?.message || "Erro ao dar baixa na fatura.");
+        }
+    });
+
+    const handleMarkAsPaid = (invoiceId: number) => {
+        setInvoiceToPay(invoiceId);
+        setIsPayModalOpen(true);
+    };
 
     const handleGenerateInvoice = (e?: React.MouseEvent | React.FormEvent) => {
         if (e) e.preventDefault();
@@ -221,6 +252,25 @@ export default function TabFinanceiro() {
             link.remove();
         } catch (error) {
             toast.error("Erro ao baixar carnê.");
+        }
+    };
+
+    const handleDownloadReceipt = async (invoiceId: number) => {
+        try {
+            const loadingToast = toast.loading("Gerando recibo...");
+            const response = await axios.get(`/v1/financial/invoices/${invoiceId}/receipt`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Recibo_O_Vermelhinho_${invoiceId}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Recibo gerado com sucesso!", { id: loadingToast });
+        } catch (error) {
+            toast.error("Erro ao baixar recibo.");
         }
     };
 
@@ -668,6 +718,16 @@ export default function TabFinanceiro() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-1.5">
+                                                {invoice.status !== 'paid' && (
+                                                    <button
+                                                        onClick={() => handleMarkAsPaid(invoice.id)}
+                                                        disabled={payInvoiceMutation.isPending}
+                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-xl transition-all disabled:opacity-50"
+                                                        title="Dar Baixa (Confirmar Pagamento)"
+                                                    >
+                                                        <CheckCircle size={16} />
+                                                    </button>
+                                                )}
                                                 {invoice.payment_url && (
                                                     <>
                                                         <button
@@ -688,16 +748,26 @@ export default function TabFinanceiro() {
                                                         </a>
                                                     </>
                                                 )}
-                                                {invoice.group_id && invoice.total_parcels! > 1 && (
+                                                {invoice.status === 'paid' ? (
                                                     <button
-                                                        onClick={() => handleDownloadCarnet(invoice.group_id!)}
-                                                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                                                        title="Baixar Carnê Completo"
+                                                        onClick={() => handleDownloadReceipt(invoice.id)}
+                                                        className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+                                                        title="Imprimir Recibo de Pagamento"
                                                     >
                                                         <Printer size={16} />
                                                     </button>
+                                                ) : (
+                                                    invoice.group_id && invoice.total_parcels! > 1 && (
+                                                        <button
+                                                            onClick={() => handleDownloadCarnet(invoice.group_id!)}
+                                                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                                                            title="Baixar Cronograma Completo"
+                                                        >
+                                                            <Printer size={16} />
+                                                        </button>
+                                                    )
                                                 )}
-                                                {!invoice.payment_url && !invoice.group_id && (
+                                                {!invoice.payment_url && !invoice.group_id && invoice.status === 'pending' && (
                                                     <span className="text-[10px] text-gray-300 font-bold uppercase italic">Aguardando</span>
                                                 )}
                                             </div>
@@ -1067,6 +1137,78 @@ export default function TabFinanceiro() {
                             className="flex-1 h-12 rounded-2xl bg-[#B70F0A] hover:bg-[#8e0c08] font-bold text-xs uppercase text-white shadow-lg shadow-red-200 transition-all"
                         >
                             Prosseguir
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Modal de Confirmação de Pagamento Elegante */}
+            <AlertDialog open={isPayModalOpen} onOpenChange={setIsPayModalOpen}>
+                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md">
+                    <AlertDialogHeader>
+                        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                            <DollarSign size={32} />
+                        </div>
+                        <AlertDialogTitle className="text-2xl font-bold text-gray-900 text-center">
+                            Confirmar Pagamento?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-500 text-center text-sm mt-2 font-medium">
+                            Selecione o método de pagamento utilizado pelo cliente abaixo:
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="grid grid-cols-3 gap-2 mt-6 px-2">
+                        {[
+                            { id: 'pix', label: 'Pix', icon: <Smartphone size={14} /> },
+                            { id: 'dinheiro', label: 'Dinheiro', icon: <DollarSign size={14} /> },
+                            { id: 'cartao', label: 'Cartão', icon: <CreditCard size={14} /> }
+                        ].map(method => (
+                            <button
+                                key={method.id}
+                                type="button"
+                                onClick={() => setManualPaymentMethod(method.id)}
+                                className={cn(
+                                    "flex flex-col items-center justify-center py-3 px-1 rounded-2xl border-2 transition-all gap-1.5",
+                                    manualPaymentMethod === method.id 
+                                        ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-100" 
+                                        : "bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                                )}
+                            >
+                                {method.icon}
+                                <span className="text-[10px] font-black uppercase tracking-tighter">{method.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase text-center leading-tight">
+                            Ao confirmar, o status será alterado para <span className="text-emerald-600">PAGO</span> e sincronizado com o <b>Tiny ERP</b>.
+                        </p>
+                    </div>
+
+                    <AlertDialogFooter className="mt-8 flex gap-3 sm:justify-start">
+                        <AlertDialogCancel 
+                            disabled={payInvoiceMutation.isPending}
+                            className="flex-1 h-12 rounded-2xl border-gray-100 font-bold text-xs uppercase text-gray-400 hover:bg-gray-50 transition-all"
+                        >
+                            Voltar
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            disabled={payInvoiceMutation.isPending}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if (invoiceToPay) {
+                                    payInvoiceMutation.mutate(invoiceToPay, {
+                                        onSuccess: () => {
+                                            setIsPayModalOpen(false);
+                                            setInvoiceToPay(null);
+                                        }
+                                    });
+                                }
+                            }}
+                            className="flex-1 h-12 rounded-2xl bg-green-600 hover:bg-green-700 font-bold text-xs uppercase text-white shadow-lg shadow-green-100 transition-all"
+                        >
+                            {payInvoiceMutation.isPending ? "Processando..." : "Sim, Confirmar"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
