@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Relatório Executivo - O Vermelhinho</title>
     <style>
-        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #333; line-height: 1.4; }
+        body { font-family: 'Arial', 'Helvetica', sans-serif; color: #333; line-height: 1.4; }
         .header { text-align: center; border-bottom: 3px solid #B70F0A; padding-bottom: 10px; margin-bottom: 25px; }
         .header h1 { color: #B70F0A; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
         .header p { margin: 5px 0; color: #666; font-size: 14px; }

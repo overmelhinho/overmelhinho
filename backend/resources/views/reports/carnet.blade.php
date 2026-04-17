@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Carnê de Pagamento - O Vermelhinho</title>
     <style>
-        body { font-family: sans-serif; font-size: 12px; color: #333; margin: 0; padding: 0; }
+        body { font-family: 'Arial', 'Helvetica', sans-serif; font-size: 12px; color: #333; margin: 0; padding: 0; }
         .container { padding: 30px; }
         .header { border-bottom: 2px solid #B70F0A; padding-bottom: 10px; margin-bottom: 20px; }
         .header table { width: 100%; }

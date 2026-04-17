@@ -85,7 +85,8 @@ class FinancialController extends Controller
             'recentPaid' => $recentPaid,
         ];
 
-        $pdf = Pdf::loadView('reports.financial', $data);
+        $pdf = Pdf::loadView('reports.financial', $data)
+            ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
 
         return $pdf->download('Relatorio_Gestao_PRO_' . $now->format('d-m-Y') . '.pdf');
     }
@@ -115,7 +116,8 @@ class FinancialController extends Controller
             'generatedAt' => now()->format('d/m/Y H:i'),
         ];
 
-        $pdf = Pdf::loadView('reports.carnet', $data);
+        $pdf = Pdf::loadView('reports.carnet', $data)
+            ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
 
         return $pdf->download('Carne_O_Vermelhinho_' . $client->id . '_' . now()->format('d-m-Y') . '.pdf');
     }

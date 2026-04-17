@@ -176,7 +176,8 @@ class AutorizacaoController extends Controller
             ->findOrFail($id);
 
         $pdf = Pdf::loadView('pdf.autorizacao', ['autorizacao' => $autorizacao])
-            ->setPaper('a4', 'portrait');
+            ->setPaper('a4', 'portrait')
+            ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
 
         $filename = "autorizacoes/autorizacao-{$autorizacao->numero}.pdf";
         Storage::disk('public')->put($filename, $pdf->output());
@@ -194,7 +195,8 @@ class AutorizacaoController extends Controller
             ->findOrFail($id);
 
         $pdf = Pdf::loadView('pdf.autorizacao', ['autorizacao' => $autorizacao])
-            ->setPaper('a4', 'portrait');
+            ->setPaper('a4', 'portrait')
+            ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
 
         return $pdf->stream("autorizacao-{$autorizacao->numero}.pdf");
     }
@@ -293,7 +295,8 @@ class AutorizacaoController extends Controller
         try {
             $autorizacaoFull = $autorizacao->fresh()->load(['cliente.enderecos', 'cliente.contatos', 'vendedor', 'parcelas']);
             $pdf = Pdf::loadView('pdf.autorizacao', ['autorizacao' => $autorizacaoFull])
-                ->setPaper('a4', 'portrait');
+                ->setPaper('a4', 'portrait')
+                ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
             $filename = "autorizacoes/autorizacao-{$autorizacao->numero}-assinada.pdf";
             Storage::disk('public')->put($filename, $pdf->output());
             $autorizacao->update(['pdf_path' => $filename]);
@@ -345,7 +348,8 @@ class AutorizacaoController extends Controller
         try {
             $autorizacaoFull = $autorizacao->fresh()->load(['cliente.enderecos', 'cliente.contatos', 'vendedor', 'justificadoPor', 'parcelas']);
             $pdf = Pdf::loadView('pdf.autorizacao', ['autorizacao' => $autorizacaoFull])
-                ->setPaper('a4', 'portrait');
+                ->setPaper('a4', 'portrait')
+                ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
             $filename = "autorizacoes/autorizacao-{$autorizacao->numero}-justificada.pdf";
             Storage::disk('public')->put($filename, $pdf->output());
             $autorizacao->update(['pdf_path' => $filename]);
@@ -474,7 +478,8 @@ class AutorizacaoController extends Controller
         $pdfFiles = [];
         foreach ($autorizacoes as $aut) {
             $pdf = Pdf::loadView('pdf.autorizacao', ['autorizacao' => $aut])
-                ->setPaper('a4', 'portrait');
+                ->setPaper('a4', 'portrait')
+                ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
             
             $filename = "contrato_" . str_pad($aut->numero, 5, '0', STR_PAD_LEFT) . ".pdf";
             $fullPath = $tempDir . DIRECTORY_SEPARATOR . $filename;
