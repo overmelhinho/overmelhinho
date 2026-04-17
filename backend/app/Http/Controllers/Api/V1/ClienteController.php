@@ -31,6 +31,7 @@ class ClienteController extends Controller
                 $sub->whereIn('status_assinatura', ['ativa', 'ativo'])
                     ->orWhere('tipo_cliente', 'gratuito');
             })
+            ->where('exibir_no_site', true)
             ->get();
     }
 
@@ -42,6 +43,7 @@ class ClienteController extends Controller
         $cityName = $request->input('city_name');
         
         $query = Cliente::query()
+            ->where('exibir_no_site', true)
             ->where(function($sub) {
                 $sub->whereIn('status_assinatura', ['ativa', 'ativo'])
                     ->orWhere('tipo_cliente', 'gratuito');
@@ -230,6 +232,7 @@ class ClienteController extends Controller
                     $sub->orWhere('nome_fantasia', 'ilike', substr($normalizedQ, 0, 3) . "%");
                 }
             })
+            ->where('exibir_no_site', true)
             ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo'])->orWhere('tipo_cliente', 'gratuito'))
             ->when($cityId, function($sq) use ($cityId) {
                 $sq->where(function($sub) use ($cityId) {
@@ -290,6 +293,7 @@ class ClienteController extends Controller
         $tipo = trim((string) ($request->input('tipo_cliente') ?? $request->input('tipo') ?? ''));
         $statusAss = trim((string) ($request->input('status_assinatura') ?? ''));
         $possuiAds = $request->has('possui_publicidade') ? $request->boolean('possui_publicidade') : null;
+        $visibilidade = trim((string) ($request->input('visibilidade') ?? 'all'));
 
         $query = Cliente::query();
 
@@ -303,6 +307,7 @@ class ClienteController extends Controller
                 'tipo_cliente',
                 'status_assinatura',
                 'possui_publicidade',
+                'exibir_no_site',
                 'seo_keywords',
                 'observacoes',
                 'created_at',
@@ -341,6 +346,14 @@ class ClienteController extends Controller
             if (in_array($tipo, ['gratuito', 'pagante'], true)) {
                 $query->where('tipo_cliente', $tipo);
             }
+        }
+
+        if ($visibilidade === 'visible') {
+            $query->where('exibir_no_site', true);
+        } elseif ($visibilidade === 'hidden') {
+            $query->where(function($q) {
+                $q->where('exibir_no_site', false)->orWhereNull('exibir_no_site');
+            });
         }
 
         if ($statusAss !== '') {
@@ -471,7 +484,8 @@ class ClienteController extends Controller
 
     public function showPublic($id)
     {
-        $query = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews', 'jobOpportunities']);
+        $query = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews', 'jobOpportunities'])
+            ->where('exibir_no_site', true);
         
         if (is_numeric($id)) {
             $cliente = $query->find($id);
@@ -505,6 +519,7 @@ class ClienteController extends Controller
         // Base da query: Clientes que NÃO são o atual e NÃO pertencem aos mesmos segmentos
         $baseQuery = Cliente::with(['enderecos', 'segmentos'])
             ->where('id', '!=', $id)
+            ->where('exibir_no_site', true)
             ->whereDoesntHave('segmentos', function($q) use ($segmentIds) {
                 $q->whereIn('segmentos.id', $segmentIds);
             });
@@ -698,6 +713,7 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => 'nullable|string|max:255',
                 'descricao'             => 'nullable|string',
                 'observacoes'           => 'nullable|string',
+                'exibir_no_site'        => 'nullable|boolean',
                 'possui_publicidade'    => 'nullable|boolean',
 
                 'video'         => 'nullable|string|max:500',
@@ -805,6 +821,7 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => $validated['registro_profissional'] ?? null,
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
+                'exibir_no_site'        => $validated['exibir_no_site'] ?? true,
                 'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
             ];
 
@@ -1110,6 +1127,7 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => 'nullable|string|max:255',
                 'descricao'             => 'nullable|string',
                 'observacoes'           => 'nullable|string',
+                'exibir_no_site'        => 'nullable|boolean',
                 'possui_publicidade'    => 'nullable|boolean',
 
                 'video'         => 'nullable|string|max:500',
@@ -1218,6 +1236,7 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => $validated['registro_profissional'] ?? null,
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
+                'exibir_no_site'        => array_key_exists('exibir_no_site', $validated) ? $validated['exibir_no_site'] : true,
                 'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
                 'audit_status'          => $validated['audit_status'] ?? $cliente->audit_status,
                 'audit_differences'     => $validated['audit_differences'] ?? $cliente->audit_differences,
@@ -2007,6 +2026,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         $status = $request->input('status', 'pending');
         $cidade = $request->input('cidade');
         $tipo = $request->input('tipo');
+        $visibilidade = $request->input('visibilidade');
 
         $query = Cliente::query()
             ->with(['enderecos', 'contatos']);
@@ -2035,6 +2055,14 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
         if ($tipo) {
             $query->where('tipo_cliente', $tipo);
+        }
+
+        if ($visibilidade === 'visible') {
+            $query->where('exibir_no_site', true);
+        } elseif ($visibilidade === 'hidden') {
+            $query->where(function($q) {
+                $q->where('exibir_no_site', false)->orWhereNull('exibir_no_site');
+            });
         }
 
         $query->orderByRaw("CASE WHEN tipo_cliente = 'pagante' THEN 0 ELSE 1 END")

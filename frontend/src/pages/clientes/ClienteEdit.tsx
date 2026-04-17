@@ -295,6 +295,7 @@ export default function ClienteEdit() {
         google_review_id: r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : null),
         profile_photo_url: r.author_photo_url || r.profile_photo_url || ""
       })) : [],
+      exibir_no_site: c?.exibir_no_site !== false,
     };
   }, [data]);
 
@@ -367,6 +368,7 @@ export default function ClienteEdit() {
               razao_social: values.razao_social || null,
               descricao: values.descricao || null,
               observacoes: values.observacoes || null,
+              exibir_no_site: values.exibir_no_site,
 
               inscricao_estadual: values.inscricao_estadual || null,
               inscricao_municipal: values.inscricao_municipal || null,

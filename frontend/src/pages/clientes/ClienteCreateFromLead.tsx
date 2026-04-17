@@ -466,6 +466,7 @@ export default function ClienteCreateFromLead() {
               data_fundacao: "",
               selected_reviews: [],
               galeria: [],
+              exibir_no_site: true,
             }}
             validationSchema={validationSchema}
             onSubmit={async (values) => {
@@ -486,6 +487,7 @@ export default function ClienteCreateFromLead() {
                   cpf_cnpj: values.cnpj,
                   razao_social: values.razao_social || null,
                   descricao: values.descricao || null,
+                  exibir_no_site: values.exibir_no_site,
 
                   inscricao_estadual: values.inscricao_estadual || null,
                   inscricao_municipal: values.inscricao_municipal || null,

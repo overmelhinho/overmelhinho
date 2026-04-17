@@ -304,9 +304,33 @@ export default function TabIdentificacao() {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-[#B70F0A] flex items-center gap-2">
-        <Building2 className="w-5 h-5 text-[#B70F0A]" /> Identificação
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-[#B70F0A] flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-[#B70F0A]" /> Identificação
+        </h3>
+
+        {/* ✅ Toggle Exibir no Site */}
+        <div className="flex items-center gap-3 bg-gray-50 border px-4 py-2 rounded-xl shadow-sm">
+          <div className="flex flex-col text-right">
+            <span className="text-[11px] font-bold uppercase text-gray-600 tracking-wider">Status no Site</span>
+            <span className={`text-[10px] font-medium ${values.exibir_no_site ? "text-green-600" : "text-red-500"}`}>
+              {values.exibir_no_site ? " VISÍVEL AO PÚBLICO" : " OCULTO NO PORTAL"}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setFieldValue("exibir_no_site", !values.exibir_no_site)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-transparent focus:ring-[#B70F0A]/20 ${values.exibir_no_site ? "bg-green-500" : "bg-gray-300"
+              }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${values.exibir_no_site ? "translate-x-6" : "translate-x-1"
+                }`}
+            />
+          </button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="md:col-span-2">
@@ -352,7 +376,7 @@ export default function TabIdentificacao() {
             <Hash className="w-4 h-4 text-[#B70F0A]" /> CPF / CNPJ
           </label>
           <MaskedInput
-            mask={values.cnpj?.replace(/\D/g, "").length < 11 ? "999.999.999-99" : "99.999.999/9999-99"}
+            mask={(values.cnpj || "").replace(/\D/g, "").length <= 11 ? "999.999.999-999" : "99.999.999/9999-99"}
             maskChar=""
             formatChars={{ '9': '[0-9]' }}
             name="cnpj"

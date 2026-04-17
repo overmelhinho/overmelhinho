@@ -16,14 +16,19 @@ import {
     Zap,
     CheckCircle2,
     SearchX,
-    Building2,
     CalendarDays,
-    X
+    X,
+    Eye,
+    EyeOff,
+    Building2
 } from 'lucide-react';
 import api from '@/services/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ExpressCalendar } from '@/components/ui/ExpressCalendar';
 
 const AuditDashboardPage: React.FC = () => {
     const navigate = useNavigate();
@@ -37,6 +42,7 @@ const AuditDashboardPage: React.FC = () => {
     const filterUser = searchParams.get('user_id') || '';
     const filterDateStart = searchParams.get('date_start') || '';
     const filterDateEnd = searchParams.get('date_end') || '';
+    const filterVisibilidade = searchParams.get('visibilidade') || '';
     const searchTerm = searchParams.get('q') || '';
 
     const updateFilter = (params: Record<string, string | number | null>) => {
@@ -57,7 +63,7 @@ const AuditDashboardPage: React.FC = () => {
         setSearchParams({ tab }); // Mantém apenas a tab
     };
 
-    const hasFilters = filterCity || filterType || searchTerm || filterUser || filterDateStart || filterDateEnd;
+    const hasFilters = filterCity || filterType || searchTerm || filterUser || filterDateStart || filterDateEnd || filterVisibilidade;
 
     // 1. Busca Cidades para o Filtro
     const { data: cities } = useQuery({
@@ -79,13 +85,14 @@ const AuditDashboardPage: React.FC = () => {
 
     // 2. Busca Fila de Auditoria (Pending)
     const { data: queueData, isLoading: loadingQueue } = useQuery({
-        queryKey: ['audit-queue', page, filterCity, filterType, searchTerm],
+        queryKey: ['audit-queue', page, filterCity, filterType, filterVisibilidade, searchTerm],
         queryFn: async () => {
             const response = await api.get('/v1/audit/queue', {
                 params: {
                     page,
                     cidade: filterCity,
                     tipo: filterType,
+                    visibilidade: filterVisibilidade,
                     q: searchTerm,
                     status: 'pending'
                 }
@@ -237,7 +244,7 @@ const AuditDashboardPage: React.FC = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-gray-100 flex items-center gap-3 shadow-sm w-full overflow-x-auto"
+                        className="bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-gray-100 flex flex-wrap items-center gap-3 shadow-sm w-full"
                     >
                         <div className="flex-1 min-w-[200px] relative group">
                             <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#B70F0A]" />
@@ -250,70 +257,86 @@ const AuditDashboardPage: React.FC = () => {
                             />
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-100 rounded-2xl">
-                                <CalendarDays className="w-4 h-4 text-slate-400" />
-                                <input
-                                    type="date"
-                                    value={filterDateStart}
-                                    onChange={(e) => updateFilter({ date_start: e.target.value })}
-                                    className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 cursor-pointer"
-                                    title="Data inicial"
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100 rounded-2xl relative overflow-hidden group h-10">
+                                    <CalendarDays className="w-4 h-4 text-slate-400 group-hover:text-[#B70F0A] transition-colors" />
+                                    <span className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                                        {filterDateStart ? format(new Date(filterDateStart + "T00:00:00"), "dd/MM/yyyy") : "Início"}
+                                        <span className="text-slate-400 font-normal text-xs mx-1">até</span>
+                                        {filterDateEnd ? format(new Date(filterDateEnd + "T00:00:00"), "dd/MM/yyyy") : "Fim"}
+                                    </span>
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 border-none bg-transparent shadow-none" align="start">
+                                <ExpressCalendar 
+                                    startDate={filterDateStart || null} 
+                                    endDate={filterDateEnd || null} 
+                                    onChange={(start, end) => updateFilter({ date_start: start || "", date_end: end || "" })} 
                                 />
-                                <span className="text-slate-300 text-xs">até</span>
-                                <input
-                                    type="date"
-                                    value={filterDateEnd}
-                                    onChange={(e) => updateFilter({ date_end: e.target.value })}
-                                    className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 cursor-pointer"
-                                    title="Data final"
-                                />
-                            </div>
-                        </div>
+                            </PopoverContent>
+                        </Popover>
 
                         {tab === 'queue' && (
                             <>
                                 <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
                                     <MapPin className="w-4 h-4 text-slate-400" />
-                                    <select
-                                        value={filterCity}
-                                        onChange={(e) => updateFilter({ cidade: e.target.value })}
-                                        className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer min-w-[140px]"
-                                    >
-                                        <option value="">Cidades</option>
-                                        {cities?.map((c: any) => (
-                                            <option key={c.id} value={c.nome}>{c.nome}</option>
-                                        ))}
-                                    </select>
+                                    <Select value={filterCity || "all"} onValueChange={(val) => updateFilter({ cidade: val === "all" ? "" : val })}>
+                                        <SelectTrigger className="w-[140px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                            <SelectValue placeholder="Cidades" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas Cidades</SelectItem>
+                                            {cities?.map((c: any) => (
+                                                <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
                                     <Users className="w-4 h-4 text-slate-400" />
-                                    <select
-                                        value={filterType}
-                                        onChange={(e) => updateFilter({ tipo: e.target.value })}
-                                        className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer"
-                                    >
-                                        <option value="">Tipos</option>
-                                        <option value="pagante">Pagantes</option>
-                                        <option value="gratuito">Gratuitos</option>
-                                    </select>
+                                    <Select value={filterType || "all"} onValueChange={(val) => updateFilter({ tipo: val === "all" ? "" : val })}>
+                                        <SelectTrigger className="w-[110px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                            <SelectValue placeholder="Tipos" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos Tipos</SelectItem>
+                                            <SelectItem value="pagante">Pagantes</SelectItem>
+                                            <SelectItem value="gratuito">Gratuitos</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                                    <Eye className="w-4 h-4 text-slate-400" />
+                                    <Select value={filterVisibilidade || "all"} onValueChange={(val) => updateFilter({ visibilidade: val === "all" ? "" : val })}>
+                                        <SelectTrigger className="w-[125px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                            <SelectValue placeholder="Status no Site" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Mista (Vis. & Ocult.)</SelectItem>
+                                            <SelectItem value="visible">Visíveis</SelectItem>
+                                            <SelectItem value="hidden">Ocultos</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </>
                         )}
 
                         <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
                             <ClipboardCheck className="w-4 h-4 text-slate-400" />
-                            <select
-                                value={filterUser}
-                                onChange={(e) => updateFilter({ user_id: e.target.value })}
-                                className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer min-w-[130px]"
-                            >
-                                <option value="">Conferido por</option>
-                                {auditors?.map((u: any) => (
-                                    <option key={u.id} value={u.id}>{u.name}</option>
-                                ))}
-                            </select>
+                            <Select value={filterUser || "all"} onValueChange={(val) => updateFilter({ user_id: val === "all" ? "" : val })}>
+                                <SelectTrigger className="w-[130px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                    <SelectValue placeholder="Conferido por" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Qualquer um</SelectItem>
+                                    {auditors?.map((u: any) => (
+                                        <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         {hasFilters && (
@@ -386,7 +409,14 @@ const AuditDashboardPage: React.FC = () => {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <span className="font-bold text-slate-800 text-lg block group-hover:text-[#B70F0A] transition-colors">{c.nome_fantasia}</span>
+                                                        <span className="font-bold text-slate-800 text-lg group-hover:text-[#B70F0A] transition-colors flex items-center gap-2">
+                                                            {c.nome_fantasia}
+                                                            {c.exibir_no_site === false && (
+                                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase tracking-tighter">
+                                                                    <EyeOff className="w-3 h-3" /> Oculto
+                                                                </span>
+                                                            )}
+                                                        </span>
                                                         <span className="text-[10px] font-bold text-slate-400">
                                                             {c.razao_social && c.razao_social !== c.nome_fantasia ? c.razao_social : (c.cpf_cnpj || 'Sem documento')}
                                                         </span>

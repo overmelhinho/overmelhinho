@@ -3,193 +3,95 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Autorização nº {{ $autorizacao->numero }}</title>
+    <title>A.P {{ str_pad($autorizacao->numero, 5, '0', STR_PAD_LEFT) }}</title>
     <style>
         @page {
-            margin: 1cm;
+            margin: 30px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
+        
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 10.5px;
-            color: #232323;
-            background: #fff;
-            line-height: 1.4;
+            font-size: 11px;
+            color: #1F2937;
+            background: #ffffff;
+            line-height: 1.5;
+            padding: 15px 30px;
         }
 
-        .container {
-            width: 100%;
-        }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { vertical-align: top; }
 
-        /* ── HEADER ─────── */
-        .header {
-            width: 100%;
-            margin-bottom: 5px;
-            text-align: center;
-        }
-        .logo-img {
-            height: 48px;
-            margin-bottom: 5px;
-        }
-        .empresa-info p {
-            font-size: 9px;
-            color: #666;
-            line-height: 1.3;
-        }
-        
-        .title-box {
-            text-align: center;
-            margin: 10px 0;
-            padding: 8px 0;
-            border-top: 2px solid #B70F0A;
-            border-bottom: 1px solid #FDB913;
-        }
-        .title-box h2 {
-            font-size: 13px;
-            text-transform: uppercase;
-            font-weight: 900;
-            color: #232323;
-            letter-spacing: 0.5px;
-        }
+        /* ── HEADER ── */
+        .header-table { border-bottom: 2px solid #E5E7EB; padding-bottom: 10px; margin-bottom: 15px; }
+        .logo-img { max-height: 50px; }
+        .header-company { text-align: right; font-size: 9.5px; color: #6B7280; line-height: 1.3; }
+        .header-company strong { color: #111827; font-size: 12px; display: block; margin-bottom: 3px; text-transform: uppercase; }
+
+        /* ── TITLE ── */
+        .doc-title { text-align: center; font-size: 15px; font-weight: bold; color: #111827; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 15px; }
 
         /* ── SECTIONS ── */
-        .section-bar {
-            background-color: #232323;
-            padding: 5px 15px;
-            margin-top: 15px;
-            margin-bottom: 8px;
-            border-bottom: 3px solid #FDB913;
-        }
-        .section-bar h3 {
-            font-size: 10px;
-            text-transform: uppercase;
-            font-weight: 900;
-            letter-spacing: 2px;
-            color: #fff;
-        }
+        .section-title { font-size: 11px; font-weight: bold; color: #B70F0A; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;}
+        
+        .info-table { margin-bottom: 15px; }
+        .info-table td { padding: 8px 10px; border: 1px solid #F3F4F6; width: 50%; }
+        .info-table .label { display: block; font-size: 8.5px; font-weight: bold; color: #9CA3AF; text-transform: uppercase; margin-bottom: 3px; }
+        .info-table .value { display: block; font-size: 12px; font-weight: bold; color: #111827; }
+        .info-table .value-desc { font-size: 11px; font-weight: normal; color: #374151; }
 
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 5px;
-        }
-        .data-table td {
-            padding: 4px 10px;
-            vertical-align: top;
-            border-bottom: 1px solid #eee;
-        }
-        .label {
-            font-size: 8.5px;
-            font-weight: 900;
-            color: #B70F0A;
-            text-transform: uppercase;
-            display: block;
-            margin-bottom: 1px;
-        }
-        .value {
-            font-size: 10px;
-            color: #232323;
-            font-weight: 600;
-        }
+        /* ── PAYMENT & INSTALLMENTS ── */
+        .pay-summary { margin-bottom: 10px; }
+        .pay-summary td { border: 1px solid #E5E7EB; background: #F9FAFB; padding: 10px; text-align: center; width: 25%; }
+        .pay-summary .val { font-size: 13px; font-weight: bold; color: #111827; margin-top: 4px; }
+        .pay-summary .val.red { color: #B70F0A; }
 
-        /* ── TABLES ─────── */
-        table.payment-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 5px;
-            border: 1px solid #eee;
-        }
-        table.payment-table th {
-            background-color: #f9f9f9;
-            border-bottom: 2px solid #FDB913;
-            padding: 6px;
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            color: #232323;
-        }
-        table.payment-table td {
-            border-bottom: 1px solid #eee;
-            padding: 6px;
-            font-size: 10px;
-            color: #232323;
-        }
+        .installments-table th { background: #F3F4F6; padding: 6px; font-size: 9px; color: #4B5563; text-transform: uppercase; border: 1px solid #E5E7EB; }
+        .installments-table td { padding: 6px; font-size: 11px; color: #111827; border: 1px solid #E5E7EB; text-align: center; font-weight: bold; }
 
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
+        /* ── OBS ── */
+        .obs-box { border: 1px solid #F3F4F6; background: #FAFAFA; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 10px; color: #374151; }
+        .obs-box p { margin-bottom: 4px; }
+        .obs-box p:last-child { margin-bottom: 0; }
 
-        /* ── SIGNATURE ──── */
-        .signature-area {
-            margin-top: 30px;
-        }
-        .signature-table {
-            width: 100%;
-        }
-        .signature-line {
-            border-top: 1px solid #B70F0A;
-            width: 85%;
-            margin: 35px auto 5px auto;
-        }
-        .signature-label {
-            font-size: 9px;
-            font-weight: 900;
-            color: #232323;
-            text-transform: uppercase;
-        }
-
-        .footer-legal {
-            font-size: 7px;
-            color: #999;
-            margin-top: 30px;
-            text-align: justify;
-            line-height: 1.4;
-            border-top: 1px solid #eee;
-            padding-top: 10px;
-        }
-
-        .accent-red {
-            color: #B70F0A;
-        }
+        /* ── SIGNATURES ── */
+        .signature-area { margin-top: 35px; page-break-inside: avoid; }
+        .sign-table td { width: 50%; padding: 0 15px; text-align: center; }
+        .sign-line { border-top: 1px solid #6B7280; width: 90%; margin: 30px auto 5px auto; }
+        .sign-label { font-size: 10px; font-weight: bold; color: #111827; text-transform: uppercase; }
+        
+        .legal-footer { margin-top: 25px; padding-top: 10px; border-top: 1px solid #E5E7EB; font-size: 8px; color: #9CA3AF; text-align: justify; line-height: 1.4; page-break-inside: avoid; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    {{-- 1. HEADER --}}
-    <div class="header">
-        <div style="text-align: center; margin-bottom: 10px;">
-            <img src="{{ public_path('logo-contract.png') }}" class="logo-img" alt="Logo">
-        </div>
-        
-        <div class="empresa-info">
-            <p style="font-weight: 900; color: #232323; font-size: 10px; margin-bottom: 2px;">GUIA DE NEGÓCIOS FARROUPILHA LTDA</p>
-            <p>
-                Rua Cel. Pena de Moraes, 513, Sala 1004 • Centro • Farroupilha/RS<br>
-                (54) 3268.0002 • contato@overmelhinho.com.br • CNPJ: 09.951.787/0001-28
-            </p>
-        </div>
-    </div>
-
-    {{-- 2. TITLE BOX --}}
-    <div class="title-box">
-        <h2>Autorização de Publicidade e Prestação de Serviços nº {{ str_pad($autorizacao->numero, 5, '0', STR_PAD_LEFT) }}</h2>
-    </div>
-
-    {{-- 3. GERAL --}}
-    <div class="section-bar">
-        <h3>1. Identificação do Contratante</h3>
-    </div>
-    
-    <table class="data-table">
+    <!-- 1. HEADER -->
+    <table class="header-table">
         <tr>
-            <td width="70%">
-                <span class="label">Razão Social / Nome</span>
-                <span class="value">{{ $autorizacao->cliente->razao_social ?: $autorizacao->cliente->nome_fantasia }}</span>
+            <td style="width: 40%; vertical-align: middle;">
+                <img src="{{ public_path('logo-contract.png') }}" class="logo-img" alt="Logo">
             </td>
-            <td width="30%">
-                <span class="label">Vendedor</span>
-                <span class="value">{{ $autorizacao->vendedor?->name ?? '—' }}</span>
+            <td class="header-company">
+                <strong>O VERMELHINHO INFORMAÇÕES</strong>
+                Rua Cel. Pena de Moraes, 513, Sala 1004 • Centro<br>
+                Farroupilha/RS • (54) 3268.0002<br>
+                CNPJ: 09.951.787/0001-28 • angelica@overmelhinho.com.br
+            </td>
+        </tr>
+    </table>
+
+    <!-- 2. TITLE -->
+    <div class="doc-title">
+        Autorização de Publicidade - Nº {{ str_pad($autorizacao->numero, 5, '0', STR_PAD_LEFT) }}
+    </div>
+
+    <!-- 3. CLIENT INFO -->
+    <div class="section-title">Dados do Contratante</div>
+    <table class="info-table">
+        <tr>
+            <td colspan="2">
+                <span class="label">Razão Social / Identificação</span>
+                <span class="value">{{ ltrim($autorizacao->cliente->razao_social ?: $autorizacao->cliente->nome_fantasia) }}</span>
             </td>
         </tr>
         <tr>
@@ -198,165 +100,165 @@
                 <span class="value">{{ $autorizacao->cliente->nome_fantasia }}</span>
             </td>
             <td>
-                <span class="label">Código da Autorização</span>
-                <span class="value">#{{ str_pad($autorizacao->numero, 5, '0', STR_PAD_LEFT) }}</span>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                @php
-                    $cpfCnpj = $autorizacao->cliente->cpf_cnpj;
+                @php 
+                    $cpfCnpjRaw = $autorizacao->cliente->cpf_cnpj; 
+                    $onlyNumbers = preg_replace('/[^0-9]/', '', $cpfCnpjRaw ?? '');
+                    $docLabel = 'CNPJ/CPF';
+                    $cpfCnpjFormatted = '—';
+                    if (strlen($onlyNumbers) === 11) {
+                        $docLabel = 'CPF';
+                        $cpfCnpjFormatted = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $onlyNumbers);
+                    } elseif (strlen($onlyNumbers) === 14) {
+                        $docLabel = 'CNPJ';
+                        $cpfCnpjFormatted = preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $onlyNumbers);
+                    } elseif ($onlyNumbers) {
+                        $cpfCnpjFormatted = $cpfCnpjRaw;
+                    }
                 @endphp
-                <span class="label">CNPJ/CPF</span>
-                <span class="value">{{ $cpfCnpj }}</span>
-            </td>
-            <td>
-                @php $end = $autorizacao->cliente->enderecos->first(); @endphp
-                <span class="label">Cidade / UF</span>
-                <span class="value">{{ $end?->cidade ?? '—' }} / {{ $end?->estado ?? '—' }}</span>
+                <span class="label">{{ $docLabel }}</span>
+                <span class="value">{{ $cpfCnpjFormatted }}</span>
             </td>
         </tr>
         <tr>
             <td colspan="2">
-                <span class="label">Endereço Completo</span>
-                <span class="value">
-                    {{ $end?->logradouro ?? '—' }}, {{ $end?->numero ?? 'S/N' }} - {{ $end?->bairro ?? '---' }} | CEP: {{ $end?->cep ?? '—' }}
+                @php $end = $autorizacao->cliente->enderecos->first(); @endphp
+                <span class="label">Endereço de Faturamento</span>
+                <span class="value-desc">
+                    {{ $end?->logradouro ?? '—' }}, {{ $end?->numero ?? 'S/N' }} - {{ $end?->bairro ?? '---' }} 
+                    | {{ $end?->cidade ?? '—' }}-{{ $end?->estado ?? '—' }} | CEP: {{ $end?->cep ?? '—' }}
                 </span>
             </td>
         </tr>
         <tr>
             <td>
                 @php $contato = $autorizacao->cliente->contatos->first(); @endphp
-                <span class="label">E-mail para Faturamento</span>
-                <span class="value">{{ $contato?->email_principal ?? '—' }}</span>
+                <span class="label">Contatos (Fone/Celular)</span>
+                <span class="value">{{ $contato?->telefone_principal ?: $contato?->celular ?: '—' }} / {{ $contato?->telefone_secundario ?: '—' }}</span>
             </td>
             <td>
-                <span class="label">Fone Principal / Celular</span>
-                <span class="value">{{ $contato?->telefone_principal ?: $contato?->celular ?: '—' }}</span>
+                <span class="label">E-mail Principal</span>
+                <span class="value-desc">{{ $contato?->email_principal ?? '—' }}</span>
             </td>
         </tr>
     </table>
 
-    {{-- 4. PUBLICIDADE --}}
-    <div class="section-bar">
-        <h3>2. Objeto e Detalhes da Veiculação</h3>
-    </div>
-    <table class="data-table">
+    <!-- 4. AD DETAILS -->
+    <div class="section-title">Detalhes da Veiculação</div>
+    <table class="info-table">
         <tr>
-            <td>
-                <span class="label">Título do Anúncio</span>
-                <span class="value accent-red" style="font-size: 11px;">{{ $autorizacao->titulo_anuncio }}</span>
+            <td colspan="2">
+                <span class="label">Título / Chamada do Anúncio</span>
+                <span class="value" style="color: #B70F0A;">{{ $autorizacao->titulo_anuncio }}</span>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <span class="label">Descritivo e Soluções (Escopo do Serviço)</span>
+                <span class="value-desc">{{ $autorizacao->descricao_anuncio ?: 'Inclusão de publicação comercial nas plataformas digitais e impressas da contratada.' }}</span>
             </td>
         </tr>
         <tr>
             <td>
-                <span class="label">Informativo Técnico / Veiculação</span>
-                <span class="value" style="font-weight: normal; color: #444;">{{ $autorizacao->descricao_anuncio ?: 'Inclusão de publicidade no Guia Comercial O Vermelhinho, Portal de Notícias e Redes Sociais conforme plano contratado.' }}</span>
+                <span class="label">Vigência Comercial</span>
+                <span class="value">{{ $autorizacao->data_inicio->format('d/m/Y') }} até {{ $autorizacao->data_fim->format('d/m/Y') }}</span>
             </td>
-        </tr>
-        <tr>
             <td>
-                <span class="label">Vigência do Contrato</span>
-                <span class="value">{{ $autorizacao->data_inicio->format('d/m/Y') }} a {{ $autorizacao->data_fim->format('d/m/Y') }}</span>
+                <span class="label">Vendedor</span>
+                <span class="value">{{ $autorizacao->vendedor?->name ?? 'Equipe Comercial' }}</span>
             </td>
         </tr>
     </table>
 
-    {{-- 5. PAGAMENTO --}}
-    <div class="section-bar">
-        <h3>3. Condições Comerciais e Pagamento</h3>
-    </div>
-    
-    <table class="data-table" style="margin-bottom: 10px;">
+    <!-- 5. FINANCIALS -->
+    <div class="section-title">Resumo Financeiro</div>
+    <table class="pay-summary">
         <tr>
-            <td width="25%">
+            <td>
                 <span class="label">Valor Bruto</span>
-                <span class="value">R$ {{ number_format($autorizacao->valor_total, 2, ',', '.') }}</span>
+                <div class="val">R$ {{ number_format($autorizacao->valor_total, 2, ',', '.') }}</div>
             </td>
-            <td width="25%">
-                <span class="label">Forma de Pagto</span>
-                <span class="value">{{ $autorizacao->modo_pagamento }}</span>
+            <td>
+                <span class="label">Acordo de Pagto.</span>
+                <div class="val">{{ $autorizacao->modo_pagamento }}</div>
             </td>
-            <td width="25%">
-                <span class="label">Meio de Pagto</span>
-                <span class="value">{{ match($autorizacao->payment_method) { 'pix' => 'PIX', 'boleto' => 'Boleto', 'cartao' => 'Cartão', 'dinheiro' => 'Dinheiro', default => $autorizacao->payment_method } }}</span>
+            <td>
+                <span class="label">Meio Escolhido</span>
+                <div class="val uppercase">{{ match(strtolower($autorizacao->payment_method)) { 'pix' => 'PIX', 'boleto' => 'Boleto', 'cartao' => 'Cartão', 'dinheiro' => 'Dinheiro', default => $autorizacao->payment_method } }}</div>
             </td>
-            <td width="25%">
-                <span class="label">Valor Total Líquido</span>
-                <span class="value accent-red">R$ {{ number_format($autorizacao->valor_liquido, 2, ',', '.') }}</span>
+            <td>
+                <span class="label">Total Líquido</span>
+                <div class="val red">R$ {{ number_format($autorizacao->valor_liquido, 2, ',', '.') }}</div>
             </td>
         </tr>
     </table>
 
-    <table class="payment-table" style="width: 70%; margin: 10px auto;">
+    @if($autorizacao->parcelas && count($autorizacao->parcelas) > 0)
+    <table class="installments-table" style="width: 60%; margin: 0 auto 15px auto;">
         <thead>
             <tr>
-                <th width="20%">Parcela</th>
-                <th width="40%" class="text-center">Vencimento</th>
-                <th width="40%" class="text-right">Valor Parcela</th>
+                <th width="33%">Parcela</th>
+                <th width="33%">Vencimento</th>
+                <th width="34%">Valor (R$)</th>
             </tr>
         </thead>
         <tbody>
             @foreach($autorizacao->parcelas as $p)
             <tr>
-                <td class="text-center">{{ $p->numero }}</td>
-                <td class="text-center">{{ $p->vencimento->format('d/m/Y') }}</td>
-                <td class="text-right" style="font-weight: bold;">R$ {{ number_format($p->payable_amount, 2, ',', '.') }}</td>
+                <td>{{ $p->numero }} de {{ count($autorizacao->parcelas) }}</td>
+                <td>{{ $p->vencimento->format('d/m/Y') }}</td>
+                <td>R$ {{ number_format($p->payable_amount, 2, ',', '.') }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
+    @endif
 
-    {{-- 6. OBSERVAÇÕES --}}
+    {{-- OBSERVAÇÕES --}}
     @if($autorizacao->observacoes_anuncio || $autorizacao->observacoes_financeiro)
-    <div class="section-bar">
-        <h3>4. Observações e Ajustes Específicos</h3>
-    </div>
-    <div style="padding: 5px 10px; font-size: 8.5px; line-height: 1.5; color: #444;">
+    <div class="obs-box">
         @if($autorizacao->observacoes_anuncio)
-            <p><strong>Notas de Produção:</strong> {{ $autorizacao->observacoes_anuncio }}</p>
+            <p><strong>Observações de Arte/Produção:</strong> {{ $autorizacao->observacoes_anuncio }}</p>
         @endif
         @if($autorizacao->observacoes_financeiro)
-            <p><strong>Notas de Faturamento:</strong> {{ $autorizacao->observacoes_financeiro }}</p>
+            <p><strong>Observações Faturamento:</strong> {{ $autorizacao->observacoes_financeiro }}</p>
         @endif
     </div>
     @endif
 
-    {{-- 7. ASSINATURAS --}}
+    <!-- SIGNATURES -->
     <div class="signature-area">
-        <table class="signature-table">
+        <table class="sign-table">
             <tr>
-                <td width="50%" valign="bottom">
-                    <div class="signature-line"></div>
-                    <p class="text-center signature-label">CONTRATADA<br>Guia de Negócios Farroupilha Ltda</p>
+                <td valign="bottom">
+                    <div class="sign-line"></div>
+                    <div class="sign-label">CONTRATADA</div>
+                    <div style="font-size: 8.5px; color: #6B7280; font-weight: normal; margin-top:2px;">Guia de Negócios Farroupilha Ltda</div>
                 </td>
-                <td width="50%" valign="bottom">
+                <td valign="bottom" style="position: relative;">
                     @if($autorizacao->status === 'assinado')
                         @if($autorizacao->justificativa_assinatura)
-                            <p class="text-center" style="font-size: 8px; color: #B70F0A; font-weight: 900; margin-bottom: 20px;">ACEITE FORMALIZADO VIA WHATSAPP / ADMINISTRATIVO</p>
+                            <div style="font-size: 8px; color: #059669; font-weight: bold; margin-bottom: 8px;">ACEITE REGISTRADO ELETRONICAMENTE</div>
                         @elseif($autorizacao->assinatura_base64)
-                            <div class="text-center">
-                                <img src="{{ $autorizacao->assinatura_base64 }}" style="max-height: 45px; margin-bottom: -15px;">
-                            </div>
+                            <img src="{{ $autorizacao->assinatura_base64 }}" style="max-height: 40px; margin-bottom: -10px; z-index: -1;">
                         @endif
                     @endif
-                    <div class="signature-line"></div>
-                    <p class="text-center signature-label">CONTRATANTE (ACEITE DIGITAL)<br>{{ $autorizacao->cliente->razao_social ?: $autorizacao->cliente->nome_fantasia }}</p>
+                    <div class="sign-line"></div>
+                    <div class="sign-label">CONTRATANTE</div>
+                    <div style="font-size: 8px; color: #6B7280; font-weight: normal; margin-top:2px; height: 20px;">
+                        {{ $autorizacao->cliente->razao_social ?: $autorizacao->cliente->nome_fantasia }}
+                        @if($autorizacao->status === 'assinado')
+                            <br>Assinado em {{ $autorizacao->assinado_em->format('d/m/Y H:i') }} | IP: {{ $autorizacao->assinatura_ip ?? 'N/A' }}
+                        @endif
+                    </div>
                 </td>
             </tr>
         </table>
-        @if($autorizacao->status === 'assinado')
-        <div class="text-center" style="margin-top: 15px; font-size: 7px; color: #999; font-style: italic;">
-            Documento assinado digitalmente em {{ $autorizacao->assinado_em->format('d/m/Y H:i') }} | IP: {{ $autorizacao->assinatura_ip ?? 'Autorizado' }} | Hash: {{ substr(md5($autorizacao->id), 0, 16) }}
-        </div>
-        @endif
     </div>
 
-    {{-- 8. TERMOS --}}
-    <div class="footer-legal">
-        Este documento constitui autorização irrevogável para a prestação dos serviços acima descritos. O CONTRATANTE declara ciência dos prazos e valores, autorizando a emissão de cobrança conforme cronograma. A veiculação está sujeita aos termos de uso do Portal O Vermelhinho. Eventual inadimplência sujeita o título a protesto e encargos legais. Foro: Farroupilha/RS.
+    <!-- LEGAL FOOTER -->
+    <div class="legal-footer">
+        Este documento constitui autorização irrevogável para a prestação dos serviços acima descritos. O CONTRATANTE atesta a veracidade das informações, expressa ciência dos prazos de vigência e reconhece a dívida correspondente aos valores financeiros apurados conforme cronograma de pagamento. A veiculação está sujeita às Políticas de Uso do O Vermelhinho. Eventual inadimplência ensejará na paralisação da veiculação e o legítimo protesto deste título extrajudicial, acrescido das multas e juros legais aplicáveis. Fica eleito o Foro da Comarca de Farroupilha/RS para dirimir eventuais litígios.
     </div>
-</div>
 
 </body>
 </html>

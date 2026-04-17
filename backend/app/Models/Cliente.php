@@ -52,6 +52,7 @@ class Cliente extends Model
         'tipo_arquivo_midia',
         'last_audit_at',
         'audit_status',
+        'exibir_no_site',
         'audit_differences',
     ];
 
@@ -71,6 +72,7 @@ class Cliente extends Model
 
     protected $casts = [
         'possui_publicidade' => 'boolean',
+        'exibir_no_site' => 'boolean',
         'seo_keywords' => 'array',
         'beneficios' => 'array',
         'horario_atendimento' => 'array',

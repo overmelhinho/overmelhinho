@@ -18,7 +18,9 @@ import {
   BadgeCheck,
   AlertTriangle,
   ClipboardCheck,
-  Trash2
+  Trash2,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 import {
@@ -28,6 +30,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type TipoCliente = "pagante" | "gratuito";
 type StatusAssinatura =
@@ -46,6 +50,7 @@ type ClienteLite = {
   tipo_cliente?: TipoCliente | string | null;
   status_assinatura?: StatusAssinatura | null;
   observacoes?: string | null;
+  exibir_no_site?: boolean;
 
   seo_keywords?: any;
   galeria_imagens_count?: number;
@@ -245,6 +250,7 @@ export default function ClientesList() {
 
   const [searchDebounced, setSearchDebounced] = useState("");
   const [tipo, setTipo] = useState<"all" | TipoCliente>("all");
+  const [visibilidade, setVisibilidade] = useState<"all" | "visible" | "hidden">("all");
   const [sort, setSort] = useState<string>("latest");
   const [page, setPage] = useState<number>(1);
 
@@ -290,7 +296,7 @@ export default function ClientesList() {
     }
   };
 
-  const queryKey = useMemo(() => ["clientes", { page, sort, searchDebounced, tipo }], [page, sort, searchDebounced, tipo]);
+  const queryKey = useMemo(() => ["clientes", { page, sort, searchDebounced, tipo, visibilidade }], [page, sort, searchDebounced, tipo, visibilidade]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey,
@@ -304,6 +310,7 @@ export default function ClientesList() {
           sort,
           q: searchDebounced,
           tipo: tipo !== "all" ? tipo : undefined,
+          visibilidade: visibilidade !== "all" ? visibilidade : undefined,
         },
       });
       return resp?.data;
@@ -457,28 +464,44 @@ export default function ClientesList() {
           <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
               <Filter className="w-4 h-4 text-gray-500" />
-              <select
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value as any)}
-                className="text-sm outline-none"
-              >
-                <option value="all">Todos os tipos</option>
-                <option value="pagante">Apenas Pagantes</option>
-                <option value="gratuito">Apenas Gratuitos</option>
-              </select>
+              <Select value={tipo || "all"} onValueChange={(val: any) => setTipo(val)}>
+                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-[130px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="pagante">Apenas Pagantes</SelectItem>
+                  <SelectItem value="gratuito">Apenas Gratuitos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="text-sm outline-none font-medium"
-              >
-                <option value="latest">✨ Recém Cadastrados</option>
-                <option value="oldest">Mais Antigos</option>
-                <option value="nome">Nome (A-Z)</option>
-                <option value="default">Ranking SaaS</option>
-              </select>
+              <Eye className="w-4 h-4 text-gray-500" />
+              <Select value={visibilidade || "all"} onValueChange={(val: any) => setVisibilidade(val)}>
+                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-[170px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
+                  <SelectValue placeholder="Qualquer Visibilidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Qualquer Visibilidade</SelectItem>
+                  <SelectItem value="visible">Apenas Visíveis no Site</SelectItem>
+                  <SelectItem value="hidden">Apenas Ocultos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
+              <Select value={sort} onValueChange={(val) => setSort(val)}>
+                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm font-medium w-[170px] outline-none focus:ring-0 [&>svg]:opacity-50 text-slate-700 bg-transparent">
+                  <SelectValue placeholder="Ordernar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="latest">✨ Recém Cadastrados</SelectItem>
+                  <SelectItem value="oldest">Mais Antigos</SelectItem>
+                  <SelectItem value="nome">Nome (A-Z)</SelectItem>
+                  <SelectItem value="default">Ranking SaaS</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <button
@@ -487,6 +510,7 @@ export default function ClientesList() {
                 setSearch("");
                 setSearchDebounced("");
                 setTipo("all");
+                setVisibilidade("all");
                 setSort("latest");
                 setPage(1);
                 setTimeout(() => refetch(), 0);
@@ -552,7 +576,14 @@ export default function ClientesList() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-medium text-gray-900">{c.nome_fantasia}</div>
+                            <div className="font-medium text-gray-900 flex items-center gap-2">
+                              {c.nome_fantasia}
+                              {c.exibir_no_site === false && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200">
+                                  <EyeOff className="w-3 h-3" /> Oculto no Site
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[10px] text-gray-500">
                               {cidadeUF || "—"}
                             </div>

@@ -38,6 +38,7 @@ class ClienteResource extends JsonResource
             'status_assinatura' => $this->status_assinatura ?? 'ativa',
 
             'palavras_chave' => $this->palavras_chave,
+            'exibir_no_site' => (bool) ($this->exibir_no_site ?? true),
             'horario_atendimento' => $this->horario_atendimento,
             'beneficios' => is_string($this->beneficios) ? (json_decode($this->beneficios, true) ?: []) : ($this->beneficios ?: []),
 
