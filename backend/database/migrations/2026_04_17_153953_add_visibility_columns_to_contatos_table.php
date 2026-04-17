@@ -12,9 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('contatos', function (Blueprint $table) {
-            $table->boolean('exibir_email')->default(true)->after('site');
-            $table->boolean('exibir_tel_secundario')->default(true)->after('telefone_secundario');
-            $table->boolean('exibir_tel_outro')->default(true)->after('telefone_outro');
+            if (!Schema::hasColumn('contatos', 'exibir_email')) {
+                $table->boolean('exibir_email')->default(true)->after('site');
+            }
+            if (!Schema::hasColumn('contatos', 'exibir_tel_secundario')) {
+                $table->boolean('exibir_tel_secundario')->default(true)->after('telefone_secundario');
+            }
+            if (!Schema::hasColumn('contatos', 'exibir_tel_outro')) {
+                $table->boolean('exibir_tel_outro')->default(true)->after('telefone_outro');
+            }
         });
     }
 
@@ -24,7 +30,15 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('contatos', function (Blueprint $table) {
-            $table->dropColumn(['exibir_email', 'exibir_tel_secundario', 'exibir_tel_outro']);
+            if (Schema::hasColumn('contatos', 'exibir_email')) {
+                $table->dropColumn('exibir_email');
+            }
+            if (Schema::hasColumn('contatos', 'exibir_tel_secundario')) {
+                $table->dropColumn('exibir_tel_secundario');
+            }
+            if (Schema::hasColumn('contatos', 'exibir_tel_outro')) {
+                $table->dropColumn('exibir_tel_outro');
+            }
         });
     }
 };
