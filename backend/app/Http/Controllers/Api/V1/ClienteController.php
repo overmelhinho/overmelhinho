@@ -765,7 +765,7 @@ public function historico(Request $request, int $id)
                 'enderecos.*.link_maps'    => 'nullable|string|max:500',
                 'enderecos.*.link_waze'    => 'nullable|string|max:500',
 
-                'contatos'                      => 'nullable|array|min:1',
+                'contatos'                      => 'nullable|array',
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
                 'contatos.*.telefone_secundario' => 'nullable|string|max:50',
                 'contatos.*.celular'             => 'nullable|string|max:50',
@@ -783,7 +783,7 @@ public function historico(Request $request, int $id)
                 'contatos.*.nome_contato'        => 'nullable|string|max:255',
 
                 'redes_sociais'        => 'nullable|array',
-                'redes_sociais.*.tipo' => 'required|string|max:50',
+                'redes_sociais.*.tipo' => 'nullable|string|max:50',
                 'redes_sociais.*.url'  => 'nullable|string|max:500',
 
                 'logo_url' => 'nullable|string|max:255',
@@ -1177,7 +1177,7 @@ public function historico(Request $request, int $id)
                 'enderecos.*.link_maps'    => 'nullable|string|max:500',
                 'enderecos.*.link_waze'    => 'nullable|string|max:500',
 
-                'contatos'                      => 'nullable|array|min:1',
+                'contatos'                      => 'nullable|array',
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
                 'contatos.*.telefone_secundario' => 'nullable|string|max:50',
                 'contatos.*.celular'             => 'nullable|string|max:50',
@@ -1195,7 +1195,7 @@ public function historico(Request $request, int $id)
                 'contatos.*.nome_contato'        => 'nullable|string|max:255',
 
                 'redes_sociais'        => 'nullable|array',
-                'redes_sociais.*.tipo' => 'required|string|max:50',
+                'redes_sociais.*.tipo' => 'nullable|string|max:50',
                 'redes_sociais.*.url'  => 'nullable|string|max:500',
 
                 'logo_url' => 'nullable|string|max:255',
