@@ -20,6 +20,7 @@ class Contato extends Model
         'exibir_tel_secundario',
         'exibir_celular',
         'exibir_tel_outro',
+        'exibir_email',
         'email_principal',
         'email_cobranca',
         'site',
@@ -33,6 +34,7 @@ class Contato extends Model
         'exibir_tel_secundario'            => 'boolean',
         'exibir_celular'                   => 'boolean',
         'exibir_tel_outro'                 => 'boolean',
+        'exibir_email'                     => 'boolean',
         'telefone_principal_hidden_until'   => 'datetime',
     ];
 

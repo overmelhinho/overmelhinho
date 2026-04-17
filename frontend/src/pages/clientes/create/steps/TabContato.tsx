@@ -1,6 +1,6 @@
 import { useFormikContext } from "formik";
 import { Phone, Mail, User, CheckCircle2, EyeOff, Clock } from "lucide-react";
-import MaskedInput from "@/components/ui/masked-input";
+import PhoneInput from "@/components/ui/phone-input";
 
 function addDays(date: Date, days: number): Date {
   const result = new Date(date);
@@ -24,10 +24,10 @@ export default function TabContato() {
   const { values, setFieldValue, handleChange } = useFormikContext<any>();
 
   const phoneFields = [
-    { id: 'telefone_principal', label: 'Telefone Principal', mask: '(99) 9999-9999', placeholder: '(00) 0000-0000', showExibir: 'exibir_tel_principal', hasPrincipalHide: true },
-    { id: 'telefone_secundario', label: 'Telefone Secundário', mask: '(99) 9999-9999', placeholder: '(00) 0000-0000', showExibir: 'exibir_tel_secundario', hasPrincipalHide: false },
-    { id: 'celular', label: 'Celular', mask: '(99) 99999-9999', placeholder: '(00) 00000-0000', showExibir: 'exibir_celular', hasPrincipalHide: false },
-    { id: 'telefone_outro', label: 'Outro Telefone / 0800', mask: null, placeholder: 'Digite o número', showExibir: 'exibir_tel_outro', hasPrincipalHide: false },
+    { id: 'telefone_principal', label: 'Telefone Principal', showExibir: 'exibir_tel_principal', hasPrincipalHide: true },
+    { id: 'telefone_secundario', label: 'Telefone Secundário', showExibir: 'exibir_tel_secundario', hasPrincipalHide: false },
+    { id: 'celular', label: 'Celular', showExibir: 'exibir_celular', hasPrincipalHide: false },
+    { id: 'telefone_outro', label: 'Outro Telefone / 0800', showExibir: 'exibir_tel_outro', hasPrincipalHide: false, freeText: true },
   ];
 
   const handlePhoneChange = (name: string, value: string) => {
@@ -82,23 +82,21 @@ export default function TabContato() {
               </label>
             </div>
 
-            {field.mask ? (
-              <MaskedInput
-                mask={field.mask}
-                maskChar=""
-                name={field.id}
-                value={values[field.id] || ""}
-                onChange={(e: any) => handlePhoneChange(field.id, e.target.value)}
-                placeholder={field.placeholder}
-                className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] bg-white transition-all shadow-sm"
-              />
-            ) : (
+            {field.freeText ? (
               <input
                 type="text"
                 name={field.id}
                 value={values[field.id] || ""}
                 onChange={handleChange}
-                placeholder={field.placeholder}
+                placeholder="Digite o número"
+                className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] bg-white transition-all shadow-sm"
+              />
+            ) : (
+              <PhoneInput
+                name={field.id}
+                value={values[field.id] || ""}
+                onChange={(e: any) => handlePhoneChange(field.id, e.target.value)}
+                placeholder="(00) 0000-0000"
                 className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] bg-white transition-all shadow-sm"
               />
             )}

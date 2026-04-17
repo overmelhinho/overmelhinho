@@ -21,6 +21,7 @@ class ContatoResource extends JsonResource
             'exibir_tel_secundario'            => $this->exibir_tel_secundario,
             'exibir_celular'      => $this->exibir_celular,
             'exibir_tel_outro'    => $this->exibir_tel_outro,
+            'exibir_email'        => $this->exibir_email,
             'whatsapp_principal'  => $this->whatsapp_principal,
             'whatsapp_secundario' => $this->whatsapp_secundario,
             'email_principal'     => $this->email_principal,
