@@ -383,14 +383,35 @@ class ClienteController extends Controller
             }
 
             $query->where(function ($sub) use ($q, $qDigits, $unaccentExists) {
-                if ($unaccentExists) {
-                    $sub->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$q}%"])
-                        ->orWhereRaw("unaccent(razao_social) ilike unaccent(?)", ["%{$q}%"])
-                        ->orWhereRaw("unaccent(nome_alternativo) ilike unaccent(?)", ["%{$q}%"]);
+                // Busca por palavras individuais (permite que a ordem das palavras não importe)
+                $terms = array_filter(explode(' ', $q));
+                
+                if (count($terms) > 1) {
+                    $sub->where(function ($inner) use ($terms, $unaccentExists) {
+                        foreach ($terms as $term) {
+                            $inner->where(function($wordSub) use ($term, $unaccentExists) {
+                                if ($unaccentExists) {
+                                    $wordSub->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$term}%"])
+                                            ->orWhereRaw("unaccent(razao_social) ilike unaccent(?)", ["%{$term}%"])
+                                            ->orWhereRaw("unaccent(nome_alternativo) ilike unaccent(?)", ["%{$term}%"]);
+                                } else {
+                                    $wordSub->where('nome_fantasia', 'ilike', "%{$term}%")
+                                            ->orWhere('razao_social', 'ilike', "%{$term}%")
+                                            ->orWhere('nome_alternativo', 'ilike', "%{$term}%");
+                                }
+                            });
+                        }
+                    });
                 } else {
-                    $sub->where('nome_fantasia', 'ilike', "%{$q}%")
-                        ->orWhere('razao_social', 'ilike', "%{$q}%")
-                        ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+                    if ($unaccentExists) {
+                        $sub->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$q}%"])
+                            ->orWhereRaw("unaccent(razao_social) ilike unaccent(?)", ["%{$q}%"])
+                            ->orWhereRaw("unaccent(nome_alternativo) ilike unaccent(?)", ["%{$q}%"]);
+                    } else {
+                        $sub->where('nome_fantasia', 'ilike', "%{$q}%")
+                            ->orWhere('razao_social', 'ilike', "%{$q}%")
+                            ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+                    }
                 }
 
                 // cpf/cnpj: tenta por dígitos e por texto também (caso venha mascarado)
