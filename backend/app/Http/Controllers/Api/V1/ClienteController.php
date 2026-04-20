@@ -631,6 +631,7 @@ public function historico(Request $request, int $id)
                 'logo_url'      => $request->input('logo_url') ?? $request->input('logotipo'),
                 'video'         => $request->input('video') ?? $request->input('video_link'),
                 'portfolio_url' => $request->input('portfolio_url') ?? $request->input('arquivo_midia'),
+                'banner_url'    => $request->input('banner_url') ?? $request->input('banner'),
             ]);
 
             // Normaliza redes_sociais
@@ -788,6 +789,7 @@ public function historico(Request $request, int $id)
                 'redes_sociais.*.url'  => 'nullable|string|max:500',
 
                 'logo_url' => 'nullable|string|max:255',
+                'banner_url' => 'nullable|string|max:255',
                 'horario_atendimento' => 'nullable',
 
                 'generate_seo_keywords' => 'nullable|boolean',
@@ -836,6 +838,10 @@ public function historico(Request $request, int $id)
 
             if (Schema::hasColumn('clientes', 'logo_url')) {
                 $clienteData['logo_url'] = $validated['logo_url'] ?? null;
+            }
+
+            if (Schema::hasColumn('clientes', 'banner_url')) {
+                $clienteData['banner_url'] = $validated['banner_url'] ?? null;
             }
 
             if (Schema::hasColumn('clientes', 'video')) {
@@ -1201,6 +1207,7 @@ public function historico(Request $request, int $id)
                 'redes_sociais.*.url'  => 'nullable|string|max:500',
 
                 'logo_url' => 'nullable|string|max:255',
+                'banner_url' => 'nullable|string|max:255',
                 'horario_atendimento' => 'nullable',
 
                 'generate_seo_keywords' => 'nullable|boolean',
@@ -1258,6 +1265,10 @@ public function historico(Request $request, int $id)
 
             if (Schema::hasColumn('clientes', 'logo_url')) {
                 $clienteData['logo_url'] = $validated['logo_url'] ?? null;
+            }
+
+            if (Schema::hasColumn('clientes', 'banner_url')) {
+                $clienteData['banner_url'] = $validated['banner_url'] ?? null;
             }
 
             if (Schema::hasColumn('clientes', 'video')) {
@@ -1618,6 +1629,107 @@ $this->audit(
 
         } catch (\Throwable $e) {
             Log::error('COMMIT_LOGO_TEMP_FAIL', [
+                'cliente_id' => $clienteId,
+                'temp_path'  => $tempPath,
+                'error'      => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    public function commitBannerTemp(Request $request, $clienteId)
+    {
+        $request->validate([
+            'temp_path' => 'required|string',
+        ]);
+
+        $cliente = Cliente::findOrFail($clienteId);
+
+        $supabaseUrl = rtrim(config('services.supabase.url'), '/');
+        $supabaseKey = config('services.supabase.service_role_key') ?: config('services.supabase.key');
+        $bucket = config('services.supabase.bucket', 'clientes-media');
+
+        $input = trim((string) $request->input('temp_path', ''));
+
+        if (Str::startsWith($input, 'http://') || Str::startsWith($input, 'https://')) {
+            $parsedPath = parse_url($input, PHP_URL_PATH) ?: '';
+            $marker = "/storage/v1/object/public/{$bucket}/";
+            if (str_contains($parsedPath, $marker)) {
+                $input = explode($marker, $parsedPath, 2)[1] ?? $input;
+            }
+        }
+
+        $tempPath = ltrim($input, '/');
+
+        if (!Str::startsWith($tempPath, 'temp/')) {
+            return response()->json([
+                'success' => false,
+                'message' => "temp_path inválido: {$tempPath}"
+            ], 422);
+        }
+
+        $filename = basename($tempPath);
+        $destPath = "clientes/{$clienteId}/banner/{$filename}";
+
+        try {
+            $copyUrl = "{$supabaseUrl}/storage/v1/object/copy";
+            $copyPayload = [
+                'bucketId' => $bucket,
+                'sourceKey' => $tempPath,
+                'destinationKey' => $destPath,
+                'destinationBucketId' => $bucket,
+            ];
+
+            $copyResp = Http::withHeaders([
+                'apikey' => $supabaseKey,
+                'Authorization' => "Bearer {$supabaseKey}",
+                'Content-Type' => 'application/json',
+            ])->post($copyUrl, $copyPayload);
+
+            if (!$copyResp->successful()) {
+                throw new \Exception("Erro ao copiar arquivo no Supabase: " . $copyResp->body());
+            }
+
+            $deleteUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
+            Http::withHeaders([
+                'apikey' => $supabaseKey,
+                'Authorization' => "Bearer {$supabaseKey}",
+                'Content-Type' => 'application/json',
+            ])->delete($deleteUrl, ['prefixes' => [$tempPath]]);
+
+            $finalUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucket}/{$destPath}";
+            $oldBannerUrl = $cliente->banner_url ?? null;
+            $cliente->update(['banner_url' => $finalUrl]);
+
+            $this->audit(
+                action: 'upload',
+                entityType: 'cliente_banner',
+                entityId: (int) $cliente->id,
+                fieldChanges: [
+                    'banner_url' => [
+                        'from' => $oldBannerUrl,
+                        'to' => $finalUrl,
+                    ],
+                ],
+                clienteId: (int) $cliente->id,
+                metadata: [
+                    'dest_path' => $destPath,
+                    'bucket' => $bucket,
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'banner_url' => $finalUrl,
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('COMMIT_BANNER_TEMP_FAIL', [
                 'cliente_id' => $clienteId,
                 'temp_path'  => $tempPath,
                 'error'      => $e->getMessage(),

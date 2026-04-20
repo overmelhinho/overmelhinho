@@ -6,16 +6,27 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.c
 
 async function getClient(id: string) {
     try {
-        const res = await api.get(`/public/clientes/${id}`);
-        return res.data.data;
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+        const response = await fetch(`${baseUrl}/public/clientes/${id}`, {
+            headers: {
+                'Accept': 'application/json',
+            },
+            next: { revalidate: 60 } // Opcional: cache de 60 segundos
+        });
+
+        if (!response.ok) return null;
+        
+        const data = await response.json();
+        return data.data;
     } catch (e) {
         return null;
     }
 }
 
 // 🔍 SEO Dinâmico: Título, Descrição e Keywords baseadas na empresa real
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-    const client = await getClient(params.id);
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+    const { id } = await params;
+    const client = await getClient(id);
     if (!client) return { title: 'O Vermelhinho | Guia de Empresas' };
 
     const city = client.enderecos?.[0]?.cidade || '';
@@ -39,8 +50,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     };
 }
 
-export default async function Page({ params }: { params: { id: string } }) {
-    const client = await getClient(params.id);
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const client = await getClient(id);
 
     if (!client) {
         return <ClientProfileClient />;

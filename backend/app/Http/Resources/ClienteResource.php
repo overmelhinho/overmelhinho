@@ -43,6 +43,7 @@ class ClienteResource extends JsonResource
             'beneficios' => is_string($this->beneficios) ? (json_decode($this->beneficios, true) ?: []) : ($this->beneficios ?: []),
 
             'logotipo_url' => $logoUrl,
+            'banner_url' => $this->banner_url,
 
             'seo_keywords' => $this->seo_keywords ?? [],
             'seo_keywords_source' => $this->seo_keywords_source ?? 'generated',

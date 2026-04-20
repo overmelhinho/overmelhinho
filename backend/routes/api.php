@@ -154,6 +154,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Logo
     Route::post('clientes/{cliente}/logo/commit-temp', [ClienteController::class , 'commitLogoTemp']);
+    Route::post('clientes/{cliente}/banner/commit-temp', [ClienteController::class , 'commitBannerTemp']);
 
     // ✅ Ticket (IMPORTANTE: rotas específicas antes do resource)
     Route::get('tickets/my-focus', [TicketController::class , 'myFocusQueue']);

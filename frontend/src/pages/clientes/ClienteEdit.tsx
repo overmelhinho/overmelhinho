@@ -266,6 +266,9 @@ export default function ClienteEdit() {
       logotipo_path: null,
       logotipo_mime: null,
 
+      banner: c?.banner_url || null,
+      banner_path: null,
+
       video_link: c?.video || c?.video_link || "",
 
       arquivo_midia: c?.portfolio_url || c?.arquivo_midia || null,
@@ -415,6 +418,7 @@ export default function ClienteEdit() {
               tipo_cliente: values.tipoCliente,
 
               logotipo: typeof values.logotipo === "string" ? values.logotipo : null,
+              banner_url: typeof values.banner === "string" ? values.banner : null,
               video: values.video_link || null,
               portfolio_url: typeof values.arquivo_midia === "string" ? values.arquivo_midia : null,
 
@@ -452,6 +456,23 @@ export default function ClienteEdit() {
               } catch (e) {
                 console.error("Falha commit logo:", e);
                 toast.error("Alterações salvas, mas falhou ao publicar o logo.");
+              }
+            }
+
+            const bannerTempPath =
+              normalizeTempPath(values.banner_path) ||
+              normalizeTempPath(
+                typeof values.banner === "string" ? extractTempPathFromPublicUrl(values.banner) : null
+              );
+
+            if (bannerTempPath) {
+              try {
+                await axios.post(`/v1/clientes/${clienteId}/banner/commit-temp`, {
+                  temp_path: bannerTempPath,
+                });
+              } catch (e) {
+                console.error("Falha commit banner:", e);
+                toast.error("Alterações salvas, mas falhou ao publicar o banner.");
               }
             }
 

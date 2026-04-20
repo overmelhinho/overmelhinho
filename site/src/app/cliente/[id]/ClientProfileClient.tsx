@@ -286,11 +286,15 @@ export default function ClientProfileClient() {
                     </div>
                 </div>
 
-                <img
-                    src={client.galeria?.[0]?.url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&auto=format&fit=crop&q=80"}
-                    className="w-full h-full object-cover escala-focus-top"
-                    alt={client.nome_fantasia}
-                />
+                {client.banner_url ? (
+                    <img
+                        src={client.banner_url}
+                        className="w-full h-full object-cover escala-focus-top"
+                        alt={client.nome_fantasia}
+                    />
+                ) : (
+                    <div className="w-full h-full bg-white"></div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 md:to-transparent"></div>
             </section>
 

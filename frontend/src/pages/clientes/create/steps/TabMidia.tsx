@@ -145,8 +145,110 @@ export default function TabMidia() {
 
   const isPdfUrl = (url: string) => url?.toLowerCase().includes(".pdf");
 
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      toast.error(`Limite de 2MB excedido.`);
+      e.target.value = "";
+      return;
+    }
+    setUploading(true);
+    setProgress(0);
+    try {
+      const formData = new FormData();
+      formData.append("files[]", file);
+      const { data } = await axios.post("/v1/upload-temp", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const uploaded = data.files[0];
+      setFieldValue("banner", uploaded.public_url);
+      setFieldValue("banner_path", uploaded.path || null);
+      toast.success("Banner enviado!");
+    } catch (error) {
+      toast.error("Falha ao enviar banner.");
+    } finally {
+      setUploading(false);
+      setProgress(0);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="space-y-8">
+      {/* 🖼️ BANNER SECTION */}
+      <section className="p-6 bg-red-50/30 rounded-2xl border border-red-100">
+        <h3 className="text-lg font-semibold text-[#B70F0A] flex items-center gap-2 mb-2">
+          <Upload className="w-5 h-5 text-[#B70F0A]" /> Banner da Empresa
+        </h3>
+        
+        <div className="grid md:grid-cols-2 gap-6 items-start">
+          <div className="space-y-4">
+            <div className="bg-white p-4 rounded-xl border text-sm text-gray-600 space-y-2">
+              <p className="font-semibold text-gray-800">📏 Dimensões Ideais:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Resolução sugerida: <b>1920 x 700 px</b></li>
+                <li>Proporção: <b>3:1</b></li>
+                <li>Área de foco: <b>Centro da imagem</b></li>
+                <li>Tamanho máx: <b>2MB</b> (WebP recomendado)</li>
+              </ul>
+              <p className="text-xs italic bg-amber-50 p-2 rounded border border-amber-100 mt-2">
+                <b>Dica:</b> Mantenha o conteúdo principal centralizado. Evite textos na parte inferior, pois serão cobertos pelo box do perfil.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="image/*"
+                id="bannerUpload"
+                className="hidden"
+                onChange={handleBannerUpload}
+              />
+              <label
+                htmlFor="bannerUpload"
+                className="cursor-pointer flex items-center gap-2 bg-[#B70F0A] text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Upload className="w-4 h-4" /> Enviar Banner
+              </label>
+
+              {values.banner && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFieldValue("banner", null);
+                    setFieldValue("banner_path", null);
+                  }}
+                  className="text-red-500 text-sm font-medium hover:underline flex items-center gap-1"
+                >
+                  <X className="w-4 h-4" /> Remover
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Prévia do Banner</span>
+            <div className="aspect-[3/1] bg-gray-100 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center relative group">
+              {values.banner ? (
+                <img src={values.banner} alt="Banner Preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center p-4">
+                  <Eye className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-xs text-gray-400">Nenhum banner selecionado</p>
+                </div>
+              )}
+              {uploading && (
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <div className="text-white text-sm font-bold animate-pulse">Enviando...</div>
+                  </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section>
         <h3 className="text-lg font-semibold text-[#B70F0A] flex items-center gap-2">
           <Youtube className="w-5 h-5 text-[#B70F0A]" /> Vídeo da Empresa

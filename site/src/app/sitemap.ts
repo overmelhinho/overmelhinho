@@ -6,8 +6,14 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.c
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     try {
         // 1. Buscar os dados do sitemap no backend
-        const response = await api.get('/public/sitemap-data');
-        const clients = response.data;
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+        const response = await fetch(`${baseUrl}/public/sitemap-data`, {
+            next: { revalidate: 3600 } // Cache de 1 hora para o sitemap
+        });
+
+        if (!response.ok) return [];
+        
+        const clients = await response.json();
 
         // 2. Mapear os clientes para o formato do sitemap
         const clientEntries = clients.map((client: any) => ({

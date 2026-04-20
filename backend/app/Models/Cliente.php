@@ -32,6 +32,7 @@ class Cliente extends Model
         'video',
         'portfolio_url',
         'logo_url',
+        'banner_url',
         'possui_publicidade',
         'seo_keywords',
         'seo_keywords_source',
