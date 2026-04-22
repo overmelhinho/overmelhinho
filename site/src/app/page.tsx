@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Mic, Sparkles, Menu, Search, User, Home as HomeIcon, Briefcase, Heart, MessageCircle, ArrowRight } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAds } from '@/hooks/useAds';
+import { useClients } from '@/hooks/useClients';
 import { useLocation } from '@/contexts/LocationContext';
 import Logo from '@/components/Logo';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
@@ -26,6 +28,7 @@ export default function Home() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const { cityId } = useLocation();
   const { data: homeAds } = useAds({ city_id: cityId, tipo: 'BANNER' });
+  const { data: realClients } = useClients({ city_id: cityId, per_page: 3 });
 
   // Animação de escrita do título
   const [textIndex, setTextIndex] = useState(0);
@@ -91,35 +94,55 @@ export default function Home() {
     { id: 4, name: 'Vagas', icon: '💼', color: 'bg-[#F3E8FF]', desc: 'Carreira' },
   ];
 
-  const featured = [
-    {
-      name: "Giardino Restaurante",
-      category: "Gastronomia",
-      rating: 4.9,
-      img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80",
-      location: "Centro, Farroupilha - RS",
-      whatsapp: "5554999999001",
-      desc: "Culinária italiana autêntica no coração da Serra Gaúcha."
-    },
-    {
-      name: "Clínica Serra Saúde",
-      category: "Saúde",
-      rating: 4.8,
-      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
-      location: "Bairro Centro, Garibaldi - RS",
-      whatsapp: "5554999999002",
-      desc: "Atendimento médico completo com especialistas da região."
-    },
-    {
-      name: "Serra Fit Academia",
-      category: "Fitness",
-      rating: 5.0,
-      img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&auto=format&fit=crop&q=80",
-      location: "Av. Principal, Bento Gonçalves - RS",
-      whatsapp: "5554999999003",
-      desc: "Musculação, cardio e aulas coletivas 6 dias por semana."
-    },
-  ];
+  const featured = useMemo(() => {
+    if (!realClients || realClients.length === 0) {
+      return [
+        {
+          name: "Giardino Restaurante",
+          category: "Gastronomia",
+          rating: 4.9,
+          img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80",
+          location: "Centro, Farroupilha - RS",
+          whatsapp: "5554999999001",
+          desc: "Culinária italiana autêntica no coração da Serra Gaúcha.",
+          slug: "giardino-restaurante"
+        },
+        {
+          name: "Clínica Serra Saúde",
+          category: "Saúde",
+          rating: 4.8,
+          img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
+          location: "Bairro Centro, Garibaldi - RS",
+          whatsapp: "5554999999002",
+          desc: "Atendimento médico completo com especialistas da região.",
+          slug: "clinica-serra-saude"
+        },
+        {
+          name: "Serra Fit Academia",
+          category: "Fitness",
+          rating: 5.0,
+          img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&auto=format&fit=crop&q=80",
+          location: "Av. Principal, Bento Gonçalves - RS",
+          whatsapp: "5554999999003",
+          desc: "Musculação, cardio e aulas coletivas 6 dias por semana.",
+          slug: "serra-fit-academia"
+        },
+      ];
+    }
+
+    return realClients.map(client => ({
+      name: client.nome_fantasia,
+      category: client.segmentos?.[0]?.nome || 'Negócio Local',
+      rating: (client as any).google_rating || 5.0,
+      img: (client as any).logotipo_url || client.logo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
+      location: client.enderecos?.[0]
+        ? `${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`
+        : 'Sua Cidade',
+      whatsapp: client.contatos?.[0]?.whatsapp_selected || client.contatos?.[0]?.celular || '',
+      desc: client.descricao || 'Empresa destaque no portal O Vermelhinho.',
+      slug: client.slug
+    }));
+  }, [realClients]);
 
   const handleQuickSearch = (term: string) => {
     trackSearch(term);
@@ -216,7 +239,7 @@ export default function Home() {
                     <div className="flex space-x-6 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:space-x-0 md:gap-10">
                         {featured.map((item, idx) => (
                             <div key={idx} className="snap-center min-w-[92%] md:min-w-0 bg-white rounded-[4rem] overflow-hidden shadow-[0_40px_100px_-30px_rgba(0,0,0,0.15)] border-4 border-white flex flex-col gummy-card group">
-                                <div className="relative h-72 overflow-hidden">
+                                <Link href={`/cliente/${item.slug}`} className="relative h-72 overflow-hidden block">
                                     <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                                     <div className="absolute top-8 right-8 bg-white/95 backdrop-blur-md px-5 py-3 rounded-full flex items-center space-x-2 shadow-2xl">
                                         <span className="text-yellow-500 text-xl font-black">★</span>
@@ -225,11 +248,13 @@ export default function Home() {
                                     <div className="absolute bottom-8 left-8 bg-black/60 backdrop-blur-md text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 font-sans">
                                         Destaque Portal
                                     </div>
-                                </div>
+                                </Link>
                                 <div className="p-8 flex-1 flex flex-col justify-between space-y-6">
                                     <div className="space-y-2">
                                         <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.4em] font-sans">{item.category}</span>
-                                        <h4 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter leading-none font-serif">{item.name}</h4>
+                                        <Link href={`/cliente/${item.slug}`}>
+                                            <h4 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter leading-none font-serif hover:text-brand-red transition-colors cursor-pointer">{item.name}</h4>
+                                        </Link>
                                         <p className="text-gray-400 font-bold tracking-tight font-sans">{item.location}</p>
                                         <p className="text-gray-400 font-medium text-sm mt-2">{item.desc}</p>
                                     </div>

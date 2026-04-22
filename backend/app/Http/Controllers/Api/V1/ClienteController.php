@@ -58,9 +58,10 @@ class ClienteController extends Controller
             } catch (\Exception $e) { $canUseSimilarity = false; }
         }
 
+        $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
+
         // ✅ Busca Inteligente (Fuzzy + Aprendizado de Typos)
         if ($q !== '') {
-            $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
             
             // 1. Verifica se existe uma correção aprendida pelo sistema (Learning Logic)
             $learned = \App\Models\SearchCorrection::where('typo', mb_strtolower($normalizedQ, 'UTF-8'))

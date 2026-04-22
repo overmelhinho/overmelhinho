@@ -17,6 +17,7 @@ import ConfiguracoesPage from "@/pages/ConfiguracoesPage";
 
 import Unauthorized from "@/pages/Unauthorized";
 import MinhaContaPage from "@/pages/MinhaContaPage";
+import DocumentationPage from "@/pages/DocumentationPage";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -451,6 +452,16 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <MinhaContaPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/documentacao",
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <DocumentationPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },

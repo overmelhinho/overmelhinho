@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogOut, User, ChevronDown, Bell, Check, ExternalLink } from "lucide-react";
+import { LogOut, User, ChevronDown, Bell, Check, ExternalLink, Sparkles } from "lucide-react";
 import { useNotifications, useMarkNotificationAsRead, useMarkAllNotificationsAsRead } from "@/hooks/useNotifications";
 
-export default function Header() {
+export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -80,6 +80,16 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-4">
+          
+          {/* Botão Help Me - Estilo Moderno SaaS */}
+          <button
+            onClick={onToggleHelp}
+            className="group relative flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-orange-600 border border-orange-100 hover:bg-orange-100 transition-all font-bold text-xs"
+            title="Ajuda Inteligente"
+          >
+            <Sparkles size={16} className="animate-pulse" />
+            <span className="hidden md:block">Ajude-me</span>
+          </button>
 
           {/* Menu de Notificações */}
           <div className="relative" ref={notifRef}>
