@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import api from '@/services/api';
 import {
     Search,
     MapPin,
@@ -41,114 +42,8 @@ interface Job {
 }
 
 // ── DADOS ─────────────────────────────────────────────────────────
-const JOBS: Job[] = [
-    {
-        id: 1,
-        title: 'Vendedor(a) Externo(a)',
-        company: 'Grupo Freitas',
-        location: 'Centro, Farroupilha - RS',
-        salary: 'R$ 1.800 + comissões',
-        salaryNum: 1800,
-        type: 'CLT',
-        date: 'Há 1 dia',
-        daysAgo: 1,
-        tags: ['Vendas', 'CNH B', 'Externo'],
-        category: 'Vendas',
-        desc: 'Realizará visitas a clientes e prospecção de novos negócios na cidade e região, com metas e comissões atrativas.',
-        requirements: ['Ensino Médio completo', 'CNH categoria B', 'Experiência em vendas externas'],
-        benefits: ['Vale Alimentação', 'Plano de Saúde', 'Comissões ilimitadas', 'Veículo da empresa'],
-        contact: 'rh@grupofreitas.com.br',
-        logo: 'https://images.unsplash.com/photo-1549421263-5ec394a5ad4c?w=100&h=100&fit=crop',
-    },
-    {
-        id: 2,
-        title: 'Assistente Administrativo(a)',
-        company: 'Metalúrgica Nardi',
-        location: 'Distrito Industrial, Farroupilha - RS',
-        salary: 'R$ 2.200,00',
-        salaryNum: 2200,
-        type: 'CLT',
-        date: 'Há 2 dias',
-        daysAgo: 2,
-        tags: ['Adm', 'Excel', 'Escrita'],
-        category: 'Administrativo',
-        desc: 'Suporte nas rotinas administrativas, controle de documentos, atendimento telefônico e lançamento de dados em sistema ERP.',
-        requirements: ['Ensino Médio completo', 'Conhecimento em Pacote Office', 'Organização e proatividade'],
-        benefits: ['Vale Transporte', 'Vale Alimentação', 'Seguro de Vida'],
-        contact: '(54) 3268-0000',
-    },
-    {
-        id: 3,
-        title: 'Operador(a) de Máquinas CNC',
-        company: 'Plásticos Serra Gaúcha',
-        location: 'Parque Industrial, Carlos Barbosa - RS',
-        salary: 'R$ 3.000,00',
-        salaryNum: 3000,
-        type: 'CLT',
-        date: 'Há 3 dias',
-        daysAgo: 3,
-        tags: ['Indústria', 'CNC', 'Turno'],
-        category: 'Indústria',
-        desc: 'Operação e setup de máquinas CNC para produção de peças plásticas. Trabalho em turno fixo com adicional de turno.',
-        requirements: ['Curso técnico em mecânica ou área afim', 'Experiência com CNC', 'Disponibilidade para turno'],
-        benefits: ['Vale Transporte', 'Vale Alimentação', 'Adicional de Turno', 'Plano de Saúde'],
-        contact: '(54) 3268-1111',
-    },
-    {
-        id: 4,
-        title: 'Estagiário(a) em Marketing Digital',
-        company: 'Digital Intelligence',
-        location: 'Centro, Farroupilha - RS (Híbrido)',
-        salary: 'R$ 900,00 + benefícios',
-        salaryNum: 900,
-        type: 'Estágio',
-        date: 'Há 1 dia',
-        daysAgo: 1,
-        tags: ['Marketing', 'Social Media', 'Canva'],
-        category: 'TI & Digital',
-        desc: 'Auxiliar na criação de conteúdo para redes sociais, edição de vídeos curtos, relatórios de métricas e campanhas pagas.',
-        requirements: ['Cursando Marketing, Publicidade ou Comunicação', 'Conhecimento em Canva ou Figma', 'Criatividade e boa escrita'],
-        benefits: ['Bolsa Auxílio', 'Vale Transporte', 'Horário Flexível', 'Home Office parcial'],
-        contact: 'vagas@digitalintelligence.com.br',
-        logo: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=100&h=100&fit=crop',
-    },
-    {
-        id: 5,
-        title: 'Motorista Entregador',
-        company: 'Distribuidora Garibaldi',
-        location: 'Garibaldi - RS',
-        salary: 'R$ 2.500,00 + ajuda de custo',
-        salaryNum: 2500,
-        type: 'CLT',
-        date: 'Há 4 dias',
-        daysAgo: 4,
-        tags: ['Logística', 'CNH D', 'Entregas'],
-        category: 'Logística',
-        desc: 'Realizar entregas de bebidas e produtos na região da Serra Gaúcha. Veículo fornecido pela empresa.',
-        requirements: ['CNH categoria D', 'Experiência com entregas', 'Curso de Mopp (desejável)'],
-        benefits: ['Vale Alimentação', 'Plano Odontológico', 'Ajuda de Custo com combustível'],
-        contact: '(54) 3462-0000',
-    },
-    {
-        id: 6,
-        title: 'Analista de TI – Suporte N2',
-        company: 'TechSerra Soluções',
-        location: 'Bento Gonçalves - RS (Presencial)',
-        salary: 'R$ 4.500,00',
-        salaryNum: 4500,
-        type: 'CLT',
-        date: 'Há 2 dias',
-        daysAgo: 2,
-        tags: ['TI', 'Suporte', 'Windows Server'],
-        category: 'TI & Digital',
-        desc: 'Atendimento de chamados N2, gestão de usuários no Active Directory, suporte a infraestrutura de rede e servidores Windows.',
-        requirements: ['Graduação em TI ou áreas correlatas', 'Windows Server e Active Directory', 'Conhecimento em redes TCP/IP'],
-        benefits: ['Plano de Saúde', 'PLR', 'Vale Alimentação', 'Gympass'],
-        contact: 'rh@techserra.com.br',
-    },
-];
-
-const CATEGORIES = ['Vendas', 'Administrativo', 'Indústria', 'TI & Digital', 'Logística'];
+// Os dados agora são puxados da API. (Mock removido)
+const CATEGORIES = ['Vendas', 'Administrativo', 'Indústria', 'TI & Digital', 'Logística', 'Serviços', 'Outros'];
 
 // ── MÁSCARA FONE ──────────────────────────────────────────────────
 function maskPhone(value: string): string {
@@ -162,6 +57,46 @@ function maskPhone(value: string): string {
 
 // ── JOB MODAL ─────────────────────────────────────────────────────
 function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
+    const [isApplying, setIsApplying] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        resume: null as File | null
+    });
+    const [errorMsg, setErrorMsg] = useState('');
+
+    const handleApply = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setErrorMsg('');
+
+        if (!formData.name || !formData.email || !formData.resume) {
+            setErrorMsg('Por favor, preencha nome, e-mail e anexe o currículo.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const payload = new FormData();
+            payload.append('name', formData.name);
+            payload.append('email', formData.email);
+            payload.append('phone', formData.phone);
+            payload.append('resume', formData.resume);
+            
+            await api.post(`/jobs/${job.id}/apply`, payload, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            
+            setIsSuccess(true);
+        } catch (error: any) {
+            setErrorMsg(error.response?.data?.message || 'Erro ao enviar candidatura. Tente novamente.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
@@ -196,76 +131,178 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
                 </div>
 
                 <div className="px-8 py-8 space-y-8">
-                    {/* Salário + Tipo + Horário */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        <div className="bg-gray-50 rounded-2xl p-5 space-y-1">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Salário</p>
-                            <p className="font-black text-gray-900">{job.salary}</p>
+                    {!isApplying ? (
+                        <>
+                            {/* Salário + Tipo + Horário */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                <div className="bg-gray-50 rounded-2xl p-5 space-y-1">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Salário</p>
+                                    <p className="font-black text-gray-900">{job.salary}</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-2xl p-5 space-y-1">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Contrato</p>
+                                    <p className="font-black text-gray-900">{job.type}</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-2xl p-5 space-y-1 col-span-2 sm:col-span-1">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Publicada</p>
+                                    <p className="font-black text-gray-900">{job.date}</p>
+                                </div>
+                            </div>
+
+                            {/* Tags */}
+                            <div className="flex flex-wrap gap-2">
+                                {job.tags.map(tag => (
+                                    <span key={tag} className="px-3 py-1.5 bg-brand-red/5 text-brand-red text-[10px] font-black uppercase tracking-widest rounded-lg">{tag}</span>
+                                ))}
+                            </div>
+
+                            {/* Descrição */}
+                            <div className="space-y-3">
+                                <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Sobre a Vaga</h3>
+                                <p className="text-gray-500 font-medium leading-relaxed">{job.desc}</p>
+                            </div>
+
+                            {/* Requisitos */}
+                            <div className="space-y-3">
+                                <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Requisitos</h3>
+                                <ul className="space-y-2">
+                                    {job.requirements.map((r, i) => (
+                                        <li key={i} className="flex items-center gap-3 text-gray-600 font-medium text-sm">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-brand-red flex-shrink-0" />
+                                            {r}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            {/* Benefícios */}
+                            <div className="space-y-3">
+                                <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Benefícios</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {job.benefits.map((b, i) => (
+                                        <span key={i} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-black rounded-lg">{b}</span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* CTA Section */}
+                            <div className="bg-gray-900 rounded-[2rem] p-8 space-y-4">
+                                <p className="text-white font-black text-lg">Interessado(a)?</p>
+                                <p className="text-gray-400 text-sm font-medium">Preencha seus dados e anexe seu currículo para esta vaga.</p>
+                                <button
+                                    onClick={() => setIsApplying(true)}
+                                    className="w-full bg-brand-red text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30"
+                                >
+                                    Quero me Candidatar
+                                </button>
+                            </div>
+                        </>
+                    ) : isSuccess ? (
+                        <div className="bg-emerald-50 rounded-[2rem] p-10 text-center space-y-4">
+                            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <CheckSquare size={40} />
+                            </div>
+                            <h3 className="text-2xl font-black text-emerald-900 tracking-tight">Currículo Enviado!</h3>
+                            <p className="text-emerald-700 font-medium">Sua candidatura foi enviada com sucesso para a empresa <strong>{job.company}</strong>.</p>
+                            <button
+                                onClick={onClose}
+                                className="mt-6 px-8 py-3 bg-emerald-600 text-white rounded-xl font-black hover:bg-emerald-700 transition-colors"
+                            >
+                                Fechar
+                            </button>
                         </div>
-                        <div className="bg-gray-50 rounded-2xl p-5 space-y-1">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Contrato</p>
-                            <p className="font-black text-gray-900">{job.type}</p>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+                                <button onClick={() => setIsApplying(false)} className="text-gray-400 hover:text-brand-red transition-colors">
+                                    <ArrowLeft size={20} />
+                                </button>
+                                <div>
+                                    <h3 className="font-black text-xl text-gray-900">Sua Candidatura</h3>
+                                    <p className="text-xs font-bold text-gray-400 tracking-widest uppercase mt-1">Vaga: {job.title}</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleApply} className="space-y-5">
+                                {errorMsg && (
+                                    <div className="p-4 bg-red-50 text-brand-red font-bold text-sm rounded-xl border border-red-100">
+                                        {errorMsg}
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">Nome Completo *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red focus:bg-white rounded-xl py-3 px-4 outline-none font-bold text-gray-900 transition-all placeholder:text-gray-300"
+                                        placeholder="Seu nome"
+                                        value={formData.name}
+                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">E-mail *</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red focus:bg-white rounded-xl py-3 px-4 outline-none font-bold text-gray-900 transition-all placeholder:text-gray-300"
+                                            placeholder="seu@email.com"
+                                            value={formData.email}
+                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">WhatsApp</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red focus:bg-white rounded-xl py-3 px-4 outline-none font-bold text-gray-900 transition-all placeholder:text-gray-300"
+                                            placeholder="(00) 00000-0000"
+                                            value={maskPhone(formData.phone)}
+                                            onChange={e => setFormData({ ...formData, phone: maskPhone(e.target.value) })}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">Anexar Currículo (PDF/Word) *</label>
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            required
+                                            accept=".pdf,.doc,.docx"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            onChange={e => {
+                                                if (e.target.files && e.target.files.length > 0) {
+                                                    setFormData({ ...formData, resume: e.target.files[0] });
+                                                }
+                                            }}
+                                        />
+                                        <div className={`w-full border-2 border-dashed ${formData.resume ? 'border-brand-red bg-brand-red/5' : 'border-gray-200 bg-gray-50'} rounded-xl p-6 text-center transition-colors pointer-events-none`}>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${formData.resume ? 'bg-brand-red text-white' : 'bg-gray-200 text-gray-500'}`}>
+                                                    <Briefcase size={18} />
+                                                </div>
+                                                {formData.resume ? (
+                                                    <p className="font-black text-sm text-brand-red">{formData.resume.name}</p>
+                                                ) : (
+                                                    <p className="font-bold text-sm text-gray-500">Clique ou arraste seu arquivo aqui</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full bg-brand-red text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30 disabled:opacity-50 disabled:pointer-events-none mt-4"
+                                >
+                                    {isSubmitting ? 'Enviando...' : 'Enviar Currículo'}
+                                </button>
+                            </form>
                         </div>
-                        <div className="bg-gray-50 rounded-2xl p-5 space-y-1 col-span-2 sm:col-span-1">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Publicada</p>
-                            <p className="font-black text-gray-900">{job.date}</p>
-                        </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-2">
-                        {job.tags.map(tag => (
-                            <span key={tag} className="px-3 py-1.5 bg-brand-red/5 text-brand-red text-[10px] font-black uppercase tracking-widest rounded-lg">{tag}</span>
-                        ))}
-                    </div>
-
-                    {/* Descrição */}
-                    <div className="space-y-3">
-                        <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Sobre a Vaga</h3>
-                        <p className="text-gray-500 font-medium leading-relaxed">{job.desc}</p>
-                    </div>
-
-                    {/* Requisitos */}
-                    <div className="space-y-3">
-                        <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Requisitos</h3>
-                        <ul className="space-y-2">
-                            {job.requirements.map((r, i) => (
-                                <li key={i} className="flex items-center gap-3 text-gray-600 font-medium text-sm">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-brand-red flex-shrink-0" />
-                                    {r}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {/* Benefícios */}
-                    <div className="space-y-3">
-                        <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Benefícios</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {job.benefits.map((b, i) => (
-                                <span key={i} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-black rounded-lg">{b}</span>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Contato / CTA */}
-                    <div className="bg-gray-900 rounded-[2rem] p-8 space-y-4">
-                        <p className="text-white font-black text-lg">Interessado(a)? Entre em contato!</p>
-                        <p className="text-gray-400 text-sm font-medium">Envie seu currículo diretamente para a empresa.</p>
-                        <a
-                            href={job.contact.includes('@')
-                                ? `mailto:${job.contact}?subject=Candidatura – ${job.title}`
-                                : `https://wa.me/55${job.contact.replace(/\D/g, '')}?text=Olá! Vi a vaga de ${encodeURIComponent(job.title)} no Vermelhinho e gostaria de me candidatar.`
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full bg-brand-red text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30"
-                        >
-                            {job.contact.includes('@') ? <Mail size={20} /> : <Phone size={20} />}
-                            {job.contact.includes('@') ? 'Enviar Currículo por E-mail' : 'Candidatar pelo WhatsApp'}
-                        </a>
-                        <p className="text-gray-500 text-xs text-center font-bold">{job.contact}</p>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -281,6 +318,42 @@ export default function VagasPage() {
     const [sortBy, setSortBy] = useState<'recentes' | 'salario'>('recentes');
     const [showFilters, setShowFilters] = useState(false);
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+    const [jobs, setJobs] = useState<Job[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchJobs = async () => {
+            try {
+                const res = await api.get('/jobs/public');
+                const data = res.data.data || [];
+                
+                const mappedJobs: Job[] = data.map((j: any) => ({
+                    id: j.id,
+                    title: j.title,
+                    company: j.client?.nome_fantasia || 'Empresa Confidencial',
+                    location: j.city || 'Não informado',
+                    salary: j.salary_range || 'A combinar',
+                    salaryNum: parseInt(String(j.salary_range).replace(/\D/g, '')) || 0,
+                    type: j.hiring_type || 'CLT',
+                    date: j.published_at ? new Date(j.published_at).toLocaleDateString('pt-BR') : 'Recente',
+                    daysAgo: j.published_at ? Math.floor((new Date().getTime() - new Date(j.published_at).getTime()) / (1000 * 3600 * 24)) : 0,
+                    tags: [j.work_model, j.role, j.education_level].filter(Boolean),
+                    category: j.area || 'Outros',
+                    desc: j.description || 'Sem descrição.',
+                    requirements: j.experience_required ? [j.experience_required] : [],
+                    benefits: [], // TODO: Mapear se houver no backend
+                    contact: j.contact_whatsapp || j.contact_email || 'Não informado',
+                }));
+                
+                setJobs(mappedJobs);
+            } catch (error) {
+                console.error("Erro ao buscar vagas", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchJobs();
+    }, []);
 
     // Toggle categoria
     const toggleCategory = useCallback((cat: string) => {
@@ -291,7 +364,7 @@ export default function VagasPage() {
 
     // Filtragem + ordenação 
     const filteredJobs = useMemo(() => {
-        let result = JOBS.filter(job => {
+        let result = jobs.filter(job => {
             const term = searchTerm.toLowerCase();
             const matchesSearch = !term
                 || job.title.toLowerCase().includes(term)
@@ -312,8 +385,8 @@ export default function VagasPage() {
     const categoryCounts = useMemo(() =>
         CATEGORIES.map(cat => ({
             cat,
-            count: JOBS.filter(j => j.category === cat).length
-        })), []);
+            count: jobs.filter(j => j.category === cat).length
+        })), [jobs]);
 
 
     return (
@@ -472,14 +545,23 @@ export default function VagasPage() {
                         </div>
 
                         {/* Cards */}
-                        {filteredJobs.length === 0 ? (
+                        {isLoading ? (
+                            <div className="bg-white rounded-[3rem] p-16 text-center space-y-4 border border-gray-50">
+                                <div className="text-brand-red mb-4 inline-block animate-spin">
+                                    <Search size={40} />
+                                </div>
+                                <h3 className="font-black text-xl text-gray-900">Buscando vagas...</h3>
+                            </div>
+                        ) : filteredJobs.length === 0 ? (
                             <div className="bg-white rounded-[3rem] p-16 text-center space-y-4 border border-gray-50">
                                 <div className="text-5xl">🔍</div>
                                 <h3 className="font-black text-xl text-gray-900">Nenhuma vaga encontrada</h3>
-                                <p className="text-gray-400 font-medium">Tente outros termos ou remova os filtros.</p>
-                                <button onClick={() => { setSearchTerm(''); setSelectedCategories([]); }} className="text-brand-red font-black hover:underline">
-                                    Limpar busca
-                                </button>
+                                <p className="text-gray-400 font-medium">No momento não há vagas disponíveis ou correspondentes aos seus filtros.</p>
+                                {(searchTerm || selectedCategories.length > 0) && (
+                                    <button onClick={() => { setSearchTerm(''); setSelectedCategories([]); }} className="text-brand-red font-black hover:underline mt-2">
+                                        Limpar busca
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-4">
