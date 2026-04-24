@@ -79,9 +79,12 @@ class AutorizacaoController extends Controller
             'permuta_amount'        => 'nullable|numeric|min:0',
             'permuta_description'   => 'nullable|string',
             'desconto_tipo'         => 'nullable|string|in:fixed,percent',
-            'desconto_valor'        => 'nullable|numeric|min:0',
-            'parcelas'              => 'nullable|array',
-            'parcelas.*.vencimento' => 'required|date',
+            'desconto_valor'          => 'nullable|numeric|min:0',
+            'parcelas'                => 'nullable|array',
+            'parcelas.*.vencimento'   => 'required|date',
+            'responsavel_nome'        => 'nullable|string|max:255',
+            'responsavel_preferencia' => 'nullable|string|max:255',
+            'responsavel_turno'       => 'nullable|string|max:255',
         ]);
 
         $validated['numero']      = Autorizacao::proximoNumero();
@@ -91,6 +94,16 @@ class AutorizacaoController extends Controller
         $validated['status']      = 'rascunho';
 
         $autorizacao = Autorizacao::create($validated);
+
+        // ✅ Sincroniza com o mestre do Cliente
+        $cliente = Cliente::find($validated['cliente_id']);
+        if ($cliente) {
+            $cliente->update([
+                'contact_preference' => $validated['responsavel_preferencia'] ?? $cliente->contact_preference,
+                'best_contact_shift' => $validated['responsavel_turno'] ?? $cliente->best_contact_shift,
+                'responsavel'        => $validated['responsavel_nome'] ?? $cliente->responsavel,
+            ]);
+        }
 
         // Gera parcelas (automatica ou customizada)
         $this->gerarParcelas($autorizacao, $request->input('parcelas', []));
@@ -117,8 +130,8 @@ class AutorizacaoController extends Controller
     {
         $autorizacao = Autorizacao::findOrFail($id);
 
-        if (!in_array($autorizacao->status, ['rascunho'])) {
-            return response()->json(['message' => 'Apenas rascunhos podem ser editados.'], 422);
+        if (in_array($autorizacao->status, ['assinado', 'cancelado'])) {
+            return response()->json(['message' => 'Apenas contratos não assinados podem ser editados.'], 422);
         }
 
         $validated = $request->validate([
@@ -140,12 +153,28 @@ class AutorizacaoController extends Controller
             'permuta_amount'        => 'nullable|numeric|min:0',
             'permuta_description'   => 'nullable|string',
             'desconto_tipo'         => 'nullable|string|in:fixed,percent',
-            'desconto_valor'        => 'nullable|numeric|min:0',
-            'parcelas'              => 'nullable|array',
-            'parcelas.*.vencimento' => 'required|date',
+            'desconto_valor'          => 'nullable|numeric|min:0',
+            'parcelas'                => 'nullable|array',
+            'parcelas.*.vencimento'   => 'required|date',
+            'responsavel_nome'        => 'nullable|string|max:255',
+            'responsavel_preferencia' => 'nullable|string|max:255',
+            'responsavel_turno'       => 'nullable|string|max:255',
         ]);
 
         $autorizacao->update($validated);
+
+        // ✅ Sincroniza com o mestre do Cliente
+        $cliente = $autorizacao->cliente;
+        if ($cliente) {
+            $updateClient = [];
+            if (isset($validated['responsavel_preferencia'])) $updateClient['contact_preference'] = $validated['responsavel_preferencia'];
+            if (isset($validated['responsavel_turno'])) $updateClient['best_contact_shift'] = $validated['responsavel_turno'];
+            if (isset($validated['responsavel_nome'])) $updateClient['responsavel'] = $validated['responsavel_nome'];
+            
+            if (!empty($updateClient)) {
+                $cliente->update($updateClient);
+            }
+        }
 
         // Se mudar algo financeiro, regera as parcelas
         if ($request->hasAny(['valor_total', 'taxa_cadastro', 'num_parcelas', 'is_permuta', 'permuta_amount', 'desconto_valor', 'desconto_tipo', 'data_primeira_parcela', 'parcelas'])) {
@@ -157,6 +186,20 @@ class AutorizacaoController extends Controller
             'success' => true,
             'data'    => $autorizacao->fresh()->load(['parcelas', 'cliente', 'vendedor']),
         ]);
+    }
+
+    public function destroy($id)
+    {
+        $autorizacao = Autorizacao::findOrFail($id);
+
+        if (in_array($autorizacao->status, ['assinado'])) {
+            return response()->json(['message' => 'Contratos assinados não podem ser excluídos.'], 422);
+        }
+
+        $autorizacao->parcelas()->delete();
+        $autorizacao->delete();
+
+        return response()->json(['success' => true]);
     }
 
     // ─── Cancelar ─────────────────────────────────────────────────────────────

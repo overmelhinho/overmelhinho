@@ -120,7 +120,7 @@ const AuditMatchPage: React.FC = () => {
                     id: 'address',
                     label: 'Endereço',
                     icon: <MapPin className="w-4 h-4" />,
-                    current: mainAddress.rua ? `${mainAddress.rua}, ${mainAddress.numero}` : 'Não informado',
+                    current: mainAddress.rua ? `${mainAddress.rua}, ${mainAddress.numero}${client.enderecos?.length > 1 ? ` (+${client.enderecos.length - 1} unidades)` : ''}` : 'Não informado',
                     new: diffs.endereco?.new || (hasExistingDiffs ? (mainAddress.rua ? `${mainAddress.rua}, ${mainAddress.numero}` : 'Não informado') : (intelData?.endereco || 'Não encontrado')),
                     source: diffs.endereco ? 'Base Digital Google' : sourceInfo,
                     fieldPath: 'endereco',
@@ -133,7 +133,8 @@ const AuditMatchPage: React.FC = () => {
                         estado: mainAddress.estado,
                         cep: mainAddress.cep,
                         complemento: mainAddress.complemento,
-                    }
+                    },
+                    extraInfo: client.enderecos?.length > 1 ? `${client.enderecos.length} endereços cadastrados. A IA confere preferencialmente a Matriz.` : undefined
                 },
                 {
                     id: 'website',
@@ -205,7 +206,7 @@ const AuditMatchPage: React.FC = () => {
             nome_fantasia: client?.nome_fantasia,
             cpf_cnpj: client?.cpf_cnpj,
             contatos: [...(client?.contatos || [])],
-            endereco: client?.enderecos?.[0] ? { ...client.enderecos[0] } : {},
+            enderecos: [...(client?.enderecos || [])],
             redes_sociais: [...(client?.redes_sociais || [])]
         };
 
@@ -223,20 +224,24 @@ const AuditMatchPage: React.FC = () => {
                     // Usa os campos estruturados do Google Places se disponíveis
                     const diffs = client?.audit_differences || {};
                     const parts = diffs.endereco?.parts;
+                    
+                    // Garante que temos um objeto de endereço para a matriz (índice 0)
+                    if (!payload.enderecos[0]) payload.enderecos[0] = {};
+
                     if (parts) {
-                        payload.endereco = {
-                            ...payload.endereco,
-                            rua: parts.rua || payload.endereco.rua,
-                            numero: parts.numero || payload.endereco.numero,
-                            bairro: parts.bairro || payload.endereco.bairro,
-                            cidade: parts.cidade || payload.endereco.cidade,
-                            estado: parts.estado || payload.endereco.estado,
-                            cep: parts.cep || payload.endereco.cep,
-                            complemento: parts.complemento || payload.endereco.complemento,
+                        payload.enderecos[0] = {
+                            ...payload.enderecos[0],
+                            rua: parts.rua || payload.enderecos[0].rua,
+                            numero: parts.numero || payload.enderecos[0].numero,
+                            bairro: parts.bairro || payload.enderecos[0].bairro,
+                            cidade: parts.cidade || payload.enderecos[0].cidade,
+                            estado: parts.estado || payload.enderecos[0].estado,
+                            cep: parts.cep || payload.enderecos[0].cep,
+                            complemento: parts.complemento || payload.enderecos[0].complemento,
                         };
                     } else {
                         // Fallback para clientes sem parts: usa o valor bruto somente na rua
-                        payload.endereco.rua = f.new;
+                        payload.enderecos[0].rua = f.new;
                     }
                 }
                 if (f.id === 'instagram') {
@@ -387,6 +392,12 @@ const AuditMatchPage: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-4">
+                                        {field.extraInfo && (
+                                            <div className="px-4 py-2 bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-2">
+                                                <AlertCircle size={14} className="text-amber-600 shrink-0" />
+                                                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tighter">{field.extraInfo}</span>
+                                            </div>
+                                        )}
                                         {/* Current Value */}
                                         <div
                                             className={`w-full p-5 rounded-3xl border transition-all relative ${auditStatus[field.id] === 'rejected' ? 'bg-slate-900 border-slate-900 shadow-lg' : 'bg-slate-50 border-slate-100'}`}

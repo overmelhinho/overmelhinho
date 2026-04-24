@@ -128,6 +128,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/clientes/{id}/historico', [ClienteController::class , 'historico']);
     Route::get('/clientes/{id}/seo-rankings', [SeoRankingController::class , 'getClientRankings']);
+    Route::get('/clientes/{id}/suggest-keywords', [ClienteController::class , 'keywordSuggestions']);
     Route::post('/clientes/{id}/seo/keywords/generate', [ClienteController::class , 'generateSeoKeywords']);
     Route::patch('/clientes/{id}/seo/keywords', [ClienteController::class , 'updateSeoKeywords']);
     Route::get('clientes/check-cnpj', [ClienteController::class, 'checkCnpj']);
@@ -255,6 +256,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('/',         [AutorizacaoController::class, 'store']);
         Route::get('/{id}',      [AutorizacaoController::class, 'show']);
         Route::put('/{id}',      [AutorizacaoController::class, 'update']);
+        Route::delete('/{id}',   [AutorizacaoController::class, 'destroy']);
         Route::patch('/{id}/cancel', [AutorizacaoController::class, 'cancel']);
         Route::post('/{id}/send-link',       [AutorizacaoController::class, 'sendLink']);
         Route::post('/{id}/justify',         [AutorizacaoController::class, 'justify']);

@@ -502,6 +502,38 @@ export default function CampanhaWizard({
                             }}
                         />
                     </div>
+
+                    {/* ✅ Sugestões Inteligentes */}
+                    {w.keywordSuggestions.length > 0 && (
+                        <div className="space-y-3 mt-6 animate-in fade-in slide-in-from-top-2 duration-700">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sugestões baseadas no perfil</span>
+                                {w.loadingSuggestions && (
+                                    <div className="w-3 h-3 border-2 border-[#B70F0A] border-t-transparent rounded-full animate-spin" />
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {w.keywordSuggestions
+                                    .filter(s => !w.keywordsParsed.includes(s))
+                                    .slice(0, 15)
+                                    .map((s, i) => (
+                                    <button
+                                        key={i}
+                                        type="button"
+                                        onClick={() => {
+                                            const current = w.form.keywords_text || "";
+                                            const next = current ? `${current}, ${s}` : s;
+                                            w.onPatch({ keywords_text: next });
+                                        }}
+                                        className="px-3 py-1.5 bg-white hover:bg-red-50 hover:text-[#B70F0A] hover:border-red-200 text-gray-600 text-xs font-medium rounded-xl border border-gray-100 shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
+                                    >
+                                        <span className="text-red-400 text-base leading-none">+</span>
+                                        {s}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
             <div className="flex gap-4">
@@ -952,6 +984,38 @@ export default function CampanhaWizard({
                                             }}
                                         />
                                     </div>
+
+                                    {/* ✅ Sugestões Inteligentes */}
+                                    {w.keywordSuggestions.length > 0 && (
+                                        <div className="space-y-2 mt-4 animate-in fade-in slide-in-from-top-2 duration-700">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Sugestões</span>
+                                                {w.loadingSuggestions && (
+                                                    <div className="w-2.5 h-2.5 border-2 border-[#B70F0A] border-t-transparent rounded-full animate-spin" />
+                                                )}
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {w.keywordSuggestions
+                                                    .filter(s => !w.keywordsParsed.includes(s))
+                                                    .slice(0, 10)
+                                                    .map((s, i) => (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const current = w.form.keywords_text || "";
+                                                            const next = current ? `${current}, ${s}` : s;
+                                                            w.onPatch({ keywords_text: next });
+                                                        }}
+                                                        className="px-2.5 py-1 bg-white hover:bg-red-50 hover:text-[#B70F0A] hover:border-red-100 text-gray-500 text-[11px] font-bold rounded-lg border border-gray-100 shadow-sm transition-all active:scale-95 flex items-center gap-1"
+                                                    >
+                                                        <span className="text-red-400 text-sm leading-none">+</span>
+                                                        {s}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </section>
                         )}

@@ -195,8 +195,8 @@ export default function TabContato() {
             className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] bg-white shadow-sm"
           >
             <option value="">Selecione...</option>
-            <option value="presential">Presencial 🏢</option>
-            <option value="call">Ligação 📞</option>
+            <option value="presencial">Presencial 🏢</option>
+            <option value="ligacao">Ligação 📞</option>
             <option value="email">E-mail 📧</option>
             <option value="whatsapp">WhatsApp 💬</option>
           </select>
@@ -212,8 +212,9 @@ export default function TabContato() {
             className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] bg-white shadow-sm"
           >
             <option value="">Selecione...</option>
-            <option value="morning">Manhã 🌅</option>
-            <option value="afternoon">Tarde ☀️</option>
+            <option value="manha">Manhã 🌅</option>
+            <option value="tarde">Tarde ☀️</option>
+            <option value="ambos">Ambos os Turnos 🌓</option>
           </select>
         </div>
       </div>

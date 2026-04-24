@@ -248,6 +248,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
   const create = useCreateCampanha();
   const update = useUpdateCampanha(campanhaId || 0);
 
+
   // ----- Detalhe (para EDIT)
   const detalhe = useCampanhaDetalhe(mode === "edit" ? campanhaId : undefined);
 
@@ -290,6 +291,31 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
     prioridade: "media",
     due_at: "",
   });
+
+  // ✅ Sugestões de keywords baseadas no cliente
+  const [keywordSuggestions, setKeywordSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (!form.cliente_id) {
+      setKeywordSuggestions([]);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      setLoadingSuggestions(true);
+      try {
+        const res = await api.get(`/v1/clientes/${form.cliente_id}/suggest-keywords`);
+        setKeywordSuggestions(res.data || []);
+      } catch (e) {
+        console.error("Erro ao carregar sugestões:", e);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, [form.cliente_id]);
 
   // ----- Hydrate form no EDIT
   useEffect(() => {
@@ -787,6 +813,8 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
     hasGlobalPlacement,
     keywordsLimit,
     keywordsParsed,
+    keywordSuggestions,
+    loadingSuggestions,
     checklist,
     stepValid,
     nextDisabled,

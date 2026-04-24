@@ -20,7 +20,7 @@ export default function TabHorarios() {
 
   // Garante todos os 7 dias presentes, sem valores pré-preenchidos
   const buildFullHorarios = (saved: any[]) =>
-    DAYS.map(d => saved.find((x: any) => x.day === d.id) || { day: d.id, open: "", close: "", closed: true });
+    DAYS.map(d => saved.find((x: any) => x.day === d.id) || { day: d.id, open: "", close: "", open2: "", close2: "", closed: true });
 
   const savedHorarios = Array.isArray(values.horario_atendimento) ? values.horario_atendimento : [];
   const horarios = buildFullHorarios(savedHorarios);
@@ -30,6 +30,18 @@ export default function TabHorarios() {
       h.day === dayId ? { ...h, [field]: value } : h
     );
     setFieldValue("horario_atendimento", next);
+  };
+
+  const replicateToAll = (dayId: number) => {
+    const source = buildFullHorarios(savedHorarios).find((h: any) => h.day === dayId);
+    if (!source) return;
+
+    const next = DAYS.map(d => ({
+      ...source,
+      day: d.id
+    }));
+    setFieldValue("horario_atendimento", next);
+    toast.success("Horário replicado para todos os dias!");
   };
 
   const handleImport = async () => {
@@ -75,28 +87,29 @@ export default function TabHorarios() {
         </button>
       </div>
 
-      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-sm">
+      <div className="bg-white border rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+        <table className="w-full text-sm min-w-[700px]">
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="px-4 py-3 text-left font-semibold text-gray-700">Dia</th>
               <th className="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
-              <th className="px-4 py-3 text-center font-semibold text-gray-700">Abertura</th>
-              <th className="px-4 py-3 text-center font-semibold text-gray-700">Fechamento</th>
+              <th className="px-4 py-3 text-center font-semibold text-gray-700">1º Turno (Abre/Fecha)</th>
+              <th className="px-4 py-3 text-center font-semibold text-gray-700">2º Turno (Abre/Fecha)</th>
+              <th className="px-4 py-3 text-center font-semibold text-gray-700">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {DAYS.map((day) => {
-              const h = horarios.find((x: any) => x.day === day.id) || { open: "", close: "", closed: true };
+              const h = horarios.find((x: any) => x.day === day.id) || { open: "", close: "", open2: "", close2: "", closed: true };
 
               return (
-                <tr key={day.id} className={h.closed ? "bg-gray-50/50" : "bg-white"}>
-                  <td className="px-4 py-3 font-medium text-gray-900">{day.label}</td>
+                <tr key={day.id} className={h.closed ? "bg-gray-50/50" : "bg-white hover:bg-slate-50/50 transition-colors"}>
+                  <td className="px-4 py-3 font-bold text-gray-900">{day.label}</td>
                   <td className="px-4 py-3 text-center">
                     <button
                       type="button"
                       onClick={() => updateDay(day.id, "closed", !h.closed)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${h.closed
+                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${h.closed
                         ? "bg-red-100 text-red-700 border border-red-200"
                         : "bg-green-100 text-green-700 border border-green-200"
                         }`}
@@ -105,28 +118,66 @@ export default function TabHorarios() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <div className="relative inline-block">
-                      <Sun className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-amber-500" />
-                      <input
-                        type="time"
-                        value={h.open}
-                        disabled={h.closed}
-                        onChange={(e) => updateDay(day.id, "open", e.target.value)}
-                        className="pl-7 pr-2 py-1 border rounded-md focus:ring-1 focus:ring-[#B70F0A] disabled:opacity-50 text-sm"
-                      />
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="relative">
+                        <Sun className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-500" />
+                        <input
+                          type="time"
+                          value={h.open || ""}
+                          disabled={h.closed}
+                          onChange={(e) => updateDay(day.id, "open", e.target.value)}
+                          className="pl-7 pr-2 py-1.5 border rounded-lg focus:ring-1 focus:ring-[#B70F0A] disabled:opacity-50 text-xs font-bold bg-white w-28"
+                        />
+                      </div>
+                      <span className="text-gray-400">às</span>
+                      <div className="relative">
+                        <Moon className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-500" />
+                        <input
+                          type="time"
+                          value={h.close || ""}
+                          disabled={h.closed}
+                          onChange={(e) => updateDay(day.id, "close", e.target.value)}
+                          className="pl-7 pr-2 py-1.5 border rounded-lg focus:ring-1 focus:ring-[#B70F0A] disabled:opacity-50 text-xs font-bold bg-white w-28"
+                        />
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <div className="relative inline-block">
-                      <Moon className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-500" />
-                      <input
-                        type="time"
-                        value={h.close}
-                        disabled={h.closed}
-                        onChange={(e) => updateDay(day.id, "close", e.target.value)}
-                        className="pl-7 pr-2 py-1 border rounded-md focus:ring-1 focus:ring-[#B70F0A] disabled:opacity-50 text-sm"
-                      />
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="relative">
+                        <Sun className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-orange-400" />
+                        <input
+                          type="time"
+                          value={h.open2 || ""}
+                          disabled={h.closed}
+                          onChange={(e) => updateDay(day.id, "open2", e.target.value)}
+                          className="pl-7 pr-2 py-1.5 border rounded-lg focus:ring-1 focus:ring-[#B70F0A] disabled:opacity-50 text-xs font-bold bg-white w-28"
+                          placeholder="Turno 2"
+                        />
+                      </div>
+                      <span className="text-gray-400">às</span>
+                      <div className="relative">
+                        <Moon className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
+                        <input
+                          type="time"
+                          value={h.close2 || ""}
+                          disabled={h.closed}
+                          onChange={(e) => updateDay(day.id, "close2", e.target.value)}
+                          className="pl-7 pr-2 py-1.5 border rounded-lg focus:ring-1 focus:ring-[#B70F0A] disabled:opacity-50 text-xs font-bold bg-white w-28"
+                        />
+                      </div>
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => replicateToAll(day.id)}
+                      disabled={h.closed || !h.open || !h.close}
+                      className="p-2 text-slate-400 hover:text-[#B70F0A] hover:bg-red-50 rounded-lg transition-all disabled:opacity-0"
+                      title="Replicar este horário para todos os dias"
+                    >
+                      <RefreshCcw className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               );
@@ -135,9 +186,16 @@ export default function TabHorarios() {
         </table>
       </div>
 
-      <div className="flex items-start gap-2 text-xs text-gray-500 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-        <Clock className="w-4 h-4 text-blue-600 mt-0.5" />
-        <p>Os horários configurados aqui serão exibidos no seu perfil público. Certifique-se de mantê-los atualizados.</p>
+      <div className="flex items-start gap-3 text-xs text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100">
+        <Clock className="w-4 h-4 text-slate-400 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-bold text-slate-700">Dicas de Preenchimento:</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            <li>Para empresas que fecham ao meio-dia, preencha os dois turnos (ex: 08:00 às 12:00 e 13:30 às 18:00).</li>
+            <li>Se a empresa não fecha ao meio-dia, preencha apenas o 1º Turno.</li>
+            <li>Use o botão <RefreshCcw className="inline w-3 h-3 mx-1" /> para copiar o horário de um dia para todos os outros rapidamente.</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

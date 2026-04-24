@@ -205,7 +205,28 @@ export default function ClientHubPage() {
                                 <h2 className="text-base font-black text-gray-900 tracking-tight leading-tight">
                                     {cliente?.nome_fantasia}
                                 </h2>
-                                <p className="text-xs text-gray-400 font-medium mt-0.5">ID #{id}</p>
+                                <p className="text-xs text-gray-400 font-medium mt-0.5 mb-2">ID #{id}</p>
+                                
+                                {/* Preferências de Contato */}
+                                {(cliente?.contact_preference || cliente?.best_contact_shift) && (
+                                    <div className="flex flex-wrap justify-center gap-2 mt-3">
+                                        {cliente?.best_contact_shift && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black text-blue-700 uppercase tracking-tight">
+                                                {['manha', 'morning'].includes(cliente.best_contact_shift) ? '🌅 Manhã' : 
+                                                 ['tarde', 'afternoon'].includes(cliente.best_contact_shift) ? '☀️ Tarde' : 
+                                                 ['ambos', 'both'].includes(cliente.best_contact_shift) ? '🌓 Ambos' : cliente.best_contact_shift}
+                                            </span>
+                                        )}
+                                        {cliente?.contact_preference && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-[10px] font-black text-red-700 uppercase tracking-tight">
+                                                {['whatsapp'].includes(cliente.contact_preference) ? '💬 WhatsApp' : 
+                                                 ['ligacao', 'call'].includes(cliente.contact_preference) ? '📞 Ligação' : 
+                                                 ['email'].includes(cliente.contact_preference) ? '📧 E-mail' : 
+                                                 ['presencial', 'presential'].includes(cliente.contact_preference) ? '🏢 Presencial' : cliente.contact_preference}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

@@ -121,11 +121,17 @@
         </tr>
         <tr>
             <td colspan="2">
-                @php $end = $autorizacao->cliente->enderecos->first(); @endphp
+                @php 
+                    $end = $autorizacao->cliente->enderecos->first(); 
+                    $addrParts = array_filter([$end?->rua, $end?->numero, $end?->complemento]);
+                    $addrLine1 = implode(', ', $addrParts) ?: '—';
+                    $addrLine2 = array_filter([$end?->bairro, $end?->cidade, $end?->estado]);
+                    $addrLine2Str = implode(' - ', $addrLine2) . ($end?->cep ? " | CEP: {$end->cep}" : "");
+                @endphp
                 <span class="label">Endereço de Faturamento</span>
                 <span class="value-desc">
-                    {{ $end?->logradouro ?? '—' }}, {{ $end?->numero ?? 'S/N' }} - {{ $end?->bairro ?? '---' }} 
-                    | {{ $end?->cidade ?? '—' }}-{{ $end?->estado ?? '—' }} | CEP: {{ $end?->cep ?? '—' }}
+                    {{ $addrLine1 }}<br>
+                    {{ $addrLine2Str ?: '—' }}
                 </span>
             </td>
         </tr>
@@ -140,6 +146,57 @@
                 <span class="value-desc">{{ $contato?->email_principal ?? '—' }}</span>
             </td>
         </tr>
+        @php
+            $preferencia = $autorizacao->responsavel_preferencia;
+            $turno = $autorizacao->responsavel_turno;
+            
+            // Mapeamento de Turno
+            $turnoMap = [
+                'morning' => 'Manhã',
+                'afternoon' => 'Tarde',
+                'both' => 'Ambos os Turnos',
+                'manha' => 'Manhã',
+                'tarde' => 'Tarde',
+                'ambos' => 'Ambos os Turnos',
+            ];
+            $turnoPT = $turnoMap[strtolower($turno)] ?? $turno;
+
+            // Mapeamento de Preferência
+            $prefMap = [
+                'whatsapp' => 'WhatsApp',
+                'ligacao' => 'Ligação',
+                'presencial' => 'Presencial',
+                'email' => 'E-mail',
+            ];
+            $preferenciaPT = $prefMap[strtolower($preferencia)] ?? $preferencia;
+        @endphp
+
+        @if($preferencia || $turno)
+        <tr>
+            <td colspan="2" style="padding: 0; border: none;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 33%; border: 1px solid #F3F4F6;">
+                            <span class="label">Responsável</span>
+                            <span class="value">{{ $autorizacao->responsavel_nome ?: '—' }}</span>
+                        </td>
+                        @if($preferencia)
+                        <td style="width: 33%; border: 1px solid #F3F4F6;">
+                            <span class="label">Preferência de Contato</span>
+                            <span class="value">{{ $preferenciaPT }}</span>
+                        </td>
+                        @endif
+                        @if($turno)
+                        <td style="width: 34%; border: 1px solid #F3F4F6;">
+                            <span class="label">Melhor Turno</span>
+                            <span class="value">{{ $turnoPT }}</span>
+                        </td>
+                        @endif
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        @endif
     </table>
 
     <!-- 4. AD DETAILS -->

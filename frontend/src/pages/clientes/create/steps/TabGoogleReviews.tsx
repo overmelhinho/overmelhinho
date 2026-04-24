@@ -1,8 +1,16 @@
 import { useState, useEffect } from "react";
 import { useFormikContext } from "formik";
-import { Plus, Star, RefreshCw, CheckCircle2, AlertCircle, Search, MapPin } from "lucide-react";
+import { Plus, Star, RefreshCw, CheckCircle2, AlertCircle, Search, MapPin, X, User } from "lucide-react";
 import axios from "@/services/api";
 import toast from "react-hot-toast";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function TabGoogleReviews() {
     const { values, setFieldValue, handleChange } = useFormikContext<any>();
@@ -10,6 +18,15 @@ export default function TabGoogleReviews() {
     const [loading, setLoading] = useState(false);
     const [lookingUp, setLookingUp] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    // Estado para o Modal Manual
+    const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+    const [manualReview, setManualReview] = useState({
+        author_name: "",
+        rating: 5,
+        text: "",
+        author_photo_url: ""
+    });
 
     const placeId = values.google_place_id;
     const isCreateMode = !values.id;
@@ -118,6 +135,25 @@ export default function TabGoogleReviews() {
         setFieldValue("reviews", currentList);
     };
 
+    const handleAddManual = () => {
+        if (!manualReview.author_name || !manualReview.text) {
+            toast.error("Preencha o nome e o depoimento.");
+            return;
+        }
+
+        const newReview = {
+            ...manualReview,
+            relative_time_description: "Inserido manualmente",
+            time: Date.now() / 1000
+        };
+
+        setReviews([newReview, ...reviews]);
+        toggleSelection(newReview);
+        toast.success("Depoimento adicionado!");
+        setIsManualModalOpen(false);
+        setManualReview({ author_name: "", rating: 5, text: "", author_photo_url: "" });
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-gray-50 p-4 rounded-xl border">
@@ -168,22 +204,7 @@ export default function TabGoogleReviews() {
                 </div>
                 <button
                     type="button"
-                    onClick={() => {
-                        const author = prompt("Nome do Autor:");
-                        const text = prompt("Depoimento:");
-                        if (author && text) {
-                            const newReview = {
-                                author_name: author,
-                                text: text,
-                                rating: 5,
-                                relative_time_description: "Inserido manualmente",
-                                time: Date.now() / 1000
-                            };
-                            setReviews([newReview, ...reviews]);
-                            toggleSelection(newReview);
-                            toast.success("Depoimento adicionado!");
-                        }
-                    }}
+                    onClick={() => setIsManualModalOpen(true)}
                     className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
                 >
                     <Plus className="w-4 h-4" /> Adicionar Manualmente
@@ -261,6 +282,88 @@ export default function TabGoogleReviews() {
                         })}
                 </div>
             )}
+
+            <Dialog open={isManualModalOpen} onOpenChange={setIsManualModalOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-[#B70F0A] flex items-center gap-2">
+                            <Plus className="w-6 h-6" /> Novo Depoimento
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-5 py-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-700">Nome do Autor</label>
+                            <div className="relative">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#B70F0A]/20 focus:border-[#B70F0A] outline-none transition-all"
+                                    placeholder="Ex: João Silva"
+                                    value={manualReview.author_name}
+                                    onChange={(e) => setManualReview({ ...manualReview, author_name: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-700">Avaliação</label>
+                            <div className="flex gap-2">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        onClick={() => setManualReview({ ...manualReview, rating: s })}
+                                        className="transition-transform active:scale-95"
+                                    >
+                                        <Star
+                                            className={`w-8 h-8 ${s <= manualReview.rating ? "text-yellow-400 fill-yellow-400" : "text-slate-200"}`}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-700">Depoimento</label>
+                            <textarea
+                                rows={4}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#B70F0A]/20 focus:border-[#B70F0A] outline-none transition-all resize-none text-sm"
+                                placeholder="Escreva aqui o comentário do cliente..."
+                                value={manualReview.text}
+                                onChange={(e) => setManualReview({ ...manualReview, text: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-700">URL da Foto (opcional)</label>
+                            <input
+                                type="text"
+                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#B70F0A]/20 focus:border-[#B70F0A] outline-none transition-all text-xs"
+                                placeholder="https://link-da-imagem.com/foto.jpg"
+                                value={manualReview.author_photo_url}
+                                onChange={(e) => setManualReview({ ...manualReview, author_photo_url: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-3">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setIsManualModalOpen(false)}
+                            className="rounded-xl"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleAddManual}
+                            className="bg-[#B70F0A] hover:bg-[#8e0c08] text-white rounded-xl px-8"
+                        >
+                            Adicionar Depoimento
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

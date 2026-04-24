@@ -44,6 +44,7 @@ type StatusAssinatura =
 
 type ClienteLite = {
   id: number;
+  slug: string;
   nome_fantasia: string;
   cpf_cnpj: string | null;
   logo_url?: string | null;
@@ -804,7 +805,10 @@ export default function ClientesList() {
                     icon={<ExternalLink className="w-4 h-4" />}
                     onClick={() => {
                       if (!selected) return;
-                      window.location.href = `/clientes/${selected.id}`;
+                      const siteUrl = window.location.hostname === "localhost" 
+                        ? "http://localhost:3000" 
+                        : "https://www.overmelhinho.com.br";
+                      window.open(`${siteUrl}/cliente/${selected.slug || selected.id}`, "_blank");
                     }}
                   />
 

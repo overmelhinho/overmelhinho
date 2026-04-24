@@ -47,7 +47,7 @@ class ClienteResource extends JsonResource
 
             'seo_keywords' => $this->seo_keywords ?? [],
             'seo_keywords_source' => $this->seo_keywords_source ?? 'generated',
-            'seo_keywords_updated_at' => $this->seo_keywords_updated_at ? (is_string($this->seo_keywords_updated_at) ? $this->seo_keywords_updated_at : $this->seo_keywords_updated_at->toISOString()) : null,
+            'seo_keywords_updated_at' => $this->seo_keywords_updated_at ? (is_string($this->seo_keywords_updated_at) ? $this->seo_keywords_updated_at : $this->seo_keywords_updated_at->toIso8601String()) : null,
 
             'quotes_enabled' => $this->relationLoaded('contatos') 
                 ? $this->contatos->whereNotNull('celular')->count() > 0 
@@ -73,8 +73,10 @@ class ClienteResource extends JsonResource
 
             // ✅ Novos Campos de Auditoria
             'audit_status' => $this->audit_status ?? 'ok',
-            'last_audit_at' => $this->last_audit_at ? (is_string($this->last_audit_at) ? $this->last_audit_at : $this->last_audit_at->toISOString()) : null,
+            'last_audit_at' => $this->last_audit_at ? (is_string($this->last_audit_at) ? $this->last_audit_at : $this->last_audit_at->toIso8601String()) : null,
             'audit_differences' => is_string($this->audit_differences) ? json_decode($this->audit_differences, true) : $this->audit_differences,
+            'contact_preference' => $this->contact_preference,
+            'best_contact_shift' => $this->best_contact_shift,
         ];
     }
 }

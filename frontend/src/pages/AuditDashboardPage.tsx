@@ -425,10 +425,26 @@ const AuditDashboardPage: React.FC = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="space-y-2">
-                                                    <div className="flex items-center gap-1.5 text-slate-600">
-                                                        <MapPin className="w-3.5 h-3.5 text-red-400" />
-                                                        <span className="text-sm font-semibold">{c.enderecos?.[0]?.cidade || 'S/ Cidade'}</span>
-                                                    </div>
+                                                    {c.enderecos && c.enderecos.length > 0 ? (
+                                                        c.enderecos.map((end: any, eIdx: number) => (
+                                                            <div key={eIdx} className="flex items-center gap-1.5 text-slate-600">
+                                                                <MapPin className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                                                <span className="text-sm font-semibold">
+                                                                    {end.cidade}
+                                                                    {end.nome_unidade && (
+                                                                        <span className="ml-1 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                                                                            ({end.nome_unidade})
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5 text-slate-400 italic">
+                                                            <MapPin className="w-3.5 h-3.5" />
+                                                            <span className="text-sm">S/ Cidade</span>
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center gap-2">
                                                         <div className={`text-[10px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-tighter ${c.tipo_cliente === 'pagante' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
                                                             {c.tipo_cliente}
@@ -547,7 +563,7 @@ const AuditDashboardPage: React.FC = () => {
                                             </td>
                                             <td className="px-8 py-6 text-right">
                                                 <button
-                                                    onClick={() => navigate(`/clientes/${log.cliente_id}`)}
+                                                    onClick={() => navigate(`/clientes/${log.cliente_id}/hub`)}
                                                     className="p-2.5 hover:bg-white hover:shadow-md rounded-xl transition-all text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-100"
                                                 >
                                                     <ArrowUpRight className="w-5 h-5" />

@@ -92,6 +92,8 @@ export default function ClienteCreateFromLead() {
           responsavel: lead.responsavel || '',
           cep: '', estado: '', cidade: '', bairro: '', rua: '', numero: '', complemento: '',
           facebook: '', instagram: '', linkedin: '', youtube: '', tiktok: '', x: '',
+          contact_preference: '',
+          best_contact_shift: '',
           ...iaData
         }}
         enableReinitialize
@@ -135,6 +137,25 @@ export default function ClienteCreateFromLead() {
                     <label className="block text-sm">Responsável</label>
                     <Field name="responsavel" className={inputClass} />
                     {touched.responsavel && errors.responsavel && <div className="text-red-500 text-sm">{errors.responsavel}</div>}
+                  </div>
+                  <div>
+                    <label className="block text-sm">Preferência de Contato</label>
+                    <Field as="select" name="contact_preference" className={inputClass}>
+                      <option value="">Selecione...</option>
+                      <option value="presencial">Presencial 🏢</option>
+                      <option value="ligacao">Ligação 📞</option>
+                      <option value="email">E-mail 📧</option>
+                      <option value="whatsapp">WhatsApp 💬</option>
+                    </Field>
+                  </div>
+                  <div>
+                    <label className="block text-sm">Melhor Turno para Contato</label>
+                    <Field as="select" name="best_contact_shift" className={inputClass}>
+                      <option value="">Selecione...</option>
+                      <option value="manha">Manhã 🌅</option>
+                      <option value="tarde">Tarde ☀️</option>
+                      <option value="ambos">Ambos os Turnos 🌓</option>
+                    </Field>
                   </div>
                 </div>
               </Tab>

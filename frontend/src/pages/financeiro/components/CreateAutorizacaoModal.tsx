@@ -74,7 +74,10 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         desconto_valor: "0",
         is_permuta: false,
         permuta_amount: "0",
-        permuta_description: ""
+        permuta_description: "",
+        responsavel_nome: "",
+        responsavel_preferencia: "",
+        responsavel_turno: ""
     });
 
     const [plans, setPlans] = useState<Plan[]>([]);
@@ -93,6 +96,14 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                     const c = response.data.data || response.data;
                     setClients([c]);
                     setClientSearch(c.nome_fantasia || c.razao_social);
+                    
+                    // Pre-fill contact info
+                    setForm(prev => ({
+                        ...prev,
+                        responsavel_nome: c.contatos?.[0]?.nome_contato || prev.responsavel_nome,
+                        responsavel_preferencia: c.contact_preference || prev.responsavel_preferencia,
+                        responsavel_turno: c.best_contact_shift || prev.responsavel_turno
+                    }));
                 } catch (e) {
                     console.error("Erro ao buscar cliente inicial", e);
                 }
@@ -369,10 +380,24 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                                     <button
                                                         key={c.id}
                                                         type="button"
-                                                        onClick={() => {
+                                                        onClick={async () => {
                                                             setClienteId(c.id);
                                                             setClientSearch(c.nome_fantasia);
                                                             setClients([]);
+                                                            
+                                                            // Buscar detalhes para preencher contato
+                                                            try {
+                                                                const res = await axios.get(`/v1/clientes/${c.id}`);
+                                                                const fullClient = res.data.data || res.data;
+                                                                setForm(prev => ({
+                                                                    ...prev,
+                                                                    responsavel_nome: fullClient.contatos?.[0]?.nome_contato || "",
+                                                                    responsavel_preferencia: fullClient.contact_preference || "",
+                                                                    responsavel_turno: fullClient.best_contact_shift || ""
+                                                                }));
+                                                            } catch (e) {
+                                                                console.error("Erro ao buscar detalhes do cliente", e);
+                                                            }
                                                         }}
                                                         className="w-full flex items-center justify-between p-4 hover:bg-red-50 text-left transition-colors border-b border-gray-50 last:border-0"
                                                     >
@@ -410,6 +435,47 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                     </Button>
                                 </div>
                             )}
+
+                            {/* Campos Adicionais de Contato */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Responsável</Label>
+                                    <Input
+                                        name="responsavel_nome"
+                                        value={form.responsavel_nome}
+                                        onChange={handleChange}
+                                        placeholder="Ex: João da Silva"
+                                        className="rounded-xl h-11 border-gray-200 font-bold focus:ring-red-500 bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Preferência de Contato</Label>
+                                    <Select value={form.responsavel_preferencia} onValueChange={(v) => handleSelectChange('responsavel_preferencia', v)}>
+                                        <SelectTrigger className="rounded-xl h-11 border-gray-200 font-bold focus:ring-red-500 bg-white">
+                                            <SelectValue placeholder="Selecione..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-gray-100 shadow-xl font-bold">
+                                            <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                            <SelectItem value="ligacao">Ligação</SelectItem>
+                                            <SelectItem value="presencial">Presencial</SelectItem>
+                                            <SelectItem value="email">E-mail</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Melhor Turno</Label>
+                                    <Select value={form.responsavel_turno} onValueChange={(v) => handleSelectChange('responsavel_turno', v)}>
+                                        <SelectTrigger className="rounded-xl h-11 border-gray-200 font-bold focus:ring-red-500 bg-white">
+                                            <SelectValue placeholder="Selecione..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-gray-100 shadow-xl font-bold">
+                                            <SelectItem value="manha">Manhã</SelectItem>
+                                            <SelectItem value="tarde">Tarde</SelectItem>
+                                            <SelectItem value="ambos">Ambos os Turnos</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
                         </div>
 
                         {/* 2. DADOS DA PUBLICIDADE */}

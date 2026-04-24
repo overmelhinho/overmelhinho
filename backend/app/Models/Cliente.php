@@ -55,6 +55,7 @@ class Cliente extends Model
         'audit_status',
         'exibir_no_site',
         'audit_differences',
+        'responsavel',
     ];
 
     public function renewals()

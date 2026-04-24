@@ -304,7 +304,19 @@ export default function RenewalMagicLinkPage() {
 
                             <div className="bg-red-50/50 p-4 rounded-2xl border border-red-50">
                                 <p className="text-sm text-red-900 font-semibold italic">
-                                    {cliente?.horario_atendimento || "Horário não informado."}
+                                    {Array.isArray(cliente?.horario_atendimento) ? (
+                                        <div className="space-y-1">
+                                            {cliente.horario_atendimento.map((s: any) => (
+                                                !s.closed && (
+                                                    <div key={s.day} className="flex justify-between text-[11px] font-bold text-red-900/70 border-b border-red-100/50 pb-1 last:border-0">
+                                                        <span>{{1:'Segunda', 2:'Terça', 3:'Quarta', 4:'Quinta', 5:'Sexta', 6:'Sábado', 7:'Domingo'}[s.day as number]}:</span>
+                                                        <span>{s.open} - {s.close}{s.open2 && ` / ${s.open2} - ${s.close2}`}</span>
+                                                    </div>
+                                                )
+                                            ))}
+                                            {cliente.horario_atendimento.every((s: any) => s.closed) && "Fechado todos os dias."}
+                                        </div>
+                                    ) : "Horário não informado."}
                                 </p>
                             </div>
 

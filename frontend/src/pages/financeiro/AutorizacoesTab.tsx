@@ -33,7 +33,10 @@ import {
 import toast from "react-hot-toast";
 import CreateAutorizacaoModal from "./components/CreateAutorizacaoModal";
 import PreviewAutorizacaoModal from "./components/PreviewAutorizacaoModal";
+import EditAutorizacaoModal from "./components/EditAutorizacaoModal";
+import EditAutorizacaoContatoModal from "./components/EditAutorizacaoContatoModal";
 import { cn } from "@/lib/utils";
+import { User, Edit3 } from "lucide-react";
 
 interface Autorizacao {
     id: number;
@@ -54,6 +57,9 @@ interface Autorizacao {
     data_fim: string;
     assinado_em: string | null;
     pdf_path: string | null;
+    responsavel_nome: string | null;
+    responsavel_preferencia: string | null;
+    responsavel_turno: string | null;
 }
 
 export default function AutorizacoesTab() {
@@ -64,6 +70,10 @@ export default function AutorizacoesTab() {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [selectedPreview, setSelectedPreview] = useState<{ id: number, numero: number } | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [selectedEditContact, setSelectedEditContact] = useState<Autorizacao | null>(null);
+    const [isEditContactOpen, setIsEditContactOpen] = useState(false);
+    const [selectedEditAutorizacao, setSelectedEditAutorizacao] = useState<Autorizacao | null>(null);
+    const [isEditAutorizacaoOpen, setIsEditAutorizacaoOpen] = useState(false);
     
     // Limpa seleção ao trocar filtros
     useEffect(() => {
@@ -162,6 +172,22 @@ export default function AutorizacoesTab() {
         } catch (error: any) {
             const msg = error.response?.data?.message || "Erro ao gerar faturas.";
             toast.error(msg, { id: loadingToast },);
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm("Tem certeza que deseja EXCLUIR permanentemente esta autorização? Esta ação não pode ser desfeita.")) {
+            return;
+        }
+
+        const loadingToast = toast.loading("Excluindo autorização...");
+        try {
+            await axios.delete(`/v1/autorizacoes/${id}`);
+            toast.success("Autorização excluída com sucesso!", { id: loadingToast });
+            refetch();
+        } catch (error: any) {
+            const msg = error.response?.data?.message || "Erro ao excluir autorização.";
+            toast.error(msg, { id: loadingToast });
         }
     };
 
@@ -355,6 +381,16 @@ export default function AutorizacoesTab() {
                                                     <FileText size={16} /> Visualizar PDF (Autorização)
                                                 </DropdownMenuItem>
 
+                                                <DropdownMenuItem
+                                                    onClick={() => {
+                                                        setSelectedEditContact(a);
+                                                        setIsEditContactOpen(true);
+                                                    }}
+                                                    className="rounded-xl font-bold text-xs gap-2 py-2.5 cursor-pointer"
+                                                >
+                                                    <User size={16} /> Editar Dados de Contato
+                                                </DropdownMenuItem>
+
                                                 {a.status === "rascunho" && (
                                                     <DropdownMenuItem
                                                         onClick={() => handleSendLink(a.id)}
@@ -383,9 +419,33 @@ export default function AutorizacoesTab() {
                                                 )}
 
                                                 <DropdownMenuSeparator className="bg-gray-50" />
-                                                <DropdownMenuItem className="rounded-xl font-bold text-xs gap-2 py-2.5 text-red-600 hover:bg-red-50 cursor-pointer">
-                                                    <Trash2 size={16} /> Cancelar Autorização
-                                                </DropdownMenuItem>
+
+                                                {a.status !== "assinado" && (
+                                                    <>
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setSelectedEditAutorizacao(a);
+                                                                setIsEditAutorizacaoOpen(true);
+                                                            }}
+                                                            className="rounded-xl font-bold text-xs gap-2 py-2.5 text-blue-700 hover:bg-blue-50 cursor-pointer"
+                                                        >
+                                                            <Edit3 size={16} /> Editar Contrato
+                                                        </DropdownMenuItem>
+
+                                                        <DropdownMenuItem 
+                                                           onClick={() => handleDelete(a.id)}
+                                                           className="rounded-xl font-bold text-xs gap-2 py-2.5 text-red-600 hover:bg-red-50 cursor-pointer font-black"
+                                                        >
+                                                            <Trash2 size={16} /> EXCLUIR Definitivamente
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+
+                                                {a.status === "assinado" && (
+                                                    <DropdownMenuItem className="rounded-xl font-bold text-xs gap-2 py-2.5 text-gray-400 hover:bg-gray-50 cursor-pointer">
+                                                        <XCircle size={16} /> Cancelar Autorização
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </td>
@@ -402,6 +462,20 @@ export default function AutorizacoesTab() {
                 onClose={() => setIsPreviewOpen(false)}
                 autorizacaoId={selectedPreview?.id || null}
                 numero={selectedPreview?.numero || null}
+            />
+
+            <EditAutorizacaoContatoModal
+                isOpen={isEditContactOpen}
+                onClose={() => setIsEditContactOpen(false)}
+                onSuccess={() => refetch()}
+                autorizacao={selectedEditContact}
+            />
+
+            <EditAutorizacaoModal
+                isOpen={isEditAutorizacaoOpen}
+                onClose={() => setIsEditAutorizacaoOpen(false)}
+                onSuccess={() => refetch()}
+                autorizacao={selectedEditAutorizacao}
             />
         </div>
     );

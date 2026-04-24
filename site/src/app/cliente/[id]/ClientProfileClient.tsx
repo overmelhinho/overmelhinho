@@ -247,8 +247,19 @@ export default function ClientProfileClient() {
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
+        // Primeiro turno
         if (currentTime >= todaySchedule.open && currentTime <= todaySchedule.close) {
             return { open: true, label: `Aberto até ${todaySchedule.close}` };
+        }
+
+        // Segundo turno
+        if (todaySchedule.open2 && todaySchedule.close2 && currentTime >= todaySchedule.open2 && currentTime <= todaySchedule.close2) {
+            return { open: true, label: `Aberto até ${todaySchedule.close2}` };
+        }
+
+        // Se estiver entre os turnos (meio-dia)
+        if (todaySchedule.open2 && currentTime < todaySchedule.open2 && currentTime > todaySchedule.close) {
+            return { open: false, label: `Fechado (Abre às ${todaySchedule.open2})` };
         }
 
         return { open: false, label: `Fechado (Abre às ${todaySchedule.open})` };
@@ -721,9 +732,14 @@ export default function ClientProfileClient() {
                                         <span className="w-24">{daysMap[s.day]}</span>
                                         <div className="flex-1 h-px border-t border-dotted border-gray-100 mx-4"></div>
                                         {s.closed ? (
-                                            <span className="text-gray-300">Fechado</span>
+                                            <span className="text-gray-300 text-right">Fechado</span>
                                         ) : (
-                                            <span>{s.open} - {s.close}</span>
+                                            <div className="text-right flex flex-col items-end">
+                                                <span>{s.open} - {s.close}</span>
+                                                {s.open2 && s.close2 && (
+                                                    <span className="text-[8px] opacity-60 leading-tight">{s.open2} - {s.close2}</span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 )) : <p className="text-gray-400 font-bold italic lowercase">Não informado</p>}

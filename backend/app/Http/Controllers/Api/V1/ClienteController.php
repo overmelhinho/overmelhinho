@@ -302,6 +302,7 @@ class ClienteController extends Controller
         if ($lite) {
             $query->select([
                 'id',
+                'slug',
                 'nome_fantasia',
                 'cpf_cnpj',
                 'logo_url',
@@ -309,6 +310,7 @@ class ClienteController extends Controller
                 'status_assinatura',
                 'possui_publicidade',
                 'exibir_no_site',
+                'audit_differences',
                 'seo_keywords',
                 'observacoes',
                 'created_at',
@@ -644,6 +646,13 @@ public function historico(Request $request, int $id)
         ]);
 
         try {
+            // AUTO-HEALING SCHEMA
+            try {
+                if (!Schema::hasColumn('clientes', 'responsavel')) {
+                    DB::statement("ALTER TABLE clientes ADD COLUMN responsavel VARCHAR(255) NULL");
+                }
+            } catch (\Exception $e) {}
+
             $cpfCnpjRaw = (string) ($request->input('cpf_cnpj') ?? $request->input('cnpj') ?? '');
             $cpfCnpjNormalized = preg_replace('/\D+/', '', $cpfCnpjRaw) ?? '';
 
@@ -821,6 +830,8 @@ public function historico(Request $request, int $id)
                 'reviews'               => 'nullable|array',
                 'beneficios'            => 'nullable|array',
                 'beneficios.*'          => 'string|max:100',
+                'contact_preference'    => 'nullable|string|max:50',
+                'best_contact_shift'    => 'nullable|string|max:50',
             ]);
 
             $generate = $request->boolean('generate_seo_keywords', true);
@@ -1060,6 +1071,9 @@ public function historico(Request $request, int $id)
                 if (!Schema::hasColumn('clientes', 'tipo_arquivo_midia')) {
                     DB::statement("ALTER TABLE clientes ADD COLUMN tipo_arquivo_midia VARCHAR(50) DEFAULT 'catalogo' NULL");
                 }
+                if (!Schema::hasColumn('clientes', 'responsavel')) {
+                    DB::statement("ALTER TABLE clientes ADD COLUMN responsavel VARCHAR(255) NULL");
+                }
             } catch (\Exception $e) {
                 Log::warning("Auto-healing schema warning: " . $e->getMessage());
             }
@@ -1243,6 +1257,8 @@ public function historico(Request $request, int $id)
                 'last_audit_at'         => 'nullable|date',
                 'audit_differences'     => 'nullable',
                 'audit_action'          => 'nullable|string',
+                'contact_preference'    => 'nullable|string|max:50',
+                'best_contact_shift'    => 'nullable|string|max:50',
             ]);
 
             $generate = $request->boolean('generate_seo_keywords', true);
@@ -1271,6 +1287,8 @@ public function historico(Request $request, int $id)
                 'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
                 'audit_status'          => $validated['audit_status'] ?? $cliente->audit_status,
                 'audit_differences'     => $validated['audit_differences'] ?? $cliente->audit_differences,
+                'contact_preference'    => $validated['contact_preference'] ?? $cliente->contact_preference,
+                'best_contact_shift'    => $validated['best_contact_shift'] ?? $cliente->best_contact_shift,
             ];
 
             if (isset($validated['last_audit_at'])) {
@@ -2281,6 +2299,64 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
         return response()->json($users);
     }
+    /**
+     * ✅ Sugestões Inteligentes de Keywords para Campanhas
+     * Pega keywords do SEO, nomes de segmentos e buscas populares relacionadas.
+     */
+    public function keywordSuggestions($id)
+    {
+        $cliente = Cliente::with(['segmentos', 'enderecos', 'cidadesAtendidas'])->findOrFail($id);
+        
+        $suggestions = [];
+        
+        // 1. Keywords já existentes no SEO (se houver)
+        if (is_array($cliente->seo_keywords)) {
+            $suggestions = array_merge($suggestions, $cliente->seo_keywords);
+        }
+        
+        // 2. Nomes dos segmentos
+        foreach ($cliente->segmentos as $seg) {
+            $suggestions[] = $seg->nome;
+        }
+        
+        // 3. Buscas populares relacionadas aos segmentos do cliente (SearchLog)
+        if ($cliente->segmentos->count() > 0) {
+            $segmentNames = $cliente->segmentos->pluck('nome')->toArray();
+            
+            // Tenta achar termos que contenham os nomes dos segmentos
+            $popularSearches = \App\Models\SearchLog::query()
+                ->where(function($q) use ($segmentNames) {
+                    foreach ($segmentNames as $name) {
+                        $q->orWhere('term', 'ilike', "%{$name}%");
+                    }
+                })
+                ->select('term', DB::raw('count(*) as count'))
+                ->groupBy('term')
+                ->orderByDesc('count')
+                ->limit(15)
+                ->get()
+                ->pluck('term')
+                ->toArray();
+                
+            $suggestions = array_merge($suggestions, $popularSearches);
+        }
+        
+        // 4. Termos genéricos que fazem sentido para qualquer campanha de conversão
+        $suggestions[] = "promoção";
+        $suggestions[] = "oferta";
+        $suggestions[] = "melhor preço";
+        
+        // Limpar e normalizar
+        $suggestions = array_map(function($s) {
+            return mb_strtolower(trim($s), 'UTF-8');
+        }, $suggestions);
+        
+        // Remove duplicados e vazios
+        $suggestions = array_unique(array_filter($suggestions));
+        
+        return response()->json(array_values($suggestions));
+    }
+
     /**
      * ✅ Excluir Cliente e todas as suas relações
      */

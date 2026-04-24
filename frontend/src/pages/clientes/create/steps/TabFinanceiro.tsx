@@ -28,7 +28,8 @@ import { cn } from "@/lib/utils";
 import CreateAutorizacaoModal from "../../../financeiro/components/CreateAutorizacaoModal";
 import PreviewAutorizacaoModal from "../../../financeiro/components/PreviewAutorizacaoModal";
 import JustificarAssinaturaModal from "../../../financeiro/components/JustificarAssinaturaModal";
-import { MoreHorizontal, Share2, Send, CheckCircle, DollarSign, ShieldCheck } from "lucide-react";
+import { MoreHorizontal, Share2, Send, CheckCircle, DollarSign, ShieldCheck, Edit3, Trash2 } from "lucide-react";
+import EditAutorizacaoModal from "../../../financeiro/components/EditAutorizacaoModal";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -125,13 +126,30 @@ export default function TabFinanceiro() {
         },
     });
 
-    // Fetch Autorizações
     const { data: autorizacoes, isLoading: isLoadingAuths, refetch: refetchAuths } = useQuery<Autorizacao[]>({
         queryKey: ["client-autorizacoes", id],
         queryFn: async () => {
             const resp = await axios.get("/v1/autorizacoes", { params: { cliente_id: id } });
             return resp.data.data;
         },
+    });
+
+    const [isEditAuthOpen, setIsEditAuthOpen] = useState(false);
+    const [authToEdit, setAuthToEdit] = useState<any>(null);
+    const [isDeleteAuthModalOpen, setIsDeleteAuthModalOpen] = useState(false);
+    const [authIdToDelete, setAuthIdToDelete] = useState<number | null>(null);
+
+    const deleteAuthMutation = useMutation({
+        mutationFn: async (authId: number) => {
+            await axios.delete(`/v1/autorizacoes/${authId}`);
+        },
+        onSuccess: () => {
+            toast.success("Autorização excluída com sucesso!");
+            refetchAuths();
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || "Erro ao excluir autorização.");
+        }
     });
 
     // Fetch Plans
@@ -612,6 +630,31 @@ export default function TabFinanceiro() {
                                                         >
                                                             <DollarSign size={14} /> Gerar Faturas Tiny
                                                         </DropdownMenuItem>
+                                                    )}
+
+                                                    {auth.status !== "assinado" && (
+                                                        <>
+                                                            <DropdownMenuSeparator className="bg-gray-50" />
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setAuthToEdit(auth);
+                                                                    setIsEditAuthOpen(true);
+                                                                }}
+                                                                className="rounded-lg font-bold text-xs gap-2 py-2 text-blue-700 hover:bg-blue-50 cursor-pointer"
+                                                            >
+                                                                <Edit3 size={14} /> Editar Contrato
+                                                            </DropdownMenuItem>
+
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setAuthIdToDelete(auth.id);
+                                                                    setIsDeleteAuthModalOpen(true);
+                                                                }}
+                                                                className="rounded-lg font-bold text-xs gap-2 py-2 text-red-600 hover:bg-red-50 cursor-pointer"
+                                                            >
+                                                                <Trash2 size={14} /> Excluir Definitivamente
+                                                            </DropdownMenuItem>
+                                                        </>
                                                     )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -1213,6 +1256,50 @@ export default function TabFinanceiro() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Modal de Confirmação de Exclusão Definitiva */}
+            <AlertDialog open={isDeleteAuthModalOpen} onOpenChange={setIsDeleteAuthModalOpen}>
+                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md">
+                    <AlertDialogHeader>
+                        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                            <Trash2 size={32} />
+                        </div>
+                        <AlertDialogTitle className="text-2xl font-bold text-gray-900 text-center">
+                            Excluir Contrato?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-500 text-center text-sm mt-2 font-medium">
+                            Você está prestes a excluir este contrato <b>definitivamente</b>. <br/><br/>
+                            Esta ação removerá todos os dados e parcelas vinculadas, e <b>não poderá ser desfeita</b>.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-8 flex gap-3 sm:justify-start">
+                        <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-gray-100 font-bold text-xs uppercase text-gray-400 hover:bg-gray-50 transition-all">
+                            Manter Contrato
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={() => {
+                                if (authIdToDelete) {
+                                    deleteAuthMutation.mutate(authIdToDelete);
+                                    setIsDeleteAuthModalOpen(false);
+                                }
+                            }}
+                            className="flex-1 h-12 rounded-2xl bg-red-600 hover:bg-red-700 font-bold text-xs uppercase text-white shadow-lg shadow-red-200 transition-all"
+                        >
+                            Sim, Excluir
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <EditAutorizacaoModal
+                isOpen={isEditAuthOpen}
+                onClose={() => setIsEditAuthOpen(false)}
+                onSuccess={() => {
+                    setIsEditAuthOpen(false);
+                    refetchAuths();
+                }}
+                autorizacao={authToEdit}
+            />
         </div>
     );
 }

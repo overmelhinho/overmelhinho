@@ -250,7 +250,7 @@ class AuditLogger
     private function normalizeValue($value)
     {
         if ($value instanceof \Carbon\Carbon) {
-            return $value->toISOString();
+            return $value->toIso8601String();
         }
 
         // Se vier DateTime

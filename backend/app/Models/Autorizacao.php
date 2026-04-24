@@ -42,6 +42,9 @@ class Autorizacao extends Model
         'desconto_valor',
         'justificativa_assinatura',
         'justificado_por',
+        'responsavel_nome',
+        'responsavel_preferencia',
+        'responsavel_turno',
     ];
 
     protected $casts = [
