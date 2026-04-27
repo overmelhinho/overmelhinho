@@ -59,6 +59,8 @@ export default function ClientProfileClient() {
         }
     }, [client, trackInteraction]);
 
+    const isPagante = client?.tipo_cliente === 'pagante';
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -226,7 +228,7 @@ export default function ClientProfileClient() {
         hasWhatsApp = !!whatsapp;
     }
 
-    const tabs = ['Sobre', 'Fotos'];
+    const tabs = isPagante ? ['Sobre', 'Fotos'] : ['Sobre'];
     if (client.reviews?.length > 0) tabs.push('Avaliações');
     if (client.job_opportunities?.length > 0) tabs.push('Vagas');
     const daysMap: Record<number, string> = {
@@ -267,8 +269,81 @@ export default function ClientProfileClient() {
 
     const status = getTodayStatus();
 
+    // 🧠 JSON-LD Structured Data for SEO
+    const schemaData = {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": client.nome_fantasia,
+        "image": client.logotipo_url || client.banner_url,
+        "@id": typeof window !== 'undefined' ? window.location.href : '',
+        "url": typeof window !== 'undefined' ? window.location.href : '',
+        "telephone": contactInfo?.telefone_principal || contactInfo?.celular,
+        "address": client.enderecos?.[0] ? {
+            "@type": "PostalAddress",
+            "streetAddress": `${client.enderecos[0].rua}, ${client.enderecos[0].numero}`,
+            "addressLocality": client.enderecos[0].cidade,
+            "addressRegion": client.enderecos[0].estado,
+            "postalCode": client.enderecos[0].cep,
+            "addressCountry": "BR"
+        } : undefined,
+        "geo": client.enderecos?.[0]?.latitude ? {
+            "@type": "GeoCoordinates",
+            "latitude": client.enderecos[0].latitude,
+            "longitude": client.enderecos[0].longitude
+        } : undefined,
+        "openingHoursSpecification": schedule.map((s: any) => ({
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": [
+                "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+            ][s.day - 1],
+            "opens": s.open,
+            "closes": s.close
+        })),
+        "aggregateRating": client.google_rating ? {
+            "@type": "AggregateRating",
+            "ratingValue": client.google_rating,
+            "reviewCount": client.reviews_count || 1
+        } : undefined,
+        "keywords": client.seo_keywords?.join(", "),
+        "sameAs": client.redes_sociais?.map((r: any) => r.url) || []
+    };
+
+    const breadcrumbData = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Início",
+                "item": "https://www.overmelhinho.com.br"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": client.segmentos?.[0]?.nome || "Clientes",
+                "item": `https://www.overmelhinho.com.br/busca?segmento=${client.segmentos?.[0]?.id || ''}`
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
+                "name": client.nome_fantasia,
+                "item": typeof window !== 'undefined' ? window.location.href : ''
+            }
+        ]
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24 md:pb-0">
+            {/* 🤖 SEO Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+            />
 
 
 
@@ -297,14 +372,14 @@ export default function ClientProfileClient() {
                     </div>
                 </div>
 
-                {client.banner_url ? (
+                {client.banner_url && isPagante ? (
                     <img
                         src={client.banner_url}
                         className="w-full h-full object-cover escala-focus-top"
                         alt={client.nome_fantasia}
                     />
                 ) : (
-                    <div className="w-full h-full bg-white"></div>
+                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200"></div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 md:to-transparent"></div>
             </section>
@@ -315,15 +390,17 @@ export default function ClientProfileClient() {
                 <div className="bg-white rounded-[2.5rem] md:rounded-[4rem] p-7 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.12)] border-2 border-white gummy-card relative">
 
                     {/* Floating Profile Image */}
-                    <div className="absolute -top-10 md:-top-20 left-8 md:left-10 w-20 h-20 md:w-40 md:h-40 rounded-3xl md:rounded-full bg-white p-1 shadow-2xl border-4 border-white overflow-hidden group">
-                        <img
-                            src={client.logotipo_url || "https://images.unsplash.com/photo-1599305090598-fe179d501227?w=400"}
-                            className="w-full h-full object-contain p-2 rounded-[1rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
-                            alt="Logo"
-                        />
-                    </div>
+                    {isPagante && (
+                        <div className="absolute -top-10 md:-top-20 left-8 md:left-10 w-20 h-20 md:w-40 md:h-40 rounded-3xl md:rounded-full bg-white p-1 shadow-2xl border-4 border-white overflow-hidden group">
+                            <img
+                                src={client.logotipo_url || "https://images.unsplash.com/photo-1599305090598-fe179d501227?w=400"}
+                                className="w-full h-full object-contain p-2 rounded-[1rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
+                                alt={`Logotipo de ${client.nome_fantasia}`}
+                            />
+                        </div>
+                    )}
 
-                    <div className="mt-8 md:mt-0 md:ml-48 space-y-4">
+                    <div className={`mt-8 md:mt-0 ${isPagante ? 'md:ml-48' : ''} space-y-4`}>
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-3">
@@ -350,7 +427,7 @@ export default function ClientProfileClient() {
 
                             {/* CTAs DESKTOP */}
                             <div className="hidden md:flex mt-4 md:mt-0 flex-wrap items-center gap-3">
-                                {hasWhatsApp && (
+                                {hasWhatsApp && isPagante && (
                                     <button
                                         onClick={handleWhatsAppClick}
                                         className="bg-[#25D366] text-white px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl shadow-green-100 flex items-center active:scale-95 transition-all hover:brightness-110 border-b-4 border-green-700"
@@ -366,15 +443,28 @@ export default function ClientProfileClient() {
                                         <Phone size={20} className="mr-2" /> Ligar Agora
                                     </button>
                                 )}
-                                {client.enderecos?.[0] && (
-                                    <a
-                                        href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="bg-blue-50 text-blue-600 border border-blue-100 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-blue-100"
-                                    >
-                                        <MapPin size={20} className="mr-2" fill="currentColor" /> Waze
-                                    </a>
+                                {client.enderecos?.[0] && isPagante && (
+                                    <>
+                                        {/* Waze: Apenas Mobile */}
+                                        <a
+                                            href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}&navigate=yes`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="md:hidden bg-blue-50 text-blue-600 border border-blue-100 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-blue-100"
+                                        >
+                                            <MapPin size={20} className="mr-2" fill="currentColor" /> Waze
+                                        </a>
+
+                                        {/* Google Maps: Apenas Desktop */}
+                                        <a
+                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="hidden md:flex bg-gray-50 text-gray-600 border border-gray-100 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest items-center active:scale-95 transition-all hover:bg-gray-100"
+                                        >
+                                            <MapPin size={20} className="mr-2" fill="currentColor" /> Google Maps
+                                        </a>
+                                    </>
                                 )}
                                 <button
                                     onClick={handleShareClick}
@@ -426,23 +516,25 @@ export default function ClientProfileClient() {
                                     className="space-y-10"
                                 >
                                     <section className="space-y-6">
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Sobre a Empresa</h2>
+                                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Sobre a {client.nome_fantasia}</h2>
                                         <p className="text-gray-500 leading-relaxed text-lg font-medium whitespace-pre-line break-words">
                                             {client.descricao || `O ${client.nome_fantasia} oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.`}
                                         </p>
 
                                         {/* Info Boxes */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {client.data_fundacao && (
+                                            {client.data_fundacao && client.exibir_data_fundacao !== false && (
                                                 <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
                                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Fundada em</p>
                                                     <p className="text-lg font-black text-gray-900 font-serif italic">{new Date(client.data_fundacao).getFullYear()}</p>
                                                 </div>
                                             )}
-                                            <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Especialidade</p>
-                                                <p className="text-lg font-black text-gray-900 font-serif italic">{client.segmentos?.[0]?.nome || 'Negócio Local'}</p>
-                                            </div>
+                                            {client.segmentos?.[0]?.nome && (
+                                                <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
+                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Segmento</p>
+                                                    <p className="text-lg font-black text-gray-900 font-serif italic">{client.segmentos[0].nome}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </section>
 
@@ -571,37 +663,47 @@ export default function ClientProfileClient() {
                                                             </div>
                                                         </div>
 
-                                                        <p className="text-sm text-gray-500 font-medium leading-relaxed">
-                                                            {end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
-                                                            {end.bairro} • {end.cep}
-                                                        </p>
+                                                        {!end.exibir_apenas_cidade ? (
+                                                            <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                                                                {end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
+                                                                {end.bairro} • {end.cep}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-400 font-medium italic mt-2">
+                                                                Endereço completo não exibido. Atendimento em {end.cidade} - {end.estado}.
+                                                            </p>
+                                                        )}
                                                     </div>
 
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                                                         {(i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone) && (
                                                             <a 
                                                                 href={`tel:${(i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone).replace(/\D/g, '')}`}
-                                                                className="col-span-full md:col-span-1 bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2 mb-1"
+                                                                className={`col-span-full ${end.exibir_apenas_cidade ? '' : 'md:col-span-1'} bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2 mb-1`}
                                                             >
                                                                 <Phone size={12} /> Ligar: {i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone}
                                                             </a>
                                                         )}
-                                                        <a 
-                                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
-                                                        >
-                                                            Google Maps
-                                                        </a>
-                                                        <a 
-                                                            href={`https://waze.com/ul?q=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
-                                                        >
-                                                            Waze
-                                                        </a>
+                                                        {!end.exibir_apenas_cidade && (
+                                                            <a 
+                                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
+                                                            >
+                                                                Google Maps
+                                                            </a>
+                                                        )}
+                                                        {(!end.exibir_apenas_cidade && isPagante) && (
+                                                            <a 
+                                                                href={`https://waze.com/ul?q=${encodeURIComponent(`${end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="md:hidden bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
+                                                            >
+                                                                Waze
+                                                            </a>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )) : (
@@ -631,7 +733,7 @@ export default function ClientProfileClient() {
                                             <img
                                                 src={img.url}
                                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                                alt="Galeria"
+                                                alt={`Foto de ${client.nome_fantasia} - ${i + 1}`}
                                             />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-gray-900 transform scale-50 group-hover:scale-100 transition-transform duration-500">
@@ -747,7 +849,7 @@ export default function ClientProfileClient() {
                         </div>
 
                         {/* WhatsApp CTA */}
-                        {hasWhatsApp && (
+                        {hasWhatsApp && isPagante && (
                             <div className="relative group overflow-hidden bg-[#25D366] rounded-[3rem] p-10 text-white shadow-2xl shadow-green-100 gummy-card cursor-pointer border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all" onClick={handleWhatsAppClick}>
                                 <div className="relative space-y-6">
                                     <div className="bg-white/20 w-14 h-14 rounded-2xl flex items-center justify-center">
@@ -825,6 +927,26 @@ export default function ClientProfileClient() {
                         </div>
                     </section>
                 )}
+                {/* 🏷️ SEO Keywords / Tags - Modern SaaS Style (Interactive & Linked) */}
+                {client.seo_keywords?.length > 0 && (
+                    <section className="mt-20 pt-10 border-t border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-6 text-center">Tags & Segmentos</p>
+                        <div className="flex flex-wrap justify-center gap-3">
+                            {client.seo_keywords.map((tag: string, idx: number) => (
+                                <button 
+                                    key={idx}
+                                    onClick={() => {
+                                        window.scrollTo(0, 0);
+                                        router.push(`/busca?q=${encodeURIComponent(tag)}`);
+                                    }}
+                                    className="text-[10px] md:text-xs font-bold text-gray-500 bg-white/50 backdrop-blur-sm px-5 py-3 rounded-2xl border border-gray-100 hover:border-brand-red/30 hover:text-brand-red hover:bg-white transition-all shadow-sm active:scale-95"
+                                >
+                                    #{tag.toLowerCase().replace(/\s+/g, '')}
+                                </button>
+                            ))}
+                        </div>
+                    </section>
+                )}
             </div>
 
             {/* 🖥️ DESKTOP FOOTER */}
@@ -857,7 +979,7 @@ export default function ClientProfileClient() {
                             <span>Ligar</span>
                         </button>
                     )}
-                    {hasWhatsApp && (
+                    {hasWhatsApp && isPagante && (
                         <button
                             onClick={handleWhatsAppClick}
                             className="flex-1 bg-[#25D366] text-white py-6 rounded-[2rem] shadow-[0_25px_50px_-10px_rgba(37,211,102,0.5)] font-black text-lg flex items-center justify-center space-x-3 active:scale-95 transition-all overflow-hidden relative font-sans border-b-4 border-green-700"
@@ -867,7 +989,7 @@ export default function ClientProfileClient() {
                             <span>WhatsApp</span>
                         </button>
                     )}
-                    {(!hasPhone && !hasWhatsApp && client.enderecos?.[0]) && (
+                    {(!hasPhone && !hasWhatsApp && client.enderecos?.[0] && isPagante) && (
                         <a
                             href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
                             target="_blank"

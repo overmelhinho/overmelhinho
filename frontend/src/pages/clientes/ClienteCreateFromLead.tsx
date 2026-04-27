@@ -160,8 +160,8 @@ export default function ClienteCreateFromLead() {
       setTicketsClienteId(null);
       setMissingLogo(false);
       setMissingGaleria(false);
-      // step segura (gratuito só tem 0..2)
-      if (step > 2) setStep(0);
+      // step segura (gratuito só tem 0..3 agora)
+      if (step > 3) setStep(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoCliente]);
@@ -200,13 +200,13 @@ export default function ClienteCreateFromLead() {
       { id: 0, label: "Identificação" },
       { id: 1, label: "Endereço" },
       { id: 2, label: "Contato" },
+      { id: 3, label: "Segmentos" }, // ✅ Ativado para todos
     ];
 
     if (tipoCliente === "pagante") {
       base.push(
-        { id: 3, label: "Cidades" },
-        { id: 4, label: "Redes Sociais" },
-        { id: 5, label: "Segmentos" },
+        { id: 4, label: "Cidades" },
+        { id: 5, label: "Redes Sociais" },
         { id: 6, label: "Benefícios" },
         { id: 7, label: "Horário" },
         { id: 8, label: "Logotipo" },
@@ -246,7 +246,11 @@ export default function ClienteCreateFromLead() {
       celular: 2,
       responsavel: 2,
 
-      redes_sociais: 4,
+      redes_sociais: 5,
+      segmentos: 3,
+      cidades_atendidas: 4,
+      beneficios: 6,
+      horario_atendimento: 7,
 
       video_link: 9,
       arquivo_midia: 9,
@@ -420,6 +424,12 @@ export default function ClienteCreateFromLead() {
               telefone_principal: lead?.telefone || "",
               telefone_secundario: "",
               celular: "",
+              telefone_outro: "",
+              whatsapp_selected: "telefone_principal",
+              has_whatsapp_principal: false,
+              has_whatsapp_secundario: false,
+              has_whatsapp_celular: false,
+              has_whatsapp_outro: false,
               responsavel: lead?.responsavel || "",
 
               enderecos: [
@@ -467,6 +477,7 @@ export default function ClienteCreateFromLead() {
               selected_reviews: [],
               galeria: [],
               exibir_no_site: true,
+              exibir_data_fundacao: true,
             }}
             validationSchema={validationSchema}
             onSubmit={async (values) => {
@@ -508,6 +519,7 @@ export default function ClienteCreateFromLead() {
                     telefone: e.telefone || null,
                     link_maps: e.link_maps || null,
                     link_waze: e.link_waze || null,
+                    exibir_apenas_cidade: e.exibir_apenas_cidade ?? false,
                   })),
 
                   contatos: [
@@ -515,6 +527,12 @@ export default function ClienteCreateFromLead() {
                       telefone_principal: values.telefone_principal,
                       telefone_secundario: values.telefone_secundario || null,
                       celular: values.celular || null,
+                      telefone_outro: values.telefone_outro || null,
+                      whatsapp_selected: values.whatsapp_selected || null,
+                      has_whatsapp_principal: (values.has_whatsapp_principal || values.whatsapp_selected === 'telefone_principal') ? true : false,
+                      has_whatsapp_secundario: (values.has_whatsapp_secundario || values.whatsapp_selected === 'telefone_secundario') ? true : false,
+                      has_whatsapp_celular: (values.has_whatsapp_celular || values.whatsapp_selected === 'celular') ? true : false,
+                      has_whatsapp_outro: (values.has_whatsapp_outro || values.whatsapp_selected === 'telefone_outro') ? true : false,
                       email_principal: values.email,
                       nome_contato: values.responsavel,
                     },
@@ -544,6 +562,7 @@ export default function ClienteCreateFromLead() {
                   reviews: values.selected_reviews || [],
                   beneficios: values.beneficios || [],
                   tipo_arquivo_midia: values.tipo_arquivo_midia || "catalogo",
+                  exibir_data_fundacao: values.exibir_data_fundacao,
                 };
 
                 // 1) cria cliente
@@ -723,6 +742,7 @@ export default function ClienteCreateFromLead() {
 
                 if (dados.google_place_id) setFieldValue("google_place_id", String(dados.google_place_id));
                 if (dados.data_fundacao) setFieldValue("data_fundacao", String(dados.data_fundacao));
+                if (dados.exibir_data_fundacao !== undefined) setFieldValue("exibir_data_fundacao", !!dados.exibir_data_fundacao);
 
                 toast.success("Dados aplicados ao cadastro.");
               };
@@ -830,7 +850,7 @@ export default function ClienteCreateFromLead() {
                         setTipoCliente(next);
                         setFieldValue("tipoCliente", next);
 
-                        if (next === "gratuito" && step > 2) {
+                        if (next === "gratuito" && step > 3) {
                           setStep(0);
                         }
 
@@ -851,19 +871,23 @@ export default function ClienteCreateFromLead() {
                   <TabsUI tabs={tabs} currentStep={step} setCurrentStep={setStep} />
 
                   <div className="mt-2 p-6 bg-white shadow rounded-xl border min-h-[420px]">
-                    {step === 0 && <TabIdentificacao />}
-                    {step === 1 && <TabEndereco />}
-                    {step === 2 && <TabContato />}
+                    {tabs[step]?.label === "Identificação" && <TabIdentificacao />}
+                    {tabs[step]?.label === "Endereço" && <TabEndereco />}
+                    {tabs[step]?.label === "Contato" && <TabContato />}
+                    {tabs[step]?.label === "Segmentos" && <TabSegmentos />}
 
-                    {step === 3 && tipoCliente === "pagante" && <TabCidadesAtendidas />}
-                    {step === 4 && tipoCliente === "pagante" && <TabRedesSociais />}
-                    {step === 5 && tipoCliente === "pagante" && <TabSegmentos />}
-                    {step === 6 && tipoCliente === "pagante" && <TabBeneficios />}
-                    {step === 7 && tipoCliente === "pagante" && <TabHorarios />}
-                    {step === 8 && tipoCliente === "pagante" && <TabLogotipo />}
-                    {step === 9 && tipoCliente === "pagante" && <TabMidia />}
-                    {step === 10 && tipoCliente === "pagante" && <TabGaleria />}
-                    {step === 11 && tipoCliente === "pagante" && <TabGoogleReviews />}
+                    {tipoCliente === "pagante" && (
+                      <>
+                        {tabs[step]?.label === "Cidades" && <TabCidadesAtendidas />}
+                        {tabs[step]?.label === "Redes Sociais" && <TabRedesSociais />}
+                        {tabs[step]?.label === "Benefícios" && <TabBeneficios />}
+                        {tabs[step]?.label === "Horário" && <TabHorarios />}
+                        {tabs[step]?.label === "Logotipo" && <TabLogotipo />}
+                        {tabs[step]?.label === "Mídia" && <TabMidia />}
+                        {tabs[step]?.label === "Galeria" && <TabGaleria />}
+                        {tabs[step]?.label === "Google Reviews" && <TabGoogleReviews />}
+                      </>
+                    )}
                   </div>
 
                   <div className="flex justify-between">

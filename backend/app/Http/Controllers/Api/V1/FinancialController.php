@@ -258,7 +258,7 @@ class FinancialController extends Controller
     public function indexAllInvoices()
     {
         $invoices = Invoice::with(['client.contatos', 'plan'])
-            ->orderBy('due_date', 'desc')
+            ->orderBy('due_date', 'asc')
             ->limit(100)
             ->get();
 
@@ -326,9 +326,10 @@ class FinancialController extends Controller
         $payableAmount   = max(0, $finalTotal - $permutaAmount);
         $permutaDesc     = $validated['permuta_description'] ?? null;
 
-        // ── Parcelamento ─────────────────────────────
-        $parcelAmount     = round($payableAmount / $installments, 2);
-        $lastParcelAmount = round($payableAmount - ($parcelAmount * ($installments - 1)), 2);
+        // ── Parcelamento (Sem Centavos) ──────────────
+        // Parcelas 2..N ficam com valor inteiro; a diferença fica na parcela 1.
+        $parcelAmount      = floor($payableAmount / $installments);
+        $firstParcelAmount = round($payableAmount - ($parcelAmount * ($installments - 1)), 2);
 
         $groupId       = (string) \Illuminate\Support\Str::uuid();
         $invoicesCreated = [];
@@ -372,7 +373,7 @@ class FinancialController extends Controller
         // ── Permuta Parcial ou Cobrança Normal ───────
         for ($i = 1; $i <= $installments; $i++) {
             $currentDueDate   = $dueDate->copy()->addMonths($i - 1);
-            $currentAmount    = ($i === $installments) ? $lastParcelAmount : $parcelAmount;
+            $currentAmount    = ($i === 1) ? $firstParcelAmount : $parcelAmount;
 
             $invoice = Invoice::create([
                 'client_id'           => $client->id,
@@ -449,9 +450,20 @@ class FinancialController extends Controller
             // Sincronizar baixa com o Tiny se a fatura tiver um ID lá
             if ($invoice->tiny_account_id) {
                 try {
-                    $valorBaixa = $invoice->payable_amount ?? $invoice->amount;
-                    $this->tinyService->payReceivable($invoice->tiny_account_id, $valorBaixa);
-                    Log::info("Baixa da fatura #{$invoice->id} sincronizada com sucesso no Tiny ERP (Valor: R$ {$valorBaixa}).");
+                    $valorPago = (float)($invoice->payable_amount ?? $invoice->amount);
+
+                    // Obter valor original no Tiny para calcular desconto
+                    $tinyConta = $this->tinyService->getReceivableStatus($invoice->tiny_account_id);
+                    $valorTiny = $tinyConta ? (float)($tinyConta['valor'] ?? 0) : $valorPago;
+                    $desconto  = max(0, round($valorTiny - $valorPago, 2));
+
+                    $this->tinyService->payReceivable($invoice->tiny_account_id, $valorPago, $desconto);
+
+                    if ($desconto > 0) {
+                        Log::info("Baixa da fatura #{$invoice->id} no Tiny: R$ {$valorPago} pago + R$ {$desconto} desconto (original Tiny: R$ {$valorTiny}).");
+                    } else {
+                        Log::info("Baixa da fatura #{$invoice->id} sincronizada com sucesso no Tiny ERP (Valor: R$ {$valorPago}).");
+                    }
                 }
                 catch (\Exception $e) {
                     Log::error("Erro ao sincronizar baixa da fatura #{$invoice->id} no Tiny: " . $e->getMessage());
@@ -464,6 +476,243 @@ class FinancialController extends Controller
         return response()->json([
             'message' => 'Fatura atualizada com sucesso e sincronizada com o Tiny.',
             'invoice' => $invoice->load(['client', 'plan']),
+        ]);
+    }
+
+    /**
+     * Alterar o valor ou vencimento da fatura.
+     *
+     * difference_action:
+     *   discount      → diferença é descartada (desconto/remissão)
+     *   redistribute  → diferença redistribuída nas parcelas pendentes do grupo
+     *   create_extra  → cria nova fatura com o valor da diferença
+     */
+    public function updateInvoice(Request $request, $id)
+    {
+        $invoice = Invoice::findOrFail($id);
+
+        if ($invoice->status !== 'pending') {
+            return response()->json(['message' => 'Apenas faturas pendentes podem ser alteradas.'], 400);
+        }
+
+        $validated = $request->validate([
+            'amount'            => 'required|numeric|min:0',
+            'due_date'          => 'required|date',
+            'justification'     => 'required|string|min:5',
+            'difference_action' => 'nullable|string|in:discount,redistribute,create_extra',
+            'extra_due_date'    => 'required_if:difference_action,create_extra|nullable|date',
+        ]);
+
+        $oldAmount         = (float) ($invoice->payable_amount ?? $invoice->amount);
+        $newAmount         = (float) $validated['amount'];
+        $difference        = round($oldAmount - $newAmount, 2);
+        $differenceAction  = $validated['difference_action'] ?? 'discount';
+        $justification     = $validated['justification'];
+        $tinyErrors        = [];
+        $extraInvoice      = null;
+        $redistributedInfo = null;
+
+        // ── 1. Atualiza a parcela principal ─────────────────────────
+        $invoice->update([
+            'amount'        => $newAmount,
+            'payable_amount'=> $newAmount,
+            'due_date'      => $validated['due_date'],
+            'justification' => "Alterado de R$ {$oldAmount} para R$ {$newAmount} (venc {$validated['due_date']}). Ação diferença: {$differenceAction}. Motivo: {$justification}",
+        ]);
+
+        // Sync Tiny – Criar nova conta para garantir boleto com valor correto
+        if ($invoice->tiny_account_id) {
+            try {
+                $invoice->load(['client.enderecos', 'client.contatos', 'plan']);
+                $tinyData = $this->tinyService->updateReceivable($invoice, $newAmount, $validated['due_date']);
+                
+                // Atualizamos localmente com o novo link/ID do Tiny
+                $invoice->update([
+                    'tiny_account_id' => $tinyData['tiny_account_id'],
+                    'payment_url'     => $tinyData['payment_url'],
+                ]);
+                
+                Log::info("Fatura #{$invoice->id} recriada no Tiny ERP (Boleto Atualizado). Novo ID: {$tinyData['tiny_account_id']}");
+            } catch (\Exception $e) {
+                $tinyErrors[] = "Erro ao atualizar boleto: " . $e->getMessage();
+                Log::error("Erro ao sincronizar edição da fatura #{$invoice->id} no Tiny: " . $e->getMessage());
+            }
+        }
+
+        // ── 2. Aplicar ação sobre a diferença (somente se houver diferença) ──
+        if ($difference != 0 && abs($difference) >= 0.01) {
+
+            if ($differenceAction === 'redistribute' && $invoice->group_id) {
+                // Busca as outras parcelas pendentes do grupo (exceto esta)
+                $siblings = Invoice::where('group_id', $invoice->group_id)
+                    ->where('status', 'pending')
+                    ->where('id', '!=', $invoice->id)
+                    ->orderBy('parcel_number')
+                    ->get();
+
+                if ($siblings->isNotEmpty()) {
+                    $addPerParcel   = floor(($difference / $siblings->count()) * 100) / 100;
+                    $remainderCents = round($difference - ($addPerParcel * $siblings->count()), 2);
+
+                    foreach ($siblings as $idx => $sibling) {
+                        // O primeiro irmão absorve a sobra de centavos
+                        $adjustment   = $addPerParcel + ($idx === 0 ? $remainderCents : 0);
+                        $sibNewAmount = round(($sibling->payable_amount ?? $sibling->amount) + $adjustment, 2);
+                        $sibNewAmount = max(0, $sibNewAmount);
+
+                        // Data formatada de forma segura
+                        $sibDueDate = \Carbon\Carbon::parse($sibling->due_date)->format('Y-m-d');
+
+                        $sibling->update([
+                            'amount'          => $sibNewAmount,
+                            'payable_amount'  => $sibNewAmount,
+                            'justification'   => "Valor redistribuído da parcela #{$invoice->parcel_number} (diff R$ {$adjustment}). Motivo: {$justification}",
+                        ]);
+
+                        // Sync Tiny para redistribuição
+                        if ($sibling->tiny_account_id) {
+                            try {
+                                $sibling->load(['client.enderecos', 'client.contatos', 'plan']);
+                                $tinyData = $this->tinyService->updateReceivable($sibling, $sibNewAmount, $sibDueDate);
+                                $sibling->update([
+                                    'tiny_account_id' => $tinyData['tiny_account_id'],
+                                    'payment_url'     => $tinyData['payment_url'],
+                                ]);
+                                Log::info("[Redistribute] Tiny sync OK: parcela #{$sibling->parcel_number} novo boleto gerado.");
+                            } catch (\Exception $e) {
+                                $tinyErrors[] = "Erro ao atualizar boleto da parcela #{$sibling->parcel_number}: " . $e->getMessage();
+                                Log::error("[Redistribute] Tiny sync FALHOU: parcela #{$sibling->parcel_number}: " . $e->getMessage());
+                            }
+                        }
+                    }
+
+                    $redistributedInfo = [
+                        'siblings_updated' => $siblings->count(),
+                        'add_per_parcel'   => $addPerParcel,
+                    ];
+                }
+
+            } elseif ($differenceAction === 'create_extra' && $difference > 0) {
+                // Cria nova fatura com o valor da diferença
+                $extraDueDate = \Carbon\Carbon::parse($validated['extra_due_date']);
+                $maxParcel    = Invoice::where('group_id', $invoice->group_id ?? '')->max('parcel_number') ?? $invoice->parcel_number;
+
+                $extraInvoice = Invoice::create([
+                    'client_id'      => $invoice->client_id,
+                    'plan_id'        => $invoice->plan_id,
+                    'amount'         => $difference,
+                    'payable_amount' => $difference,
+                    'due_date'       => $extraDueDate,
+                    'status'         => 'pending',
+                    'payment_method' => $invoice->payment_method,
+                    'parcel_number'  => $maxParcel + 1,
+                    'total_parcels'  => ($invoice->total_parcels ?? 1) + 1,
+                    'group_id'       => $invoice->group_id,
+                    'justification'  => "Parcela extra criada pela diferença da edição da parcela #{$invoice->parcel_number}. Motivo: {$justification}",
+                ]);
+
+                // Sync Tiny – criar nova conta a receber
+                try {
+                    $tinyData = $this->tinyService->createReceivable($extraInvoice, $difference);
+                    $extraInvoice->update([
+                        'tiny_account_id' => $tinyData['tiny_account_id'],
+                        'payment_url'     => $tinyData['payment_url'],
+                    ]);
+                } catch (\Exception $e) {
+                    $tinyErrors[] = "Parcela extra: " . $e->getMessage();
+                    Log::error("Erro ao criar parcela extra no Tiny: " . $e->getMessage());
+                }
+            }
+            // discount: nenhuma ação adicional necessária
+        }
+
+        $message = match($differenceAction) {
+            'redistribute' => 'Fatura alterada. Diferença de R$ ' . number_format(abs($difference), 2, ',', '.') . ' redistribuída nas demais parcelas.',
+            'create_extra' => 'Fatura alterada. Nova parcela extra de R$ ' . number_format(abs($difference), 2, ',', '.') . ' criada.',
+            default        => 'Fatura alterada. Diferença de R$ ' . number_format(abs($difference), 2, ',', '.') . ' registrada como desconto.',
+        };
+
+        return response()->json([
+            'message'            => $message,
+            'invoice'            => $invoice->load(['client', 'plan']),
+            'extra_invoice'      => $extraInvoice,
+            'redistributed_info' => $redistributedInfo,
+            'tiny_errors'        => $tinyErrors,
+        ]);
+    }
+
+    /**
+     * Quitação antecipada de um grupo de parcelas (com desconto opcional).
+     * Liquida todas as parcelas pendentes do group_id e sincroniza no Tiny.
+     */
+    public function settleGroup(Request $request)
+    {
+        $validated = $request->validate([
+            'group_id'       => 'required|string',
+            'discount_value' => 'nullable|numeric|min:0',
+            'discount_type'  => 'nullable|string|in:fixed,percent',
+            'payment_method' => 'nullable|string|in:pix,dinheiro,cartao,boleto',
+            'justification'  => 'required|string|min:5',
+        ]);
+
+        $pendingInvoices = Invoice::where('group_id', $validated['group_id'])
+            ->where('status', 'pending')
+            ->get();
+
+        if ($pendingInvoices->isEmpty()) {
+            return response()->json(['message' => 'Nenhuma parcela pendente encontrada para este grupo.'], 404);
+        }
+
+        $totalPendente = $pendingInvoices->sum(fn($i) => $i->payable_amount ?? $i->amount);
+
+        // Calcular desconto
+        $discount = 0;
+        if (!empty($validated['discount_value'])) {
+            if (($validated['discount_type'] ?? 'fixed') === 'percent') {
+                $discount = ($totalPendente * $validated['discount_value']) / 100;
+            } else {
+                $discount = $validated['discount_value'];
+            }
+        }
+        $totalAPagar = max(0, $totalPendente - $discount);
+
+        $settled = 0;
+        $tinyErrors = [];
+
+        foreach ($pendingInvoices as $invoice) {
+            $invoice->update([
+                'status'         => 'paid',
+                'payment_method' => $validated['payment_method'] ?? $invoice->payment_method,
+                'justification'  => "Quitação antecipada. Total do grupo: R$ {$totalPendente}, desconto: R$ {$discount}. Motivo: {$validated['justification']}",
+                'action_date'    => now(),
+            ]);
+
+            if ($invoice->tiny_account_id) {
+                try {
+                    $valorPago = (float)($invoice->payable_amount ?? $invoice->amount);
+
+                    // Obter valor original no Tiny para calcular desconto automático
+                    $tinyConta = $this->tinyService->getReceivableStatus($invoice->tiny_account_id);
+                    $valorTiny = $tinyConta ? (float)($tinyConta['valor'] ?? 0) : $valorPago;
+                    $descontoTiny = max(0, round($valorTiny - $valorPago, 2));
+
+                    $this->tinyService->payReceivable($invoice->tiny_account_id, $valorPago, $descontoTiny);
+                } catch (\Exception $e) {
+                    $tinyErrors[] = "Parcela #{$invoice->parcel_number}: " . $e->getMessage();
+                    Log::error("[settleGroup] Erro ao baixar parcela {$invoice->id} no Tiny: " . $e->getMessage());
+                }
+            }
+            $settled++;
+        }
+
+        // Ativa a assinatura do cliente
+        $pendingInvoices->first()->client?->update(['status_assinatura' => 'ativa']);
+
+        return response()->json([
+            'message'     => "{$settled} parcela(s) quitada(s) com sucesso!",
+            'total_pago'  => $totalAPagar,
+            'desconto'    => $discount,
+            'tiny_errors' => $tinyErrors,
         ]);
     }
 

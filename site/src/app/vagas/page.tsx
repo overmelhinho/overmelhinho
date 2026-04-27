@@ -39,6 +39,7 @@ interface Job {
     benefits: string[];
     contact: string;
     logo?: string;
+    timestamp: number; // para ordenação precisa por data
 }
 
 // ── DADOS ─────────────────────────────────────────────────────────
@@ -336,6 +337,7 @@ export default function VagasPage() {
                     salaryNum: parseInt(String(j.salary_range).replace(/\D/g, '')) || 0,
                     type: j.hiring_type || 'CLT',
                     date: j.published_at ? new Date(j.published_at).toLocaleDateString('pt-BR') : 'Recente',
+                    timestamp: j.published_at ? new Date(j.published_at).getTime() : new Date().getTime(),
                     daysAgo: j.published_at ? Math.floor((new Date().getTime() - new Date(j.published_at).getTime()) / (1000 * 3600 * 24)) : 0,
                     tags: [j.work_model, j.role, j.education_level].filter(Boolean),
                     category: j.area || 'Outros',
@@ -375,9 +377,12 @@ export default function VagasPage() {
             return matchesSearch && matchesCat;
         });
 
-        result = [...result].sort((a, b) =>
-            sortBy === 'recentes' ? a.daysAgo - b.daysAgo : b.salaryNum - a.salaryNum
-        );
+        result = [...result].sort((a, b) => {
+            if (sortBy === 'recentes') {
+                return b.timestamp - a.timestamp; // Mais novo primeiro
+            }
+            return b.salaryNum - a.salaryNum; // Maior salário primeiro
+        });
 
         return result;
     }, [searchTerm, selectedCategories, sortBy]);
@@ -527,20 +532,22 @@ export default function VagasPage() {
                                 ))}
                             </div>
 
-                            {/* Seletor de ordenação */}
-                            <div className="relative group">
-                                <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-4 py-2.5 cursor-pointer hover:border-brand-red transition-colors">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Ordenar:</span>
-                                    <select
-                                        value={sortBy}
-                                        onChange={e => setSortBy(e.target.value as 'recentes' | 'salario')}
-                                        className="bg-transparent border-none outline-none text-xs font-black text-brand-red cursor-pointer"
-                                    >
-                                        <option value="recentes">Mais recentes</option>
-                                        <option value="salario">Maior salário</option>
-                                    </select>
-                                    <ChevronDown size={14} className="text-gray-400" />
-                                </div>
+                            {/* Seletor de ordenação elegante */}
+                            <div className="flex items-center p-1.5 bg-gray-100 rounded-2xl">
+                                <button
+                                    onClick={() => setSortBy('recentes')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'recentes' ? 'bg-white text-brand-red shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    <Clock size={14} />
+                                    Mais Recentes
+                                </button>
+                                <button
+                                    onClick={() => setSortBy('salario')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'salario' ? 'bg-white text-brand-red shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    <Tag size={14} />
+                                    Maior Salário
+                                </button>
                             </div>
                         </div>
 

@@ -207,7 +207,9 @@ const AuditMatchPage: React.FC = () => {
             cpf_cnpj: client?.cpf_cnpj,
             contatos: [...(client?.contatos || [])],
             enderecos: [...(client?.enderecos || [])],
-            redes_sociais: [...(client?.redes_sociais || [])]
+            redes_sociais: [...(client?.redes_sociais || [])],
+            exibir_no_site: client?.exibir_no_site,
+            exibir_data_fundacao: client?.exibir_data_fundacao,
         };
 
         fields.forEach(f => {

@@ -107,7 +107,7 @@ class TinyErpService
         $contaReceber = [
             'data_emissao' => now()->format('d/m/Y'),
             'vencimento' => $invoice->due_date instanceof \Carbon\Carbon ? $invoice->due_date->format('d/m/Y') : date('d/m/Y', strtotime($invoice->due_date)),
-            'valor' => number_format($valorCobrado, 2, ',', ''),
+            'valor' => number_format($valorCobrado, 2, '.', ''),
             'historico' => "Fatura #{$invoice->id} - Plano " . ($invoice->plan ? $invoice->plan->name : 'Avulso'),
             'cliente' => [
                 'id' => (int)$invoice->client->tiny_id,
@@ -169,8 +169,18 @@ class TinyErpService
     /**
      * Efetua a baixa (liquidação) de uma conta a receber no Tiny.
      * Método: conta.receber.baixar.php
+     *
+     * Quando o valor da parcela foi editado localmente (ex: de R$ 199 para R$ 50),
+     * o Tiny ainda tem o valor original. Na baixa, enviamos:
+     *   - valor: o que foi efetivamente pago (R$ 50)
+     *   - desconto: a diferença (R$ 149)
+     * Isso mantém o fluxo de caixa correto.
+     *
+     * @param string $tinyAccountId  ID da conta no Tiny
+     * @param float  $amount         Valor efetivamente pago
+     * @param float  $discount       Desconto a aplicar (diferença entre valor original e pago)
      */
-    public function payReceivable(string $tinyAccountId, float $amount = null): bool
+    public function payReceivable(string $tinyAccountId, float $amount = null, float $discount = 0): bool
     {
         try {
             $conta = [
@@ -178,9 +188,12 @@ class TinyErpService
                 'data' => now()->format('d/m/Y'),
             ];
 
-            if ($amount) {
-                // O Tiny v2 espera o valor com vírgula para centavos se enviado como string formatada
-                $conta['valor'] = number_format($amount, 2, ',', '');
+            if ($amount !== null) {
+                $conta['valor'] = number_format($amount, 2, '.', '');
+            }
+
+            if ($discount > 0) {
+                $conta['desconto'] = number_format($discount, 2, '.', '');
             }
 
             Log::info("Baixando conta no Tiny: {$tinyAccountId}", $conta);
@@ -367,6 +380,44 @@ class TinyErpService
     /**
      * Mapeia o método de pagamento interno para o formato do Tiny.
      */
+    /**
+     * Gera uma nova conta no Tiny para uma parcela editada.
+     * Necessário para que o boleto/link de pagamento saia com o valor correto.
+     *
+     * @param Invoice $invoice    Fatura local
+     * @param float   $newAmount  Novo valor
+     * @param string  $newDueDate Novo vencimento
+     * @return array ['tiny_account_id' => string, 'payment_url' => string]
+     */
+    public function updateReceivable(Invoice $invoice, float $newAmount, string $newDueDate): array
+    {
+        Log::info("[TinyErpService::updateReceivable] Gerando nova conta para boleto atualizado.", [
+            'invoice_id' => $invoice->id,
+            'old_tiny_id' => $invoice->tiny_account_id,
+            'new_amount' => $newAmount
+        ]);
+
+        // Salvamos temporariamente os novos valores no objeto para a criação
+        $originalAmount = $invoice->payable_amount ?? $invoice->amount;
+        $originalDate = $invoice->due_date;
+
+        $invoice->payable_amount = $newAmount;
+        $invoice->amount = $newAmount;
+        $invoice->due_date = $newDueDate;
+
+        try {
+            // Criamos a nova conta (o Tiny gerará um novo link de boleto)
+            $tinyData = $this->createReceivable($invoice, $newAmount);
+            
+            return $tinyData;
+        } finally {
+            // Restauramos os valores originais no objeto (o Controller salvará os novos se tudo der certo)
+            $invoice->payable_amount = $originalAmount;
+            $invoice->amount = $originalAmount;
+            $invoice->due_date = $originalDate;
+        }
+    }
+
     protected function mapPaymentMethod(?string $method): string
     {
         $map = [
@@ -379,3 +430,4 @@ class TinyErpService
         return $map[$method] ?? 'Boleto Bancário';
     }
 }
+

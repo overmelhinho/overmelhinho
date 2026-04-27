@@ -75,6 +75,19 @@ export default function TabEndereco() {
                   )}
                 </div>
 
+                <div className="flex items-center gap-2 mb-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                  <input
+                    type="checkbox"
+                    id={`enderecos[${index}].exibir_apenas_cidade`}
+                    checked={endereco.exibir_apenas_cidade || false}
+                    onChange={(e) => setFieldValue(`enderecos[${index}].exibir_apenas_cidade`, e.target.checked)}
+                    className="accent-[#B70F0A] h-4 w-4 rounded border-gray-300"
+                  />
+                  <label htmlFor={`enderecos[${index}].exibir_apenas_cidade`} className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
+                    Apenas exibir cidade e estado
+                  </label>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div>
                     <label className="text-sm font-medium text-gray-600 flex items-center gap-2">

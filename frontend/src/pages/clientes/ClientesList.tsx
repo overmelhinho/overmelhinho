@@ -150,16 +150,27 @@ function hasSeoKeywords(c: ClienteLite) {
 }
 
 function computePendencias(c: ClienteLite) {
-  const missingLogo = !c.logo_url;
-  const missingGaleria = (c.galeria_imagens_count ?? 0) <= 0;
-  const missingSeo = !hasSeoKeywords(c);
+  // Verifica se existe logo (não nulo e não string vazia)
+  const hasLogo = !!c.logo_url && c.logo_url.trim().length > 0;
+  
+  // Verifica galeria (pode vir via count ou array se for completo)
+  const galCount = c.galeria_imagens_count ?? (c as any).galeria_imagens?.length ?? 0;
+  const hasGaleria = galCount > 0;
 
-  const missingMidia =
-    typeof (c as any).portfolio_url !== "undefined"
-      ? !(c as any).portfolio_url
-      : false;
+  // SEO
+  const hasSeo = hasSeoKeywords(c);
 
-  return { missingLogo, missingGaleria, missingSeo, missingMidia };
+  // Mídia (Portfolio/Catálogo ou Vídeo)
+  const hasPortfolio = !!c.portfolio_url && c.portfolio_url.trim().length > 0;
+  const hasVideo = !!c.video && c.video.trim().length > 0;
+  const hasMidia = hasPortfolio || hasVideo;
+
+  return { 
+    missingLogo: !hasLogo, 
+    missingGaleria: !hasGaleria, 
+    missingSeo: !hasSeo, 
+    missingMidia: !hasMidia 
+  };
 }
 
 function clienteRowKey(c: ClienteLite) {
@@ -729,8 +740,8 @@ export default function ClientesList() {
           if (!v) setDrawerOpen(false);
         }}
       >
-        <DialogContent className="sm:max-w-[860px] p-0 overflow-hidden">
-          <div className="p-5 border-b bg-white">
+        <DialogContent className="sm:max-w-[860px] p-0 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="p-5 border-b bg-white shrink-0">
             <DialogHeader>
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 rounded-2xl border bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
@@ -830,7 +841,7 @@ export default function ClientesList() {
           </div>
 
           {selected ? (
-            <div className="p-5 space-y-4 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50 custom-scrollbar">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <InfoCard title="Contato principal" icon={<Phone className="w-4 h-4" />}>
                   {formatContato(selected)}

@@ -18,19 +18,21 @@ class CidadeController extends Controller
             ->unique()
             ->values();
 
-        $operacionais = [
-            'Alto Feliz', 'Arroio do Sal', 'Barão', 'Bento Gonçalves', 'Boa Vista do Sul',
-            'Bom Princípio', 'Campo Bom', 'Canela', 'Carlos Barbosa', 'Caxias do Sul',
-            'Coronel Pilar', 'Farroupilha', 'Feliz', 'Flores da Cunha', 'Garibaldi',
-            'Gramado', 'Lajeado', 'Monte Belo do Sul', 'Nova Prata', 'Nova Roma do Sul',
-            'Novo Hamburgo', 'Pinto Bandeira', 'Salvador do Sul', 'São Marcos',
-            'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
-        ];
-
+        // Query base: buscar cidades que possuem clientes ativos para exibir no site
         $query = Cidade::query()
             ->select(['id', 'nome', 'uf'])
             ->where('uf', 'RS')
-            ->whereIn('nome', $operacionais)
+            ->where(function ($sub) {
+                // 1. Cidades onde os clientes possuem endereço cadastrado
+                $sub->whereHas('enderecos.cliente', function ($c) {
+                    $c->where('exibir_no_site', true);
+                })
+                // 2. OU cidades que o cliente marcou que atende (Expansão Regional)
+                ->orWhereHas('clientesQueAtendem', function ($c) {
+                    $c->where('exibir_no_site', true);
+                });
+            })
+            ->distinct()
             ->orderBy('nome');
 
         // Caso venha ids=1,2,3 (hidratar labels das selecionadas)
@@ -45,17 +47,10 @@ class CidadeController extends Controller
         // Busca por texto (q=...)
         if ($q !== '') {
             $query->where(function ($sub) use ($q) {
-                // Postgres: busca case-insensitive robusta
                 $sub->where('nome', 'ilike', "%{$q}%")
                     ->orWhere('uf', 'ilike', "%{$q}%");
             });
-
-            // Limite para não pesar em digitação rápida
             $query->limit(100);
-        } else {
-            // Sem busca, ainda é OK retornar tudo (497), mas mantemos limite razoável se quiser
-            // Se você quiser sempre listar tudo sem q, comente o limit abaixo.
-            $query->limit(497);
         }
 
         return response()->json([

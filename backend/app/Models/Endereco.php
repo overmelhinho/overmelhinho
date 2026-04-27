@@ -23,6 +23,11 @@ class Endereco extends Model
         'link_maps',
         'link_waze',
         'iframe_maps',
+        'exibir_apenas_cidade',
+    ];
+
+    protected $casts = [
+        'exibir_apenas_cidade' => 'boolean',
     ];
 
     public function cliente()

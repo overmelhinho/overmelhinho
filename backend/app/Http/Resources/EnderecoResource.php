@@ -23,6 +23,7 @@ class EnderecoResource extends JsonResource
             'iframe_maps'  => $this->iframe_maps,
             'latitude'     => $this->latitude ? (float) $this->latitude : null,
             'longitude'    => $this->longitude ? (float) $this->longitude : null,
+            'exibir_apenas_cidade' => (bool) $this->exibir_apenas_cidade,
             'created_at'   => $this->created_at,
             'updated_at'   => $this->updated_at,
         ];

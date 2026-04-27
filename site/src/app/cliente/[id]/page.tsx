@@ -31,7 +31,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
     const city = client.enderecos?.[0]?.cidade || '';
     const segment = client.segmentos?.[0]?.nome || '';
-    const title = `${client.nome_fantasia} em ${city} | ${segment} | O Vermelhinho`;
+    const mainKeyword = client.seo_keywords?.[0] ? ` | ${client.seo_keywords[0]}` : '';
+    const title = `${client.nome_fantasia} em ${city}${mainKeyword} | ${segment} | O Vermelhinho`;
     const description = client.descricao?.substring(0, 160) || `Encontre ${client.nome_fantasia} em ${city}. Confira fotos, contatos, horários e vagas de emprego no guia O Vermelhinho.`;
 
     return {

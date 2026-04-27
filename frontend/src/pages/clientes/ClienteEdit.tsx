@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { Save, RotateCcw, AlertTriangle } from "lucide-react";
 
 import axios from "@/services/api";
 import Skeleton from "@/components/ui/skeleton";
@@ -130,13 +132,13 @@ export default function ClienteEdit() {
       { id: 0, label: "Identificação" },
       { id: 1, label: "Endereço" },
       { id: 2, label: "Contato" },
+      { id: 3, label: "Segmentos" }, // ✅ Agora disponível para todos os tipos
     ];
 
     if (tipoCliente === "pagante") {
       base.push(
-        { id: 3, label: "Cidades" },
-        { id: 4, label: "Redes Sociais" },
-        { id: 5, label: "Segmentos" },
+        { id: 4, label: "Cidades" },
+        { id: 5, label: "Redes Sociais" },
         { id: 6, label: "Benefícios" },
         { id: 7, label: "Horário" },
         { id: 8, label: "Logotipo" },
@@ -218,6 +220,10 @@ export default function ClienteEdit() {
       celular: contato?.celular || "",
       telefone_outro: contato?.telefone_outro || "",
       whatsapp_selected: contato?.whatsapp_selected || "telefone_principal",
+      has_whatsapp_principal: !!contato?.has_whatsapp_principal,
+      has_whatsapp_secundario: !!contato?.has_whatsapp_secundario,
+      has_whatsapp_celular: !!contato?.has_whatsapp_celular,
+      has_whatsapp_outro: !!contato?.has_whatsapp_outro,
       exibir_tel_principal: !!contato?.exibir_tel_principal,
       telefone_principal_hidden_until: contato?.telefone_principal_hidden_until || null,
       exibir_tel_secundario: !!contato?.exibir_tel_secundario,
@@ -260,6 +266,7 @@ export default function ClienteEdit() {
       horario_atendimento: Array.isArray(c?.horario_atendimento) ? c.horario_atendimento : [],
       data_fundacao: c?.data_fundacao ? c.data_fundacao.split("T")[0] : "",
       google_place_id: c?.google_place_id || "",
+      exibir_data_fundacao: c?.exibir_data_fundacao ?? true,
 
       // uploads
       logotipo: c?.logotipo_url || c?.logo_url || c?.logotipo || null,
@@ -298,7 +305,7 @@ export default function ClienteEdit() {
         google_review_id: r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : null),
         profile_photo_url: r.author_photo_url || r.profile_photo_url || ""
       })) : [],
-      exibir_no_site: c?.exibir_no_site !== false,
+      exibir_no_site: c?.exibir_no_site ?? true,
     };
   }, [data]);
 
@@ -392,6 +399,7 @@ export default function ClienteEdit() {
                 telefone: e.telefone || null,
                 link_maps: e.link_maps || null,
                 link_waze: e.link_waze || null,
+                exibir_apenas_cidade: e.exibir_apenas_cidade ?? false,
               })),
 
               contatos: [
@@ -401,6 +409,10 @@ export default function ClienteEdit() {
                   celular: values.celular || null,
                   telefone_outro: values.telefone_outro || null,
                   whatsapp_selected: values.whatsapp_selected || null,
+                  has_whatsapp_principal: (values.has_whatsapp_principal || values.whatsapp_selected === 'telefone_principal') ? true : false,
+                  has_whatsapp_secundario: (values.has_whatsapp_secundario || values.whatsapp_selected === 'telefone_secundario') ? true : false,
+                  has_whatsapp_celular: (values.has_whatsapp_celular || values.whatsapp_selected === 'celular') ? true : false,
+                  has_whatsapp_outro: (values.has_whatsapp_outro || values.whatsapp_selected === 'telefone_outro') ? true : false,
                   exibir_tel_principal: values.exibir_tel_principal ?? false,
                   telefone_principal_hidden_until: values.telefone_principal_hidden_until || null,
                   exibir_tel_secundario: values.exibir_tel_secundario ?? false,
@@ -432,6 +444,7 @@ export default function ClienteEdit() {
 
               data_fundacao: values.data_fundacao || null,
               google_place_id: values.google_place_id || null,
+              exibir_data_fundacao: values.exibir_data_fundacao,
               horario_atendimento: values.horario_atendimento || [],
               reviews: values.reviews || [],
               beneficios: values.beneficios || [],
@@ -557,7 +570,7 @@ export default function ClienteEdit() {
           }
         }}
       >
-        {({ values, setFieldValue }) => (
+        {({ values, setFieldValue, dirty, resetForm }) => (
           <Form
             className="space-y-6"
             onSubmitCapture={(e) => {
@@ -649,6 +662,65 @@ export default function ClienteEdit() {
                 </button>
               )}
             </div>
+
+            {/* Floating Save Bar */}
+            <AnimatePresence>
+              {(dirty || saving) && (
+                <motion.div
+                  initial={{ y: 100, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 100, opacity: 0 }}
+                  className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-2xl"
+                >
+                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-2xl p-4 shadow-2xl flex items-center justify-between gap-6">
+                    <div className="flex items-center gap-4 text-white pl-2">
+                      <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-500">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold">Alterações não salvas</div>
+                        <div className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Você modificou este cliente</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Deseja descartar todas as alterações não salvas?")) {
+                            resetForm();
+                          }
+                        }}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Descartar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-red-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {saving ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            Salvar Agora
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Form>
         )}
       </Formik>

@@ -39,16 +39,19 @@ class ClienteResource extends JsonResource
 
             'palavras_chave' => $this->palavras_chave,
             'exibir_no_site' => (bool) ($this->exibir_no_site ?? true),
+            'exibir_data_fundacao' => (bool) ($this->exibir_data_fundacao ?? true),
             'horario_atendimento' => $this->horario_atendimento,
             'beneficios' => is_string($this->beneficios) ? (json_decode($this->beneficios, true) ?: []) : ($this->beneficios ?: []),
 
             'logotipo_url' => $logoUrl,
-            'banner_url' => $this->banner_url,
+            'logo_url' => $logoUrl, // ✅ Alias para o frontend identificar pendência
 
             'seo_keywords' => $this->seo_keywords ?? [],
             'seo_keywords_source' => $this->seo_keywords_source ?? 'generated',
             'seo_keywords_updated_at' => $this->seo_keywords_updated_at ? (is_string($this->seo_keywords_updated_at) ? $this->seo_keywords_updated_at : $this->seo_keywords_updated_at->toIso8601String()) : null,
 
+            'galeria_imagens_count' => $this->galeria_imagens_count ?? ($this->relationLoaded('galeriaImagens') ? $this->galeriaImagens->count() : 0),
+            
             'quotes_enabled' => $this->relationLoaded('contatos') 
                 ? $this->contatos->whereNotNull('celular')->count() > 0 
                 : false,

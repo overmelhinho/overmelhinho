@@ -12,8 +12,8 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 Schedule::command('leads:process-lost-followup')->dailyAt('10:00');
 
-// Checagem quinzenal do SEO (Google Search Console) - a cada 14 dias
-Schedule::command('seo:check-rankings')->cron('0 2 */14 * *');
+// Checagem semanal do SEO (Google Search Console) - a cada 7 dias
+Schedule::command('seo:check-rankings')->cron('0 2 */7 * *');
 
 // Renovação de Clientes: Gera renovações e tickets no dia 1 de cada mês
 Schedule::command('renewals:generate')->monthlyOn(1, '01:00');

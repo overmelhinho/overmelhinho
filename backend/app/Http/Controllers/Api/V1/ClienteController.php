@@ -28,7 +28,7 @@ class ClienteController extends Controller
         return Cliente::query()
             ->select(['id', 'slug', 'updated_at'])
             ->where(function ($sub) {
-                $sub->whereIn('status_assinatura', ['ativa', 'ativo'])
+                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])
                     ->orWhere('tipo_cliente', 'gratuito');
             })
             ->where('exibir_no_site', true)
@@ -45,7 +45,7 @@ class ClienteController extends Controller
         $query = Cliente::query()
             ->where('exibir_no_site', true)
             ->where(function($sub) {
-                $sub->whereIn('status_assinatura', ['ativa', 'ativo'])
+                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
@@ -234,7 +234,7 @@ class ClienteController extends Controller
                 }
             })
             ->where('exibir_no_site', true)
-            ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo'])->orWhere('tipo_cliente', 'gratuito'))
+            ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])->orWhere('tipo_cliente', 'gratuito'))
             ->when($cityId, function($sq) use ($cityId) {
                 $sq->where(function($sub) use ($cityId) {
                     $sub->whereHas('cidadesAtendidas', fn($c) => $c->where('cidades.id', $cityId))
@@ -313,6 +313,8 @@ class ClienteController extends Controller
                 'audit_differences',
                 'seo_keywords',
                 'observacoes',
+                'portfolio_url',
+                'video',
                 'created_at',
                 'updated_at',
             ]);
@@ -651,6 +653,15 @@ public function historico(Request $request, int $id)
                 if (!Schema::hasColumn('clientes', 'responsavel')) {
                     DB::statement("ALTER TABLE clientes ADD COLUMN responsavel VARCHAR(255) NULL");
                 }
+                if (!Schema::hasColumn('contatos', 'has_whatsapp_principal')) {
+                    DB::statement("ALTER TABLE contatos ADD COLUMN has_whatsapp_principal BOOLEAN DEFAULT FALSE");
+                    DB::statement("ALTER TABLE contatos ADD COLUMN has_whatsapp_secundario BOOLEAN DEFAULT FALSE");
+                    DB::statement("ALTER TABLE contatos ADD COLUMN has_whatsapp_celular BOOLEAN DEFAULT FALSE");
+                    DB::statement("ALTER TABLE contatos ADD COLUMN has_whatsapp_outro BOOLEAN DEFAULT FALSE");
+                }
+                if (!Schema::hasColumn('enderecos', 'exibir_apenas_cidade')) {
+                    DB::statement("ALTER TABLE enderecos ADD COLUMN exibir_apenas_cidade BOOLEAN DEFAULT FALSE");
+                }
             } catch (\Exception $e) {}
 
             $cpfCnpjRaw = (string) ($request->input('cpf_cnpj') ?? $request->input('cnpj') ?? '');
@@ -747,6 +758,7 @@ public function historico(Request $request, int $id)
                 'descricao'             => 'nullable|string',
                 'observacoes'           => 'nullable|string',
                 'exibir_no_site'        => 'nullable|boolean',
+                'exibir_data_fundacao'  => 'nullable|boolean',
                 'possui_publicidade'    => 'nullable|boolean',
 
                 'video'         => 'nullable|string|max:500',
@@ -777,26 +789,28 @@ public function historico(Request $request, int $id)
                 'endereco'                 => 'nullable|array',
                 'endereco.nome_unidade'    => 'nullable|string|max:255',
                 'endereco.telefone'        => 'nullable|string|max:50',
-                'endereco.cep'             => 'required_with:endereco|string',
+                'endereco.cep'             => 'nullable|string',
                 'endereco.estado'          => 'required_with:endereco|string',
                 'endereco.cidade'          => 'required_with:endereco|string',
-                'endereco.bairro'          => 'required_with:endereco|string',
-                'endereco.rua'             => 'required_with:endereco|string',
-                'endereco.numero'          => 'required_with:endereco|string',
+                'endereco.bairro'          => 'nullable|string',
+                'endereco.rua'             => 'nullable|string',
+                'endereco.numero'          => 'nullable|string',
                 'endereco.complemento'     => 'nullable|string',
 
                 'enderecos'                => 'nullable|array',
                 'enderecos.*.nome_unidade' => 'nullable|string|max:255',
                 'enderecos.*.telefone'     => 'nullable|string|max:50',
-                'enderecos.*.cep'          => 'required|string',
-                'enderecos.*.estado'       => 'required|string',
-                'enderecos.*.cidade'       => 'required|string',
-                'enderecos.*.bairro'       => 'required|string',
-                'enderecos.*.rua'          => 'required|string',
-                'enderecos.*.numero'       => 'required|string',
+                'enderecos.*.cep'          => 'nullable|string',
+                'enderecos.*.estado'       => 'required_with:enderecos|string',
+                'enderecos.*.cidade'       => 'required_with:enderecos|string',
+                'enderecos.*.bairro'       => 'nullable|string',
+                'enderecos.*.rua'          => 'nullable|string',
+                'enderecos.*.numero'       => 'nullable|string',
                 'enderecos.*.complemento'  => 'nullable|string',
                 'enderecos.*.link_maps'    => 'nullable|string|max:500',
                 'enderecos.*.link_waze'    => 'nullable|string|max:500',
+                'enderecos.*.exibir_apenas_cidade' => 'nullable|boolean',
+                'endereco.exibir_apenas_cidade'    => 'nullable|boolean',
 
                 'contatos'                      => 'nullable|array',
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
@@ -804,6 +818,10 @@ public function historico(Request $request, int $id)
                 'contatos.*.celular'             => 'nullable|string|max:50',
                 'contatos.*.telefone_outro'      => 'nullable|string|max:50',
                 'contatos.*.whatsapp_selected'   => 'nullable|string|max:50',
+                'contatos.*.has_whatsapp_principal'  => 'nullable|boolean',
+                'contatos.*.has_whatsapp_secundario' => 'nullable|boolean',
+                'contatos.*.has_whatsapp_celular'    => 'nullable|boolean',
+                'contatos.*.has_whatsapp_outro'      => 'nullable|boolean',
                 'contatos.*.exibir_tel_principal'              => 'nullable|boolean',
                 'contatos.*.telefone_principal_hidden_until'    => 'nullable|date',
                 'contatos.*.exibir_tel_secundario'             => 'nullable|boolean',
@@ -857,8 +875,9 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => $validated['registro_profissional'] ?? null,
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
-                'exibir_no_site'        => $validated['exibir_no_site'] ?? true,
-                'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
+                'exibir_no_site'        => $request->boolean('exibir_no_site', true),
+                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', true),
+                'possui_publicidade'    => $request->boolean('possui_publicidade'),
             ];
 
             if (Schema::hasColumn('clientes', 'horario_atendimento')) {
@@ -1040,15 +1059,6 @@ public function historico(Request $request, int $id)
      */
     public function update(Request $request, $id)
     {
-        Log::info('CLIENTE UPDATE - PAYLOAD RECEBIDO', [
-            'cliente_id' => $id,
-            'headers' => [
-                'content_type' => $request->header('Content-Type'),
-                'origin' => $request->header('Origin'),
-                'authorization' => $request->header('Authorization') ? 'present' : 'missing',
-            ],
-            'body' => $request->all(),
-        ]);
 
         try {
             $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas'])
@@ -1073,6 +1083,15 @@ public function historico(Request $request, int $id)
                 }
                 if (!Schema::hasColumn('clientes', 'responsavel')) {
                     DB::statement("ALTER TABLE clientes ADD COLUMN responsavel VARCHAR(255) NULL");
+                }
+                if (!Schema::hasColumn('contatos', 'has_whatsapp_principal')) {
+                    DB::statement("ALTER TABLE contatos ADD COLUMN has_whatsapp_principal BOOLEAN DEFAULT FALSE");
+                    DB::statement("ALTER TABLE contatos ADD COLUMN has_whatsapp_secundario BOOLEAN DEFAULT FALSE");
+                    DB::statement("ALTER TABLE contatos ADD COLUMN has_whatsapp_celular BOOLEAN DEFAULT FALSE");
+                    DB::statement("ALTER TABLE contatos ADD COLUMN has_whatsapp_outro BOOLEAN DEFAULT FALSE");
+                }
+                if (!Schema::hasColumn('enderecos', 'exibir_apenas_cidade')) {
+                    DB::statement("ALTER TABLE enderecos ADD COLUMN exibir_apenas_cidade BOOLEAN DEFAULT FALSE");
                 }
             } catch (\Exception $e) {
                 Log::warning("Auto-healing schema warning: " . $e->getMessage());
@@ -1172,6 +1191,7 @@ public function historico(Request $request, int $id)
                 'descricao'             => 'nullable|string',
                 'observacoes'           => 'nullable|string',
                 'exibir_no_site'        => 'nullable|boolean',
+                'exibir_data_fundacao'  => 'nullable|boolean',
                 'possui_publicidade'    => 'nullable|boolean',
 
                 'video'         => 'nullable|string|max:500',
@@ -1200,26 +1220,28 @@ public function historico(Request $request, int $id)
 
                 'endereco'                 => 'nullable|array',
                 'endereco.nome_unidade'    => 'nullable|string|max:255',
-                'endereco.cep'             => 'required_with:endereco|string',
+                'endereco.cep'             => 'nullable|string',
                 'endereco.estado'          => 'required_with:endereco|string',
                 'endereco.cidade'          => 'required_with:endereco|string',
-                'endereco.bairro'          => 'required_with:endereco|string',
-                'endereco.rua'             => 'required_with:endereco|string',
-                'endereco.numero'          => 'required_with:endereco|string',
+                'endereco.bairro'          => 'nullable|string',
+                'endereco.rua'             => 'nullable|string',
+                'endereco.numero'          => 'nullable|string',
                 'endereco.complemento'     => 'nullable|string',
 
                 'enderecos'                => 'nullable|array',
                 'enderecos.*.nome_unidade' => 'nullable|string|max:255',
                 'enderecos.*.telefone'     => 'nullable|string|max:50',
-                'enderecos.*.cep'          => 'required|string',
-                'enderecos.*.estado'       => 'required|string',
-                'enderecos.*.cidade'       => 'required|string',
-                'enderecos.*.bairro'       => 'required|string',
-                'enderecos.*.rua'          => 'required|string',
-                'enderecos.*.numero'       => 'required|string',
+                'enderecos.*.cep'          => 'nullable|string',
+                'enderecos.*.estado'       => 'required_with:enderecos|string',
+                'enderecos.*.cidade'       => 'required_with:enderecos|string',
+                'enderecos.*.bairro'       => 'nullable|string',
+                'enderecos.*.rua'          => 'nullable|string',
+                'enderecos.*.numero'       => 'nullable|string',
                 'enderecos.*.complemento'  => 'nullable|string',
                 'enderecos.*.link_maps'    => 'nullable|string|max:500',
                 'enderecos.*.link_waze'    => 'nullable|string|max:500',
+                'enderecos.*.exibir_apenas_cidade' => 'nullable|boolean',
+                'endereco.exibir_apenas_cidade'    => 'nullable|boolean',
 
                 'contatos'                      => 'nullable|array',
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
@@ -1227,6 +1249,10 @@ public function historico(Request $request, int $id)
                 'contatos.*.celular'             => 'nullable|string|max:50',
                 'contatos.*.telefone_outro'      => 'nullable|string|max:50',
                 'contatos.*.whatsapp_selected'   => 'nullable|string|max:50',
+                'contatos.*.has_whatsapp_principal'  => 'nullable|boolean',
+                'contatos.*.has_whatsapp_secundario' => 'nullable|boolean',
+                'contatos.*.has_whatsapp_celular'    => 'nullable|boolean',
+                'contatos.*.has_whatsapp_outro'      => 'nullable|boolean',
                 'contatos.*.exibir_tel_principal'              => 'nullable|boolean',
                 'contatos.*.telefone_principal_hidden_until'    => 'nullable|date',
                 'contatos.*.exibir_tel_secundario'             => 'nullable|boolean',
@@ -1283,8 +1309,9 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => $validated['registro_profissional'] ?? null,
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
-                'exibir_no_site'        => array_key_exists('exibir_no_site', $validated) ? $validated['exibir_no_site'] : true,
-                'possui_publicidade'    => $validated['possui_publicidade'] ?? null,
+                'exibir_no_site'        => $request->boolean('exibir_no_site', $cliente->exibir_no_site ?? true),
+                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', $cliente->exibir_data_fundacao ?? true),
+                'possui_publicidade'    => $request->boolean('possui_publicidade', $cliente->possui_publicidade ?? false),
                 'audit_status'          => $validated['audit_status'] ?? $cliente->audit_status,
                 'audit_differences'     => $validated['audit_differences'] ?? $cliente->audit_differences,
                 'contact_preference'    => $validated['contact_preference'] ?? $cliente->contact_preference,
@@ -1347,6 +1374,13 @@ public function historico(Request $request, int $id)
                 $clienteData['beneficios'] = $request->input('beneficios');
             }
 
+            Log::info('CLIENTE UPDATE - DADOS PARA SALVAR', [
+                'cliente_id' => $id,
+                'exibir_no_site' => $clienteData['exibir_no_site'],
+                'exibir_data_fundacao' => $clienteData['exibir_data_fundacao'],
+                'payload_final' => $clienteData
+            ]);
+
             $cliente->update($clienteData);
 
 
@@ -1376,6 +1410,10 @@ public function historico(Request $request, int $id)
             }
 
             // contato: atualiza o primeiro, senão cria
+            \Illuminate\Support\Facades\Log::info('DEBUG_CONTATOS_UPDATE', [
+                'req_contatos' => $request->input('contatos'),
+                'val_contatos' => $validated['contatos'] ?? null,
+            ]);
             if (!empty($validated['contatos']) && is_array($validated['contatos'])) {
                 $c0 = $validated['contatos'][0] ?? null;
                 if (is_array($c0)) {
@@ -2181,6 +2219,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         $cidade = $request->input('cidade');
         $tipo = $request->input('tipo');
         $visibilidade = $request->input('visibilidade');
+        $segmentoId = $request->input('segmento_id');
 
         $query = Cliente::query()
             ->with(['enderecos', 'contatos']);
@@ -2211,6 +2250,12 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             $query->where('tipo_cliente', $tipo);
         }
 
+        if ($segmentoId) {
+            $query->whereHas('segmentos', function($sq) use ($segmentoId) {
+                $sq->where('segmentos.id', $segmentoId);
+            });
+        }
+
         if ($visibilidade === 'visible') {
             $query->where('exibir_no_site', true);
         } elseif ($visibilidade === 'hidden') {
@@ -2237,6 +2282,26 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             })
             ->when($request->input('date_end'), function($q, $end) {
                 return $q->whereDate('created_at', '<=', $end);
+            })
+            ->when($request->input('segmento_id'), function($q, $sid) {
+                return $q->whereHas('cliente', function($sq) use ($sid) {
+                    $sq->whereHas('segmentos', function($ssq) use ($sid) {
+                        $ssq->where('segmentos.id', $sid);
+                    });
+                });
+            })
+            ->when($request->input('result'), function($q, $res) {
+                if ($res === 'corrected') {
+                    // Tem alguma chave que não seja last_audit_at ou updated_at
+                    return $q->whereNotNull('field_changes')
+                             ->whereRaw("(SELECT count(*) FROM jsonb_object_keys(field_changes::jsonb) k WHERE k NOT IN ('last_audit_at', 'updated_at')) > 0");
+                } elseif ($res === 'kept') {
+                    // Não tem chaves relevantes
+                    return $q->where(function($sq) {
+                        $sq->whereNull('field_changes')
+                           ->orWhereRaw("(SELECT count(*) FROM jsonb_object_keys(field_changes::jsonb) k WHERE k NOT IN ('last_audit_at', 'updated_at')) = 0");
+                    });
+                }
             })
             ->when($request->input('q'), function($q, $term) {
                 return $q->whereHas('cliente', function($sq) use ($term) {
@@ -2286,6 +2351,45 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             : 0;
 
         return response()->json($stats);
+    }
+
+    /**
+     * ✅ Visão Geral por Cidades
+     */
+    public function auditCityStats()
+    {
+        // Pega todas as cidades que possuem clientes vinculados (via enderecos ou cliente_cidade)
+        $cities = \App\Models\Cidade::select('id', 'nome')->get();
+
+        $data = $cities->map(function($city) {
+            $total = \App\Models\Cliente::whereHas('enderecos', function($q) use ($city) {
+                $q->where('cidade', 'ilike', "%{$city->nome}%");
+            })->orWhereHas('cidadesAtendidas', function($q) use ($city) {
+                $q->where('cidades.id', $city->id);
+            })->count();
+
+            if ($total === 0) return null;
+
+            $auditados = \App\Models\Cliente::whereNotNull('last_audit_at')
+                ->where(function($sub) use ($city) {
+                    $sub->whereHas('enderecos', function($q) use ($city) {
+                        $q->where('cidade', 'ilike', "%{$city->nome}%");
+                    })->orWhereHas('cidadesAtendidas', function($q) use ($city) {
+                        $q->where('cidades.id', $city->id);
+                    });
+                })->count();
+
+            return [
+                'id' => $city->id,
+                'nome' => $city->nome,
+                'total' => $total,
+                'auditados' => $auditados,
+                'pendentes' => $total - $auditados,
+                'percentual' => round(($auditados / $total) * 100, 1)
+            ];
+        })->filter()->values();
+
+        return response()->json($data);
     }
 
     public function auditUsers()
@@ -2393,5 +2497,35 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             Log::error("ERRO_AO_DELETAR_CLIENTE", ['id' => $id, 'error' => $e->getMessage()]);
             return response()->json(['message' => 'Erro ao excluir cliente. Verifique se existem vínculos que impedem a exclusão.'], 500);
         }
+    }
+
+    /**
+     * ✅ Atualiza os slugs de todos os clientes que estão vazios
+     */
+    /**
+     * ✅ Atualiza os slugs de todos os clientes que estão vazios (Bypassing Audit)
+     */
+    /**
+     * ✅ Atualiza os slugs de todos os clientes que estão vazios (Bypassing Audit)
+     */
+    /**
+     * ✅ Atualiza os slugs de todos os clientes que estão vazios
+     */
+    public function bulkUpdateSlugs()
+    {
+        $clientes = Cliente::whereNull('slug')->orWhere('slug', '')->get();
+        $count = 0;
+
+        foreach ($clientes as $cliente) {
+            if (!empty($cliente->nome_fantasia)) {
+                $cliente->save();
+                $count++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Slugs de {$count} clientes foram atualizados com sucesso."
+        ]);
     }
 }

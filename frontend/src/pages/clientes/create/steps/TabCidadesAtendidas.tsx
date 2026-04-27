@@ -262,7 +262,7 @@ export default function TabCidadesAtendidas() {
               title="Seleciona todas as cidades do resultado atual"
             >
               <CheckCircle2 className="w-4 h-4" />
-              Selecionar resultados
+              Selecionar Todas Cidades
             </button>
 
             <button
@@ -382,7 +382,7 @@ export default function TabCidadesAtendidas() {
         />
 
         <div className="text-xs text-gray-500">
-          Você pode selecionar quantas cidades quiser. Use “Selecionar resultados” para acelerar.
+          Você pode selecionar quantas cidades quiser. Use “Selecionar Todas Cidades” para acelerar.
         </div>
 
         {isErrorBusca ? (

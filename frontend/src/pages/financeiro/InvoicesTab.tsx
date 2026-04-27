@@ -24,6 +24,9 @@ import {
     User,
     ChevronDown,
     RefreshCw,
+    Pencil,
+    Landmark,
+    Info,
 } from "lucide-react";
 import { format, isBefore, startOfDay, subDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -82,6 +85,8 @@ interface Invoice {
     action_date?: string;
     tiny_account_id?: string | null;
     autorizacao_numero?: string | null;
+    parcel_number?: number;
+    total_parcels?: number;
 }
 
 export default function InvoicesTab() {
@@ -101,6 +106,29 @@ export default function InvoicesTab() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isResending, setIsResending] = useState(false);
+
+    // Edit Modal
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editAmount, setEditAmount] = useState("");
+    const [editDueDate, setEditDueDate] = useState("");
+    const [editJustification, setEditJustification] = useState("");
+    const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+    const [editDifferenceAction, setEditDifferenceAction] = useState<"discount" | "redistribute" | "create_extra">("discount");
+    const [editExtraDueDate, setEditExtraDueDate] = useState("");
+
+    // Tiny Errors Modal
+    const [tinyErrorsOpen, setTinyErrorsOpen] = useState(false);
+    const [tinyErrorsList, setTinyErrorsList] = useState<string[]>([]);
+
+    // Settle Modal
+    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [settleGroupId, setSettleGroupId] = useState("");
+    const [settleGroupParcels, setSettleGroupParcels] = useState<Invoice[]>([]);
+    const [settleDiscount, setSettleDiscount] = useState("");
+    const [settleDiscountType, setSettleDiscountType] = useState<"fixed" | "percent">("fixed");
+    const [settlePaymentMethod, setSettlePaymentMethod] = useState("pix");
+    const [settleJustification, setSettleJustification] = useState("");
+    const [isSettleSubmitting, setIsSettleSubmitting] = useState(false);
 
     const handleSync = async () => {
         setIsSyncing(true);
@@ -357,7 +385,7 @@ export default function InvoicesTab() {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                                Autorização
+                                Autorização / Parcela
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                 Cliente
@@ -404,8 +432,17 @@ export default function InvoicesTab() {
 
                                 return (
                                     <tr key={invoice.id} className="hover:bg-gray-50">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-black text-gray-900">
-                                            {invoice.autorizacao_numero ? `#${invoice.autorizacao_numero}` : "-"}
+                                        <td className="whitespace-nowrap px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-black text-gray-900">
+                                                    {invoice.autorizacao_numero ? `#${invoice.autorizacao_numero}` : "-"}
+                                                </span>
+                                                {invoice.parcel_number && invoice.total_parcels && (
+                                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
+                                                        Parcela {invoice.parcel_number}/{invoice.total_parcels}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <Popover>
@@ -548,6 +585,40 @@ export default function InvoicesTab() {
                                                         <button
                                                             onClick={() => {
                                                                 setSelectedInvoice(invoice);
+                                                                setEditAmount(String(invoice.payable_amount ?? invoice.amount));
+                                                                setEditDueDate(invoice.due_date?.slice(0, 10) ?? "");
+                                                                setEditJustification("");
+                                                                setIsEditModalOpen(true);
+                                                            }}
+                                                            className="p-2 text-blue-500 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Editar Valor / Vencimento"
+                                                        >
+                                                            <Pencil size={15} />
+                                                        </button>
+
+                                                        {invoice.group_id && invoice.total_parcels && invoice.total_parcels > 1 && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const groupParcels = (invoices ?? []).filter(
+                                                                        i => i.group_id === invoice.group_id && i.status === 'pending'
+                                                                    );
+                                                                    setSettleGroupId(invoice.group_id!);
+                                                                    setSettleGroupParcels(groupParcels);
+                                                                    setSettleDiscount("");
+                                                                    setSettleJustification("");
+                                                                    setSettlePaymentMethod("pix");
+                                                                    setIsSettleModalOpen(true);
+                                                                }}
+                                                                className="p-2 text-purple-500 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors"
+                                                                title="Quitar Parcelas Restantes"
+                                                            >
+                                                                <Landmark size={15} />
+                                                            </button>
+                                                        )}
+
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedInvoice(invoice);
                                                                 setActionType('paid');
                                                                 setJustification("");
                                                                 setIsActionModalOpen(true);
@@ -662,6 +733,343 @@ export default function InvoicesTab() {
                         >
                             {isSubmitting ? "Processando..." : "Confirmar Ação"}
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Edit Invoice Modal ───────────────────────── */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="sm:max-w-lg rounded-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black flex items-center gap-2">
+                            <Pencil className="text-blue-600" size={20} /> Editar Fatura
+                        </DialogTitle>
+                        <DialogDescription className="font-medium">
+                            Altere o valor ou a data de vencimento desta parcela.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {/* Campos principais */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Novo Valor (R$)</label>
+                                <Input
+                                    type="number" min="0" step="0.01"
+                                    value={editAmount}
+                                    onChange={e => setEditAmount(e.target.value)}
+                                    className="rounded-xl border-gray-200 font-bold text-gray-900"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Novo Vencimento</label>
+                                <Input
+                                    type="date" value={editDueDate}
+                                    onChange={e => setEditDueDate(e.target.value)}
+                                    className="rounded-xl border-gray-200 font-bold text-gray-900"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Painel da diferença — aparece quando o valor muda */}
+                        {(() => {
+                            const originalAmount = selectedInvoice ? Number(selectedInvoice.payable_amount ?? selectedInvoice.amount) : 0;
+                            const newAmt = Number(editAmount);
+                            const diff = Math.round((originalAmount - newAmt) * 100) / 100;
+                            if (!editAmount || Math.abs(diff) < 0.01) return null;
+
+                            const hasSiblings = selectedInvoice?.group_id && (selectedInvoice.total_parcels ?? 1) > 1;
+
+                            return (
+                                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
+                                            <Info size={14} /> Diferença detectada
+                                        </p>
+                                        <span className={`text-sm font-black px-3 py-1 rounded-full ${
+                                            diff > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        }`}>
+                                            {diff > 0 ? '-' : '+'}R$ {Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+
+                                    <p className="text-xs text-blue-700 font-medium">O que fazer com esta diferença?</p>
+
+                                    <div className="space-y-2">
+                                        <label className="flex items-start gap-3 p-2.5 rounded-xl border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors">
+                                            <input type="radio" name="diff_action" value="discount"
+                                                checked={editDifferenceAction === 'discount'}
+                                                onChange={() => setEditDifferenceAction('discount')}
+                                                className="mt-0.5 accent-blue-600"
+                                            />
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-800">💸 Desconto / Remissão</p>
+                                                <p className="text-xs text-gray-500">A diferença é descartada. O total do grupo diminui.</p>
+                                            </div>
+                                        </label>
+
+                                        {hasSiblings && (
+                                            <label className="flex items-start gap-3 p-2.5 rounded-xl border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors">
+                                                <input type="radio" name="diff_action" value="redistribute"
+                                                    checked={editDifferenceAction === 'redistribute'}
+                                                    onChange={() => setEditDifferenceAction('redistribute')}
+                                                    className="mt-0.5 accent-blue-600"
+                                                />
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-800">📊 Redistribuir nas parcelas seguintes</p>
+                                                    <p className="text-xs text-gray-500">A diferença é distribuída igualmente entre as outras parcelas pendentes. O total do grupo é preservado.</p>
+                                                </div>
+                                            </label>
+                                        )}
+
+                                        {diff > 0 && (
+                                            <label className="flex items-start gap-3 p-2.5 rounded-xl border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors">
+                                                <input type="radio" name="diff_action" value="create_extra"
+                                                    checked={editDifferenceAction === 'create_extra'}
+                                                    onChange={() => setEditDifferenceAction('create_extra')}
+                                                    className="mt-0.5 accent-blue-600"
+                                                />
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-800">📄 Criar parcela extra</p>
+                                                    <p className="text-xs text-gray-500">Uma nova parcela de R$ {Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} será criada para o cliente pagar depois.</p>
+                                                </div>
+                                            </label>
+                                        )}
+                                    </div>
+
+                                    {editDifferenceAction === 'create_extra' && diff > 0 && (
+                                        <div className="space-y-1 pt-1">
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Vencimento da Parcela Extra</label>
+                                            <Input
+                                                type="date" value={editExtraDueDate}
+                                                onChange={e => setEditExtraDueDate(e.target.value)}
+                                                className="rounded-xl border-blue-200 font-bold"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Motivo da Alteração (Obrigatório)</label>
+                            <Textarea
+                                placeholder="Ex: Negociação comercial, correção de valor..."
+                                value={editJustification}
+                                onChange={e => setEditJustification(e.target.value)}
+                                className="min-h-[80px] rounded-2xl border-gray-200"
+                            />
+                        </div>
+
+                        {/* Tiny ERP transparency panel */}
+                        <div className={`border rounded-2xl p-4 space-y-2 ${
+                            selectedInvoice?.tiny_account_id ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                            <p className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${
+                                selectedInvoice?.tiny_account_id ? 'text-orange-700' : 'text-gray-500'
+                            }`}>
+                                <Info size={14} /> {selectedInvoice?.tiny_account_id ? 'O que será feito no Tiny ERP' : 'Sem sincronização com Tiny ERP'}
+                            </p>
+                            {selectedInvoice?.tiny_account_id ? (
+                                <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
+                                    <li>Conta <strong>#{selectedInvoice.tiny_account_id}</strong> será atualizada com o novo valor e vencimento</li>
+                                    {editDifferenceAction === 'redistribute' && <li>Contas das parcelas seguintes também serão atualizadas no Tiny</li>}
+                                    {editDifferenceAction === 'create_extra' && <li>Uma nova conta a receber será criada no Tiny para a parcela extra</li>}
+                                    {editDifferenceAction === 'discount' && <li>Nenhuma outra conta será afetada no Tiny</li>}
+                                </ul>
+                            ) : (
+                                <p className="text-xs font-bold text-gray-500">Esta fatura não está no Tiny ERP. Apenas o sistema local será alterado.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:justify-end">
+                        <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
+                        <Button
+                            disabled={!editAmount || !editDueDate || editJustification.length < 5 ||
+                                (editDifferenceAction === 'create_extra' && !editExtraDueDate) ||
+                                isEditSubmitting
+                            }
+                            className="rounded-xl font-black px-8 bg-blue-600 hover:bg-blue-700"
+                            onClick={async () => {
+                                if (!selectedInvoice) return;
+                                setIsEditSubmitting(true);
+                                try {
+                                    const res = await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/edit`, {
+                                        amount: Number(editAmount),
+                                        due_date: editDueDate,
+                                        justification: editJustification,
+                                        difference_action: editDifferenceAction,
+                                        extra_due_date: editDifferenceAction === 'create_extra' ? editExtraDueDate : undefined,
+                                    });
+                                    if (res.data.tiny_errors?.length > 0) {
+                                        toast.success(res.data.message);
+                                        setTinyErrorsList(res.data.tiny_errors);
+                                        setTinyErrorsOpen(true);
+                                    } else {
+                                        toast.success(res.data.message);
+                                    }
+                                    refetch();
+                                    setIsEditModalOpen(false);
+                                } catch (error: any) {
+                                    const msg = error?.response?.data?.message ?? "Erro ao editar fatura.";
+                                    toast.error(msg);
+                                } finally {
+                                    setIsEditSubmitting(false);
+                                }
+                            }}
+                        >
+                            {isEditSubmitting ? "Salvando..." : "Salvar Alterações"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Settle Group Modal ───────────────────────── */}
+            <Dialog open={isSettleModalOpen} onOpenChange={setIsSettleModalOpen}>
+                <DialogContent className="sm:max-w-lg rounded-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black flex items-center gap-2">
+                            <Landmark className="text-purple-600" size={20} /> Quitação Antecipada
+                        </DialogTitle>
+                        <DialogDescription className="font-medium">
+                            Quitar todas as parcelas pendentes deste grupo de uma vez.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {/* Parcelas envolvidas */}
+                        <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Parcelas Pendentes a Quitar</p>
+                            {settleGroupParcels.map(p => (
+                                <div key={p.id} className="flex justify-between text-sm">
+                                    <span className="text-gray-600 font-medium">Parcela {p.parcel_number}/{p.total_parcels} — Venc. {format(new Date(p.due_date + 'T12:00:00'), 'dd/MM/yyyy')}</span>
+                                    <span className="font-bold text-gray-900">R$ {Number(p.payable_amount ?? p.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            ))}
+                            <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-gray-900">
+                                <span>Total</span>
+                                <span>R$ {settleGroupParcels.reduce((a, p) => a + Number(p.payable_amount ?? p.amount), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Desconto</label>
+                                <Input
+                                    type="number" min="0" step="0.01"
+                                    placeholder="0"
+                                    value={settleDiscount}
+                                    onChange={e => setSettleDiscount(e.target.value)}
+                                    className="rounded-xl border-gray-200"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Tipo</label>
+                                <Select value={settleDiscountType} onValueChange={(v: any) => setSettleDiscountType(v)}>
+                                    <SelectTrigger className="rounded-xl border-gray-200 h-10 text-sm font-bold"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="fixed">R$ Fixo</SelectItem>
+                                        <SelectItem value="percent">% Percentual</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Forma de Pagamento</label>
+                            <Select value={settlePaymentMethod} onValueChange={setSettlePaymentMethod}>
+                                <SelectTrigger className="rounded-xl border-gray-200 h-10 text-sm font-bold"><SelectValue /></SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="pix">PIX</SelectItem>
+                                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                                    <SelectItem value="cartao">Cartão</SelectItem>
+                                    <SelectItem value="boleto">Boleto</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Motivo / Observação (Obrigatório)</label>
+                            <Textarea
+                                placeholder="Ex: Cliente quitou antecipadamente com desconto de 10%..."
+                                value={settleJustification}
+                                onChange={e => setSettleJustification(e.target.value)}
+                                className="min-h-[80px] rounded-2xl border-gray-200"
+                            />
+                        </div>
+
+                        {/* Tiny ERP transparency panel */}
+                        <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 space-y-2">
+                            <p className="text-xs font-black text-purple-700 uppercase tracking-widest flex items-center gap-2">
+                                <Info size={14} /> O que será feito no Tiny ERP
+                            </p>
+                            <ul className="text-sm text-purple-900 space-y-1 list-disc list-inside">
+                                <li><strong>{settleGroupParcels.filter(p => p.tiny_account_id).length}</strong> conta(s) a receber será(ão) baixada(s) no Tiny</li>
+                                {settleGroupParcels.filter(p => !p.tiny_account_id).length > 0 && (
+                                    <li className="text-amber-700">{settleGroupParcels.filter(p => !p.tiny_account_id).length} parcela(s) sem Tiny ID — serão quitadas apenas localmente</li>
+                                )}
+                                <li>Valor final após desconto: <strong>R$ {Math.max(0, settleGroupParcels.reduce((a, p) => a + Number(p.payable_amount ?? p.amount), 0) - (settleDiscount ? (settleDiscountType === 'percent' ? (settleGroupParcels.reduce((a, p) => a + Number(p.payable_amount ?? p.amount), 0) * Number(settleDiscount) / 100) : Number(settleDiscount)) : 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:justify-end">
+                        <Button variant="secondary" onClick={() => setIsSettleModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
+                        <Button
+                            disabled={settleJustification.length < 5 || isSettleSubmitting}
+                            className="rounded-xl font-black px-8 bg-purple-600 hover:bg-purple-700"
+                            onClick={async () => {
+                                setIsSettleSubmitting(true);
+                                try {
+                                    const res = await axios.post(`/v1/financial/invoices/settle-group`, {
+                                        group_id: settleGroupId,
+                                        discount_value: settleDiscount ? Number(settleDiscount) : undefined,
+                                        discount_type: settleDiscountType,
+                                        payment_method: settlePaymentMethod,
+                                        justification: settleJustification,
+                                    });
+                                    if (res.data.tiny_errors?.length > 0) {
+                                        toast.success(res.data.message + " (com erros no Tiny — veja o log)");
+                                    } else {
+                                        toast.success(res.data.message);
+                                    }
+                                    refetch();
+                                    setIsSettleModalOpen(false);
+                                } catch (error: any) {
+                                    const msg = error?.response?.data?.message ?? "Erro ao quitar parcelas.";
+                                    toast.error(msg);
+                                } finally {
+                                    setIsSettleSubmitting(false);
+                                }
+                            }}
+                        >
+                            {isSettleSubmitting ? "Processando..." : "Confirmar Quitação"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Tiny ERP Errors Modal ───────────────────── */}
+            <Dialog open={tinyErrorsOpen} onOpenChange={setTinyErrorsOpen}>
+                <DialogContent className="sm:max-w-md rounded-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black flex items-center gap-2 text-orange-700">
+                            <Info size={20} /> Erros de Sincronização com o Tiny
+                        </DialogTitle>
+                        <DialogDescription>
+                            O sistema local foi atualizado com sucesso, mas houve falhas ao sincronizar com o Tiny ERP. Verifique os detalhes abaixo e tente novamente pelo botão “Reenviar ao Tiny” se necessário.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 py-2">
+                        {tinyErrorsList.map((err, idx) => (
+                            <div key={idx} className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                                <p className="text-sm text-red-800 font-medium">{err}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setTinyErrorsOpen(false)} className="rounded-xl font-bold w-full">Entendido</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

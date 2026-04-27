@@ -460,9 +460,22 @@ export default function TabIdentificacao() {
           />
         </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-[#B70F0A]" /> Data de Fundação
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-600 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-[#B70F0A]" /> Data de Fundação
+            </span>
+
+            {/* ✅ Toggle Exibir no Site */}
+            <label className="flex items-center gap-2 text-[10px] uppercase font-bold text-gray-500 cursor-pointer select-none hover:text-[#B70F0A] transition-colors">
+              <input
+                type="checkbox"
+                checked={values.exibir_data_fundacao !== false}
+                onChange={(e) => setFieldValue("exibir_data_fundacao", e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-gray-300 text-[#B70F0A] focus:ring-[#B70F0A]"
+              />
+              Exibir no site
+            </label>
           </label>
           <div className="flex gap-2">
             <input

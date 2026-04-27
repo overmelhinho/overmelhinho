@@ -58,7 +58,7 @@ class AuditLogger
 
 
         $payload = [
-            'actor_user_id' => (int) $actorId,
+            'actor_user_id' => $actorId ? (int) $actorId : null,
             'action' => $action,
             'entity_type' => $entityType,
             'entity_id' => $entityId,

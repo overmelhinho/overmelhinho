@@ -24,10 +24,10 @@ export default function TabContato() {
   const { values, setFieldValue, handleChange } = useFormikContext<any>();
 
   const phoneFields = [
-    { id: 'telefone_principal', label: 'Telefone Principal', showExibir: 'exibir_tel_principal', hasPrincipalHide: true },
-    { id: 'telefone_secundario', label: 'Telefone Secundário', showExibir: 'exibir_tel_secundario', hasPrincipalHide: false },
-    { id: 'celular', label: 'Celular', showExibir: 'exibir_celular', hasPrincipalHide: false },
-    { id: 'telefone_outro', label: 'Outro Telefone / 0800', showExibir: 'exibir_tel_outro', hasPrincipalHide: false, freeText: true },
+    { id: 'telefone_principal', label: 'Telefone Principal', showExibir: 'exibir_tel_principal', hasWhatsApp: 'has_whatsapp_principal', hasPrincipalHide: true },
+    { id: 'telefone_secundario', label: 'Telefone Secundário', showExibir: 'exibir_tel_secundario', hasWhatsApp: 'has_whatsapp_secundario', hasPrincipalHide: false },
+    { id: 'celular', label: 'Celular', showExibir: 'exibir_celular', hasWhatsApp: 'has_whatsapp_celular', hasPrincipalHide: false },
+    { id: 'telefone_outro', label: 'Outro Telefone / 0800', showExibir: 'exibir_tel_outro', hasWhatsApp: 'has_whatsapp_outro', hasPrincipalHide: false, freeText: true },
   ];
 
   const handlePhoneChange = (name: string, value: string) => {
@@ -81,6 +81,26 @@ export default function TabContato() {
                 {values.whatsapp_selected === field.id && <CheckCircle2 className="w-3 h-3 text-[#B70F0A]" />}
               </label>
             </div>
+
+            {/* Nova opção: Possui WhatsApp */}
+            <label 
+              className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider select-none px-2 py-1 rounded-md border w-fit transition-colors ${
+                !values[field.id] 
+                  ? 'text-gray-400 bg-gray-50 border-gray-100 cursor-not-allowed opacity-60' 
+                  : 'text-green-600 bg-green-50/50 border-green-100 cursor-pointer'
+              }`}
+            >
+              <input
+                type="checkbox"
+                disabled={!values[field.id]}
+                checked={!!values[field.id] && (values[field.hasWhatsApp] || values.whatsapp_selected === field.id)}
+                onChange={(e) => {
+                  setFieldValue(field.hasWhatsApp, e.target.checked);
+                }}
+                className={`h-3 w-3 rounded border-gray-300 ${!values[field.id] ? 'cursor-not-allowed grayscale' : 'accent-green-600'}`}
+              />
+              Possui WhatsApp
+            </label>
 
             {field.freeText ? (
               <input

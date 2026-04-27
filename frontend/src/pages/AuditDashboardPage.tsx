@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -20,7 +20,15 @@ import {
     X,
     Eye,
     EyeOff,
-    Building2
+    Building2,
+    Tag,
+    Check,
+    ChevronsUpDown,
+    HelpCircle,
+    Info,
+    Globe,
+    Cpu,
+    Target
 } from 'lucide-react';
 import api from '@/services/api';
 import { format } from 'date-fns';
@@ -28,14 +36,24 @@ import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
 import { ExpressCalendar } from '@/components/ui/ExpressCalendar';
 
 const AuditDashboardPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+    const [segmentOpen, setSegmentOpen] = useState(false);
+    const [showHowItWorks, setShowHowItWorks] = useState(false);
 
     // Filtros persistentes na URL
-    const tab = (searchParams.get('tab') as 'queue' | 'history') || 'queue';
+    const tab = (searchParams.get('tab') as 'queue' | 'history' | 'cities') || 'queue';
     const page = parseInt(searchParams.get('page') || '1');
     const filterCity = searchParams.get('cidade') || '';
     const filterType = searchParams.get('tipo') || '';
@@ -43,6 +61,8 @@ const AuditDashboardPage: React.FC = () => {
     const filterDateStart = searchParams.get('date_start') || '';
     const filterDateEnd = searchParams.get('date_end') || '';
     const filterVisibilidade = searchParams.get('visibilidade') || '';
+    const filterSegmento = searchParams.get('segmento_id') || '';
+    const filterResult = searchParams.get('result') || ''; // 'all' | 'corrected' | 'kept'
     const searchTerm = searchParams.get('q') || '';
 
     const updateFilter = (params: Record<string, string | number | null>) => {
@@ -52,24 +72,43 @@ const AuditDashboardPage: React.FC = () => {
             else newParams.set(key, String(val));
         });
 
-        // Se mudou tab ou filtro, volta pra página 1 (a menos que já estejamos definindo a página)
-        if (!params.page && (params.tab || params.cidade || params.tipo || params.q)) {
+        // Se mudou tab ou filtro, volta pra página 1
+        if (!params.page && (params.tab || params.cidade || params.tipo || params.q || params.segmento_id || params.result)) {
             newParams.set('page', '1');
         }
         setSearchParams(newParams);
     };
 
     const clearFilters = () => {
-        setSearchParams({ tab }); // Mantém apenas a tab
+        setSearchParams({ tab });
     };
 
-    const hasFilters = filterCity || filterType || searchTerm || filterUser || filterDateStart || filterDateEnd || filterVisibilidade;
+    const hasFilters = filterCity || filterType || searchTerm || filterUser || filterDateStart || filterDateEnd || filterVisibilidade || filterSegmento || filterResult;
 
     // 1. Busca Cidades para o Filtro
     const { data: cities } = useQuery({
         queryKey: ['cidades-audit'],
         queryFn: async () => {
             const response = await api.get('/v1/cidades');
+            return response.data.data;
+        }
+    });
+
+    // 1.2. Busca Métricas por Cidade
+    const { data: cityStats, isLoading: loadingCityStats } = useQuery({
+        queryKey: ['audit-city-stats'],
+        queryFn: async () => {
+            const response = await api.get('/v1/audit/city-stats');
+            return response.data;
+        },
+        enabled: tab === 'cities'
+    });
+
+    // 1.5. Busca Segmentos para o Filtro
+    const { data: segments } = useQuery({
+        queryKey: ['segmentos-audit'],
+        queryFn: async () => {
+            const response = await api.get('/v1/segmentos');
             return response.data.data;
         }
     });
@@ -85,7 +124,7 @@ const AuditDashboardPage: React.FC = () => {
 
     // 2. Busca Fila de Auditoria (Pending)
     const { data: queueData, isLoading: loadingQueue } = useQuery({
-        queryKey: ['audit-queue', page, filterCity, filterType, filterVisibilidade, searchTerm],
+        queryKey: ['audit-queue', page, filterCity, filterType, filterVisibilidade, filterSegmento, searchTerm],
         queryFn: async () => {
             const response = await api.get('/v1/audit/queue', {
                 params: {
@@ -93,6 +132,7 @@ const AuditDashboardPage: React.FC = () => {
                     cidade: filterCity,
                     tipo: filterType,
                     visibilidade: filterVisibilidade,
+                    segmento_id: filterSegmento,
                     q: searchTerm,
                     status: 'pending'
                 }
@@ -104,7 +144,7 @@ const AuditDashboardPage: React.FC = () => {
 
     // 3. Busca Histórico (Audit Logs)
     const { data: historyData, isLoading: loadingHistory } = useQuery({
-        queryKey: ['audit-history', page, filterUser, searchTerm],
+        queryKey: ['audit-history', page, filterUser, filterSegmento, filterResult, searchTerm],
         queryFn: async () => {
             const response = await api.get('/v1/audit/history', {
                 params: {
@@ -112,6 +152,8 @@ const AuditDashboardPage: React.FC = () => {
                     user_id: filterUser,
                     date_start: filterDateStart,
                     date_end: filterDateEnd,
+                    segmento_id: filterSegmento,
+                    result: filterResult, // Novo filtro
                     q: searchTerm
                 }
             });
@@ -150,9 +192,20 @@ const AuditDashboardPage: React.FC = () => {
                         </div>
                         <span className="text-xs font-bold uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded text-[#B70F0A]">Governance v2.0</span>
                     </motion.div>
-                    <h1 className="text-4xl md:text-5xl font-serif text-slate-800 tracking-tight">
-                        Central de <span className="text-[#B70F0A]">Conferências</span>
-                    </h1>
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-4xl md:text-5xl font-serif text-slate-800 tracking-tight">
+                            Central de <span className="text-[#B70F0A]">Conferências</span>
+                        </h1>
+                        <motion.button 
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowHowItWorks(true)}
+                            className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-[#B70F0A] hover:text-white text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all mt-2"
+                        >
+                            <HelpCircle className="w-4 h-4" />
+                            Como funciona?
+                        </motion.button>
+                    </div>
                     <p className="text-slate-500 max-w-lg leading-relaxed">
                         Sistema automatizado de integridade de dados via IA.
                         Verificamos a internet para manter o <span className="font-bold text-slate-700">O Vermelhinho</span> sempre preciso.
@@ -210,10 +263,10 @@ const AuditDashboardPage: React.FC = () => {
             </div>
 
             {/* Navigation Tabs */}
-            <nav className="flex items-center gap-8 px-2 border-b border-gray-50 bg-white/50 backdrop-blur-sm rounded-t-3xl">
+            <nav className="flex items-center gap-8 px-2 border-b border-gray-50 bg-white/50 backdrop-blur-sm rounded-t-3xl overflow-x-auto">
                 <button
                     onClick={() => updateFilter({ tab: 'queue' })}
-                    className={`relative py-4 px-2 text-sm font-bold transition-all uppercase tracking-wider ${tab === 'queue' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`relative py-4 px-2 text-sm font-bold transition-all uppercase tracking-wider shrink-0 ${tab === 'queue' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     <div className="flex items-center gap-2">
                         <LayoutDashboard className="w-4 h-4" />
@@ -225,13 +278,25 @@ const AuditDashboardPage: React.FC = () => {
                 </button>
                 <button
                     onClick={() => updateFilter({ tab: 'history' })}
-                    className={`relative py-4 px-2 text-sm font-bold transition-all uppercase tracking-wider ${tab === 'history' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`relative py-4 px-2 text-sm font-bold transition-all uppercase tracking-wider shrink-0 ${tab === 'history' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     <div className="flex items-center gap-2">
                         <History className="w-4 h-4" />
                         Histórico Geral
                     </div>
                     {tab === 'history' && (
+                        <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-1 bg-[#B70F0A] rounded-t-full shadow-[0_0_10px_rgba(183,15,10,0.3)]" />
+                    )}
+                </button>
+                <button
+                    onClick={() => updateFilter({ tab: 'cities' })}
+                    className={`relative py-4 px-2 text-sm font-bold transition-all uppercase tracking-wider shrink-0 ${tab === 'cities' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        Visão por Cidades
+                    </div>
+                    {tab === 'cities' && (
                         <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-1 bg-[#B70F0A] rounded-t-full shadow-[0_0_10px_rgba(183,15,10,0.3)]" />
                     )}
                 </button>
@@ -244,105 +309,197 @@ const AuditDashboardPage: React.FC = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-gray-100 flex flex-wrap items-center gap-3 shadow-sm w-full"
+                        className="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-gray-100 flex flex-wrap items-end gap-6 shadow-sm w-full"
                     >
-                        <div className="flex-1 min-w-[200px] relative group">
-                            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#B70F0A]" />
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => updateFilter({ q: e.target.value })}
-                                placeholder="Buscar por cliente ou telefone..."
-                                className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:border-red-200 transition-all outline-none text-sm placeholder:text-slate-400"
-                            />
+                        {/* Pesquisar */}
+                        <div className="flex-1 min-w-[280px] space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Pesquisar</label>
+                            <div className="relative group">
+                                <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#B70F0A]" />
+                                <input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => updateFilter({ q: e.target.value })}
+                                    placeholder="Nome do cliente ou telefone..."
+                                    className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-100 bg-slate-50/50 focus:bg-white focus:border-red-200 transition-all outline-none text-sm placeholder:text-slate-400"
+                                />
+                            </div>
                         </div>
 
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <button className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100 rounded-2xl relative overflow-hidden group h-10">
-                                    <CalendarDays className="w-4 h-4 text-slate-400 group-hover:text-[#B70F0A] transition-colors" />
-                                    <span className="text-sm font-bold text-slate-700 flex items-center gap-1">
-                                        {filterDateStart ? format(new Date(filterDateStart + "T00:00:00"), "dd/MM/yyyy") : "Início"}
-                                        <span className="text-slate-400 font-normal text-xs mx-1">até</span>
-                                        {filterDateEnd ? format(new Date(filterDateEnd + "T00:00:00"), "dd/MM/yyyy") : "Fim"}
-                                    </span>
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 border-none bg-transparent shadow-none" align="start">
-                                <ExpressCalendar 
-                                    startDate={filterDateStart || null} 
-                                    endDate={filterDateEnd || null} 
-                                    onChange={(start, end) => updateFilter({ date_start: start || "", date_end: end || "" })} 
-                                />
-                            </PopoverContent>
-                        </Popover>
+                        {/* Período */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Período</label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 hover:bg-slate-100 transition-colors border border-slate-100 rounded-2xl relative overflow-hidden group h-[46px] min-w-[200px]">
+                                        <CalendarDays className="w-4 h-4 text-slate-400 group-hover:text-[#B70F0A] transition-colors" />
+                                        <span className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                                            {filterDateStart ? format(new Date(filterDateStart + "T00:00:00"), "dd/MM/yy") : "Início"}
+                                            <span className="text-slate-400 font-normal text-xs mx-1">até</span>
+                                            {filterDateEnd ? format(new Date(filterDateEnd + "T00:00:00"), "dd/MM/yy") : "Fim"}
+                                        </span>
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 border-none bg-transparent shadow-none" align="start">
+                                    <ExpressCalendar 
+                                        startDate={filterDateStart || null} 
+                                        endDate={filterDateEnd || null} 
+                                        onChange={(start, end) => updateFilter({ date_start: start || "", date_end: end || "" })} 
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        {/* Segmento */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Segmento</label>
+                            <Popover open={segmentOpen} onOpenChange={setSegmentOpen}>
+                                <PopoverTrigger asChild>
+                                    <button className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-2xl h-[46px] min-w-[180px]">
+                                        <Tag className="w-4 h-4 text-slate-400" />
+                                        <span className="text-sm font-bold text-slate-700 truncate max-w-[120px]">
+                                            {filterSegmento ? segments?.find((s: any) => s.id.toString() === filterSegmento)?.nome : "Todos Segmentos"}
+                                        </span>
+                                        <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[250px] p-0" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Buscar segmento..." />
+                                        <CommandList>
+                                            <CommandEmpty>Nenhum segmento encontrado.</CommandEmpty>
+                                            <CommandGroup>
+                                                <CommandItem
+                                                    onSelect={() => {
+                                                        updateFilter({ segmento_id: "" });
+                                                        setSegmentOpen(false);
+                                                    }}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Check className={`h-4 w-4 ${!filterSegmento ? "opacity-100" : "opacity-0"}`} />
+                                                    Todos Segmentos
+                                                </CommandItem>
+                                                {segments?.map((s: any) => (
+                                                    <CommandItem
+                                                        key={s.id}
+                                                        onSelect={() => {
+                                                            updateFilter({ segmento_id: s.id.toString() });
+                                                            setSegmentOpen(false);
+                                                        }}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <Check className={`h-4 w-4 ${filterSegmento === s.id.toString() ? "opacity-100" : "opacity-0"}`} />
+                                                        {s.nome}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
 
                         {tab === 'queue' && (
                             <>
-                                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                                    <MapPin className="w-4 h-4 text-slate-400" />
-                                    <Select value={filterCity || "all"} onValueChange={(val) => updateFilter({ cidade: val === "all" ? "" : val })}>
-                                        <SelectTrigger className="w-[140px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
-                                            <SelectValue placeholder="Cidades" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todas Cidades</SelectItem>
-                                            {cities?.map((c: any) => (
-                                                <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                {/* Cidade */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Cidade</label>
+                                    <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-2xl h-[46px]">
+                                        <MapPin className="w-4 h-4 text-slate-400" />
+                                        <Select value={filterCity || "all"} onValueChange={(val) => updateFilter({ cidade: val === "all" ? "" : val })}>
+                                            <SelectTrigger className="w-[140px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                                <SelectValue placeholder="Cidades" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todas Cidades</SelectItem>
+                                                {cities?.map((c: any) => (
+                                                    <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                                    <Users className="w-4 h-4 text-slate-400" />
-                                    <Select value={filterType || "all"} onValueChange={(val) => updateFilter({ tipo: val === "all" ? "" : val })}>
-                                        <SelectTrigger className="w-[110px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
-                                            <SelectValue placeholder="Tipos" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos Tipos</SelectItem>
-                                            <SelectItem value="pagante">Pagantes</SelectItem>
-                                            <SelectItem value="gratuito">Gratuitos</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                {/* Tipo */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Plano</label>
+                                    <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-2xl h-[46px]">
+                                        <Users className="w-4 h-4 text-slate-400" />
+                                        <Select value={filterType || "all"} onValueChange={(val) => updateFilter({ tipo: val === "all" ? "" : val })}>
+                                            <SelectTrigger className="w-[110px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                                <SelectValue placeholder="Tipos" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos Planos</SelectItem>
+                                                <SelectItem value="pagante">Pagantes</SelectItem>
+                                                <SelectItem value="gratuito">Gratuitos</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                                    <Eye className="w-4 h-4 text-slate-400" />
-                                    <Select value={filterVisibilidade || "all"} onValueChange={(val) => updateFilter({ visibilidade: val === "all" ? "" : val })}>
-                                        <SelectTrigger className="w-[125px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
-                                            <SelectValue placeholder="Status no Site" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Mista (Vis. & Ocult.)</SelectItem>
-                                            <SelectItem value="visible">Visíveis</SelectItem>
-                                            <SelectItem value="hidden">Ocultos</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                {/* Visibilidade */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Visibilidade</label>
+                                    <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-2xl h-[46px]">
+                                        <Eye className="w-4 h-4 text-slate-400" />
+                                        <Select value={filterVisibilidade || "all"} onValueChange={(val) => updateFilter({ visibilidade: val === "all" ? "" : val })}>
+                                            <SelectTrigger className="w-[125px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                                <SelectValue placeholder="Status no Site" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Mista</SelectItem>
+                                                <SelectItem value="visible">Visíveis</SelectItem>
+                                                <SelectItem value="hidden">Ocultos</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                             </>
                         )}
 
-                        <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <ClipboardCheck className="w-4 h-4 text-slate-400" />
-                            <Select value={filterUser || "all"} onValueChange={(val) => updateFilter({ user_id: val === "all" ? "" : val })}>
-                                <SelectTrigger className="w-[130px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
-                                    <SelectValue placeholder="Conferido por" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Qualquer um</SelectItem>
-                                    {auditors?.map((u: any) => (
-                                        <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                        {tab === 'history' && (
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Resultado</label>
+                                <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-2xl h-[46px]">
+                                    <CheckCircle2 className="w-4 h-4 text-slate-400" />
+                                    <Select value={filterResult || "all"} onValueChange={(val) => updateFilter({ result: val === "all" ? "" : val })}>
+                                        <SelectTrigger className="w-[140px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                            <SelectValue placeholder="Todos Resultados" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos Resultados</SelectItem>
+                                            <SelectItem value="corrected">Foi Corrigido</SelectItem>
+                                            <SelectItem value="kept">Não foi alterado</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Auditor */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Responsável</label>
+                            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-2xl h-[46px]">
+                                <ClipboardCheck className="w-4 h-4 text-slate-400" />
+                                <Select value={filterUser || "all"} onValueChange={(val) => updateFilter({ user_id: val === "all" ? "" : val })}>
+                                    <SelectTrigger className="w-[130px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                        <SelectValue placeholder="Conferido por" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Qualquer um</SelectItem>
+                                        {auditors?.map((u: any) => (
+                                            <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         {hasFilters && (
                             <button
                                 onClick={clearFilters}
-                                className="flex items-center gap-2 px-4 py-3 text-slate-400 hover:text-red-600 transition-colors text-xs font-bold uppercase"
+                                className="flex items-center gap-2 px-4 py-3 text-slate-400 hover:text-red-600 transition-colors text-[10px] font-black uppercase tracking-widest h-[46px]"
                             >
                                 <X className="w-4 h-4" />
                                 Limpar
@@ -352,9 +509,10 @@ const AuditDashboardPage: React.FC = () => {
                 )}
             </AnimatePresence>
 
+
             {/* Table / Content Section */}
             <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-slate-200/50 overflow-hidden relative">
-                {((tab === 'queue' && loadingQueue) || (tab === 'history' && loadingHistory)) ? (
+                {((tab === 'queue' && loadingQueue) || (tab === 'history' && loadingHistory) || (tab === 'cities' && loadingCityStats)) ? (
                     <div className="flex flex-col items-center justify-center py-40 gap-6">
                         <div className="relative">
                             <Loader2 className="w-16 h-16 text-[#B70F0A] animate-spin" />
@@ -370,7 +528,7 @@ const AuditDashboardPage: React.FC = () => {
                         animate={{ opacity: 1 }}
                         className="overflow-x-auto"
                     >
-                        {tab === 'queue' ? (
+                        {tab === 'queue' && (
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -506,7 +664,7 @@ const AuditDashboardPage: React.FC = () => {
                                         </motion.tr>
                                     )) : (
                                         <tr>
-                                            <td colSpan={5} className="py-32 text-center">
+                                            <td colSpan={6} className="py-32 text-center">
                                                 <div className="flex flex-col items-center gap-4 text-slate-300">
                                                     <SearchX className="w-16 h-16 stroke-[1]" />
                                                     <div className="space-y-1">
@@ -519,58 +677,72 @@ const AuditDashboardPage: React.FC = () => {
                                     )}
                                 </tbody>
                             </table>
-                        ) : (
+                        )}
+
+                        {tab === 'history' && (
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50/50 border-b border-slate-100">
                                     <tr>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cronologia</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Responsável</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cliente Conferido</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Evento</th>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Resultado</th>
                                         <th className="px-8 py-5 text-right">Visualizar</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {historyData?.data?.length > 0 ? historyData.data.map((log: any, idx: number) => (
-                                        <motion.tr
-                                            key={log.id}
-                                            initial={{ opacity: 0, y: 5 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.03 }}
-                                            className="hover:bg-slate-50/50 transition-colors"
-                                        >
-                                            <td className="px-8 py-6">
-                                                <span className="text-sm font-bold text-slate-600">
-                                                    {format(new Date(log.created_at), "dd/MM/yy '•' HH:mm", { locale: ptBR })}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-black ring-4 ring-slate-100">
-                                                        {log.actor?.name?.charAt(0) || 'S'}
+                                    {historyData?.data?.length > 0 ? historyData.data.map((log: any, idx: number) => {
+                                        // Lógica para determinar se foi corrigido ou mantido
+                                        const hasRealChanges = log.field_changes && Object.keys(log.field_changes).some(k => k !== 'last_audit_at' && k !== 'updated_at');
+                                        
+                                        return (
+                                            <motion.tr
+                                                key={log.id}
+                                                initial={{ opacity: 0, y: 5 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: idx * 0.03 }}
+                                                className="hover:bg-slate-50/50 transition-colors"
+                                            >
+                                                <td className="px-8 py-6">
+                                                    <span className="text-sm font-bold text-slate-600">
+                                                        {format(new Date(log.created_at), "dd/MM/yy '•' HH:mm", { locale: ptBR })}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-black ring-4 ring-slate-100">
+                                                            {log.actor?.name?.charAt(0) || 'S'}
+                                                        </div>
+                                                        <span className="text-sm font-bold text-slate-700">{log.actor?.name || 'Sistema IA'}</span>
                                                     </div>
-                                                    <span className="text-sm font-bold text-slate-700">{log.actor?.name || 'Sistema IA'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <span className="text-sm font-bold text-[#B70F0A]">{log.cliente?.nome_fantasia || '---'}</span>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <span className="text-[10px] bg-emerald-50 text-emerald-700 font-black px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5 w-fit uppercase">
-                                                    <CheckCircle2 className="w-3 h-3" />
-                                                    Conferência Finalizada
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <button
-                                                    onClick={() => navigate(`/clientes/${log.cliente_id}/hub`)}
-                                                    className="p-2.5 hover:bg-white hover:shadow-md rounded-xl transition-all text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-100"
-                                                >
-                                                    <ArrowUpRight className="w-5 h-5" />
-                                                </button>
-                                            </td>
-                                        </motion.tr>
-                                    )) : (
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <span className="text-sm font-bold text-[#B70F0A]">{log.cliente?.nome_fantasia || '---'}</span>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    {hasRealChanges ? (
+                                                        <span className="text-[10px] bg-emerald-50 text-emerald-700 font-black px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5 w-fit uppercase">
+                                                            <CheckCircle2 className="w-3 h-3" />
+                                                            Dados Corrigidos
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] bg-slate-50 text-slate-500 font-black px-2.5 py-1 rounded-lg border border-slate-100 flex items-center gap-1.5 w-fit uppercase">
+                                                            <Check className="w-3 h-3" />
+                                                            Mantido Sistema
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-8 py-6 text-right">
+                                                    <button
+                                                        onClick={() => navigate(`/clientes/${log.cliente_id}/hub`)}
+                                                        className="p-2.5 hover:bg-white hover:shadow-md rounded-xl transition-all text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-100"
+                                                    >
+                                                        <ArrowUpRight className="w-5 h-5" />
+                                                    </button>
+                                                </td>
+                                            </motion.tr>
+                                        );
+                                    }) : (
                                         <tr>
                                             <td colSpan={5} className="py-32 text-center text-slate-300">
                                                 Nenhum histórico registrado no período.
@@ -581,35 +753,217 @@ const AuditDashboardPage: React.FC = () => {
                             </table>
                         )}
 
-                        {/* Pagination Area */}
-                        <footer className="p-6 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-                            <div className="text-xs font-bold text-slate-400 tracking-tighter uppercase">
-                                Mostrando {tab === 'queue' ? queueData?.data?.length : historyData?.data?.length} de {tab === 'queue' ? queueData?.meta?.total : historyData?.total} resultados
-                            </div>
+                        {tab === 'cities' && (
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50/50 border-b border-slate-100">
+                                    <tr>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cidade</th>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Total Clientes</th>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Auditados</th>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Pendente</th>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cobertura</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {cityStats?.length > 0 ? cityStats.map((city: any, idx: number) => (
+                                        <motion.tr
+                                            key={city.id}
+                                            initial={{ opacity: 0, x: 10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            className="hover:bg-slate-50/50 transition-colors"
+                                        >
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-3">
+                                                    <MapPin className="w-4 h-4 text-red-400" />
+                                                    <span className="text-sm font-bold text-slate-800 uppercase tracking-tight">{city.nome}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 font-bold text-slate-600">{city.total}</td>
+                                            <td className="px-8 py-6">
+                                                <span className="text-emerald-600 font-black">{city.auditados}</span>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <span className="text-amber-600 font-black">{city.pendentes}</span>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex-1 h-2 bg-slate-100 rounded-full max-w-[100px] overflow-hidden">
+                                                        <div 
+                                                            className={`h-full rounded-full ${city.percentual >= 100 ? 'bg-emerald-500' : 'bg-[#B70F0A]'}`} 
+                                                            style={{ width: `${city.percentual}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className={`text-xs font-black ${city.percentual >= 100 ? 'text-emerald-600' : 'text-slate-800'}`}>
+                                                        {city.percentual}%
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan={5} className="py-32 text-center text-slate-300">
+                                                Dados de cidades não disponíveis.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        )}
 
-                            <div className="flex items-center gap-4">
-                                <button
-                                    disabled={page === 1}
-                                    onClick={() => { updateFilter({ page: page - 1 }); window.scrollTo(0, 0); }}
-                                    className="px-6 py-2.5 rounded-2xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:border-[#B70F0A] hover:text-[#B70F0A] disabled:opacity-30 disabled:hover:text-slate-600 transition-all shadow-sm"
-                                >
-                                    Página Anterior
-                                </button>
-                                <div className="flex gap-1.5">
-                                    <span className="w-8 h-8 rounded-lg bg-[#B70F0A] text-white flex items-center justify-center text-sm font-black shadow-lg shadow-red-100">{page}</span>
+                        {/* Pagination Area */}
+                        {tab !== 'cities' && (
+                            <footer className="p-6 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div className="text-xs font-bold text-slate-400 tracking-tighter uppercase">
+                                    Mostrando {tab === 'queue' ? queueData?.data?.length : historyData?.data?.length} de {tab === 'queue' ? queueData?.meta?.total : historyData?.total} resultados
                                 </div>
-                                <button
-                                    disabled={tab === 'queue' ? page >= queueData?.meta?.last_page : page >= historyData?.last_page}
-                                    onClick={() => { updateFilter({ page: page + 1 }); window.scrollTo(0, 0); }}
-                                    className="px-6 py-2.5 rounded-2xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:border-[#B70F0A] hover:text-[#B70F0A] disabled:opacity-30 disabled:hover:text-slate-600 transition-all shadow-sm"
-                                >
-                                    Próxima Página
-                                </button>
-                            </div>
-                        </footer>
+
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        disabled={page === 1}
+                                        onClick={() => { updateFilter({ page: page - 1 }); window.scrollTo(0, 0); }}
+                                        className="px-6 py-2.5 rounded-2xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:border-[#B70F0A] hover:text-[#B70F0A] disabled:opacity-30 disabled:hover:text-slate-600 transition-all shadow-sm"
+                                    >
+                                        Página Anterior
+                                    </button>
+                                    <div className="flex gap-1.5">
+                                        <span className="w-8 h-8 rounded-lg bg-[#B70F0A] text-white flex items-center justify-center text-sm font-black shadow-lg shadow-red-100">{page}</span>
+                                    </div>
+                                    <button
+                                        disabled={tab === 'queue' ? page >= queueData?.meta?.last_page : page >= historyData?.last_page}
+                                        onClick={() => { updateFilter({ page: page + 1 }); window.scrollTo(0, 0); }}
+                                        className="px-6 py-2.5 rounded-2xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:border-[#B70F0A] hover:text-[#B70F0A] disabled:opacity-30 disabled:hover:text-slate-600 transition-all shadow-sm"
+                                    >
+                                        Próxima Página
+                                    </button>
+                                </div>
+                            </footer>
+                        )}
                     </motion.div>
                 )}
             </div>
+
+            {/* Modal: Como Funciona */}
+            <AnimatePresence>
+                {showHowItWorks && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowHowItWorks(false)}
+                            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100]"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="fixed inset-x-4 top-[10%] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-2xl bg-white rounded-[2.5rem] shadow-2xl z-[101] overflow-hidden border border-white"
+                        >
+                            {/* Modal Header */}
+                            <div className="relative h-32 bg-[#B70F0A] flex items-center px-10">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                                <div className="relative z-10 flex items-center gap-4 text-white">
+                                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                                        <Info className="w-8 h-8" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-serif">Como funciona o Módulo?</h2>
+                                        <p className="text-xs font-bold uppercase tracking-widest text-red-100 opacity-80">Guia de Governança e IA</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setShowHowItWorks(false)}
+                                    className="absolute top-8 right-8 p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="p-10 space-y-8 overflow-y-auto max-h-[70vh]">
+                                <p className="text-slate-600 leading-relaxed italic">
+                                    O módulo de **Conferências (Auditoria)** é o "guardião" da integridade dos dados no sistema. 
+                                    Ele utiliza IA para garantir que as informações dos clientes estejam sempre sincronizadas com o que existe de mais atual na internet.
+                                </p>
+
+                                <div className="space-y-6">
+                                    {/* Passo 1 */}
+                                    <div className="flex gap-6">
+                                        <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center shrink-0 border border-red-100">
+                                            <Globe className="w-6 h-6 text-[#B70F0A]" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black uppercase text-slate-800 tracking-widest flex items-center gap-2">
+                                                <span className="text-red-600">01.</span> Varredura Inteligente
+                                            </h3>
+                                            <p className="text-sm text-slate-500 leading-relaxed">
+                                                O processo começa de duas formas:
+                                                <br /><br />
+                                                • **Varredura Noturna:** Um Job automático percorre a base periodicamente via APIs do Google e Redes Sociais.
+                                                <br />
+                                                • **Busca ao Vivo:** Ao acessar um cliente novo, a IA faz a busca em tempo real.
+                                                <br /><br />
+                                                Se houver divergência, o cliente é marcado como <span className="font-bold text-amber-600">PENDENTE</span> para revisão humana.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Passo 2 */}
+                                    <div className="flex gap-6">
+                                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0 border border-blue-100">
+                                            <Target className="w-6 h-6 text-blue-600" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black uppercase text-slate-800 tracking-widest flex items-center gap-2">
+                                                <span className="text-blue-600">02.</span> Fila de Revisão (Triagem)
+                                            </h3>
+                                            <p className="text-sm text-slate-500 leading-relaxed">
+                                                A aba "Fila de Revisão" prioriza os clientes seguindo regras de negócio:
+                                                <br /><br />
+                                                • **Inconsistências Detectadas** (Erros críticos de telefone/endereço).
+                                                <br />
+                                                • **Clientes Pagantes** (Sempre aparecem no topo da fila).
+                                                <br />
+                                                • **Validade de 180 dias** (Garantia de selo de qualidade periódica).
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Passo 3 */}
+                                    <div className="flex gap-6">
+                                        <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center shrink-0 border border-emerald-100">
+                                            <Cpu className="w-6 h-6 text-emerald-600" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black uppercase text-slate-800 tracking-widest flex items-center gap-2">
+                                                <span className="text-emerald-600">03.</span> O Match Perfeito
+                                            </h3>
+                                            <p className="text-sm text-slate-500 leading-relaxed">
+                                                Ao entrar na análise, você verá o dado do sistema vs o dado da Web:
+                                                <br /><br />
+                                                • **Aceitar a IA:** Sobrescreve o cadastro com os dados validados na internet.
+                                                <br />
+                                                • **Manter o Sistema:** Preserva o dado interno caso ele seja o mais correto (ex: informação interna exclusiva).
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-8 bg-slate-50 flex justify-end">
+                                <button 
+                                    onClick={() => setShowHowItWorks(false)}
+                                    className="px-8 py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-[#B70F0A] transition-all shadow-lg shadow-slate-200"
+                                >
+                                    Entendido
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

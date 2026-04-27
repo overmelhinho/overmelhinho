@@ -1,9 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useSeoRankings } from '@/hooks/useSeoRankings';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/services/api';
+import { toast } from 'react-hot-toast';
 import {
     TrendingUp, TrendingDown, Minus, Search, Target, MapPin, Loader,
     LayoutGrid, List, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight,
-    MousePointer2, Eye, BarChart3
+    MousePointer2, Eye, BarChart3, RefreshCw
 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, XAxis, AreaChart, Area } from 'recharts';
 
@@ -236,6 +239,21 @@ export default function SeoPerformanceWidget({ clientId }: { clientId: number })
     const { data: rankings, isLoading, error } = useSeoRankings(clientId);
     const [search, setSearch] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const queryClient = useQueryClient();
+
+    const syncMutation = useMutation({
+        mutationFn: async () => {
+            const { data } = await api.post(`/v1/clientes/${clientId}/seo-rankings/sync`);
+            return data;
+        },
+        onSuccess: (data) => {
+            toast.success(data.message || 'Sincronização concluída!');
+            queryClient.invalidateQueries({ queryKey: ["seo-rankings", clientId] });
+        },
+        onError: () => {
+            toast.error('Erro ao sincronizar dados de SEO.');
+        }
+    });
 
     const filteredRankings = useMemo(() => {
         if (!rankings) return [];
@@ -258,7 +276,20 @@ export default function SeoPerformanceWidget({ clientId }: { clientId: number })
         <div className="bg-[#F2F2F2] rounded-3xl p-10 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 text-center">
             <Target className="w-12 h-12 text-gray-300 mb-3" />
             <p className="text-gray-500 font-medium">Nenhum dado de SEO disponível para este cliente.</p>
-            <p className="text-xs text-gray-400 mt-1">Configure as palavras-chave no cadastro para iniciar o monitoramento via Search Console.</p>
+            <p className="text-xs text-gray-400 mt-1 mb-4">Configure as palavras-chave no cadastro para iniciar o monitoramento via Search Console.</p>
+
+            <button
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+                {syncMutation.isPending ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                    <RefreshCw className="w-4 h-4" />
+                )}
+                Tentar Sincronizar Agora
+            </button>
         </div>
     );
 
@@ -278,6 +309,20 @@ export default function SeoPerformanceWidget({ clientId }: { clientId: number })
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => syncMutation.mutate()}
+                        disabled={syncMutation.isPending}
+                        className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm disabled:opacity-50"
+                        title="Sincronizar com Google Search Console"
+                    >
+                        {syncMutation.isPending ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                            <RefreshCw className="w-3 h-3" />
+                        )}
+                        {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar Agora'}
+                    </button>
+
                     <div className="relative">
                         <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input

@@ -128,11 +128,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/clientes/{id}/historico', [ClienteController::class , 'historico']);
     Route::get('/clientes/{id}/seo-rankings', [SeoRankingController::class , 'getClientRankings']);
+    Route::post('/clientes/{id}/seo-rankings/sync', [SeoRankingController::class , 'syncClientRankings']);
     Route::get('/clientes/{id}/suggest-keywords', [ClienteController::class , 'keywordSuggestions']);
     Route::post('/clientes/{id}/seo/keywords/generate', [ClienteController::class , 'generateSeoKeywords']);
     Route::patch('/clientes/{id}/seo/keywords', [ClienteController::class , 'updateSeoKeywords']);
     Route::get('clientes/check-cnpj', [ClienteController::class, 'checkCnpj']);
     Route::get('clientes/google-reviews-lookup', [ClienteController::class, 'lookupGoogleReviews']);
+    Route::post('/clientes/bulk-update-slugs', [ClienteController::class, 'bulkUpdateSlugs']);
     Route::apiResource('clientes', ClienteController::class);
 
     Route::get('/job-roles', [JobRoleController::class , 'index']);
@@ -151,6 +153,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('audit/queue', [ClienteController::class, 'auditQueue']);
     Route::get('audit/history', [ClienteController::class, 'auditHistory']);
     Route::get('audit/stats', [ClienteController::class, 'auditStats']);
+    Route::get('audit/city-stats', [ClienteController::class, 'auditCityStats']);
     Route::get('audit/users', [ClienteController::class, 'auditUsers']);
 
     // Logo
@@ -245,6 +248,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/financial/invoices/sync', [\App\Http\Controllers\Api\V1\FinancialController::class , 'syncInvoices']);
     Route::post('/financial/invoices/resend-to-tiny', [\App\Http\Controllers\Api\V1\FinancialController::class , 'resendToTiny']);
     Route::patch('/financial/invoices/{id}/status', [\App\Http\Controllers\Api\V1\FinancialController::class , 'updateStatus']);
+    Route::patch('/financial/invoices/{id}/edit', [\App\Http\Controllers\Api\V1\FinancialController::class , 'updateInvoice']);
+    Route::post('/financial/invoices/settle-group', [\App\Http\Controllers\Api\V1\FinancialController::class , 'settleGroup']);
 
     // ✅ Renovações (Admin)
     Route::get('/renewals', [RenewalController::class , 'index']);

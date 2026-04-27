@@ -76,10 +76,10 @@ function SearchContent() {
     }, []);
 
     const filteredCities = useMemo(() => {
-        if (!citySearchQuery) return availableCities.slice(0, 10);
+        if (!citySearchQuery) return availableCities;
         return availableCities.filter(c =>
             c.nome.toLowerCase().includes(citySearchQuery.toLowerCase())
-        ).slice(0, 10);
+        );
     }, [availableCities, citySearchQuery]);
 
     // Mapeamento de filtros inteligentes
@@ -866,27 +866,37 @@ function SearchContent() {
                                     />
                                 </div>
 
-                                <div className="space-y-3">
-                                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-2">Sugestões próximos de você</p>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {filteredCities.map((city: any) => (
-                                            <button
-                                                key={city.id}
-                                                onClick={() => {
-                                                    setCity(city.id, city.nome);
-                                                    setIsCityModalOpen(false);
-                                                }}
-                                                className={`flex items-center justify-between p-5 rounded-3xl border-2 transition-all ${cityName === city.nome ? 'bg-brand-red/5 border-brand-red' : 'bg-white border-gray-50 hover:bg-gray-50'}`}
-                                            >
-                                                <div className="flex items-center space-x-4">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cityName === city.nome ? 'bg-brand-red text-white' : 'bg-gray-100 text-gray-400'}`}>
-                                                        <MapPin size={20} />
+                                <div className="space-y-4 flex flex-col min-h-0">
+                                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-2 flex-shrink-0">Sugestões próximos de você</p>
+                                    
+                                    <div className="grid grid-cols-1 gap-2 overflow-y-auto pr-2 max-h-[40vh] md:max-h-[50vh] custom-scrollbar scroll-smooth">
+                                        {filteredCities.length > 0 ? (
+                                            filteredCities.map((city: any) => (
+                                                <button
+                                                    key={city.id}
+                                                    onClick={() => {
+                                                        setCity(city.id, city.nome);
+                                                        setIsCityModalOpen(false);
+                                                    }}
+                                                    className={`flex items-center justify-between p-4 md:p-5 rounded-3xl border-2 transition-all flex-shrink-0 ${cityName === city.nome ? 'bg-brand-red/5 border-brand-red' : 'bg-white border-gray-50 hover:bg-gray-50'}`}
+                                                >
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cityName === city.nome ? 'bg-brand-red text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                                            <MapPin size={20} />
+                                                        </div>
+                                                        <span className={`font-black tracking-tight text-sm md:text-base ${cityName === city.nome ? 'text-brand-red' : 'text-gray-900'}`}>{city.nome}</span>
                                                     </div>
-                                                    <span className={`font-black tracking-tight ${cityName === city.nome ? 'text-brand-red' : 'text-gray-900'}`}>{city.nome}</span>
+                                                    {cityName === city.nome && <CheckCircle2 size={20} className="text-brand-red flex-shrink-0" />}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="py-10 text-center space-y-2">
+                                                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto text-gray-200">
+                                                    <MapPin size={24} />
                                                 </div>
-                                                {cityName === city.nome && <CheckCircle2 size={20} className="text-brand-red" />}
-                                            </button>
-                                        ))}
+                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nenhuma cidade encontrada</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -903,6 +913,20 @@ function SearchContent() {
         .gummy-card:active { transform: scale(0.97); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #e5e5e5;
+        }
       `}</style>
         </div>
     );

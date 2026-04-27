@@ -88,3 +88,28 @@ Isso garante que, **mesmo que o cadastro do contato esteja desatualizado ou inco
 | `numero` | `numero` | String |
 | `cep` | `cep` | Apenas números |
 | `estado` (Sigla) | `uf` | Ex: RS, SP |
+
+---
+
+## 6. Alteração de Contas a Receber (Edição de Parcelas)
+
+### Estratégia: Reconciliação no Pagamento (Implementada em 27/04/2026)
+Devido às limitações e bugs da API v2 do Tiny (endpoint `alterar` não-funcional e ausência de endpoint de `excluir/cancelar`), adotamos uma estratégia de reconciliação tardia:
+
+1.  **Edição Local**: Quando uma parcela é editada ou redistribuída no Vermelhinho, a alteração é feita **apenas no banco de dados local**. O registro correspondente no Tiny permanece com o valor original.
+2.  **Zero Poluição**: Isso evita a criação de "contas fantasma", duplicatas ou registros de baixa fictícios que poluiriam o financeiro do Tiny.
+3.  **Baixa com Desconto**: A sincronização real acontece no momento do **recebimento (baixa)**.
+    -   O sistema consulta o valor original da conta no Tiny.
+    -   Calcula a diferença entre o valor no Tiny e o valor efetivamente pago no Vermelhinho.
+    -   Executa a baixa (`conta.receber.baixar.php`) enviando o `valor` pago e a diferença no campo `desconto`.
+
+### Vantagens
+-   **Integridade do Fluxo de Caixa**: Apenas o valor real pago entra no caixa do Tiny. A diferença é registrada como desconto, mantendo o saldo correto.
+-   **Robustez**: Elimina a dependência de endpoints instáveis da API v2 para operações de edição.
+-   **Simplicidade**: O código fica mais limpo e menos propenso a erros de sincronização parcial.
+
+### Regras de Negócio
+-   **Parcelas Extras**: Se a edição resultar na criação de uma parcela extra, esta será enviada ao Tiny normalmente como uma nova conta.
+-   **Cancelamento**: Faturas canceladas localmente permanecem "em aberto" no Tiny (devido à falta de endpoint de cancelamento na API v2) e devem ser tratadas em batches de limpeza ou manualmente no painel, se necessário. No entanto, o sistema as ignora para fins de fluxo.
+
+

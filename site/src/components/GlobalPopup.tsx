@@ -69,17 +69,17 @@ export default function GlobalPopup() {
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 50 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="relative w-full max-w-lg bg-white rounded-[3rem] overflow-hidden shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)] border-4 border-white gummy-card"
+                    className="relative w-full max-w-[min(450px,90vw)] overflow-visible"
                 >
                     <button 
                         onClick={handleClose}
-                        className="absolute top-6 right-6 z-20 w-12 h-12 bg-black/20 hover:bg-black/40 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all active:scale-90"
+                        className="absolute -top-4 -right-4 z-[1010] w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-xl hover:bg-black transition-all active:scale-90 border-2 border-white"
                     >
-                        <X size={24} />
+                        <X size={20} />
                     </button>
 
                     <div 
-                        className="relative aspect-square md:aspect-[4/5] overflow-hidden cursor-pointer"
+                        className="relative overflow-hidden cursor-pointer rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] bg-slate-100"
                         onClick={() => {
                             if (ad.url) {
                                 trackAdInteraction(ad.id, 'click', 'POPUP_GLOBAL', ad.cliente.id);
@@ -91,7 +91,7 @@ export default function GlobalPopup() {
                         <img 
                             src={imageUrl} 
                             alt={ad.nome} 
-                            className="w-full h-full object-cover"
+                            className="w-full h-auto max-h-[80vh] object-contain block mx-auto"
                         />
                     </div>
                 </motion.div>

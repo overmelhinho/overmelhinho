@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mic, Sparkles, Menu, Search, User, Home as HomeIcon, Briefcase, Heart, MessageCircle, ArrowRight } from 'lucide-react';
+import { Mic, Sparkles, Menu, Search, User, Home as HomeIcon, Briefcase, Heart, MessageCircle, ArrowRight, Building2 } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAds } from '@/hooks/useAds';
 import { useClients } from '@/hooks/useClients';
@@ -134,7 +134,7 @@ export default function Home() {
       name: client.nome_fantasia,
       category: client.segmentos?.[0]?.nome || 'Negócio Local',
       rating: (client as any).google_rating || 5.0,
-      img: (client as any).logotipo_url || client.logo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
+      img: (client as any).logotipo_url || client.logo_url || null,
       location: client.enderecos?.[0]
         ? `${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`
         : 'Sua Cidade',
@@ -239,8 +239,14 @@ export default function Home() {
                     <div className="flex space-x-6 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:space-x-0 md:gap-10">
                         {featured.map((item, idx) => (
                             <div key={idx} className="snap-center min-w-[92%] md:min-w-0 bg-white rounded-[4rem] overflow-hidden shadow-[0_40px_100px_-30px_rgba(0,0,0,0.15)] border-4 border-white flex flex-col gummy-card group">
-                                <Link href={`/cliente/${item.slug}`} className="relative h-72 overflow-hidden block">
-                                    <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                                <Link href={`/cliente/${item.slug}`} className="relative h-72 overflow-hidden block bg-gray-50 flex items-center justify-center">
+                                    {item.img ? (
+                                        <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center text-gray-200">
+                                            <Building2 size={64} className="opacity-20" />
+                                        </div>
+                                    )}
                                     <div className="absolute top-8 right-8 bg-white/95 backdrop-blur-md px-5 py-3 rounded-full flex items-center space-x-2 shadow-2xl">
                                         <span className="text-yellow-500 text-xl font-black">★</span>
                                         <span className="text-lg font-black text-gray-900">{item.rating}</span>
@@ -256,7 +262,7 @@ export default function Home() {
                                             <h4 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter leading-none font-serif hover:text-brand-red transition-colors cursor-pointer">{item.name}</h4>
                                         </Link>
                                         <p className="text-gray-400 font-bold tracking-tight font-sans">{item.location}</p>
-                                        <p className="text-gray-400 font-medium text-sm mt-2">{item.desc}</p>
+                                        <p className="text-gray-400 font-medium text-sm mt-2 line-clamp-3">{item.desc}</p>
                                     </div>
 
                                     <a

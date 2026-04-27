@@ -8,6 +8,21 @@ use App\Models\Concerns\Auditable;
 class Cliente extends Model
 {
     use Auditable;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
+
+    protected static function booted()
+    {
+        static::saving(function ($cliente) {
+            if (empty($cliente->slug) && !empty($cliente->nome_fantasia)) {
+                // Gera o slug a partir do nome fantasia
+                $slug = \Illuminate\Support\Str::slug($cliente->nome_fantasia);
+                
+                // Garante que o slug seja único (adiciona sufixo se necessário)
+                $count = static::where('slug', 'LIKE', "{$slug}%")->where('id', '<>', $cliente->id)->count();
+                $cliente->slug = $count > 0 ? "{$slug}-{$count}" : $slug;
+            }
+        });
+    }
 
     protected string $auditEntityType = 'cliente';
 
@@ -54,6 +69,7 @@ class Cliente extends Model
         'last_audit_at',
         'audit_status',
         'exibir_no_site',
+        'exibir_data_fundacao',
         'audit_differences',
         'responsavel',
     ];
@@ -81,6 +97,7 @@ class Cliente extends Model
         'seo_keywords_updated_at' => 'datetime',
         'contract_ends_at' => 'date',
         'data_fundacao' => 'date',
+        'exibir_data_fundacao' => 'boolean',
         'last_audit_at' => 'datetime',
         'audit_differences' => 'array',
     ];
