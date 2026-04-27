@@ -12,10 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('contatos', function (Blueprint $table) {
-            $table->boolean('has_whatsapp_principal')->default(false)->after('telefone_principal');
-            $table->boolean('has_whatsapp_secundario')->default(false)->after('telefone_secundario');
-            $table->boolean('has_whatsapp_celular')->default(false)->after('celular');
-            $table->boolean('has_whatsapp_outro')->default(false)->after('telefone_outro');
+            if (!Schema::hasColumn('contatos', 'has_whatsapp_principal')) {
+                $table->boolean('has_whatsapp_principal')->default(false);
+            }
+            if (!Schema::hasColumn('contatos', 'has_whatsapp_celular')) {
+                $table->boolean('has_whatsapp_celular')->default(false);
+            }
+            if (!Schema::hasColumn('contatos', 'has_whatsapp_secundario')) {
+                $table->boolean('has_whatsapp_secundario')->default(false);
+            }
+            if (!Schema::hasColumn('contatos', 'has_whatsapp_outro')) {
+                $table->boolean('has_whatsapp_outro')->default(false);
+            }
         });
     }
 
