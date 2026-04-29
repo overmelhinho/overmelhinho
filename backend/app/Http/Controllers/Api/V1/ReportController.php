@@ -213,10 +213,77 @@ class ReportController extends Controller
     private function getSalesData(Request $request)
     {
         $query = Invoice::query()
-            ->with(['client:id,nome_fantasia,razao_social', 'plan:id,name']);
+            ->with(['client:id,nome_fantasia,razao_social,cpf_cnpj', 'plan:id,name']);
 
+        // Filtro de Vencimento
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('due_date', [$request->start_date, $request->end_date]);
+        }
+
+        // Filtro de Emissão (Data Cad. Inicial/Final)
+        if ($request->filled('data_cad_inicial') && $request->filled('data_cad_final')) {
+            // Emissão geralmente é action_date ou created_at. Vamos usar action_date ou date(created_at)
+            $query->whereBetween(DB::raw('DATE(created_at)'), [$request->data_cad_inicial, $request->data_cad_final]);
+        }
+
+        // Filtro de Termo (Nome/Razão Social)
+        if ($request->filled('termo')) {
+            $termo = $request->termo;
+            $query->whereHas('client', function ($q) use ($termo) {
+                $q->where('nome_fantasia', 'like', "%{$termo}%")
+                  ->orWhere('razao_social', 'like', "%{$termo}%")
+                  ->orWhere('cpf_cnpj', 'like', "%{$termo}%");
+            });
+        }
+
+        // PF / PJ
+        if ($request->filled('tipo_pf_pj') && $request->tipo_pf_pj !== 'all') {
+            $query->whereHas('client', function ($q) use ($request) {
+                if ($request->tipo_pf_pj === 'pf') {
+                    $q->whereRaw('LENGTH(REGEXP_REPLACE(cpf_cnpj, \'[^0-9]\', \'\')) <= 11');
+                } else {
+                    $q->whereRaw('LENGTH(REGEXP_REPLACE(cpf_cnpj, \'[^0-9]\', \'\')) > 11');
+                }
+            });
+        }
+
+        // Filtro Cidade / Bairro
+        if ($request->filled('cidade') || $request->filled('bairro')) {
+            $query->whereHas('client.enderecos', function ($q) use ($request) {
+                if ($request->filled('cidade')) {
+                    $q->where('cidade', 'like', '%' . $request->cidade . '%');
+                }
+                if ($request->filled('bairro')) {
+                    $q->where('bairro', 'like', '%' . $request->bairro . '%');
+                }
+            });
+        }
+
+        // Filtro Telefone
+        if ($request->filled('telefone')) {
+            $query->whereHas('client.contatos', function ($q) use ($request) {
+                $q->where('telefone', 'like', '%' . $request->telefone . '%');
+            });
+        }
+
+        // Filtro Autorizacao (Número e Tipo de Publicidade)
+        if ($request->filled('numero_autorizacao') || ($request->filled('tipo_publicidade') && $request->tipo_publicidade !== 'all')) {
+            $authQuery = Autorizacao::query();
+            if ($request->filled('numero_autorizacao')) {
+                $authQuery->where('numero', 'like', '%' . $request->numero_autorizacao . '%');
+            }
+            if ($request->filled('tipo_publicidade') && $request->tipo_publicidade !== 'all') {
+                $authQuery->where('tipo_publicidade', clone $request->tipo_publicidade);
+            }
+            $authIds = $authQuery->pluck('id');
+            $groupIds = $authIds->map(fn($id) => 'autorizacao-' . $id)->toArray();
+            
+            // Se buscou algo e não achou autorização, array será vazio.
+            if (empty($groupIds)) {
+                $query->where('id', 0); // Força zero resultados
+            } else {
+                $query->whereIn('group_id', $groupIds);
+            }
         }
 
         if ($request->filled('plan_id') && $request->plan_id !== 'all') {
@@ -227,16 +294,20 @@ class ReportController extends Controller
             $query->where('status', $request->status);
         }
 
-        if ($request->collection_type === 'bank') {
-            $query->where('payment_method', 'boleto');
-        } elseif ($request->collection_type === 'card') {
-            $query->where('payment_method', 'cartao');
-        } elseif ($request->collection_type === 'pix') {
-            $query->where('payment_method', 'pix');
-        } elseif ($request->collection_type === 'cash') {
-            $query->where('payment_method', 'dinheiro');
-        } elseif ($request->collection_type === 'direct') {
-            $query->whereNotIn('payment_method', ['boleto', 'cartao']);
+        if ($request->filled('collection_type') && $request->collection_type !== 'all') {
+            if ($request->collection_type === 'bank') {
+                $query->where('payment_method', 'boleto');
+            } elseif ($request->collection_type === 'card') {
+                $query->where('payment_method', 'cartao');
+            } elseif ($request->collection_type === 'pix') {
+                $query->where('payment_method', 'pix');
+            } elseif ($request->collection_type === 'cash') {
+                $query->where('payment_method', 'dinheiro');
+            } elseif ($request->collection_type === 'permuta') {
+                $query->where('payment_method', 'permuta');
+            } elseif ($request->collection_type === 'direct') {
+                $query->whereNotIn('payment_method', ['boleto', 'cartao', 'pix', 'permuta']);
+            }
         }
 
         $invoices = $query->orderBy('due_date', 'desc')->get();
@@ -251,12 +322,25 @@ class ReportController extends Controller
             ->get()
             ->keyBy('id');
 
-        $data = $invoices->map(function ($inv) use ($auths) {
+        // Buscar todas as faturas dessas autorizações para saber o que já foi pago
+        $groupIds = $auths->keys()->map(fn($id) => 'autorizacao-' . $id)->toArray();
+        $allInvoices = Invoice::whereIn('group_id', $groupIds)
+            ->select('group_id', 'status', 'amount')
+            ->get()
+            ->groupBy('group_id');
+
+        $data = $invoices->map(function ($inv) use ($auths, $allInvoices) {
             $authId = str_starts_with($inv->group_id ?? '', 'autorizacao-') 
                 ? (int) str_replace('autorizacao-', '', $inv->group_id) 
                 : null;
             
             $auth = $authId ? ($auths[$authId] ?? null) : null;
+
+            // Calcular o restante da autorização (Total da Aut - Soma das faturas pagas)
+            $authTotal = $auth ? (float) $auth->valor_total : 0;
+            $authInvoices = $allInvoices->get($inv->group_id, collect());
+            $paidAmount = $authInvoices->where('status', 'paid')->sum('amount');
+            $restante = max(0, $authTotal - $paidAmount);
 
             return [
                 'id' => $inv->id,
@@ -269,6 +353,10 @@ class ReportController extends Controller
                 'status' => $inv->status,
                 'payment_method' => $inv->payment_method,
                 'autorizacao_numero' => $auth?->numero ? str_pad($auth->numero, 5, '0', STR_PAD_LEFT) : null,
+                'parcel_number' => $inv->parcel_number,
+                'total_parcels' => $inv->total_parcels,
+                'auth_valor_total' => $authTotal,
+                'auth_valor_restante' => $restante,
             ];
         });
 
@@ -313,35 +401,72 @@ class ReportController extends Controller
         $startDate = $request->start_date ?? now()->startOfMonth()->format('Y-m-d');
         $endDate = $request->end_date ?? now()->endOfMonth()->format('Y-m-d');
 
-        $invoices = Invoice::where('status', 'paid')
-            ->whereBetween('due_date', [$startDate, $endDate])
-            ->with('vendedor:id,name')
-            ->get();
+        $query = Autorizacao::with(['cliente.enderecos', 'cliente.contatos', 'vendedor']);
 
-        $vendedores = [];
+        // Data filter (by data_inicio or created_at, legacy usually uses emissao/data_inicio)
+        $query->whereBetween('data_inicio', [$startDate, $endDate]);
 
-        foreach ($invoices as $i) {
-            $vendedor = $i->vendedor;
-
-            if ($vendedor) {
-                if (!isset($vendedores[$vendedor->id])) {
-                    $vendedores[$vendedor->id] = [
-                        'id' => $vendedor->id,
-                        'name' => $vendedor->name,
-                        'sales_count' => 0,
-                        'total_sold' => 0,
-                        'commission' => 0
-                    ];
-                }
-
-                $vendedores[$vendedor->id]['sales_count']++;
-                $vendedores[$vendedor->id]['total_sold'] += (float)$i->amount;
-                // Comissão fictícia de 10%
-                $vendedores[$vendedor->id]['commission'] += ((float)$i->amount * 0.10);
-            }
+        // Vendedor filter
+        if ($request->filled('vendedor_id')) {
+            $query->where('vendedor_id', $request->vendedor_id);
         }
 
-        return response()->json(array_values($vendedores));
+        // Tipo de Publicidade filter
+        if ($request->filled('tipo_publicidade')) {
+            $query->where('tipo_publicidade', clone $request->tipo_publicidade);
+        }
+
+        // Cidade filter (has to join or whereHas client.enderecos)
+        if ($request->filled('cidade')) {
+            $query->whereHas('cliente.enderecos', function ($q) use ($request) {
+                $q->where('cidade', 'like', '%' . $request->cidade . '%');
+            });
+        }
+
+        // Telefone filter (has to join or whereHas client.contatos)
+        if ($request->filled('telefone')) {
+            $query->whereHas('cliente.contatos', function ($q) use ($request) {
+                $q->where('telefone', 'like', '%' . $request->telefone . '%');
+            });
+        }
+
+        // Ordem
+        $orderBy = $request->ordem ?? 'data_inicio';
+        $direction = $request->direcao ?? 'asc';
+        if ($orderBy === 'nome_fantasia') {
+            $query->join('clientes', 'autorizacoes.cliente_id', '=', 'clientes.id')
+                  ->orderBy('clientes.nome_fantasia', $direction)
+                  ->select('autorizacoes.*');
+        } else {
+            $query->orderBy($orderBy, $direction);
+        }
+
+        $autorizacoes = $query->get();
+
+        $data = $autorizacoes->map(function ($auth) {
+            return [
+                'id' => $auth->id,
+                'emissao' => $auth->data_inicio ? $auth->data_inicio->format('d/m/Y') : null,
+                'cliente_nome' => $auth->cliente->nome_fantasia ?? $auth->cliente->razao_social ?? 'N/A',
+                'numero' => $auth->numero,
+                'tipo_publicidade' => mb_strtoupper($auth->tipo_publicidade),
+                'valor_total' => (float)$auth->valor_total,
+                'data_final' => $auth->data_fim ? $auth->data_fim->format('d/m/Y') : null,
+                'vendedor_nome' => $auth->vendedor->name ?? 'N/A',
+            ];
+        });
+
+        // Calculando totais para o dashboard
+        $summary = [
+            'total_titulos' => $data->count(),
+            'total_valor' => $data->sum('valor_total'),
+            'total_comissao' => $data->sum('valor_total') * 0.10, // Exemplo de 10%
+        ];
+
+        return response()->json([
+            'data' => $data,
+            'summary' => $summary
+        ]);
     }
 
     /**

@@ -5,6 +5,7 @@ import Providers from "./providers";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import GlobalPopup from "@/components/GlobalPopup";
+import GlobalCityModal from "@/components/GlobalCityModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({
         <Providers>
           <Header />
           <GlobalPopup />
+          <GlobalCityModal />
           {children}
           <Footer />
         </Providers>

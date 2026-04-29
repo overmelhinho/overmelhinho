@@ -85,13 +85,38 @@ class AutorizacaoController extends Controller
             'responsavel_nome'        => 'nullable|string|max:255',
             'responsavel_preferencia' => 'nullable|string|max:255',
             'responsavel_turno'       => 'nullable|string|max:255',
+            'parent_id'               => 'nullable|exists:autorizacoes,id',
+            'is_bonificacao'          => 'nullable|boolean',
         ]);
 
-        $validated['numero']      = Autorizacao::proximoNumero();
+        if (!empty($validated['parent_id'])) {
+            $parent = Autorizacao::find($validated['parent_id']);
+            $count = Autorizacao::where('parent_id', $parent->id)->count();
+            $validated['numero'] = $parent->numero . '-' . ($count + 2);
+            $validated['is_bonificacao'] = true;
+            $validated['valor_total'] = 0;
+            $validated['taxa_cadastro'] = 0;
+            $validated['permuta_amount'] = 0;
+
+            // Herdar assinatura do pai
+            if ($parent->status === 'assinado') {
+                $validated['status'] = 'assinado';
+                $validated['assinado_em'] = $parent->assinado_em;
+                $validated['assinatura_ip'] = $parent->assinatura_ip;
+                $validated['assinatura_base64'] = $parent->assinatura_base64;
+                $validated['justificativa_assinatura'] = $parent->justificativa_assinatura;
+                $validated['justificado_por'] = $parent->justificado_por;
+            } else {
+                $validated['status'] = 'rascunho';
+            }
+        } else {
+            $validated['numero']      = Autorizacao::proximoNumero();
+            $validated['status']      = 'rascunho';
+        }
+
         $validated['vendedor_id'] = Auth::id();
         $validated['taxa_cadastro'] = $validated['taxa_cadastro'] ?? 0;
         $validated['payment_method'] = $validated['payment_method'] ?? 'pix';
-        $validated['status']      = 'rascunho';
 
         $autorizacao = Autorizacao::create($validated);
 
@@ -107,6 +132,21 @@ class AutorizacaoController extends Controller
 
         // Gera parcelas (automatica ou customizada)
         $this->gerarParcelas($autorizacao, $request->input('parcelas', []));
+
+        // Se herdou a assinatura, gera o PDF imediatamente
+        if ($autorizacao->status === 'assinado') {
+            try {
+                $autorizacaoFull = $autorizacao->fresh()->load(['cliente.enderecos', 'cliente.contatos', 'vendedor', 'parcelas', 'justificadoPor']);
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.autorizacao', ['autorizacao' => $autorizacaoFull])
+                    ->setPaper('a4', 'portrait')
+                    ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
+                $filename = "autorizacoes/autorizacao-{$autorizacao->numero}-assinada.pdf";
+                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $pdf->output());
+                $autorizacao->update(['pdf_path' => $filename]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Erro ao gerar PDF da bonificação assinada: ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -130,9 +170,7 @@ class AutorizacaoController extends Controller
     {
         $autorizacao = Autorizacao::findOrFail($id);
 
-        if (in_array($autorizacao->status, ['assinado', 'cancelado'])) {
-            return response()->json(['message' => 'Apenas contratos não assinados podem ser editados.'], 422);
-        }
+        // Removida restrição para permitir edição administrativa mesmo após assinado
 
         $validated = $request->validate([
             'tipo_publicidade'      => 'sometimes|string|max:100',
@@ -176,10 +214,30 @@ class AutorizacaoController extends Controller
             }
         }
 
-        // Se mudar algo financeiro, regera as parcelas
+        // Se mudar algo financeiro, regera as parcelas e limpa faturas antigas (preservando as pagas por segurança)
         if ($request->hasAny(['valor_total', 'taxa_cadastro', 'num_parcelas', 'is_permuta', 'permuta_amount', 'desconto_valor', 'desconto_tipo', 'data_primeira_parcela', 'parcelas'])) {
+            
+            // Limpa faturas PENDENTES vinculadas a esta autorização
+            // Usamos patterns variados de group_id para garantir a limpeza
+            \App\Models\Invoice::where(function($q) use ($autorizacao) {
+                $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+                  ->orWhere('group_id', (string)$autorizacao->id);
+            })
+            ->where('status', '!=', 'paid') // Não deletamos o que já foi pago para não perder rastro financeiro
+            ->delete();
+            
             $autorizacao->parcelas()->delete();
             $this->gerarParcelas($autorizacao->fresh(), $request->input('parcelas', []));
+
+            // Se o contrato já estiver assinado, regera as faturas (Invoices) imediatamente
+            if ($autorizacao->status === 'assinado') {
+                try {
+                    $tinyService = app(\App\Services\TinyErpService::class);
+                    $this->processInvoiceGeneration($autorizacao->fresh(['parcelas', 'cliente']), $tinyService);
+                } catch (\Exception $e) {
+                    \Log::error("Erro ao regerar faturas após edição da autorização #{$autorizacao->id}: " . $e->getMessage());
+                }
+            }
         }
 
         return response()->json([
@@ -192,9 +250,9 @@ class AutorizacaoController extends Controller
     {
         $autorizacao = Autorizacao::findOrFail($id);
 
-        if (in_array($autorizacao->status, ['assinado'])) {
-            return response()->json(['message' => 'Contratos assinados não podem ser excluídos.'], 422);
-        }
+
+        // Remove todas as faturas geradas por esta autorização
+        Invoice::where('group_id', 'autorizacao-' . $autorizacao->id)->delete();
 
         $autorizacao->parcelas()->delete();
         $autorizacao->delete();

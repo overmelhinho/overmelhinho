@@ -133,14 +133,14 @@ export default function ClienteEdit() {
       { id: 1, label: "Endereço" },
       { id: 2, label: "Contato" },
       { id: 3, label: "Segmentos" }, // ✅ Agora disponível para todos os tipos
+      { id: 4, label: "Horário" }, // ✅ Agora disponível para todos os tipos
     ];
 
     if (tipoCliente === "pagante") {
       base.push(
-        { id: 4, label: "Cidades" },
-        { id: 5, label: "Redes Sociais" },
-        { id: 6, label: "Benefícios" },
-        { id: 7, label: "Horário" },
+        { id: 5, label: "Cidades" },
+        { id: 6, label: "Redes Sociais" },
+        { id: 7, label: "Benefícios" },
         { id: 8, label: "Logotipo" },
         { id: 9, label: "Mídia" },
         { id: 10, label: "Galeria" },
@@ -608,7 +608,7 @@ export default function ClienteEdit() {
                   const next = e.target.value as TipoCliente;
                   setTipoCliente(next);
                   setFieldValue("tipoCliente", next);
-                  if (next === "gratuito" && step > 2) setStep(0);
+                  if (next === "gratuito" && step > 4) setStep(0);
                 }}
                 className="border rounded-lg px-3 py-2 text-sm"
               >

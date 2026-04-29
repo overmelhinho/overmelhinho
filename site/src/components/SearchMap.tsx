@@ -107,13 +107,15 @@ export default function SearchMap({ results, highlighted, onHover, onClick, onMa
       const isFirst = idx === 0;
 
       // Simulando "Premium" nos índices 1 a 3 para parear com a lista da esquerda
-      const isPremium = business.tipo_cliente === 'premium' || (idx > 0 && idx < 4);
+      const isPremium = business.tipo_cliente === 'pagante' || business.tipo_cliente === 'premium';
+      const isGratuito = business.tipo_cliente === 'gratuito';
 
       // Imagem real do banco ou placeholder (igual da lista)
       const logoToUse = business.logotipo_url || "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200";
 
-      // Se for premium, mostra logo arredondado. O Match Perfeito (primeiro) mantém Destaque Estrela.
-      const iconInnerHtml = isPremium
+      // Se for premium/pagante, mostra logo arredondado.
+      // Se for gratuito, SEMPRE mostra o ícone genérico (Briefcase ou Estrela se for 1º)
+      const iconInnerHtml = (isPremium && !isGratuito)
         ? `<img src="${logoToUse}" class="pin-logo w-full h-full object-cover rounded-[1.2rem] p-[2px]" />`
         : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     ${isFirst

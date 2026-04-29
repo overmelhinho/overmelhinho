@@ -72,7 +72,10 @@ export default function TabContato() {
                   name="whatsapp_selected"
                   value={field.id}
                   checked={values.whatsapp_selected === field.id}
-                  onChange={() => setFieldValue("whatsapp_selected", field.id)}
+                  onChange={() => {
+                    setFieldValue("whatsapp_selected", field.id);
+                    setFieldValue(field.hasWhatsApp, true);
+                  }}
                   className="w-4 h-4 text-[#B70F0A] border-gray-300 focus:ring-[#B70F0A] accent-[#B70F0A]"
                 />
                 <span className={`transition-colors ${values.whatsapp_selected === field.id ? 'text-[#B70F0A]' : 'text-gray-500 group-hover:text-gray-700'}`}>
@@ -95,7 +98,12 @@ export default function TabContato() {
                 disabled={!values[field.id]}
                 checked={!!values[field.id] && (values[field.hasWhatsApp] || values.whatsapp_selected === field.id)}
                 onChange={(e) => {
-                  setFieldValue(field.hasWhatsApp, e.target.checked);
+                  const isChecked = e.target.checked;
+                  setFieldValue(field.hasWhatsApp, isChecked);
+                  // Se desmarcou e ele era o principal, remove ele de principal
+                  if (!isChecked && values.whatsapp_selected === field.id) {
+                    setFieldValue("whatsapp_selected", "");
+                  }
                 }}
                 className={`h-3 w-3 rounded border-gray-300 ${!values[field.id] ? 'cursor-not-allowed grayscale' : 'accent-green-600'}`}
               />

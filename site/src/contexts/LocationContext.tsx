@@ -8,6 +8,8 @@ interface LocationContextType {
     coords: { lat: number; lng: number } | null;
     isLoading: boolean;
     setCity: (id: number, name: string) => void;
+    isCityModalOpen: boolean;
+    setIsCityModalOpen: (open: boolean) => void;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -17,6 +19,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [cityName, setCityName] = useState<string | null>(null);
     const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isCityModalOpen, setIsCityModalOpen] = useState(false);
 
     const setCity = (id: number, name: string) => {
         setCityId(id);
@@ -67,7 +70,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, []);
 
     return (
-        <LocationContext.Provider value={{ cityId, cityName, coords, isLoading, setCity }}>
+        <LocationContext.Provider value={{ cityId, cityName, coords, isLoading, setCity, isCityModalOpen, setIsCityModalOpen }}>
             {children}
         </LocationContext.Provider>
     );

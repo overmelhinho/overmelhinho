@@ -160,8 +160,8 @@ export default function ClienteCreateFromLead() {
       setTicketsClienteId(null);
       setMissingLogo(false);
       setMissingGaleria(false);
-      // step segura (gratuito só tem 0..3 agora)
-      if (step > 3) setStep(0);
+      // step segura (gratuito só tem 0..4 agora)
+      if (step > 4) setStep(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoCliente]);
@@ -201,14 +201,14 @@ export default function ClienteCreateFromLead() {
       { id: 1, label: "Endereço" },
       { id: 2, label: "Contato" },
       { id: 3, label: "Segmentos" }, // ✅ Ativado para todos
+      { id: 4, label: "Horário" }, // ✅ Ativado para todos
     ];
 
     if (tipoCliente === "pagante") {
       base.push(
-        { id: 4, label: "Cidades" },
-        { id: 5, label: "Redes Sociais" },
-        { id: 6, label: "Benefícios" },
-        { id: 7, label: "Horário" },
+        { id: 5, label: "Cidades" },
+        { id: 6, label: "Redes Sociais" },
+        { id: 7, label: "Benefícios" },
         { id: 8, label: "Logotipo" },
         { id: 9, label: "Mídia" },
         { id: 10, label: "Galeria" },
@@ -246,19 +246,20 @@ export default function ClienteCreateFromLead() {
       celular: 2,
       responsavel: 2,
 
-      redes_sociais: 5,
       segmentos: 3,
-      cidades_atendidas: 4,
-      beneficios: 6,
-      horario_atendimento: 7,
+      horario_atendimento: 4,
+
+      cidades_atendidas: 5,
+      redes_sociais: 6,
+      beneficios: 7,
+
+      logotipo: 8,
+      logotipo_path: 8,
 
       video_link: 9,
       arquivo_midia: 9,
       arquivo_midia_path: 9,
       tipo_arquivo_midia: 9,
-
-      logotipo: 8,
-      logotipo_path: 8,
 
       galeria: 10,
     }),

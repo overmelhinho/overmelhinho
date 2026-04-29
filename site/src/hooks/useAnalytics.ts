@@ -10,11 +10,12 @@ export const useAnalytics = () => {
      * Rastreia uma interação com um cliente (WhatsApp, Waze, etc)
      * Envia tanto para o banco de dados quanto para o GA4 via Backend
      */
-    const trackInteraction = async (clienteId: number, type: InteractionType) => {
+    const trackInteraction = async (clienteId: number, type: InteractionType, city?: string) => {
         try {
             await api.post('/tracking/interaction', {
                 cliente_id: clienteId,
-                interaction_type: type
+                interaction_type: type,
+                city: city
             });
         } catch (error) {
             console.error('Erro ao rastrear interação:', error);

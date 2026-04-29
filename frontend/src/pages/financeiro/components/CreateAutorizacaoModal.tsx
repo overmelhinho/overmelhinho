@@ -54,6 +54,11 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
     const [clients, setClients] = useState<Cliente[]>([]);
     const [isClientLoading, setIsClientLoading] = useState(false);
 
+    // Parent Search State
+    const [parentSearch, setParentSearch] = useState("");
+    const [parents, setParents] = useState<any[]>([]);
+    const [isParentLoading, setIsParentLoading] = useState(false);
+
     const [form, setForm] = useState({
         tipo_publicidade: "WEB",
         titulo_anuncio: "",
@@ -77,7 +82,8 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         permuta_description: "",
         responsavel_nome: "",
         responsavel_preferencia: "",
-        responsavel_turno: ""
+        responsavel_turno: "",
+        parent_id: null as number | null,
     });
 
     const [plans, setPlans] = useState<Plan[]>([]);
@@ -128,6 +134,27 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         const timeoutId = setTimeout(fetchClients, 500);
         return () => clearTimeout(timeoutId);
     }, [clientSearch]);
+
+    // Parent Search Logic
+    useEffect(() => {
+        const fetchParents = async () => {
+            if (parentSearch.length < 3) return;
+            setIsParentLoading(true);
+            try {
+                const response = await axios.get(`/v1/autorizacoes?q=${parentSearch}`);
+                const data = response.data.data?.data || response.data?.data || [];
+                // Only show active or valid authorizations
+                setParents(data);
+            } catch (error) {
+                console.error("Erro ao buscar autorizações", error);
+            } finally {
+                setIsParentLoading(false);
+            }
+        };
+
+        const timeoutId = setTimeout(fetchParents, 500);
+        return () => clearTimeout(timeoutId);
+    }, [parentSearch]);
 
     // Fetch Plans
     useEffect(() => {
@@ -249,7 +276,18 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setForm(prev => ({ ...prev, [name]: value }));
+        setForm(prev => {
+            const next = { ...prev, [name]: value };
+            if (name === "data_inicio" && value) {
+                const parts = value.split("-").map(Number);
+                if (parts.length >= 2 && parts[0] && parts[1]) {
+                    const [y, m] = parts;
+                    const endDate = new Date(y + 1, m, 0);
+                    next.data_fim = format(endDate, "yyyy-MM-dd");
+                }
+            }
+            return next;
+        });
     };
 
     const handleSelectChange = (name: string, value: string) => {
@@ -272,7 +310,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         }
 
         const valor = parseFloat(parseCurrency(form.valor_total));
-        if (isNaN(valor) || valor <= 0) {
+        if (isNaN(valor) || valor < 0 || (valor === 0 && !form.parent_id)) {
             toast.error("Por favor, informe um valor total válido.");
             return;
         }
@@ -288,6 +326,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
             const payload = {
                 ...form,
                 cliente_id: clienteId,
+                parent_id: form.parent_id,
                 num_parcelas: parseInt(form.num_parcelas) || 1,
                 valor_total: valor,
                 taxa_cadastro: parseFloat(form.taxa_cadastro) || 0,
@@ -413,8 +452,9 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                     )}
                                 </div>
                             ) : (
-                                <div className="flex items-center justify-between p-4 bg-green-50 border-2 border-green-200 rounded-2xl animate-in zoom-in-95 duration-200">
-                                    <div className="flex items-center gap-4">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-green-50 border-2 border-green-200 rounded-2xl animate-in zoom-in-95 duration-200">
+                                        <div className="flex items-center gap-4">
                                         <div className="p-3 bg-green-200 rounded-xl text-green-700">
                                             <User size={24} />
                                         </div>
@@ -433,6 +473,96 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                     >
                                         Alterar Cliente
                                     </Button>
+                                </div>
+
+                                {/* Vincular Autorização */}
+                                <div className="space-y-3 p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+                                            <FileText size={16} />
+                                        </div>
+                                        <h4 className="text-xs font-black text-indigo-900 uppercase tracking-widest">É uma extensão ou bonificação?</h4>
+                                    </div>
+                                    <p className="text-[11px] text-indigo-700 font-medium">Vincule a uma autorização existente para isentar os valores e criar uma extensão de contrato (ex: Calera + See You).</p>
+                                    
+                                    {!form.parent_id ? (
+                                        <div className="relative group mt-2">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 group-focus-within:text-indigo-600 transition-colors" size={16} />
+                                            <input
+                                                type="text"
+                                                placeholder="Busque pelo cliente ou número da autorização pai..."
+                                                className="w-full rounded-xl border border-indigo-200 bg-white py-2.5 pl-9 pr-4 text-sm focus:border-indigo-600 focus:outline-none transition-all font-bold placeholder:text-indigo-300"
+                                                value={parentSearch}
+                                                onChange={(e) => setParentSearch(e.target.value)}
+                                            />
+                                            {isParentLoading && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent"></div>
+                                                </div>
+                                            )}
+
+                                            {parents.length > 0 && (
+                                                <div className="absolute z-50 w-full mt-1 rounded-xl border border-indigo-100 bg-white shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                                                    <div className="max-h-48 overflow-y-auto">
+                                                        {parents.map(p => (
+                                                            <button
+                                                                key={p.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setForm(prev => ({
+                                                                        ...prev,
+                                                                        parent_id: p.id,
+                                                                        plan_id: String(p.plan_id || ""),
+                                                                        tipo_publicidade: p.tipo_publicidade || "WEB",
+                                                                        titulo_anuncio: p.titulo_anuncio || "",
+                                                                        descricao_anuncio: p.descricao_anuncio || "",
+                                                                        data_inicio: p.data_inicio ? p.data_inicio.split("T")[0] : prev.data_inicio,
+                                                                        data_fim: p.data_fim ? p.data_fim.split("T")[0] : prev.data_fim,
+                                                                        valor_total: "0,00",
+                                                                        taxa_cadastro: "0",
+                                                                        is_permuta: false,
+                                                                        desconto_valor: "0",
+                                                                        num_parcelas: "1",
+                                                                    }));
+                                                                    setParentSearch(`${p.numero} - ${p.cliente?.nome_fantasia}`);
+                                                                    setParents([]);
+                                                                }}
+                                                                className="w-full flex items-center justify-between p-3 hover:bg-indigo-50 text-left transition-colors border-b border-gray-50 last:border-0"
+                                                            >
+                                                                <div>
+                                                                    <p className="font-bold text-gray-900 text-xs">#{p.numero} - {p.cliente?.nome_fantasia}</p>
+                                                                    <p className="text-[10px] text-gray-500 font-medium truncate max-w-[200px]">{p.titulo_anuncio}</p>
+                                                                </div>
+                                                                <Check size={14} className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-between p-3 bg-indigo-100 border border-indigo-200 rounded-xl mt-2">
+                                            <div className="flex items-center gap-2">
+                                                <Check size={16} className="text-indigo-600" />
+                                                <div>
+                                                    <p className="text-[10px] font-black text-indigo-800 uppercase">Vinculado a:</p>
+                                                    <p className="text-sm font-black text-indigo-950">{parentSearch}</p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setForm(prev => ({ ...prev, parent_id: null }));
+                                                    setParentSearch("");
+                                                }}
+                                                className="text-red-600 hover:bg-red-50 h-7 text-xs rounded-lg font-bold"
+                                            >
+                                                Remover Vínculo
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
                                 </div>
                             )}
 

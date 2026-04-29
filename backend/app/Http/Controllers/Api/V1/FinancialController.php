@@ -427,7 +427,7 @@ class FinancialController extends Controller
 
         $validated = $request->validate([
             'status'         => 'required|in:paid,canceled',
-            'justification'  => 'required|string|min:5',
+            'justification'  => 'nullable|string',
             'payment_method' => 'nullable|string|in:pix,dinheiro,cartao,boleto',
         ]);
 
@@ -499,7 +499,7 @@ class FinancialController extends Controller
             'amount'            => 'required|numeric|min:0',
             'due_date'          => 'required|date',
             'justification'     => 'required|string|min:5',
-            'difference_action' => 'nullable|string|in:discount,redistribute,create_extra',
+            'difference_action' => 'nullable|string|in:discount,redistribute,create_extra,next_installment',
             'extra_due_date'    => 'required_if:difference_action,create_extra|nullable|date',
         ]);
 
@@ -592,6 +592,44 @@ class FinancialController extends Controller
                     ];
                 }
 
+            } elseif ($differenceAction === 'next_installment' && $invoice->group_id) {
+                // Busca EXATAMENTE a próxima parcela pendente
+                $nextSibling = Invoice::where('group_id', $invoice->group_id)
+                    ->where('status', 'pending')
+                    ->where('parcel_number', '>', $invoice->parcel_number)
+                    ->orderBy('parcel_number', 'asc')
+                    ->first();
+
+                if ($nextSibling) {
+                    $sibNewAmount = round(($nextSibling->payable_amount ?? $nextSibling->amount) + $difference, 2);
+                    $sibNewAmount = max(0, $sibNewAmount);
+
+                    $nextSibling->update([
+                        'amount'         => $sibNewAmount,
+                        'payable_amount' => $sibNewAmount,
+                        'justification'  => "Diferença recebida da parcela #{$invoice->parcel_number} (R$ {$difference}). Motivo: {$justification}",
+                    ]);
+
+                    // Sync Tiny para a próxima parcela
+                    if ($nextSibling->tiny_account_id) {
+                        try {
+                            $nextSibling->load(['client.enderecos', 'client.contatos', 'plan']);
+                            $tinyData = $this->tinyService->updateReceivable($nextSibling, $sibNewAmount, $nextSibling->due_date);
+                            $nextSibling->update([
+                                'tiny_account_id' => $tinyData['tiny_account_id'],
+                                'payment_url'     => $tinyData['payment_url'],
+                            ]);
+                        } catch (\Exception $e) {
+                            $tinyErrors[] = "Erro ao atualizar boleto da próxima parcela (#{$nextSibling->parcel_number}): " . $e->getMessage();
+                        }
+                    }
+
+                    $redistributedInfo = [
+                        'next_parcel_number' => $nextSibling->parcel_number,
+                        'adjustment'         => $difference,
+                    ];
+                }
+
             } elseif ($differenceAction === 'create_extra' && $difference > 0) {
                 // Cria nova fatura com o valor da diferença
                 $extraDueDate = \Carbon\Carbon::parse($validated['extra_due_date']);
@@ -629,6 +667,7 @@ class FinancialController extends Controller
         $message = match($differenceAction) {
             'redistribute' => 'Fatura alterada. Diferença de R$ ' . number_format(abs($difference), 2, ',', '.') . ' redistribuída nas demais parcelas.',
             'create_extra' => 'Fatura alterada. Nova parcela extra de R$ ' . number_format(abs($difference), 2, ',', '.') . ' criada.',
+            'next_installment' => 'Fatura alterada. Diferença de R$ ' . number_format(abs($difference), 2, ',', '.') . ' ajustada na próxima parcela.',
             default        => 'Fatura alterada. Diferença de R$ ' . number_format(abs($difference), 2, ',', '.') . ' registrada como desconto.',
         };
 

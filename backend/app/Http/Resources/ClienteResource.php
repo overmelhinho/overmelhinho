@@ -16,7 +16,11 @@ class ClienteResource extends JsonResource
     {
         // Tratamento de URL do Logo (Suporta local e externo)
         $logoUrl = $this->logo_url;
-        if ($logoUrl && !Str::startsWith($logoUrl, ['http://', 'https://'])) {
+        
+        // ✅ Clientes Gratuitos NÃO exibem logotipo no site frontend
+        if (($this->tipo_cliente ?? 'gratuito') === 'gratuito') {
+            $logoUrl = null;
+        } elseif ($logoUrl && !Str::startsWith($logoUrl, ['http://', 'https://'])) {
             $logoUrl = asset('storage/' . $logoUrl);
         }
 

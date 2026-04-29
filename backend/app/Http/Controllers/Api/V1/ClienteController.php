@@ -265,14 +265,17 @@ class ClienteController extends Controller
             ->get();
 
         return response()->json([
-            'results' => $clientes->map(fn($c) => [
-                'id' => $c->id,
-                'slug' => $c->slug,
-                'title' => $c->nome_fantasia,
-                'image' => $c->logo_url,
-                'type' => 'client',
-                'priority' => ($c->tipo_cliente === 'pagante' && in_array($c->status_assinatura, ['ativa', 'ativo']))
-            ]),
+            'results' => $clientes->map(function($c) {
+                $isPagante = ($c->tipo_cliente === 'pagante' && in_array($c->status_assinatura, ['ativa', 'ativo']));
+                return [
+                    'id' => $c->id,
+                    'slug' => $c->slug,
+                    'title' => $c->nome_fantasia,
+                    'image' => $isPagante ? $c->logo_url : null,
+                    'type' => 'client',
+                    'priority' => $isPagante
+                ];
+            }),
             'categories' => $segmentos->map(fn($s) => [
                 'id' => $s->id,
                 'title' => $s->nome,
@@ -1297,7 +1300,7 @@ public function historico(Request $request, int $id)
             $statusAssinatura = $validated['status_assinatura']
                 ?? ($cliente->status_assinatura ?? ($tipoCliente === 'pagante' ? 'pendente' : 'cancelada'));
 
-            $seoSource = $generate ? 'ai' : 'manual';
+            $seoSource = $generate ? 'generated' : 'manual';
 
             $clienteData = [
                 'nome_fantasia' => $validated['nome_fantasia'],
@@ -1458,9 +1461,9 @@ public function historico(Request $request, int $id)
 
             // SEO IA
             if ($generate) {
-                if (Schema::hasColumn('clientes', 'seo_keywords_source') && ($cliente->seo_keywords_source ?? null) !== 'manual') {
-                    GenerateSeoKeywordsJob::dispatch($cliente->id)->afterCommit();
-                }
+                // Se o usuário marcou para gerar, executamos imediatamente (Sync)
+                // para garantir que o resultado apareça logo após o save.
+                GenerateSeoKeywordsJob::dispatchSync($cliente->id);
             }
 
             // Salva reviews do Google (somente se vier na request)
@@ -1581,7 +1584,7 @@ public function historico(Request $request, int $id)
 
             $out[] = $normalized ?? $k;
 
-            if (count($out) >= 20) break;
+            if (count($out) >= 100) break;
         }
 
 	  return $out; 

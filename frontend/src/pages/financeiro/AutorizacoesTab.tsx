@@ -36,7 +36,15 @@ import PreviewAutorizacaoModal from "./components/PreviewAutorizacaoModal";
 import EditAutorizacaoModal from "./components/EditAutorizacaoModal";
 import EditAutorizacaoContatoModal from "./components/EditAutorizacaoContatoModal";
 import { cn } from "@/lib/utils";
-import { User, Edit3 } from "lucide-react";
+import { User, Edit3, AlertTriangle } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Autorizacao {
     id: number;
@@ -74,6 +82,10 @@ export default function AutorizacoesTab() {
     const [isEditContactOpen, setIsEditContactOpen] = useState(false);
     const [selectedEditAutorizacao, setSelectedEditAutorizacao] = useState<Autorizacao | null>(null);
     const [isEditAutorizacaoOpen, setIsEditAutorizacaoOpen] = useState(false);
+
+    // Delete Modal State
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [autorizacaoToDelete, setAutorizacaoToDelete] = useState<number | null>(null);
     
     // Limpa seleção ao trocar filtros
     useEffect(() => {
@@ -175,15 +187,15 @@ export default function AutorizacoesTab() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm("Tem certeza que deseja EXCLUIR permanentemente esta autorização? Esta ação não pode ser desfeita.")) {
-            return;
-        }
+    const handleDelete = async () => {
+        if (!autorizacaoToDelete) return;
 
-        const loadingToast = toast.loading("Excluindo autorização...");
+        const loadingToast = toast.loading("Excluindo autorização e faturas...");
         try {
-            await axios.delete(`/v1/autorizacoes/${id}`);
-            toast.success("Autorização excluída com sucesso!", { id: loadingToast });
+            await axios.delete(`/v1/autorizacoes/${autorizacaoToDelete}`);
+            toast.success("Tudo foi excluído permanentemente!", { id: loadingToast });
+            setIsDeleteDialogOpen(false);
+            setAutorizacaoToDelete(null);
             refetch();
         } catch (error: any) {
             const msg = error.response?.data?.message || "Erro ao excluir autorização.";
@@ -420,26 +432,25 @@ export default function AutorizacoesTab() {
 
                                                 <DropdownMenuSeparator className="bg-gray-50" />
 
-                                                {a.status !== "assinado" && (
-                                                    <>
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                setSelectedEditAutorizacao(a);
-                                                                setIsEditAutorizacaoOpen(true);
-                                                            }}
-                                                            className="rounded-xl font-bold text-xs gap-2 py-2.5 text-blue-700 hover:bg-blue-50 cursor-pointer"
-                                                        >
-                                                            <Edit3 size={16} /> Editar Contrato
-                                                        </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => {
+                                                        setSelectedEditAutorizacao(a);
+                                                        setIsEditAutorizacaoOpen(true);
+                                                    }}
+                                                    className="rounded-xl font-bold text-xs gap-2 py-2.5 text-blue-700 hover:bg-blue-50 cursor-pointer"
+                                                >
+                                                    <Edit3 size={16} /> Editar Contrato
+                                                </DropdownMenuItem>
 
-                                                        <DropdownMenuItem 
-                                                           onClick={() => handleDelete(a.id)}
-                                                           className="rounded-xl font-bold text-xs gap-2 py-2.5 text-red-600 hover:bg-red-50 cursor-pointer font-black"
-                                                        >
-                                                            <Trash2 size={16} /> EXCLUIR Definitivamente
-                                                        </DropdownMenuItem>
-                                                    </>
-                                                )}
+                                                <DropdownMenuItem 
+                                                   onClick={() => {
+                                                       setAutorizacaoToDelete(a.id);
+                                                       setIsDeleteDialogOpen(true);
+                                                   }}
+                                                   className="rounded-xl font-bold text-xs gap-2 py-2.5 text-red-600 hover:bg-red-50 cursor-pointer font-black"
+                                                >
+                                                    <Trash2 size={16} /> EXCLUIR Definitivamente
+                                                </DropdownMenuItem>
 
                                                 {a.status === "assinado" && (
                                                     <DropdownMenuItem className="rounded-xl font-bold text-xs gap-2 py-2.5 text-gray-400 hover:bg-gray-50 cursor-pointer">
@@ -475,8 +486,43 @@ export default function AutorizacoesTab() {
                 isOpen={isEditAutorizacaoOpen}
                 onClose={() => setIsEditAutorizacaoOpen(false)}
                 onSuccess={() => refetch()}
+                onSuccess={() => refetch()}
                 autorizacao={selectedEditAutorizacao}
             />
+
+            {/* Modal de Exclusão Definitiva */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl">
+                    <DialogHeader className="flex flex-col items-center text-center pt-4">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 animate-bounce-subtle">
+                            <AlertTriangle className="text-red-600" size={32} />
+                        </div>
+                        <DialogTitle className="text-2xl font-black text-gray-900 tracking-tight">
+                            Exclusão Irreversível
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-500 font-medium px-4">
+                            Você está prestes a apagar esta autorização e <strong className="text-red-600">todas as faturas</strong> geradas por ela. Esta ação não poderá ser desfeita.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="flex flex-col sm:flex-row gap-3 p-6 pt-2">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                            className="flex-1 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 h-12"
+                        >
+                            Manter Contrato
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            className="flex-1 rounded-2xl font-black bg-red-600 hover:bg-red-700 h-12 shadow-lg shadow-red-200"
+                        >
+                            Sim, Excluir Tudo
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

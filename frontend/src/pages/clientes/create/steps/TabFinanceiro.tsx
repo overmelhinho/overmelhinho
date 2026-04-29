@@ -21,14 +21,26 @@ import {
     RefreshCw,
     Link as LinkIcon,
     Calendar,
-    Smartphone
+    Smartphone,
+    MoreHorizontal,
+    Share2,
+    Send,
+    CheckCircle,
+    DollarSign,
+    ShieldCheck,
+    Edit3,
+    Trash2,
+    AlertTriangle,
+    Pencil,
+    Landmark,
+    Info,
+    Check
 } from "lucide-react";
 import { useFormikContext } from "formik";
 import { cn } from "@/lib/utils";
 import CreateAutorizacaoModal from "../../../financeiro/components/CreateAutorizacaoModal";
 import PreviewAutorizacaoModal from "../../../financeiro/components/PreviewAutorizacaoModal";
 import JustificarAssinaturaModal from "../../../financeiro/components/JustificarAssinaturaModal";
-import { MoreHorizontal, Share2, Send, CheckCircle, DollarSign, ShieldCheck, Edit3, Trash2 } from "lucide-react";
 import EditAutorizacaoModal from "../../../financeiro/components/EditAutorizacaoModal";
 import {
     DropdownMenu,
@@ -49,6 +61,23 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import Textarea from "@/components/ui/textarea";
 
 interface Plan {
     id: number;
@@ -72,6 +101,7 @@ interface Invoice {
     permuta_amount?: number;
     payable_amount?: number;
     autorizacao_numero?: number;
+    tiny_account_id?: string | null;
 }
 
 interface Autorizacao {
@@ -105,6 +135,30 @@ export default function TabFinanceiro() {
     const [invoiceToPay, setInvoiceToPay] = useState<number | null>(null);
     const [manualPaymentMethod, setManualPaymentMethod] = useState("pix");
 
+    // Edit Invoice Modal States
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+    const [editAmount, setEditAmount] = useState("");
+    const [editDueDate, setEditDueDate] = useState("");
+    const [editJustification, setEditJustification] = useState("");
+    const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+    const [editDifferenceAction, setEditDifferenceAction] = useState<"discount" | "redistribute" | "create_extra" | "next_installment">("discount");
+    const [editExtraDueDate, setEditExtraDueDate] = useState("");
+
+    // Settle Group Modal States
+    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [settleGroupId, setSettleGroupId] = useState("");
+    const [settleGroupParcels, setSettleGroupParcels] = useState<Invoice[]>([]);
+    const [settleDiscount, setSettleDiscount] = useState("");
+    const [settleDiscountType, setSettleDiscountType] = useState<"fixed" | "percent">("fixed");
+    const [settlePaymentMethod, setSettlePaymentMethod] = useState("pix");
+    const [settleJustification, setSettleJustification] = useState("");
+    const [isSettleSubmitting, setIsSettleSubmitting] = useState(false);
+
+    // Tiny Errors Modal
+    const [tinyErrorsOpen, setTinyErrorsOpen] = useState(false);
+    const [tinyErrorsList, setTinyErrorsList] = useState<string[]>([]);
+
     // Discount States
     const [showDiscount, setShowDiscount] = useState(false);
     const [discountValue, setDiscountValue] = useState(0);
@@ -118,7 +172,7 @@ export default function TabFinanceiro() {
     const [isWarningOpen, setIsWarningOpen] = useState(false);
 
     // Fetch Invoices
-    const { data: invoices, isLoading: isLoadingInvoices } = useQuery<Invoice[]>({
+    const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useQuery<Invoice[]>({
         queryKey: ["client-invoices", id],
         queryFn: async () => {
             const resp = await axios.get(`/v1/clientes/${id}/invoices`);
@@ -144,8 +198,9 @@ export default function TabFinanceiro() {
             await axios.delete(`/v1/autorizacoes/${authId}`);
         },
         onSuccess: () => {
-            toast.success("Autorização excluída com sucesso!");
+            toast.success("Autorização e faturas excluídas!");
             refetchAuths();
+            queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || "Erro ao excluir autorização.");
@@ -332,7 +387,7 @@ export default function TabFinanceiro() {
             case "cancelado":
                 return (
                     <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-black uppercase bg-gray-100 text-gray-700 shadow-sm">
-                        <XCircle size={12} /> Cancelado
+                        <AlertCircle size={12} /> Cancelado
                     </span>
                 );
             default:
@@ -343,8 +398,6 @@ export default function TabFinanceiro() {
                 );
         }
     };
-
-    const XCircle = ({ size }: { size: number }) => <AlertCircle size={size} />; // Fallback icon
 
     const handleSendLink = async (authId: number) => {
         try {
@@ -632,30 +685,27 @@ export default function TabFinanceiro() {
                                                         </DropdownMenuItem>
                                                     )}
 
-                                                    {auth.status !== "assinado" && (
-                                                        <>
-                                                            <DropdownMenuSeparator className="bg-gray-50" />
-                                                            <DropdownMenuItem
-                                                                onClick={() => {
-                                                                    setAuthToEdit(auth);
-                                                                    setIsEditAuthOpen(true);
-                                                                }}
-                                                                className="rounded-lg font-bold text-xs gap-2 py-2 text-blue-700 hover:bg-blue-50 cursor-pointer"
-                                                            >
-                                                                <Edit3 size={14} /> Editar Contrato
-                                                            </DropdownMenuItem>
+                                                    <DropdownMenuSeparator className="bg-gray-50" />
 
-                                                            <DropdownMenuItem
-                                                                onClick={() => {
-                                                                    setAuthIdToDelete(auth.id);
-                                                                    setIsDeleteAuthModalOpen(true);
-                                                                }}
-                                                                className="rounded-lg font-bold text-xs gap-2 py-2 text-red-600 hover:bg-red-50 cursor-pointer"
-                                                            >
-                                                                <Trash2 size={14} /> Excluir Definitivamente
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setAuthToEdit(auth);
+                                                            setIsEditAuthOpen(true);
+                                                        }}
+                                                        className="rounded-lg font-bold text-xs gap-2 py-2 text-blue-700 hover:bg-blue-50 cursor-pointer"
+                                                    >
+                                                        <Edit3 size={14} /> Editar Contrato
+                                                    </DropdownMenuItem>
+
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setAuthIdToDelete(auth.id);
+                                                            setIsDeleteAuthModalOpen(true);
+                                                        }}
+                                                        className="rounded-lg font-bold text-xs gap-2 py-2 text-red-600 hover:bg-red-50 cursor-pointer font-black"
+                                                    >
+                                                        <Trash2 size={14} /> Excluir Definitivamente
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </td>
@@ -715,8 +765,10 @@ export default function TabFinanceiro() {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {invoices && invoices.length > 0 ? (
-                                invoices.map((invoice) => (
-                                    <tr key={invoice.id} className="bg-white hover:bg-gray-50/80 transition-colors group">
+                                [...invoices]
+                                    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+                                    .map((invoice) => (
+                                        <tr key={invoice.id} className="bg-white hover:bg-gray-50/80 transition-colors group">
                                         <td className="px-6 py-4 font-medium text-gray-900">
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
@@ -761,16 +813,53 @@ export default function TabFinanceiro() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-1.5">
-                                                {invoice.status !== 'paid' && (
-                                                    <button
-                                                        onClick={() => handleMarkAsPaid(invoice.id)}
-                                                        disabled={payInvoiceMutation.isPending}
-                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-xl transition-all disabled:opacity-50"
-                                                        title="Dar Baixa (Confirmar Pagamento)"
-                                                    >
-                                                        <CheckCircle size={16} />
-                                                    </button>
+                                                {invoice.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedInvoice(invoice);
+                                                                setEditAmount(String(invoice.payable_amount ?? invoice.amount));
+                                                                setEditDueDate(invoice.due_date?.slice(0, 10) ?? "");
+                                                                setEditJustification("");
+                                                                setIsEditModalOpen(true);
+                                                            }}
+                                                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                                                            title="Editar Valor / Vencimento"
+                                                        >
+                                                            <Pencil size={15} />
+                                                        </button>
+
+                                                        {invoice.group_id && invoice.total_parcels && invoice.total_parcels > 1 && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const groupParcels = (invoices ?? []).filter(
+                                                                        i => i.group_id === invoice.group_id && i.status === 'pending'
+                                                                    );
+                                                                    setSettleGroupId(invoice.group_id!);
+                                                                    setSettleGroupParcels(groupParcels);
+                                                                    setSettleDiscount("");
+                                                                    setSettleJustification("");
+                                                                    setSettlePaymentMethod("pix");
+                                                                    setIsSettleModalOpen(true);
+                                                                }}
+                                                                className="p-2 text-purple-500 hover:bg-purple-50 rounded-xl transition-all"
+                                                                title="Quitar Parcelas Restantes"
+                                                            >
+                                                                <Landmark size={15} />
+                                                            </button>
+                                                        )}
+
+                                                        <button
+                                                            onClick={() => handleMarkAsPaid(invoice.id)}
+                                                            disabled={payInvoiceMutation.isPending}
+                                                            className="p-2 text-green-600 hover:bg-green-50 rounded-xl transition-all disabled:opacity-50"
+                                                            title="Dar Baixa (Confirmar Pagamento)"
+                                                        >
+                                                            <CheckCircle size={16} />
+                                                        </button>
+                                                    </>
                                                 )}
+                                                
                                                 {invoice.payment_url && (
                                                     <>
                                                         <button
@@ -809,9 +898,6 @@ export default function TabFinanceiro() {
                                                             <Printer size={16} />
                                                         </button>
                                                     )
-                                                )}
-                                                {!invoice.payment_url && !invoice.group_id && invoice.status === 'pending' && (
-                                                    <span className="text-[10px] text-gray-300 font-bold uppercase italic">Aguardando</span>
                                                 )}
                                             </div>
                                         </td>
@@ -1154,30 +1240,28 @@ export default function TabFinanceiro() {
 
             {/* Aviso de Duplicidade Elegante */}
             <AlertDialog open={isWarningOpen} onOpenChange={setIsWarningOpen}>
-                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md">
-                    <AlertDialogHeader>
-                        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md shadow-2xl">
+                    <AlertDialogHeader className="flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mb-4">
                             <AlertCircle size={32} />
                         </div>
-                        <AlertDialogTitle className="text-2xl font-bold text-gray-900 text-center">
-                            Atenção: Autorizações Pendentes
+                        <AlertDialogTitle className="text-2xl font-black text-gray-900 tracking-tight">
+                            Atenção: Pendências
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-500 text-center text-sm mt-2 font-medium">
-                            Este cliente já possui autorizações aguardando assinatura. <br/>
-                            Gerar uma cobrança manual agora pode resultar em <b>faturas duplicadas</b>. <br/><br/>
-                            Deseja prosseguir mesmo assim?
+                        <AlertDialogDescription className="text-gray-500 font-medium px-4 mt-2 leading-relaxed">
+                            Este cliente já possui autorizações aguardando assinatura. Gerar uma cobrança agora pode causar <strong className="text-red-600">duplicidade</strong> no financeiro.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="mt-8 flex gap-3 sm:justify-start">
-                        <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-gray-100 font-bold text-xs uppercase text-gray-400 hover:bg-gray-50 transition-all">
-                            Cancelar e Voltar
+                    <AlertDialogFooter className="mt-8 flex flex-col sm:flex-row gap-3 w-full">
+                        <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-gray-100 font-bold text-gray-400 hover:bg-gray-50 transition-all uppercase text-[10px]">
+                            Voltar e Revisar
                         </AlertDialogCancel>
                         <AlertDialogAction 
                             onClick={() => {
                                 setIsWarningOpen(false);
                                 setIsModalOpen(true);
                             }}
-                            className="flex-1 h-12 rounded-2xl bg-[#B70F0A] hover:bg-[#8e0c08] font-bold text-xs uppercase text-white shadow-lg shadow-red-200 transition-all"
+                            className="flex-1 h-12 rounded-2xl bg-[#B70F0A] hover:bg-[#8e0c08] font-black text-white shadow-lg shadow-red-200 transition-all uppercase text-[10px]"
                         >
                             Prosseguir
                         </AlertDialogAction>
@@ -1187,16 +1271,16 @@ export default function TabFinanceiro() {
 
             {/* Modal de Confirmação de Pagamento Elegante */}
             <AlertDialog open={isPayModalOpen} onOpenChange={setIsPayModalOpen}>
-                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md">
-                    <AlertDialogHeader>
-                        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
-                            <DollarSign size={32} />
+                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md shadow-2xl">
+                    <AlertDialogHeader className="flex flex-col items-center text-center">
+                        <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
+                            <DollarSign size={42} />
                         </div>
-                        <AlertDialogTitle className="text-2xl font-bold text-gray-900 text-center">
+                        <AlertDialogTitle className="text-2xl font-black text-gray-900 tracking-tight">
                             Confirmar Pagamento?
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-500 text-center text-sm mt-2 font-medium">
-                            Selecione o método de pagamento utilizado pelo cliente abaixo:
+                        <AlertDialogDescription className="text-gray-500 font-medium px-4 mt-2">
+                            Selecione o método utilizado e confirme a liquidação da fatura.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 
@@ -1225,14 +1309,14 @@ export default function TabFinanceiro() {
 
                     <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
                         <p className="text-[10px] text-slate-400 font-bold uppercase text-center leading-tight">
-                            Ao confirmar, o status será alterado para <span className="text-emerald-600">PAGO</span> e sincronizado com o <b>Tiny ERP</b>.
+                            O status será alterado para <span className="text-emerald-600">PAGO</span> e sincronizado com o <b>Tiny ERP</b>.
                         </p>
                     </div>
 
-                    <AlertDialogFooter className="mt-8 flex gap-3 sm:justify-start">
+                    <AlertDialogFooter className="mt-8 flex flex-col sm:flex-row gap-3 w-full">
                         <AlertDialogCancel 
                             disabled={payInvoiceMutation.isPending}
-                            className="flex-1 h-12 rounded-2xl border-gray-100 font-bold text-xs uppercase text-gray-400 hover:bg-gray-50 transition-all"
+                            className="flex-1 h-14 rounded-2xl border-gray-100 font-bold text-gray-400 hover:bg-gray-50 transition-all uppercase text-[10px]"
                         >
                             Voltar
                         </AlertDialogCancel>
@@ -1249,7 +1333,7 @@ export default function TabFinanceiro() {
                                     });
                                 }
                             }}
-                            className="flex-1 h-12 rounded-2xl bg-green-600 hover:bg-green-700 font-bold text-xs uppercase text-white shadow-lg shadow-green-100 transition-all"
+                            className="flex-1 h-14 rounded-2xl bg-green-600 hover:bg-green-700 font-black text-white shadow-lg shadow-green-100 transition-all uppercase text-[10px]"
                         >
                             {payInvoiceMutation.isPending ? "Processando..." : "Sim, Confirmar"}
                         </AlertDialogAction>
@@ -1257,35 +1341,35 @@ export default function TabFinanceiro() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Modal de Confirmação de Exclusão Definitiva */}
+            {/* Modal de Confirmação de Exclusão Definitiva (Red Theme) */}
             <AlertDialog open={isDeleteAuthModalOpen} onOpenChange={setIsDeleteAuthModalOpen}>
-                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md">
-                    <AlertDialogHeader>
-                        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
-                            <Trash2 size={32} />
+                <AlertDialogContent className="rounded-[32px] border-none p-8 max-w-md shadow-2xl">
+                    <AlertDialogHeader className="flex flex-col items-center text-center">
+                        <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-6 animate-bounce-subtle">
+                            <AlertTriangle size={42} />
                         </div>
-                        <AlertDialogTitle className="text-2xl font-bold text-gray-900 text-center">
-                            Excluir Contrato?
+                        <AlertDialogTitle className="text-2xl font-black text-gray-900 tracking-tight">
+                            Exclusão Irreversível
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-500 text-center text-sm mt-2 font-medium">
-                            Você está prestes a excluir este contrato <b>definitivamente</b>. <br/><br/>
-                            Esta ação removerá todos os dados e parcelas vinculadas, e <b>não poderá ser desfeita</b>.
+                        <AlertDialogDescription className="text-gray-500 font-medium px-4 mt-2 leading-relaxed">
+                            Você está prestes a apagar esta autorização e <strong className="text-red-600 font-black tracking-tighter uppercase">Todas as Faturas</strong> vinculadas a ela. Esta ação não poderá ser desfeita.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="mt-8 flex gap-3 sm:justify-start">
-                        <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-gray-100 font-bold text-xs uppercase text-gray-400 hover:bg-gray-50 transition-all">
-                            Manter Contrato
+                    <AlertDialogFooter className="mt-8 flex flex-col sm:flex-row gap-3 w-full">
+                        <AlertDialogCancel className="flex-1 h-14 rounded-2xl border-gray-100 font-bold text-gray-400 hover:bg-gray-50 transition-all uppercase text-[10px]">
+                            Manter Registro
                         </AlertDialogCancel>
                         <AlertDialogAction 
-                            onClick={() => {
+                            onClick={(e) => {
+                                e.preventDefault();
                                 if (authIdToDelete) {
                                     deleteAuthMutation.mutate(authIdToDelete);
                                     setIsDeleteAuthModalOpen(false);
                                 }
                             }}
-                            className="flex-1 h-12 rounded-2xl bg-red-600 hover:bg-red-700 font-bold text-xs uppercase text-white shadow-lg shadow-red-200 transition-all"
+                            className="flex-1 h-14 rounded-2xl bg-red-600 hover:bg-red-700 font-black text-white shadow-lg shadow-red-200 transition-all uppercase text-[10px]"
                         >
-                            Sim, Excluir
+                            Sim, Excluir Tudo
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -1300,6 +1384,368 @@ export default function TabFinanceiro() {
                 }}
                 autorizacao={authToEdit}
             />
+
+            {/* ── Edit Invoice Modal ───────────────────────── */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="sm:max-w-lg rounded-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black flex items-center gap-2">
+                            <Pencil className="text-blue-600" size={20} /> Editar Fatura
+                        </DialogTitle>
+                        <DialogDescription className="font-medium">
+                            Altere o valor ou a data de vencimento desta parcela.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {/* Campos principais */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Novo Valor (R$)</label>
+                                <Input
+                                    type="number" min="0" step="0.01"
+                                    value={editAmount}
+                                    onChange={e => setEditAmount(e.target.value)}
+                                    className="rounded-xl border-gray-200 font-bold text-gray-900"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Novo Vencimento</label>
+                                <Input
+                                    type="date" value={editDueDate}
+                                    onChange={e => setEditDueDate(e.target.value)}
+                                    className="rounded-xl border-gray-200 font-bold text-gray-900"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Painel da diferença — aparece quando o valor muda */}
+                        {(() => {
+                            const originalAmount = selectedInvoice ? Number(selectedInvoice.payable_amount ?? selectedInvoice.amount) : 0;
+                            const newAmt = Number(editAmount);
+                            const diff = Math.round((originalAmount - newAmt) * 100) / 100;
+                            if (!editAmount || Math.abs(diff) < 0.01) return null;
+
+                            const hasSiblings = selectedInvoice?.group_id && (selectedInvoice.total_parcels ?? 1) > 1;
+                            const hasNextSibling = hasSiblings && (invoices ?? []).some(i => 
+                                i.group_id === selectedInvoice?.group_id && 
+                                i.status === 'pending' && 
+                                (i.parcel_number ?? 0) > (selectedInvoice?.parcel_number ?? 0)
+                            );
+
+                            return (
+                                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
+                                            <Info size={14} /> Diferença detectada
+                                        </p>
+                                        <span className={`text-sm font-black px-3 py-1 rounded-full ${
+                                            diff > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        }`}>
+                                            {diff > 0 ? '-' : '+'}R$ {Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+
+                                    <p className="text-xs text-blue-700 font-medium">O que fazer com esta diferença?</p>
+
+                                    <div className="space-y-2">
+                                        <label className="flex items-start gap-3 p-2.5 rounded-xl border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors">
+                                            <input type="radio" name="diff_action" value="discount"
+                                                checked={editDifferenceAction === 'discount'}
+                                                onChange={() => setEditDifferenceAction('discount')}
+                                                className="mt-0.5 accent-blue-600"
+                                            />
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-800">💸 Desconto / Remissão</p>
+                                                <p className="text-xs text-gray-500">A diferença é descartada. O total do grupo diminui.</p>
+                                            </div>
+                                        </label>
+
+                                        {hasSiblings && (
+                                            <label className="flex items-start gap-3 p-2.5 rounded-xl border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors">
+                                                <input type="radio" name="diff_action" value="redistribute"
+                                                    checked={editDifferenceAction === 'redistribute'}
+                                                    onChange={() => setEditDifferenceAction('redistribute')}
+                                                    className="mt-0.5 accent-blue-600"
+                                                />
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-800">📊 Redistribuir nas parcelas seguintes</p>
+                                                    <p className="text-xs text-gray-500">A diferença é distribuída igualmente entre as outras parcelas pendentes. O total do grupo é preservado.</p>
+                                                </div>
+                                            </label>
+                                        )}
+
+                                        {hasNextSibling && (
+                                            <label className="flex items-start gap-3 p-2.5 rounded-xl border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors">
+                                                <input type="radio" name="diff_action" value="next_installment"
+                                                    checked={editDifferenceAction === 'next_installment'}
+                                                    onChange={() => setEditDifferenceAction('next_installment')}
+                                                    className="mt-0.5 accent-blue-600"
+                                                />
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-800">
+                                                        {diff > 0 ? "📈 Adicionar na próxima parcela" : "📉 Descontar na próxima parcela"}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {diff > 0 
+                                                            ? `O valor de R$ ${Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} será somado à próxima parcela.` 
+                                                            : `O valor de R$ ${Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} será deduzido da próxima parcela.`
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </label>
+                                        )}
+
+                                        {diff > 0 && (
+                                            <label className="flex items-start gap-3 p-2.5 rounded-xl border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors">
+                                                <input type="radio" name="diff_action" value="create_extra"
+                                                    checked={editDifferenceAction === 'create_extra'}
+                                                    onChange={() => setEditDifferenceAction('create_extra')}
+                                                    className="mt-0.5 accent-blue-600"
+                                                />
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-800">📄 Criar parcela extra</p>
+                                                    <p className="text-xs text-gray-500">Uma nova parcela de R$ {Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} será criada para o cliente pagar depois.</p>
+                                                </div>
+                                            </label>
+                                        )}
+                                    </div>
+
+                                    {editDifferenceAction === 'create_extra' && diff > 0 && (
+                                        <div className="space-y-1 pt-1">
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Vencimento da Parcela Extra</label>
+                                            <Input
+                                                type="date" value={editExtraDueDate}
+                                                onChange={e => setEditExtraDueDate(e.target.value)}
+                                                className="rounded-xl border-blue-200 font-bold"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Motivo da Alteração (Obrigatório)</label>
+                            <Textarea
+                                placeholder="Ex: Negociação comercial, correção de valor..."
+                                value={editJustification}
+                                onChange={e => setEditJustification(e.target.value)}
+                                className="min-h-[80px] rounded-2xl border-gray-200"
+                            />
+                        </div>
+
+                        {/* Tiny ERP transparency panel */}
+                        <div className={`border rounded-2xl p-4 space-y-2 ${
+                            selectedInvoice?.tiny_account_id ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                            <p className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${
+                                selectedInvoice?.tiny_account_id ? 'text-orange-700' : 'text-gray-500'
+                            }`}>
+                                <Info size={14} /> {selectedInvoice?.tiny_account_id ? 'O que será feito no Tiny ERP' : 'Sem sincronização com Tiny ERP'}
+                            </p>
+                            {selectedInvoice?.tiny_account_id ? (
+                                <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
+                                    <li>Conta <strong>#{selectedInvoice.tiny_account_id}</strong> será atualizada com o novo valor e vencimento</li>
+                                    {editDifferenceAction === 'redistribute' && <li>Contas das parcelas seguintes também serão atualizadas no Tiny</li>}
+                                    {editDifferenceAction === 'next_installment' && <li>A conta da <strong>próxima parcela</strong> será atualizada no Tiny com o novo valor</li>}
+                                    {editDifferenceAction === 'create_extra' && <li>Uma nova conta a receber será criada no Tiny para a parcela extra</li>}
+                                    {editDifferenceAction === 'discount' && <li>Nenhuma outra conta será afetada no Tiny</li>}
+                                </ul>
+                            ) : (
+                                <p className="text-xs font-bold text-gray-500">Esta fatura não está no Tiny ERP. Apenas o sistema local será alterado.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:justify-end">
+                        <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
+                        <Button
+                            disabled={!editAmount || !editDueDate || editJustification.length < 5 ||
+                                (editDifferenceAction === 'create_extra' && !editExtraDueDate) ||
+                                isEditSubmitting
+                            }
+                            className="rounded-xl font-black px-8 bg-blue-600 hover:bg-blue-700"
+                            onClick={async () => {
+                                if (!selectedInvoice) return;
+                                setIsEditSubmitting(true);
+                                try {
+                                    const res = await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/edit`, {
+                                        amount: Number(editAmount),
+                                        due_date: editDueDate,
+                                        justification: editJustification,
+                                        difference_action: editDifferenceAction,
+                                        extra_due_date: editDifferenceAction === 'create_extra' ? editExtraDueDate : undefined,
+                                    });
+                                    toast.success(res.data.message);
+                                    if (res.data.tiny_errors?.length > 0) {
+                                        setTinyErrorsList(res.data.tiny_errors);
+                                        setTinyErrorsOpen(true);
+                                    }
+                                    refetchInvoices();
+                                    setIsEditModalOpen(false);
+                                } catch (error: any) {
+                                    const msg = error?.response?.data?.message ?? "Erro ao editar fatura.";
+                                    toast.error(msg);
+                                } finally {
+                                    setIsEditSubmitting(false);
+                                }
+                            }}
+                        >
+                            {isEditSubmitting ? "Salvando..." : "Salvar Alterações"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Settle Group Modal ───────────────────────── */}
+            <Dialog open={isSettleModalOpen} onOpenChange={setIsSettleModalOpen}>
+                <DialogContent className="sm:max-w-lg rounded-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black flex items-center gap-2">
+                            <Landmark className="text-purple-600" size={20} /> Quitação Antecipada
+                        </DialogTitle>
+                        <DialogDescription className="font-medium">
+                            Quitar todas as parcelas pendentes deste grupo de uma vez.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {/* Parcelas envolvidas */}
+                        <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Parcelas Pendentes a Quitar</p>
+                            {settleGroupParcels.map(p => (
+                                <div key={p.id} className="flex justify-between text-sm">
+                                    <span className="text-gray-600 font-medium">Parcela {p.parcel_number}/{p.total_parcels} — Venc. {format(new Date(p.due_date + 'T12:00:00'), 'dd/MM/yyyy')}</span>
+                                    <span className="font-bold text-gray-900">R$ {Number(p.payable_amount ?? p.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            ))}
+                            <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-gray-900">
+                                <span>Total</span>
+                                <span>R$ {settleGroupParcels.reduce((a, p) => a + Number(p.payable_amount ?? p.amount), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Desconto</label>
+                                <Input
+                                    type="number" min="0" step="0.01"
+                                    placeholder="0"
+                                    value={settleDiscount}
+                                    onChange={e => setSettleDiscount(e.target.value)}
+                                    className="rounded-xl border-gray-200"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Tipo</label>
+                                <Select value={settleDiscountType} onValueChange={(v: any) => setSettleDiscountType(v)}>
+                                    <SelectTrigger className="rounded-xl border-gray-200 h-10 text-sm font-bold"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="fixed">R$ Fixo</SelectItem>
+                                        <SelectItem value="percent">% Percentual</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Forma de Pagamento</label>
+                            <Select value={settlePaymentMethod} onValueChange={setSettlePaymentMethod}>
+                                <SelectTrigger className="rounded-xl border-gray-200 h-10 text-sm font-bold"><SelectValue /></SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="pix">PIX</SelectItem>
+                                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                                    <SelectItem value="cartao">Cartão</SelectItem>
+                                    <SelectItem value="boleto">Boleto</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Motivo / Observação (Obrigatório)</label>
+                            <Textarea
+                                placeholder="Ex: Cliente quitou antecipadamente com desconto de 10%..."
+                                value={settleJustification}
+                                onChange={e => setSettleJustification(e.target.value)}
+                                className="min-h-[80px] rounded-2xl border-gray-200"
+                            />
+                        </div>
+
+                        {/* Tiny ERP transparency panel */}
+                        <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 space-y-2">
+                            <p className="text-xs font-black text-purple-700 uppercase tracking-widest flex items-center gap-2">
+                                <Info size={14} /> O que será feito no Tiny ERP
+                            </p>
+                            <ul className="text-sm text-purple-900 space-y-1 list-disc list-inside">
+                                <li><strong>{settleGroupParcels.filter(p => p.tiny_account_id).length}</strong> conta(s) a receber será(ão) baixada(s) no Tiny</li>
+                                {settleGroupParcels.filter(p => !p.tiny_account_id).length > 0 && (
+                                    <li className="text-amber-700">{settleGroupParcels.filter(p => !p.tiny_account_id).length} parcela(s) sem Tiny ID — serão quitadas apenas localmente</li>
+                                )}
+                                <li>Valor final após desconto: <strong>R$ {Math.max(0, settleGroupParcels.reduce((a, p) => a + Number(p.payable_amount ?? p.amount), 0) - (settleDiscount ? (settleDiscountType === 'percent' ? (settleGroupParcels.reduce((a, p) => a + Number(p.payable_amount ?? p.amount), 0) * Number(settleDiscount) / 100) : Number(settleDiscount)) : 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:justify-end">
+                        <Button variant="secondary" onClick={() => setIsSettleModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
+                        <Button
+                            disabled={settleJustification.length < 5 || isSettleSubmitting}
+                            className="rounded-xl font-black px-8 bg-purple-600 hover:bg-purple-700"
+                            onClick={async () => {
+                                setIsSettleSubmitting(true);
+                                try {
+                                    const res = await axios.post(`/v1/financial/invoices/settle-group`, {
+                                        group_id: settleGroupId,
+                                        discount_value: settleDiscount ? Number(settleDiscount) : undefined,
+                                        discount_type: settleDiscountType,
+                                        payment_method: settlePaymentMethod,
+                                        justification: settleJustification,
+                                    });
+                                    toast.success(res.data.message);
+                                    if (res.data.tiny_errors?.length > 0) {
+                                        setTinyErrorsList(res.data.tiny_errors);
+                                        setTinyErrorsOpen(true);
+                                    }
+                                    refetchInvoices();
+                                    setIsSettleModalOpen(false);
+                                } catch (error: any) {
+                                    const msg = error?.response?.data?.message ?? "Erro ao quitar parcelas.";
+                                    toast.error(msg);
+                                } finally {
+                                    setIsSettleSubmitting(false);
+                                }
+                            }}
+                        >
+                            {isSettleSubmitting ? "Processando..." : "Confirmar Quitação"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Tiny ERP Errors Modal ───────────────────── */}
+            <Dialog open={tinyErrorsOpen} onOpenChange={setTinyErrorsOpen}>
+                <DialogContent className="sm:max-w-md rounded-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black flex items-center gap-2 text-orange-700">
+                            <Info size={20} /> Erros de Sincronização com o Tiny
+                        </DialogTitle>
+                        <DialogDescription>
+                            O sistema local foi atualizado com sucesso, mas houve falhas ao sincronizar com o Tiny ERP.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 py-2">
+                        {tinyErrorsList.map((err, idx) => (
+                            <div key={idx} className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                                <p className="text-sm text-red-800 font-medium">{err}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setTinyErrorsOpen(false)} className="rounded-xl font-bold w-full">Entendido</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

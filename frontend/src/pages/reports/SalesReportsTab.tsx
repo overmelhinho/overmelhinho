@@ -12,7 +12,9 @@ import {
     CheckCircle2, 
     Clock,
     Search,
-    FileText
+    FileText,
+    ChevronDown,
+    ChevronUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,14 +25,17 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { DateRangePicker } from "@/components/reports/DateRangePicker";
 import { cn } from "@/lib/utils";
+import { useCidades } from "@/hooks/useCidades";
 
 export default function SalesReportsTab() {
     const today = new Date();
     const firstDay = format(new Date(today.getFullYear(), today.getMonth(), 1), "yyyy-MM-dd");
     const lastDay = format(new Date(today.getFullYear(), today.getMonth() + 1, 0), "yyyy-MM-dd");
 
+    // Basic Filters
     const [startDate, setStartDate] = useState(firstDay);
     const [endDate, setEndDate] = useState(lastDay);
     const [planId, setPlanId] = useState("all");
@@ -38,15 +43,49 @@ export default function SalesReportsTab() {
     const [collectionType, setCollectionType] = useState("all");
     const [status, setStatus] = useState("all");
 
-    const { data: salesData, isLoading } = useQuery({
-        queryKey: ["sales-report", startDate, endDate, planId, vendedorId, collectionType, status],
-        queryFn: async () => {
-            const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
-            if (planId !== "all") params.append("plan_id", planId);
-            if (vendedorId !== "all") params.append("vendedor_id", vendedorId);
-            if (collectionType !== "all") params.append("collection_type", collectionType);
-            if (status !== "all") params.append("status", status);
+    // Advanced Filters
+    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [termo, setTermo] = useState("");
+    const [tipoPfPj, setTipoPfPj] = useState("all");
+    const [cidade, setCidade] = useState("all");
+    const [bairro, setBairro] = useState("");
+    const [telefone, setTelefone] = useState("");
+    const [numeroAutorizacao, setNumeroAutorizacao] = useState("");
+    const [dataCadInicial, setDataCadInicial] = useState("");
+    const [dataCadFinal, setDataCadFinal] = useState("");
+    const [tipoPublicidade, setTipoPublicidade] = useState("all");
 
+    // Search state to trigger queries cleanly
+    const [searchTrigger, setSearchTrigger] = useState(0);
+
+    const getFilterParams = () => {
+        const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+        if (planId !== "all") params.append("plan_id", planId);
+        if (vendedorId !== "all") params.append("vendedor_id", vendedorId);
+        if (collectionType !== "all") params.append("collection_type", collectionType);
+        if (status !== "all") params.append("status", status);
+
+        if (termo) params.append("termo", termo);
+        if (tipoPfPj !== "all") params.append("tipo_pf_pj", tipoPfPj);
+        if (cidade && cidade !== "all") params.append("cidade", cidade);
+        if (bairro) params.append("bairro", bairro);
+        if (telefone) params.append("telefone", telefone);
+        if (numeroAutorizacao) params.append("numero_autorizacao", numeroAutorizacao);
+        if (dataCadInicial && dataCadFinal) {
+            params.append("data_cad_inicial", dataCadInicial);
+            params.append("data_cad_final", dataCadFinal);
+        }
+        if (tipoPublicidade !== "all") params.append("tipo_publicidade", tipoPublicidade);
+
+        return params;
+    };
+
+    const { data: cidadesList } = useCidades();
+
+    const { data: salesData, isLoading, refetch } = useQuery({
+        queryKey: ["sales-report-v2", startDate, endDate, planId, vendedorId, collectionType, status, searchTrigger],
+        queryFn: async () => {
+            const params = getFilterParams();
             const resp = await axios.get(`/v1/admin/reports/sales?${params.toString()}`);
             return resp.data;
         }
@@ -71,30 +110,35 @@ export default function SalesReportsTab() {
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+    const handleSearchClick = () => {
+        setSearchTrigger(prev => prev + 1);
+    };
+
     const handleExportCSV = () => {
         if (!salesData?.data) return;
 
-        const headers = ["Autorização", "Cliente", "Plano", "Vendedor", "Valor", "Vencimento", "Status", "Metodo Pagamento"];
+        const headers = ["Autorização", "Cliente", "Plano", "Parcela", "Vendedor", "Tot. Aut.", "Fatura", "Restante Aut.", "Vencimento", "Status", "Metodo Pagamento"];
         const rows = salesData.data.map((sale: any) => [
             sale.autorizacao_numero ? `#${sale.autorizacao_numero}` : '-',
-            sale.cliente,
+            `"${(sale.cliente || '').replace(/"/g, '""')}"`,
             sale.plano,
+            sale.parcel_number ? `${sale.parcel_number}/${sale.total_parcels}` : 'Única',
             sale.vendedor,
-            sale.amount.toFixed(2),
+            sale.auth_valor_total?.toFixed(2).replace('.', ','),
+            sale.amount.toFixed(2).replace('.', ','),
+            sale.auth_valor_restante?.toFixed(2).replace('.', ','),
             format(new Date(sale.due_date), "dd/MM/yyyy"),
             sale.status === 'paid' ? 'Recebido' : 'Pendente',
             sale.payment_method
         ]);
 
-        const csvContent = [
-            headers.join(";"),
-            ...rows.map((row: any) => row.join(";"))
-        ].join("\n");
+        const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+            + headers.join(";") + "\n" 
+            + rows.map((e: any) => e.join(";")).join("\n");
 
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
+        const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
-        link.setAttribute("href", url);
+        link.setAttribute("href", encodedUri);
         link.setAttribute("download", `Relatorio_Vendas_${startDate}_${endDate}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
@@ -104,12 +148,7 @@ export default function SalesReportsTab() {
 
     const handleExportPDF = async () => {
         try {
-            const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
-            if (planId !== "all") params.append("plan_id", planId);
-            if (vendedorId !== "all") params.append("vendedor_id", vendedorId);
-            if (collectionType !== "all") params.append("collection_type", collectionType);
-            if (status !== "all") params.append("status", status);
-
+            const params = getFilterParams();
             const response = await axios.get(`/v1/admin/reports/sales/pdf?${params.toString()}`, {
                 responseType: 'blob'
             });
@@ -126,15 +165,25 @@ export default function SalesReportsTab() {
     return (
         <div className="p-6 bg-[#F8F9FC] min-h-screen space-y-6">
             {/* Filtros */}
-            <Card className="p-6 border-none shadow-sm rounded-2xl bg-white overflow-visible">
-                <div className="flex items-center gap-2 mb-6">
-                    <Filter size={18} className="text-red-600" />
-                    <h2 className="text-sm font-black uppercase tracking-widest text-gray-900">Filtros do Relatório</h2>
+            <Card className="p-6 border-none shadow-sm rounded-2xl bg-white overflow-visible transition-all">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-2">
+                        <Filter size={18} className="text-red-600" />
+                        <h2 className="text-sm font-black uppercase tracking-widest text-gray-900">Filtros do Relatório</h2>
+                    </div>
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs font-bold text-gray-500 gap-1 hover:text-red-600 rounded-xl"
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                    >
+                        {showAdvanced ? <><ChevronUp size={14}/> Ocultar Filtros Avançados</> : <><ChevronDown size={14}/> Filtros Avançados</>}
+                    </Button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div className="space-y-2 lg:col-span-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Período</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Período Vencimento</label>
                         <DateRangePicker 
                             startDate={startDate} 
                             endDate={endDate} 
@@ -176,35 +225,138 @@ export default function SalesReportsTab() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cobrança</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cobrança / Pagamento</label>
                         <Select value={collectionType} onValueChange={setCollectionType}>
                             <SelectTrigger className="rounded-xl border-gray-100 bg-gray-50/50">
                                 <SelectValue placeholder="Todos os tipos" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos os tipos</SelectItem>
-                                <SelectItem value="bank">Bancária (Boleto)</SelectItem>
-                                <SelectItem value="card">Cartão de Crédito</SelectItem>
+                                <SelectItem value="bank">Boleto Bancário</SelectItem>
+                                <SelectItem value="card">Cartão de Crédito/Débito</SelectItem>
                                 <SelectItem value="pix">Pix / Transferência</SelectItem>
-                                <SelectItem value="cash">Dinheiro / Direta</SelectItem>
+                                <SelectItem value="cash">Cheque / Dinheiro</SelectItem>
+                                <SelectItem value="permuta">Permuta</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Situação</label>
                         <Select value={status} onValueChange={setStatus}>
                             <SelectTrigger className="rounded-xl border-gray-100 bg-gray-50/50">
                                 <SelectValue placeholder="Todos os status" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Todos os status</SelectItem>
-                                <SelectItem value="paid">Recebido</SelectItem>
-                                <SelectItem value="pending">A receber</SelectItem>
+                                <SelectItem value="all">Todos (Aberto e Pago)</SelectItem>
+                                <SelectItem value="paid">Pago</SelectItem>
+                                <SelectItem value="pending">Em Aberto</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
+
+                {showAdvanced && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mt-6 pt-6 border-t border-gray-50 animate-in slide-in-from-top-4 duration-300">
+                        <div className="space-y-2 lg:col-span-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Termo da Consulta (Nome/Razão/CNPJ)</label>
+                            <Input 
+                                placeholder="Buscar..." 
+                                className="rounded-xl border-gray-100 bg-gray-50/50 h-10"
+                                value={termo}
+                                onChange={e => setTermo(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipo de Cliente</label>
+                            <Select value={tipoPfPj} onValueChange={setTipoPfPj}>
+                                <SelectTrigger className="rounded-xl border-gray-100 bg-gray-50/50 h-10">
+                                    <SelectValue placeholder="PF / PJ" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Ambos</SelectItem>
+                                    <SelectItem value="pf">Pessoa Física</SelectItem>
+                                    <SelectItem value="pj">Pessoa Jurídica</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Nº Autorização</label>
+                            <Input 
+                                placeholder="Ex: 1045" 
+                                className="rounded-xl border-gray-100 bg-gray-50/50 h-10"
+                                value={numeroAutorizacao}
+                                onChange={e => setNumeroAutorizacao(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cidade</label>
+                            <Select value={cidade} onValueChange={setCidade}>
+                                <SelectTrigger className="rounded-xl border-gray-100 bg-gray-50/50 h-10">
+                                    <SelectValue placeholder="Todas as cidades" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas as cidades</SelectItem>
+                                    {cidadesList?.map((c) => (
+                                        <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Bairro</label>
+                            <Input 
+                                placeholder="Bairro" 
+                                className="rounded-xl border-gray-100 bg-gray-50/50 h-10"
+                                value={bairro}
+                                onChange={e => setBairro(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Telefone</label>
+                            <Input 
+                                placeholder="Ex: 54999..." 
+                                className="rounded-xl border-gray-100 bg-gray-50/50 h-10"
+                                value={telefone}
+                                onChange={e => setTelefone(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2 lg:col-span-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Data Emissão (Cad. Inicial/Final)</label>
+                            <DateRangePicker 
+                                startDate={dataCadInicial} 
+                                endDate={dataCadFinal} 
+                                onRangeChange={(start, end) => {
+                                    setDataCadInicial(start);
+                                    setDataCadFinal(end);
+                                }}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipo de Publicidade</label>
+                            <Select value={tipoPublicidade} onValueChange={setTipoPublicidade}>
+                                <SelectTrigger className="rounded-xl border-gray-100 bg-gray-50/50 h-10">
+                                    <SelectValue placeholder="WEB/Impressa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas</SelectItem>
+                                    <SelectItem value="WEB">WEB</SelectItem>
+                                    <SelectItem value="APP">APP</SelectItem>
+                                    <SelectItem value="IMPRESSO">Impressa</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2 lg:col-span-2 flex items-end">
+                            <Button 
+                                onClick={handleSearchClick}
+                                className="w-full rounded-xl bg-gray-900 hover:bg-black text-white font-bold h-10 gap-2 shadow-sm"
+                            >
+                                <Search size={16} />
+                                Aplicar Filtros Avançados
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </Card>
 
             {/* Resumo */}
@@ -214,13 +366,13 @@ export default function SalesReportsTab() {
                         <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 mb-4">
                             <ShoppingCart size={20} />
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Volume de Vendas</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Volume de Faturas</p>
                     </div>
                     <div>
                         <h3 className="text-3xl font-black text-gray-900 tracking-tighter">
                             {salesData?.summary?.count || 0}
                         </h3>
-                        <p className="text-xs font-medium text-gray-400">transações no período</p>
+                        <p className="text-xs font-medium text-gray-400">parcelas no período</p>
                     </div>
                 </Card>
 
@@ -229,13 +381,13 @@ export default function SalesReportsTab() {
                         <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-white mb-4">
                             <CreditCard size={20} />
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Faturamento Bruto</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Valor Total Bruto</p>
                     </div>
                     <div>
                         <h3 className="text-3xl font-black text-white tracking-tighter">
                             {formatCurrency(salesData?.summary?.total_amount || 0)}
                         </h3>
-                        <p className="text-xs font-medium text-gray-500">total acumulado</p>
+                        <p className="text-xs font-medium text-gray-500">total bruto filtrado</p>
                     </div>
                 </Card>
 
@@ -244,13 +396,13 @@ export default function SalesReportsTab() {
                         <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 mb-4">
                             <CheckCircle2 size={20} />
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Recebido</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Valor Total Recebido</p>
                     </div>
                     <div>
                         <h3 className="text-3xl font-black text-green-600 tracking-tighter">
                             {formatCurrency(salesData?.summary?.paid_amount || 0)}
                         </h3>
-                        <p className="text-xs font-medium text-gray-400">vendas liquidadas</p>
+                        <p className="text-xs font-medium text-gray-400">faturas quitadas</p>
                     </div>
                 </Card>
 
@@ -259,7 +411,7 @@ export default function SalesReportsTab() {
                         <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 mb-4">
                             <Clock size={20} />
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">A Receber</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Valor Em Aberto</p>
                     </div>
                     <div>
                         <h3 className="text-3xl font-black text-orange-600 tracking-tighter">
@@ -274,12 +426,12 @@ export default function SalesReportsTab() {
             <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
                 <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-white shadow-sm flex items-center justify-center text-gray-900 border border-gray-100Line">
+                        <div className="w-8 h-8 rounded-xl bg-white shadow-sm flex items-center justify-center text-gray-900 border border-gray-100">
                             <ShoppingCart size={14} />
                         </div>
                         <div>
-                            <h3 className="text-sm font-black text-gray-900 tracking-tight">Detalhamento de Vendas</h3>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">Lista completa de transações filtradas</p>
+                            <h3 className="text-sm font-black text-gray-900 tracking-tight">Detalhamento Financeiro</h3>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase">Lista completa de faturas/parcelas (Nº Guia)</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -305,13 +457,15 @@ export default function SalesReportsTab() {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-gray-50/30 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 border-b border-gray-50">
-                                <th className="px-8 py-5">Autorização</th>
+                                <th className="px-8 py-5">Nº Guia / Aut</th>
                                 <th className="px-6 py-5">Cliente</th>
-                                <th className="px-6 py-5">Plano</th>
+                                <th className="px-6 py-5">Plano / Parcela</th>
                                 <th className="px-6 py-5">Vendedor</th>
-                                <th className="px-6 py-5">Valor</th>
+                                <th className="px-6 py-5">Total Aut.</th>
+                                <th className="px-6 py-5">Valor Fatura</th>
+                                <th className="px-6 py-5">Restante</th>
                                 <th className="px-6 py-5">Vencimento</th>
-                                <th className="px-6 py-5">Status</th>
+                                <th className="px-6 py-5">Situação</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -320,35 +474,48 @@ export default function SalesReportsTab() {
                                     <td colSpan={7} className="py-20 text-center">
                                         <div className="flex flex-col items-center gap-2">
                                             <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                            <span className="text-xs font-bold text-gray-300">Processando dados...</span>
+                                            <span className="text-xs font-bold text-gray-300">Processando faturas financeiras...</span>
                                         </div>
                                     </td>
                                 </tr>
                             ) : salesData?.data?.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="py-20 text-center">
-                                        <p className="text-sm font-bold text-gray-300">Nenhuma venda encontrada para os filtros selecionados.</p>
+                                        <p className="text-sm font-bold text-gray-300">Nenhuma parcela/fatura encontrada para os filtros selecionados.</p>
                                     </td>
                                 </tr>
                             ) : (
                                 salesData?.data?.map((sale: any) => (
                                     <tr key={sale.id} className="hover:bg-gray-50/50 transition-colors group">
                                         <td className="px-8 py-5">
-                                            <span className="text-xs font-black text-gray-900">#{sale.autorizacao_numero || '-'}</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
+                                                    #{sale.id}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
+                                                    Aut: {sale.autorizacao_numero ? `#${sale.autorizacao_numero.toString().padStart(5,'0')}` : 'N/A'}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-gray-800 tracking-tight">{sale.cliente}</span>
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                                                     {sale.payment_method === 'boleto' ? 'Boleto Bancário' : 
-                                                     sale.payment_method === 'cartao' ? 'Cartão de Crédito' : 
+                                                     sale.payment_method === 'cartao' ? 'Cartão de Crédito/Débito' : 
                                                      sale.payment_method === 'pix' ? 'Pix / Transferência' :
+                                                     sale.payment_method === 'permuta' ? 'Permuta' :
                                                      'Dinheiro / Direta'}
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <span className="text-xs font-bold text-gray-500">{sale.plano}</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 w-fit">{sale.plano}</span>
+                                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tighter">
+                                                    Parcela {sale.parcel_number || 1}/{sale.total_parcels || 1}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-2">
@@ -359,7 +526,17 @@ export default function SalesReportsTab() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-5">
+                                            <span className="text-xs font-bold text-gray-400 block mb-0.5 tracking-tight">
+                                                {formatCurrency(sale.auth_valor_total)}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5">
                                             <span className="text-sm font-black text-gray-900">{formatCurrency(sale.amount)}</span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className="text-xs font-bold text-orange-600 block mb-0.5 tracking-tight">
+                                                {formatCurrency(sale.auth_valor_restante)}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-5 text-xs font-bold text-gray-500">
                                             {format(new Date(sale.due_date), "dd/MM/yyyy")}
@@ -371,7 +548,7 @@ export default function SalesReportsTab() {
                                                     ? "bg-green-50 text-green-700 border-green-100" 
                                                     : "bg-orange-50 text-orange-700 border-orange-100"
                                             )}>
-                                                {sale.status === 'paid' ? 'Recebido' : 'Pendente'}
+                                                {sale.status === 'paid' ? 'Pago (PG)' : 'Aberto (AB)'}
                                             </span>
                                         </td>
                                     </tr>

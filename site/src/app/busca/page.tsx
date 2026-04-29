@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from '@/contexts/LocationContext';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useAds } from '@/hooks/useAds';
+import { useCidades } from '@/hooks/useCidades';
 import 'leaflet/dist/leaflet.css';
 
 // Importação dinâmica do mapa (sem SSR, obrigatório para Leaflet)
@@ -56,8 +57,7 @@ function SearchContent() {
     const [hoveredResult, setHoveredResult] = useState<number | null>(null);
     const [selectedMapResult, setSelectedMapResult] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-    const [isCityModalOpen, setIsCityModalOpen] = useState(false);
-    const [availableCities, setAvailableCities] = useState<any[]>([]);
+    const { data: availableCities } = useCidades();
     const [citySearchQuery, setCitySearchQuery] = useState('');
     const [isListening, setIsListening] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -68,10 +68,8 @@ function SearchContent() {
     const observerTarget = useRef(null);
     const { cityId, cityName, setCity } = useLocation();
 
-    // Buscar cidades iniciais
+    // Foco automático no input ao carregar a página (Abre o teclado no Mobile)
     useEffect(() => {
-        api.get('/cidades').then(res => setAvailableCities(res.data.data || res.data)).catch(() => { });
-        // ✅ Foco automático no input ao carregar a página (Abre o teclado no Mobile)
         if (inputRef.current) inputRef.current.focus();
     }, []);
 
@@ -228,6 +226,33 @@ function SearchContent() {
         });
     }, [data]);
  
+    // ✅ Helper para gerar links SEO (Cidade/Segmento/Cliente)
+    const getClientLink = (client: any) => {
+        if (!cityName || !client.segmentos?.[0]?.nome) {
+            return `/cliente/${client.slug || client.id}`;
+        }
+
+        // Verifica se o cliente atende esta cidade (usando camelCase ou snake_case conforme vier do backend)
+        const cidadesAtendidas = client.cidades_atendidas || client.cidadesAtendidas || [];
+        const enderecos = client.enderecos || [];
+
+        const servesCity = cidadesAtendidas.some((c: any) => 
+            c.nome.toLowerCase() === cityName.toLowerCase()
+        ) || enderecos.some((e: any) => 
+            e.cidade?.toLowerCase() === cityName.toLowerCase()
+        );
+
+        if (!servesCity) {
+            return `/cliente/${client.slug || client.id}`;
+        }
+
+        const citySlug = cityName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+        const segmentSlug = client.segmentos[0].nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+        const clientSlug = client.slug || client.id;
+
+        return `/${citySlug}/${segmentSlug}/${clientSlug}`;
+    };
+ 
     const { trackSearch, trackInteraction, trackAdInteraction: trackAd } = useAnalytics();
  
     useEffect(() => {
@@ -357,52 +382,9 @@ function SearchContent() {
 
                 {/* ============ LADO ESQUERDO: LISTA ============ */}
                 <div className={`flex-1 lg:w-[520px] lg:flex-shrink-0 lg:overflow-y-auto no-scrollbar lg:border-r border-gray-100 ${viewMode === 'map' ? 'hidden lg:block' : 'block'}`}>
-
-                    <header className="sticky top-0 z-50 bg-cloud-dancer/90 backdrop-blur-2xl border-b border-gray-100 p-3 space-y-3 shadow-sm">
-                        <div className="flex items-center space-x-3">
-                            <button onClick={() => router.push('/')} className="p-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-90 transition-all cursor-pointer text-gray-400 hover:text-brand-red">
-                                <ArrowLeft size={18} />
-                            </button>
-                            <div className="flex-1 relative group">
-                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                    <SearchIcon size={16} className={isListening ? 'text-brand-red animate-pulse' : 'text-brand-red'} />
-                                </div>
-                                <input
-                                    ref={inputRef}
-                                    type="text"
-                                    key={query}
-                                    defaultValue={query}
-                                    placeholder="O que você procura?"
-                                    onKeyDown={handleNewSearch}
-                                    className={`w-full bg-white rounded-full py-3 pl-12 pr-14 shadow-sm border transition-all font-bold text-gray-900 text-sm outline-none ${isListening ? 'border-brand-red ring-8 ring-red-100/50' : 'border-gray-100 focus:ring-4 focus:ring-brand-red/5 focus:border-brand-red'
-                                        }`}
-                                />
-                                <button
-                                    onClick={startVoiceSearch}
-                                    className={`absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all active:scale-75 ${isListening ? 'bg-brand-red text-white shadow-lg animate-bounce' : 'text-gray-400 hover:text-brand-red'
-                                        }`}
-                                >
-                                    <Mic size={16} />
-                                </button>
-                            </div>
-                            <button
-                                onClick={() => setIsCityModalOpen(true)}
-                                className="hidden md:flex items-center space-x-2 px-4 py-3 bg-white rounded-full border border-gray-100 shadow-sm hover:border-brand-red transition-all active:scale-95 group"
-                            >
-                                <MapPin size={16} className="text-brand-red" />
-                                <span className="text-sm font-black text-gray-900 truncate max-w-[100px]">{cityName || 'Cidade'}</span>
-                            </button>
-                        </div>
-
+                    
+                    <div className="p-4 bg-cloud-dancer">
                         <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1">
-                            <button
-                                onClick={() => setIsCityModalOpen(true)}
-                                className="md:hidden flex items-center space-x-2 px-4 py-2.5 bg-brand-red text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-100 active:scale-95"
-                            >
-                                <MapPin size={14} />
-                                <span>{cityName || 'Cidade'}</span>
-                            </button>
-
                             {activeFilters.map((filter) => (
                                 <button
                                     key={filter}
@@ -416,7 +398,7 @@ function SearchContent() {
                                 </button>
                             ))}
                         </div>
-                    </header>
+                    </div>
 
                     <main className="px-5 py-6 space-y-12 pb-40">
 
@@ -493,10 +475,12 @@ function SearchContent() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center space-x-4 md:space-x-8 mb-4 md:mb-10 cursor-pointer group/item" onClick={() => router.push(`/cliente/${matchPerfeito.slug || matchPerfeito.id}`)}>
-                                        <div className="w-14 h-14 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-[2.5rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
-                                            <img src={matchPerfeito.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200"} alt="" className="w-full h-full object-cover" />
-                                        </div>
+                                    <div className="flex items-center space-x-4 md:space-x-8 mb-4 md:mb-10 cursor-pointer group/item" onClick={() => router.push(getClientLink(matchPerfeito))}>
+                                        {matchPerfeito.tipo_cliente !== 'gratuito' && (
+                                            <div className="w-14 h-14 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-[2.5rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
+                                                <img src={matchPerfeito.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200"} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                        )}
                                         <div className="space-y-0.5">
                                             <h2 className="text-lg md:text-3xl font-black text-gray-900 tracking-tighter font-serif italic leading-tight">{matchPerfeito.nome_fantasia}</h2>
                                             <div className="flex items-center text-[9px] md:text-[10px] font-bold text-gray-400 space-x-2">
@@ -507,14 +491,16 @@ function SearchContent() {
                                             </div>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => handleWhatsApp(matchPerfeito.id, matchPerfeito.contatos?.[0]?.celular || '')}
-                                        className="w-fit px-8 md:px-14 mx-auto bg-[#25D366] text-white py-3 md:py-5 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_-5px_rgba(37,211,102,0.3)] hover:shadow-green-500/40 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn cursor-pointer border-b-4 border-green-700/40"
-                                    >
-                                        <WhatsAppIcon size={20} />
-                                        <span>Iniciar no WhatsApp</span>
-                                        <ChevronRight size={18} className="translate-x-0 group-hover/btn:translate-x-2 transition-transform" />
-                                    </button>
+                                    {matchPerfeito.tipo_cliente !== 'gratuito' && (
+                                        <button
+                                            onClick={() => handleWhatsApp(matchPerfeito.id, matchPerfeito.contatos?.[0]?.celular || '')}
+                                            className="w-fit px-8 md:px-14 mx-auto bg-[#25D366] text-white py-3 md:py-5 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_-5px_rgba(37,211,102,0.3)] hover:shadow-green-500/40 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn cursor-pointer border-b-4 border-green-700/40"
+                                        >
+                                            <WhatsAppIcon size={20} />
+                                            <span>Iniciar no WhatsApp</span>
+                                            <ChevronRight size={18} className="translate-x-0 group-hover/btn:translate-x-2 transition-transform" />
+                                        </button>
+                                    )}
                                 </div>
                             </section>
                         )}
@@ -530,7 +516,7 @@ function SearchContent() {
                                     {patrocinados.map((item: any) => (
                                         <div
                                             key={item.id}
-                                            onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
+                                            onClick={() => router.push(getClientLink(item))}
                                             onMouseEnter={() => setHoveredResult(item.id)}
                                             onMouseLeave={() => setHoveredResult(null)}
                                             className="bg-white rounded-[2rem] md:rounded-[3.5rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer"
@@ -540,9 +526,11 @@ function SearchContent() {
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                                             </div>
                                             <div className="px-4 pb-6 md:px-8 md:pb-10 pt-1 relative">
-                                                <div className="absolute -top-8 left-4 w-16 h-16 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[2.5rem] bg-white p-1 shadow-2xl border-2 border-white group-hover:-translate-y-4 transition-transform duration-500">
-                                                    <img src={item.logotipo_url || "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200"} className="w-full h-full object-cover rounded-[1rem] md:rounded-[2rem]" alt="" />
-                                                </div>
+                                                {item.tipo_cliente !== 'gratuito' && (
+                                                    <div className="absolute -top-8 left-4 w-16 h-16 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[2.5rem] bg-white p-1 shadow-2xl border-2 border-white group-hover:-translate-y-4 transition-transform duration-500">
+                                                        <img src={item.logotipo_url || "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200"} className="w-full h-full object-cover rounded-[1rem] md:rounded-[2rem]" alt="" />
+                                                    </div>
+                                                )}
                                                 <div className="pt-10 md:pt-16 space-y-2 md:space-y-4">
                                                     <div className="flex justify-between items-center">
                                                         <h4 className="text-lg md:text-2xl font-black text-gray-900 tracking-tight font-serif italic leading-none truncate max-w-[160px] md:max-w-[200px]">{item.nome_fantasia}</h4>
@@ -617,29 +605,33 @@ function SearchContent() {
                                         return (
                                             <React.Fragment key={item.id}>
                                                     <div
-                                                        onClick={() => router.push(`/cliente/${item.slug || item.id}`)}
+                                                        onClick={() => router.push(getClientLink(item))}
                                                         onMouseEnter={() => setHoveredResult(item.id)}
                                                         onMouseLeave={() => setHoveredResult(null)}
                                                         className={`flex items-center justify-between p-4 md:p-7 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
                                                     >
                                                         <div className="flex items-center space-x-4 md:space-x-6">
-                                                            <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
-                                                                <img src={item.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
-                                                            </div>
+                                                            {item.tipo_cliente !== 'gratuito' && (
+                                                                <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
+                                                                    <img src={item.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
+                                                                </div>
+                                                            )}
                                                             <div className="space-y-1">
                                                                 <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-lg md:text-xl leading-none">{item.nome_fantasia}</h5>
                                                                 <p className="text-[9px] md:text-[10px] font-medium text-gray-400 uppercase tracking-widest">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
                                                             </div>
                                                         </div>
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleWhatsApp(item.id, item.contatos?.[0]?.celular || '');
-                                                        }}
-                                                        className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 text-[#25D366] flex items-center justify-center active:scale-90 transition-all hover:bg-[#25D366] hover:text-white group-hover:shadow-md"
-                                                    >
-                                                        <WhatsAppIcon size={20} />
-                                                    </button>
+                                                    {item.tipo_cliente !== 'gratuito' && (
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleWhatsApp(item.id, item.contatos?.[0]?.celular || '');
+                                                            }}
+                                                            className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 text-[#25D366] flex items-center justify-center active:scale-90 transition-all hover:bg-[#25D366] hover:text-white group-hover:shadow-md"
+                                                        >
+                                                            <WhatsAppIcon size={20} />
+                                                        </button>
+                                                    )}
                                                 </div>
 
                                                 {showAd && (
@@ -718,7 +710,7 @@ function SearchContent() {
                     <div className="absolute top-6 left-6 z-[1000]">
                         <div className="bg-white/90 backdrop-blur-3xl px-6 py-3 rounded-full shadow-2xl border border-white/60 flex items-center space-x-4 cursor-default">
                             <div className="flex -space-x-3">
-                                {allResults.slice(0, 3).map((item: any, i) => (
+                                {allResults.filter((r: any) => r.tipo_cliente !== 'gratuito').slice(0, 3).map((item: any, i: number) => (
                                     <div key={i} className="inline-block h-8 w-8 rounded-full ring-4 ring-white shadow-sm overflow-hidden bg-gray-100 flex-shrink-0">
                                         <img src={item.logotipo_url || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=50"} alt="" className="w-full h-full object-cover" />
                                     </div>
@@ -779,12 +771,14 @@ function SearchContent() {
                                         <button className="flex-1 bg-brand-red text-white py-3 rounded-full font-black text-[11px] uppercase tracking-widest hover:bg-red-700 transition-colors">
                                             Ver Detalhes
                                         </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleWhatsApp(selectedMapItem.id, selectedMapItem.contatos?.[0]?.celular || ''); }}
-                                            className="w-12 h-12 flex-shrink-0 bg-green-500 text-white rounded-full flex items-center justify-center shadow-md border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all"
-                                        >
-                                            <MessageCircle size={16} fill="currentColor" />
-                                        </button>
+                                        {selectedMapItem.tipo_cliente !== 'gratuito' && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleWhatsApp(selectedMapItem.id, selectedMapItem.contatos?.[0]?.celular || ''); }}
+                                                className="w-12 h-12 flex-shrink-0 bg-green-500 text-white rounded-full flex items-center justify-center shadow-md border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all"
+                                            >
+                                                <MessageCircle size={16} fill="currentColor" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -827,86 +821,8 @@ function SearchContent() {
                 </div>
             </nav >
 
-            {/* 🏙️ MODAL SELETOR DE CIDADE */}
-            <AnimatePresence>
-                {isCityModalOpen && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsCityModalOpen(false)}
-                            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative bg-white w-full max-w-lg rounded-[3.5rem] shadow-2xl overflow-hidden gummy-card"
-                        >
-                            <div className="p-10 space-y-8">
-                                <div className="flex justify-between items-center">
-                                    <div className="space-y-1">
-                                        <h3 className="text-3xl font-black text-gray-900 font-serif italic tracking-tighter">Mudar Região</h3>
-                                        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Encontre serviços em outras cidades</p>
-                                    </div>
-                                    <button onClick={() => setIsCityModalOpen(false)} className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 active:scale-75 transition-all">
-                                        <X size={24} />
-                                    </button>
-                                </div>
+            {/* O Modal de Cidade agora é Global e está no Layout */}
 
-                                <div className="relative">
-                                    <SearchIcon className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-red" size={20} />
-                                    <input
-                                        type="text"
-                                        value={citySearchQuery}
-                                        onChange={(e) => setCitySearchQuery(e.target.value)}
-                                        placeholder="Digite o nome da cidade..."
-                                        className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red/20 focus:bg-white rounded-3xl py-5 pl-14 pr-6 font-bold text-gray-900 transition-all outline-none shadow-inner"
-                                    />
-                                </div>
-
-                                <div className="space-y-4 flex flex-col min-h-0">
-                                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-2 flex-shrink-0">Sugestões próximos de você</p>
-                                    
-                                    <div className="grid grid-cols-1 gap-2 overflow-y-auto pr-2 max-h-[40vh] md:max-h-[50vh] custom-scrollbar scroll-smooth">
-                                        {filteredCities.length > 0 ? (
-                                            filteredCities.map((city: any) => (
-                                                <button
-                                                    key={city.id}
-                                                    onClick={() => {
-                                                        setCity(city.id, city.nome);
-                                                        setIsCityModalOpen(false);
-                                                    }}
-                                                    className={`flex items-center justify-between p-4 md:p-5 rounded-3xl border-2 transition-all flex-shrink-0 ${cityName === city.nome ? 'bg-brand-red/5 border-brand-red' : 'bg-white border-gray-50 hover:bg-gray-50'}`}
-                                                >
-                                                    <div className="flex items-center space-x-4">
-                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cityName === city.nome ? 'bg-brand-red text-white' : 'bg-gray-100 text-gray-400'}`}>
-                                                            <MapPin size={20} />
-                                                        </div>
-                                                        <span className={`font-black tracking-tight text-sm md:text-base ${cityName === city.nome ? 'text-brand-red' : 'text-gray-900'}`}>{city.nome}</span>
-                                                    </div>
-                                                    {cityName === city.nome && <CheckCircle2 size={20} className="text-brand-red flex-shrink-0" />}
-                                                </button>
-                                            ))
-                                        ) : (
-                                            <div className="py-10 text-center space-y-2">
-                                                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto text-gray-200">
-                                                    <MapPin size={24} />
-                                                </div>
-                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nenhuma cidade encontrada</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-gray-50 p-6 text-center">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest opacity-50">O Vermelhinho • Geo Intelligence v2.0</p>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
 
             <style jsx global>{`
         .gummy-card { transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }

@@ -105,7 +105,7 @@ class GenerateSeoKeywordsJob implements ShouldQueue
 
         $cidades = [];
         if ($cliente->relationLoaded('cidadesAtendidas')) {
-            foreach (($cliente->cidadesAtendidas ?? collect())->take(3) as $c) {
+            foreach (($cliente->cidadesAtendidas ?? collect())->take(100) as $c) {
                 $nome = trim((string) ($c->nome ?? ''));
                 $uf = trim((string) ($c->uf ?? ''));
                 if ($nome === '') continue;
@@ -139,9 +139,18 @@ class GenerateSeoKeywordsJob implements ShouldQueue
         foreach ($segmentos as $seg) {
             $raw[] = $seg;
 
+            // Round 1: Principal ("Segmento em Cidade") - Garante cobertura total
             foreach ($cidades as $cid) {
                 $raw[] = "{$seg} em {$cid}";
+            }
+
+            // Round 2: Variação Direta ("Segmento Cidade")
+            foreach ($cidades as $cid) {
                 $raw[] = "{$seg} {$cid}";
+            }
+
+            // Round 3: Variação Local ("Segmento perto de mim Cidade")
+            foreach ($cidades as $cid) {
                 $raw[] = "{$seg} perto de mim {$cid}";
             }
 
@@ -165,7 +174,7 @@ class GenerateSeoKeywordsJob implements ShouldQueue
             $raw[] = "{$segmentos[0]} especializado em {$cidades[0]}";
         }
 
-        return $this->normalize($raw, 20);
+        return $this->normalize($raw, 100);
     }
 
     private function normalize(array $items, int $limit): array

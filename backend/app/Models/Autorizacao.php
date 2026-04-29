@@ -45,6 +45,8 @@ class Autorizacao extends Model
         'responsavel_nome',
         'responsavel_preferencia',
         'responsavel_turno',
+        'parent_id',
+        'is_bonificacao',
     ];
 
     protected $casts = [
@@ -57,6 +59,7 @@ class Autorizacao extends Model
         'is_permuta'           => 'boolean',
         'permuta_amount'       => 'decimal:2',
         'desconto_valor'       => 'decimal:2',
+        'is_bonificacao'       => 'boolean',
     ];
 
     // ─── Relacionamentos ─────────────────────────────────────────────────────
@@ -86,6 +89,16 @@ class Autorizacao extends Model
         return $this->hasMany(AutorizacaoParcela::class)->orderBy('numero');
     }
 
+    public function parentAutorizacao()
+    {
+        return $this->belongsTo(Autorizacao::class, 'parent_id');
+    }
+
+    public function subAutorizacoes()
+    {
+        return $this->hasMany(Autorizacao::class, 'parent_id');
+    }
+
     // ─── Accessors ───────────────────────────────────────────────────────────
 
     public function getValorLiquidoAttribute(): float
@@ -109,8 +122,12 @@ class Autorizacao extends Model
     /**
      * Gera o próximo número sequencial de autorização.
      */
-    public static function proximoNumero(): int
+    public static function proximoNumero(): string
     {
-        return (int) (static::max('numero') ?? 0) + 1;
+        $max = static::whereNull('parent_id')
+            ->selectRaw('MAX(CAST(numero AS UNSIGNED)) as max_num')
+            ->value('max_num');
+            
+        return (string) ((int) $max + 1);
     }
 }

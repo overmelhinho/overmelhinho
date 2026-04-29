@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { User, Menu, X } from 'lucide-react';
+import { User, Menu, X, Search, MapPin } from 'lucide-react';
 import Logo from '@/components/Logo';
+import { HeaderSearch } from '@/components/HeaderSearch';
+import { useLocation } from '@/contexts/LocationContext';
 
 const navLinks = [
     { label: 'Anuncie', href: '/anuncie' },
@@ -17,18 +19,35 @@ export default function Header() {
     const router = useRouter();
     const pathname = usePathname();
     const [menuOpen, setMenuOpen] = useState(false);
+    const { cityName, setIsCityModalOpen } = useLocation();
 
     const isActive = (href: string) => pathname === href;
 
     return (
         <>
             <header className={`sticky top-0 z-[200] border-b border-gray-100 shadow-sm transition-colors duration-300 ${menuOpen ? 'bg-white' : 'bg-white/80 backdrop-blur-xl'}`}>
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-8">
+                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4 md:gap-8">
 
                     {/* Logo */}
                     <div className="cursor-pointer flex-shrink-0" onClick={() => { router.push('/'); setMenuOpen(false); }}>
                         <Logo />
                     </div>
+
+                    {/* ✅ Search Bar Global (Hidden on Home) */}
+                    {pathname !== '/' && (
+                        <HeaderSearch />
+                    )}
+
+                    {/* ✅ Localização Global */}
+                    {pathname !== '/' && (
+                        <button 
+                            onClick={() => setIsCityModalOpen(true)}
+                            className="hidden lg:flex items-center space-x-2 px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl hover:border-brand-red transition-all group"
+                        >
+                            <MapPin size={14} className="text-brand-red" />
+                            <span className="text-[11px] font-black text-gray-900 uppercase tracking-widest truncate max-w-[100px]">{cityName || 'Cidade'}</span>
+                        </button>
+                    )}
 
                     {/* Nav Desktop */}
                     <nav className="hidden md:flex items-center gap-8">
@@ -57,7 +76,7 @@ export default function Header() {
                         </button> */}
                         <button
                             onClick={() => router.push('/anuncie')}
-                            className="px-4 py-2 md:px-4 md:py-2 bg-brand-red text-white rounded-xl font-black text-[10px] md:text-[10px] uppercase tracking-widest shadow-md shadow-red-100 hover:scale-105 active:scale-95 transition-all outline-none"
+                            className="hidden md:flex px-4 py-2 bg-brand-red text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md shadow-red-100 hover:scale-105 active:scale-95 transition-all outline-none"
                         >
                             Anunciar
                         </button>

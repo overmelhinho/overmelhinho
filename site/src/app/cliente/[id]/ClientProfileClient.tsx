@@ -14,7 +14,20 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import api from '@/services/api';
+
+// Helper para normalizar strings para slugs (URL friendly)
+const slugify = (text: string) => {
+    return text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, '-')
+        .replace(/--+/g, '-')
+        .trim();
+};
 
 function WhatsAppIcon({ size = 20 }) {
   return (
@@ -26,7 +39,7 @@ function WhatsAppIcon({ size = 20 }) {
 
 export default function ClientProfileClient() {
     const params = useParams();
-    const id = params.id as string;
+    const id = (params.id || params.clientSlug) as string;
     const router = useRouter();
     const { trackInteraction } = useAnalytics();
     const [isFavorite, setIsFavorite] = useState(false);
@@ -34,6 +47,9 @@ export default function ClientProfileClient() {
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
     const [showShareToast, setShowShareToast] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
+    const [isTagsExpanded, setIsTagsExpanded] = useState(false);
+
+    const citySlug = params.citySlug as string;
 
     const { data: client, isLoading } = useQuery({
         queryKey: ['client', id],
@@ -53,11 +69,16 @@ export default function ClientProfileClient() {
         enabled: !!id
     });
 
+    const cityNameContext = citySlug ? (client?.cidades_atendidas?.find((c: any) => {
+        const s = c.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+        return s === citySlug;
+    })?.nome || citySlug.replace(/-/g, ' ')) : null;
+
     useEffect(() => {
         if (client) {
-            trackInteraction(client.id, 'page_view');
+            trackInteraction(client.id, 'page_view', cityNameContext || undefined);
         }
-    }, [client, trackInteraction]);
+    }, [client, trackInteraction, cityNameContext]);
 
     const isPagante = client?.tipo_cliente === 'pagante';
 
@@ -80,7 +101,7 @@ export default function ClientProfileClient() {
     }
 
     const handleWhatsAppClick = () => {
-        trackInteraction(client.id, 'whatsapp_click');
+        trackInteraction(client.id, 'whatsapp_click', cityNameContext || undefined);
         const contact = client.contatos?.[0];
         if (!contact) return;
 
@@ -101,8 +122,8 @@ export default function ClientProfileClient() {
         if (!whatsapp) {
             const priority = [
                 { key: 'telefone_principal', flag: 'exibir_tel_principal', hidden: isPrincipalHidden },
-                { key: 'celular', flag: 'exibir_celular', hidden: false },
                 { key: 'telefone_secundario', flag: 'exibir_tel_secundario', hidden: false },
+                { key: 'celular', flag: 'exibir_celular', hidden: false },
                 { key: 'telefone_outro', flag: 'exibir_tel_outro', hidden: false }
             ];
 
@@ -127,8 +148,8 @@ export default function ClientProfileClient() {
 
         const priority = [
             { key: 'telefone_principal', flag: 'exibir_tel_principal', hidden: isPrincipalHidden },
-            { key: 'celular', flag: 'exibir_celular', hidden: false },
             { key: 'telefone_secundario', flag: 'exibir_tel_secundario', hidden: false },
+            { key: 'celular', flag: 'exibir_celular', hidden: false },
             { key: 'telefone_outro', flag: 'exibir_tel_outro', hidden: false }
         ];
 
@@ -203,8 +224,8 @@ export default function ClientProfileClient() {
 
     const allPhones = contactInfo ? [
         { label: 'Telefone Principal', number: contactInfo.telefone_principal, flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal },
-        { label: 'Celular', number: contactInfo.celular, flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular },
         { label: 'Telefone Secundário', number: contactInfo.telefone_secundario, flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario },
+        { label: 'Celular', number: contactInfo.celular, flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular },
         { label: 'Outro Telefone / 0800', number: contactInfo.telefone_outro, flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro },
     ].filter(p => p.number && p.flag && !p.hidden) : [];
 
@@ -233,6 +254,8 @@ export default function ClientProfileClient() {
         : [];
 
     const getTodayStatus = () => {
+        if (!schedule || schedule.length === 0) return null;
+
         const today = new Date().getDay();
         const systemDay = today === 0 ? 7 : today;
         const todaySchedule = schedule.find((s: any) => s.day === systemDay);
@@ -338,6 +361,16 @@ export default function ClientProfileClient() {
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
             />
 
+            {/* 📍 Banner de Atendimento Local (SEO Context) */}
+            {cityNameContext && (
+                <div className="bg-brand-red/5 border-b border-brand-red/10 py-2 px-4 text-center">
+                    <p className="text-[10px] md:text-xs font-black text-brand-red uppercase tracking-[0.2em] flex items-center justify-center">
+                        <MapPin size={12} className="mr-2" />
+                        Atendimento em destaque: {cityNameContext}
+                    </p>
+                </div>
+            )}
+
 
 
 
@@ -404,11 +437,15 @@ export default function ClientProfileClient() {
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-4 text-[11px] md:text-xs font-black uppercase tracking-widest font-sans">
-                                    <div className={`flex items-center py-1 px-3 rounded-full ${status.open ? 'bg-green-50 text-green-500 border border-green-100' : 'bg-red-50 text-brand-red border border-red-100'}`}>
-                                        <div className={`w-2 h-2 rounded-full mr-2 ${status.open ? 'bg-green-500' : 'bg-brand-red'} animate-pulse`}></div>
-                                        {status.label}
-                                    </div>
-                                    <span className="text-gray-300 md:block hidden">•</span>
+                                    {status && (
+                                        <>
+                                            <div className={`flex items-center py-1 px-3 rounded-full ${status.open ? 'bg-green-50 text-green-500 border border-green-100' : 'bg-red-50 text-brand-red border border-red-100'}`}>
+                                                <div className={`w-2 h-2 rounded-full mr-2 ${status.open ? 'bg-green-500' : 'bg-brand-red'} animate-pulse`}></div>
+                                                {status.label}
+                                            </div>
+                                            <span className="text-gray-300 md:block hidden">•</span>
+                                        </>
+                                    )}
                                     <p className="text-gray-400 flex items-center">
                                         <MapPin size={14} className="mr-1.5 text-brand-red" />
                                         {client.enderecos?.[0]
@@ -559,12 +596,22 @@ export default function ClientProfileClient() {
                                         <section className="space-y-6">
                                             <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Cidades Atendidas</h2>
                                             <div className="flex flex-wrap gap-3">
-                                                {client.cidades_atendidas.map((city: any, i: number) => (
-                                                    <div key={i} className="bg-white border border-gray-100 shadow-sm text-gray-500 px-5 py-3 rounded-2xl text-xs font-bold flex items-center">
-                                                        <MapPin size={14} className="mr-2 text-brand-red" />
-                                                        {city.nome} - {city.uf}
-                                                    </div>
-                                                ))}
+                                                {client.cidades_atendidas.map((city: any, i: number) => {
+                                                    const cityUrlSlug = slugify(city.nome);
+                                                    const segmentUrlSlug = client.segmentos?.[0] ? slugify(client.segmentos[0].nome) : 'servicos';
+                                                    const clientUrlSlug = client.slug || client.id;
+                                                    
+                                                    return (
+                                                        <Link 
+                                                            key={i} 
+                                                            href={`/${cityUrlSlug}/${segmentUrlSlug}/${clientUrlSlug}`}
+                                                            className="bg-white hover:bg-brand-red/5 hover:border-brand-red/30 border border-gray-100 shadow-sm text-gray-500 hover:text-brand-red px-5 py-3 rounded-2xl text-xs font-bold flex items-center transition-all group"
+                                                        >
+                                                            <MapPin size={14} className="mr-2 text-brand-red group-hover:scale-110 transition-transform" />
+                                                            {city.nome} - {city.uf}
+                                                        </Link>
+                                                    );
+                                                })}
                                             </div>
                                         </section>
                                     )}
@@ -976,19 +1023,42 @@ export default function ClientProfileClient() {
                 {client.seo_keywords?.length > 0 && (
                     <section className="mt-20 pt-10 border-t border-gray-100">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-6 text-center">Tags & Segmentos</p>
-                        <div className="flex flex-wrap justify-center gap-3">
-                            {client.seo_keywords.map((tag: string, idx: number) => (
-                                <button 
-                                    key={idx}
-                                    onClick={() => {
-                                        window.scrollTo(0, 0);
-                                        router.push(`/busca?q=${encodeURIComponent(tag)}`);
-                                    }}
-                                    className="text-[10px] md:text-xs font-bold text-gray-500 bg-white/50 backdrop-blur-sm px-5 py-3 rounded-2xl border border-gray-100 hover:border-brand-red/30 hover:text-brand-red hover:bg-white transition-all shadow-sm active:scale-95"
-                                >
-                                    #{tag.toLowerCase().replace(/\s+/g, '')}
-                                </button>
-                            ))}
+                        
+                        <div className="relative">
+                            <motion.div 
+                                initial={false}
+                                animate={{ height: isTagsExpanded ? 'auto' : '100px' }}
+                                className="flex flex-wrap justify-center gap-2 overflow-hidden relative"
+                            >
+                                {client.seo_keywords.map((tag: string, idx: number) => (
+                                    <button 
+                                        key={idx}
+                                        onClick={() => {
+                                            window.scrollTo(0, 0);
+                                            router.push(`/busca?q=${encodeURIComponent(tag)}`);
+                                        }}
+                                        className="text-[9px] md:text-[10px] font-bold text-gray-400 bg-white hover:text-brand-red hover:border-brand-red/30 px-4 py-2 rounded-xl border border-gray-100 transition-all shadow-sm active:scale-95"
+                                    >
+                                        <span className="opacity-50 mr-1">#</span>{tag}
+                                    </button>
+                                ))}
+
+                                {!isTagsExpanded && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none"></div>
+                                )}
+                            </motion.div>
+
+                            {client.seo_keywords.length > 15 && (
+                                <div className="mt-6 text-center">
+                                    <button 
+                                        onClick={() => setIsTagsExpanded(!isTagsExpanded)}
+                                        className="text-[10px] font-black uppercase tracking-widest text-brand-red hover:underline flex items-center justify-center mx-auto"
+                                    >
+                                        {isTagsExpanded ? 'Recolher Tags' : `Ver mais ${client.seo_keywords.length - 15} tags`}
+                                        <ChevronRight size={14} className={`ml-1 transition-transform ${isTagsExpanded ? '-rotate-90' : 'rotate-90'}`} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </section>
                 )}

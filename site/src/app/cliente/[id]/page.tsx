@@ -109,7 +109,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 "longitude": end.longitude
             },
             "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
-            "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone)
+            "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone),
+            "areaServed": client.cidades_atendidas?.map((c: any) => ({
+                "@type": "City",
+                "name": c.nome,
+                "addressCountry": "BR"
+            }))
         }))
         : {
             "@context": "https://schema.org",
@@ -117,6 +122,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             "name": client.nome_fantasia,
             "description": client.descricao,
             "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
+            "areaServed": client.cidades_atendidas?.map((c: any) => ({
+                "@type": "City",
+                "name": c.nome,
+                "addressCountry": "BR"
+            }))
         };
 
     return (

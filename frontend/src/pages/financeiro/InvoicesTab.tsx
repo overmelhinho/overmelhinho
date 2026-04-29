@@ -113,7 +113,7 @@ export default function InvoicesTab() {
     const [editDueDate, setEditDueDate] = useState("");
     const [editJustification, setEditJustification] = useState("");
     const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-    const [editDifferenceAction, setEditDifferenceAction] = useState<"discount" | "redistribute" | "create_extra">("discount");
+    const [editDifferenceAction, setEditDifferenceAction] = useState<"discount" | "redistribute" | "create_extra" | "next_installment">("discount");
     const [editExtraDueDate, setEditExtraDueDate] = useState("");
 
     // Tiny Errors Modal
@@ -687,7 +687,7 @@ export default function InvoicesTab() {
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
-                                Justificativa (Obrigatório)
+                                Justificativa (Opcional)
                             </label>
                             <Textarea
                                 placeholder={actionType === 'paid' ? "Ex: Pago via PIX direto, Transferência bancária..." : "Ex: Erro no valor, cliente desistiu, faturamento duplicado..."}
@@ -708,7 +708,7 @@ export default function InvoicesTab() {
                         </Button>
                         <Button
                             variant={actionType === 'paid' ? 'default' : 'destructive'}
-                            disabled={justification.length < 5 || isSubmitting}
+                            disabled={isSubmitting}
                             className={cn(
                                 "rounded-xl font-black px-8",
                                 actionType === 'paid' && "bg-green-600 hover:bg-green-700"
@@ -719,7 +719,7 @@ export default function InvoicesTab() {
                                 try {
                                     await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/status`, {
                                         status: actionType,
-                                        justification
+                                        justification: justification || (actionType === 'paid' ? 'Baixa manual confirmada' : 'Cancelamento manual confirmado')
                                     });
                                     toast.success(actionType === 'paid' ? "Fatura liquidada!" : "Fatura cancelada.");
                                     refetch();
@@ -779,6 +779,11 @@ export default function InvoicesTab() {
                             if (!editAmount || Math.abs(diff) < 0.01) return null;
 
                             const hasSiblings = selectedInvoice?.group_id && (selectedInvoice.total_parcels ?? 1) > 1;
+                            const hasNextSibling = hasSiblings && (invoices ?? []).some(i => 
+                                i.group_id === selectedInvoice?.group_id && 
+                                i.status === 'pending' && 
+                                (i.parcel_number ?? 0) > (selectedInvoice?.parcel_number ?? 0)
+                            );
 
                             return (
                                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
@@ -818,6 +823,27 @@ export default function InvoicesTab() {
                                                 <div>
                                                     <p className="text-sm font-bold text-gray-800">📊 Redistribuir nas parcelas seguintes</p>
                                                     <p className="text-xs text-gray-500">A diferença é distribuída igualmente entre as outras parcelas pendentes. O total do grupo é preservado.</p>
+                                                </div>
+                                            </label>
+                                        )}
+
+                                        {hasNextSibling && (
+                                            <label className="flex items-start gap-3 p-2.5 rounded-xl border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors">
+                                                <input type="radio" name="diff_action" value="next_installment"
+                                                    checked={editDifferenceAction === 'next_installment'}
+                                                    onChange={() => setEditDifferenceAction('next_installment')}
+                                                    className="mt-0.5 accent-blue-600"
+                                                />
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-800">
+                                                        {diff > 0 ? "📈 Adicionar na próxima parcela" : "📉 Descontar na próxima parcela"}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {diff > 0 
+                                                            ? `O valor de R$ ${Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} será somado à próxima parcela.` 
+                                                            : `O valor de R$ ${Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} será deduzido da próxima parcela.`
+                                                        }
+                                                    </p>
                                                 </div>
                                             </label>
                                         )}
@@ -874,6 +900,7 @@ export default function InvoicesTab() {
                                 <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
                                     <li>Conta <strong>#{selectedInvoice.tiny_account_id}</strong> será atualizada com o novo valor e vencimento</li>
                                     {editDifferenceAction === 'redistribute' && <li>Contas das parcelas seguintes também serão atualizadas no Tiny</li>}
+                                    {editDifferenceAction === 'next_installment' && <li>A conta da <strong>próxima parcela</strong> será atualizada no Tiny com o novo valor</li>}
                                     {editDifferenceAction === 'create_extra' && <li>Uma nova conta a receber será criada no Tiny para a parcela extra</li>}
                                     {editDifferenceAction === 'discount' && <li>Nenhuma outra conta será afetada no Tiny</li>}
                                 </ul>

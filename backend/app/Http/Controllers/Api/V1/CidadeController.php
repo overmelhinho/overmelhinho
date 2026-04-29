@@ -18,24 +18,13 @@ class CidadeController extends Controller
             ->unique()
             ->values();
 
-        // Query base: buscar cidades que possuem clientes ativos para exibir no site
+        // Query base: buscar cidades
         $query = Cidade::query()
             ->select(['id', 'nome', 'uf'])
-            ->where('uf', 'RS')
-            ->where(function ($sub) {
-                // 1. Cidades onde os clientes possuem endereço cadastrado
-                $sub->whereHas('enderecos.cliente', function ($c) {
-                    $c->where('exibir_no_site', true);
-                })
-                // 2. OU cidades que o cliente marcou que atende (Expansão Regional)
-                ->orWhereHas('clientesQueAtendem', function ($c) {
-                    $c->where('exibir_no_site', true);
-                });
-            })
             ->distinct()
             ->orderBy('nome');
 
-        // Caso venha ids=1,2,3 (hidratar labels das selecionadas)
+        // 1. Caso venha ids=1,2,3 (hidratar labels das selecionadas) - Sem filtro restrito para não bugar exibição
         if ($ids->isNotEmpty()) {
             $query->whereIn('id', $ids->all());
 
@@ -44,14 +33,29 @@ class CidadeController extends Controller
             ]);
         }
 
-        // Busca por texto (q=...)
+        // 2. Trava o sistema para exibir e buscar apenas no grupo das 28 cidades autorizadas
+        $cidadesPermitidas = [
+            'Alto Feliz', 'Arroio do Sal', 'Barão', 'Bento Gonçalves', 'Boa Vista do Sul',
+            'Bom Princípio', 'Campo Bom', 'Canela', 'Carlos Barbosa', 'Caxias do Sul',
+            'Coronel Pilar', 'Farroupilha', 'Feliz', 'Flores da Cunha', 'Garibaldi',
+            'Gramado', 'Lajeado', 'Monte Belo do Sul', 'Nova Prata', 'Nova Roma do Sul',
+            'Novo Hamburgo', 'Pinto Bandeira', 'Salvador do Sul', 'São Marcos',
+            'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
+        ];
+
+        $query->where('uf', 'RS')
+              ->whereIn(\Illuminate\Support\Facades\DB::raw('trim(nome)'), $cidadesPermitidas);
+
+        // 3. Busca por texto (q=...) - Usando 'ilike' para busca case-insensitive no PostgreSQL
         if ($q !== '') {
             $query->where(function ($sub) use ($q) {
                 $sub->where('nome', 'ilike', "%{$q}%")
                     ->orWhere('uf', 'ilike', "%{$q}%");
             });
-            $query->limit(100);
         }
+        
+        // Limita a 150 registros para evitar travamento se buscar vazio
+        $query->limit(150);
 
         return response()->json([
             'data' => $query->get(),

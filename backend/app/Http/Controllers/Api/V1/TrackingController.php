@@ -76,19 +76,23 @@ class TrackingController extends Controller
     {
         $request->validate([
             'cliente_id' => 'required|exists:clientes,id',
-            'interaction_type' => 'required|in:page_view,whatsapp_click,waze_click,social_click,call_click,share_click'
+            'interaction_type' => 'required|in:page_view,whatsapp_click,waze_click,social_click,call_click,share_click',
+            'city' => 'nullable|string|max:255'
         ]);
 
         $interaction = \App\Models\ClientInteraction::create([
             'cliente_id' => $request->cliente_id,
-            'interaction_type' => $request->interaction_type
+            'interaction_type' => $request->interaction_type,
+            // 'city' => $request->city, // TODO: Adicionar coluna no DB se necessário
         ]);
 
         // ✅ Rastreamento Server-Side via GA4
         try {
             $cliente = Cliente::with(['segmentos', 'cidadesAtendidas'])->find($request->cliente_id);
             $segment = $cliente->segmentos->first()?->nome ?? 'Outros';
-            $city = $cliente->cidadesAtendidas->first()?->nome ?? 'Geral';
+            
+            // Prioriza a cidade vinda do request (Contexto de Landing Page)
+            $city = $request->city ?: ($cliente->cidadesAtendidas->first()?->nome ?? 'Geral');
 
             $this->ga4->sendInteractionEvent(
                 $request->cliente_id,

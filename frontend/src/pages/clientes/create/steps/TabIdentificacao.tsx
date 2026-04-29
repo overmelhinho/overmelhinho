@@ -15,7 +15,7 @@ const splitKeywords = (text: string): string[] => {
     .filter(Boolean);
 };
 
-const normalizeKeywords = (items: string[], limit = 20): string[] => {
+const normalizeKeywords = (items: string[], limit = 100): string[] => {
   const out: string[] = [];
   const seen = new Set<string>();
 
@@ -188,7 +188,7 @@ export default function TabIdentificacao() {
   const tags: string[] = Array.isArray(values.seo_keywords) ? values.seo_keywords : [];
 
   const commitTags = (next: string[]) => {
-    const cleaned = normalizeKeywords(next, 20);
+    const cleaned = normalizeKeywords(next, 100);
     setFieldValue("seo_keywords", cleaned);
     setFieldValue("seo_keywords_text", cleaned.join(", "));
     // compat com campo antigo
@@ -536,7 +536,7 @@ export default function TabIdentificacao() {
 
           {generateSeo ? (
             <div className="border rounded-md px-3 py-3 bg-gray-50 text-gray-600 text-sm">
-              A IA irá gerar automaticamente <b>20 palavras-chave</b> após salvar, usando Segmentos + Cidades atendidas + Descrição.
+              A IA irá gerar automaticamente <b>até 100 palavras-chave</b> após salvar, usando Segmentos + Cidades atendidas + Descrição.
             </div>
           ) : (
             <div
@@ -599,9 +599,9 @@ export default function TabIdentificacao() {
                       setDraft("");
                     }
                   }}
-                  placeholder={tags.length ? "" : "Digite e pressione Enter…"}
+                   placeholder={tags.length ? "" : "Digite e pressione Enter…"}
                   className="min-w-[180px] flex-1 outline-none text-sm py-1"
-                  disabled={tags.length >= 20}
+                  disabled={tags.length >= 100}
                 />
               </div>
 
@@ -609,8 +609,8 @@ export default function TabIdentificacao() {
                 <p className="text-xs text-gray-500">
                   Enter para adicionar • Backspace remove • Cola aceita vírgulas/linhas
                 </p>
-                <span className={`text-xs ${tags.length >= 20 ? "text-red-600" : "text-gray-500"}`}>
-                  {tags.length}/20
+                <span className={`text-xs ${tags.length >= 100 ? "text-red-600" : "text-gray-500"}`}>
+                  {tags.length}/100
                 </span>
               </div>
 

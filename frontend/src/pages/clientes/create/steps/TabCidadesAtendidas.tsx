@@ -2,9 +2,17 @@ import { useFormikContext } from "formik";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/services/api";
 import Select from "react-select";
-import { MapPin, Loader2, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { MapPin, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type Cidade = {
   id: number;
@@ -29,6 +37,7 @@ export default function TabCidadesAtendidas() {
 
   const [search, setSearch] = useState("");
   const [chipsExpanded, setChipsExpanded] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
 
   // Ref do Select para manter foco após ações (UX premium)
   const selectRef = useRef<any>(null);
@@ -67,7 +76,7 @@ export default function TabCidadesAtendidas() {
     queryFn: async () => {
       try {
         const { data } = await api.get("/v1/cidades", {
-          params: debouncedSearch ? { q: debouncedSearch } : undefined,
+          params: { q: debouncedSearch || undefined, all: 1 },
         });
 
         const arr = Array.isArray(data?.data)
@@ -92,7 +101,7 @@ export default function TabCidadesAtendidas() {
     queryFn: async () => {
       try {
         const { data } = await api.get("/v1/cidades", {
-          params: { ids: selectedIds.join(",") },
+          params: { ids: selectedIds.join(","), all: 1 },
         });
 
         const arr = Array.isArray(data?.data)
@@ -141,12 +150,15 @@ export default function TabCidadesAtendidas() {
     setFieldValue("cidades_atendidas", unique);
   };
 
-  const handleClear = () => {
+  const handleClearClick = () => {
     if (selectedCount === 0) return;
-    const ok = window.confirm("Limpar todas as cidades selecionadas?");
-    if (!ok) return;
+    setShowClearModal(true);
+  };
+
+  const confirmClear = () => {
     setSelectedIds([]);
     setChipsExpanded(false);
+    setShowClearModal(false);
     toast.success("Seleção de cidades limpa.");
     focusSelect();
   };
@@ -180,7 +192,7 @@ export default function TabCidadesAtendidas() {
 
     try {
       const { data } = await api.get("/v1/cidades", {
-        params: { q: cidadeEnderecoNome },
+        params: { q: cidadeEnderecoNome, all: 1 },
       });
 
       const arr: Cidade[] = Array.isArray(data?.data)
@@ -257,7 +269,7 @@ export default function TabCidadesAtendidas() {
             <button
               type="button"
               onClick={handleSelectResults}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-md hover:bg-gray-50 transition"
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-md hover:bg-gray-50 transition cursor-pointer"
               disabled={isLoadingBusca || optionsBusca.length === 0}
               title="Seleciona todas as cidades do resultado atual"
             >
@@ -267,8 +279,8 @@ export default function TabCidadesAtendidas() {
 
             <button
               type="button"
-              onClick={handleClear}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-md hover:bg-gray-50 transition"
+              onClick={handleClearClick}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-md hover:bg-gray-50 transition text-red-600 hover:text-red-700 hover:border-red-200 cursor-pointer"
               disabled={selectedCount === 0}
               title="Remove todas as cidades selecionadas"
             >
@@ -280,7 +292,7 @@ export default function TabCidadesAtendidas() {
               <button
                 type="button"
                 onClick={handleAddCidadeEndereco}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-[#B70F0A] text-white rounded-md hover:bg-[#a00d08] transition"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-[#B70F0A] text-white rounded-md hover:bg-[#a00d08] transition cursor-pointer"
                 title="Adiciona a cidade informada na aba Endereço"
               >
                 <Plus className="w-4 h-4" />
@@ -314,7 +326,7 @@ export default function TabCidadesAtendidas() {
                 <button
                   type="button"
                   onClick={() => removeCidade(opt.value)}
-                  className="text-gray-500 hover:text-gray-900 transition"
+                  className="text-gray-500 hover:text-gray-900 transition cursor-pointer"
                   aria-label={`Remover ${opt.label}`}
                   title="Remover"
                 >
@@ -327,7 +339,7 @@ export default function TabCidadesAtendidas() {
               <button
                 type="button"
                 onClick={() => setChipsExpanded(true)}
-                className="px-3 py-1.5 rounded-full text-sm border bg-white hover:bg-gray-50 transition"
+                className="px-3 py-1.5 rounded-full text-sm border bg-white hover:bg-gray-50 transition cursor-pointer"
                 title="Mostrar todas as cidades selecionadas"
               >
                 +{hiddenCount} cidades
@@ -338,7 +350,7 @@ export default function TabCidadesAtendidas() {
               <button
                 type="button"
                 onClick={() => setChipsExpanded(false)}
-                className="px-3 py-1.5 rounded-full text-sm border bg-white hover:bg-gray-50 transition"
+                className="px-3 py-1.5 rounded-full text-sm border bg-white hover:bg-gray-50 transition cursor-pointer"
                 title="Recolher lista"
               >
                 Recolher
@@ -397,6 +409,39 @@ export default function TabCidadesAtendidas() {
           </div>
         ) : null}
       </div>
+
+      {/* Modal de Confirmação de Limpeza */}
+      <Dialog open={showClearModal} onOpenChange={setShowClearModal}>
+        <DialogContent className="max-w-md bg-white p-6 rounded-2xl shadow-xl">
+          <DialogHeader className="space-y-3">
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-2">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-center text-gray-900">
+              Limpar Seleção
+            </DialogTitle>
+            <DialogDescription className="text-center text-gray-600 text-base">
+              Tem certeza que deseja remover as <strong>{selectedCount}</strong> cidades selecionadas? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex gap-3 sm:justify-center">
+            <button
+              type="button"
+              onClick={() => setShowClearModal(false)}
+              className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-1"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={confirmClear}
+              className="px-5 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex-1"
+            >
+              Sim, limpar tudo
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

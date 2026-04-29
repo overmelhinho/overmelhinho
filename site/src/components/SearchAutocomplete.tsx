@@ -198,9 +198,11 @@ export const SearchAutocomplete = () => {
                                             className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-all cursor-pointer group"
                                         >
                                             <div className="flex items-center space-x-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 overflow-hidden shadow-sm flex-shrink-0">
-                                                    <img src={res.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
-                                                </div>
+                                                {res.image && (
+                                                    <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 overflow-hidden shadow-sm flex-shrink-0">
+                                                        <img src={res.image} className="w-full h-full object-cover" alt="" />
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <div className="flex items-center space-x-2">
                                                         <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-lg">{res.title}</h5>
