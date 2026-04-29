@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.overmelhinho.com.br"),
+  metadataBase: new URL("https://novo.overmelhinho.com.br"),
   title: "O Vermelhinho - Guia Local",
   description: "Encontre os melhores negócios na sua cidade",
 };

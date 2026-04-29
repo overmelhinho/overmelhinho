@@ -28,7 +28,7 @@ class GoogleSearchConsoleService
             $this->service = new SearchConsole($this->client);
         }
 
-        $this->siteUrl = env('GOOGLE_SEARCH_CONSOLE_SITE_URL', 'https://www.overmelhinho.com.br/');
+        $this->siteUrl = env('GOOGLE_SEARCH_CONSOLE_SITE_URL', 'https://novo.overmelhinho.com.br/');
     }
 
     /**

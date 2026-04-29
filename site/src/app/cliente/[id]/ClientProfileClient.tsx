@@ -198,35 +198,28 @@ export default function ClientProfileClient() {
     };
 
     const contactInfo = client?.contatos?.[0];
-    let hasPhone = false;
-    let hasWhatsApp = false;
+    const isPrincipalHidden = contactInfo?.telefone_principal_hidden_until
+        && new Date(contactInfo.telefone_principal_hidden_until) > new Date();
 
-    if (contactInfo) {
-        const isPrincipalHidden = contactInfo.telefone_principal_hidden_until
-            && new Date(contactInfo.telefone_principal_hidden_until) > new Date();
+    const allPhones = contactInfo ? [
+        { label: 'Telefone Principal', number: contactInfo.telefone_principal, flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal },
+        { label: 'Celular', number: contactInfo.celular, flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular },
+        { label: 'Telefone Secundário', number: contactInfo.telefone_secundario, flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario },
+        { label: 'Outro Telefone / 0800', number: contactInfo.telefone_outro, flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro },
+    ].filter(p => p.number && p.flag && !p.hidden) : [];
 
-        const priority = [
-            { key: 'telefone_principal', flag: 'exibir_tel_principal', hidden: isPrincipalHidden },
-            { key: 'celular', flag: 'exibir_celular', hidden: false },
-            { key: 'telefone_secundario', flag: 'exibir_tel_secundario', hidden: false },
-            { key: 'telefone_outro', flag: 'exibir_tel_outro', hidden: false }
-        ];
+    const primaryPhone = allPhones[0]?.number;
+    const hasPhone = allPhones.length > 0;
 
-        const foundPhone = priority.find(p => contactInfo[p.key] && contactInfo[p.flag] && !p.hidden);
-        const phone = foundPhone ? contactInfo[foundPhone.key] : (!isPrincipalHidden ? contactInfo.telefone_principal : contactInfo.celular);
-        hasPhone = !!phone;
-
-        let whatsapp = null;
-        if (contactInfo.whatsapp_selected && contactInfo[contactInfo.whatsapp_selected]) {
-            const isSelectedHidden = contactInfo.whatsapp_selected === 'telefone_principal' && isPrincipalHidden;
-            if (!isSelectedHidden) whatsapp = contactInfo[contactInfo.whatsapp_selected];
-        }
-        if (!whatsapp) {
-            const foundWa = priority.find(p => contactInfo[p.key] && !p.hidden);
-            if (foundWa) whatsapp = contactInfo[foundWa.key];
-        }
-        hasWhatsApp = !!whatsapp;
+    let primaryWhatsApp = null;
+    if (contactInfo?.whatsapp_selected && contactInfo[contactInfo.whatsapp_selected]) {
+        const isSelectedHidden = contactInfo.whatsapp_selected === 'telefone_principal' && isPrincipalHidden;
+        if (!isSelectedHidden) primaryWhatsApp = contactInfo[contactInfo.whatsapp_selected];
     }
+    if (!primaryWhatsApp) {
+        primaryWhatsApp = allPhones.find(p => p.isWhatsApp)?.number || allPhones[0]?.number;
+    }
+    const hasWhatsApp = !!primaryWhatsApp;
 
     const tabs = isPagante ? ['Sobre', 'Fotos'] : ['Sobre'];
     if (client.reviews?.length > 0) tabs.push('Avaliações');
@@ -316,13 +309,13 @@ export default function ClientProfileClient() {
                 "@type": "ListItem",
                 "position": 1,
                 "name": "Início",
-                "item": "https://www.overmelhinho.com.br"
+                "item": "https://novo.overmelhinho.com.br"
             },
             {
                 "@type": "ListItem",
                 "position": 2,
                 "name": client.segmentos?.[0]?.nome || "Clientes",
-                "item": `https://www.overmelhinho.com.br/busca?segmento=${client.segmentos?.[0]?.id || ''}`
+                "item": `https://novo.overmelhinho.com.br/busca?segmento=${client.segmentos?.[0]?.id || ''}`
             },
             {
                 "@type": "ListItem",
@@ -676,14 +669,20 @@ export default function ClientProfileClient() {
                                                     </div>
 
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-                                                        {(i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone) && (
-                                                            <a 
-                                                                href={`tel:${(i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone).replace(/\D/g, '')}`}
-                                                                className={`col-span-full ${end.exibir_apenas_cidade ? '' : 'md:col-span-1'} bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2 mb-1`}
-                                                            >
-                                                                <Phone size={12} /> Ligar: {i === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone}
-                                                            </a>
-                                                        )}
+                                                        {(i === 0 ? allPhones : [{ label: 'Telefone', number: end.telefone, isWhatsApp: false }]).map((p: any, idx: number) => (
+                                                            p.number && (
+                                                                <a 
+                                                                    key={idx}
+                                                                    href={`tel:${p.number.replace(/\D/g, '')}`}
+                                                                    className={`col-span-full bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2`}
+                                                                >
+                                                                    <Phone size={12} /> {p.label}: {p.number}
+                                                                </a>
+                                                            )
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                                                         {!end.exibir_apenas_cidade && (
                                                             <a 
                                                                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
@@ -824,6 +823,52 @@ export default function ClientProfileClient() {
 
                     {/* RIGHT COLUMN: SIDEBAR */}
                     <aside className="w-full lg:w-96 space-y-8">
+
+                        {/* Telefones Section */}
+                        {allPhones.length > 0 && (
+                            <div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
+                                <h3 className="text-xl font-black font-serif italic text-gray-900">Contatos</h3>
+                                <div className="space-y-4">
+                                    {allPhones.map((p, idx) => (
+                                        <div key={idx} className="group relative">
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{p.label}</span>
+                                                <div className="flex items-center justify-between">
+                                                    <a 
+                                                        href={`tel:${p.number.replace(/\D/g, '')}`} 
+                                                        className="text-lg font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic"
+                                                    >
+                                                        {p.number}
+                                                    </a>
+                                                    <div className="flex gap-2">
+                                                        <a 
+                                                            href={`tel:${p.number.replace(/\D/g, '')}`}
+                                                            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-brand-red hover:bg-red-50 transition-all border border-gray-100"
+                                                            title="Ligar"
+                                                        >
+                                                            <Phone size={16} />
+                                                        </a>
+                                                        {p.isWhatsApp && (
+                                                            <button 
+                                                                onClick={() => {
+                                                                    const cleanNumber = p.number.replace(/\D/g, '');
+                                                                    window.open(`https://wa.me/55${cleanNumber}?text=Olá! Vi seu anúncio no O Vermelhinho.`, '_blank');
+                                                                }}
+                                                                className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500 hover:bg-green-100 transition-all border border-green-100"
+                                                                title="WhatsApp"
+                                                            >
+                                                                <WhatsAppIcon size={18} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {idx < allPhones.length - 1 && <div className="h-px bg-gray-50 mt-4" />}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Hours Section (Real Data) */}
                         <div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">

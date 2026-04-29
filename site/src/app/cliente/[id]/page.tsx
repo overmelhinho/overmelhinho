@@ -2,7 +2,7 @@ import api from '@/services/api';
 import { Metadata } from 'next';
 import ClientProfileClient from './ClientProfileClient';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://novo.overmelhinho.com.br';
 
 async function getClient(id: string) {
     try {

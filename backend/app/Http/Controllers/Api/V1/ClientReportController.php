@@ -172,7 +172,7 @@ class ClientReportController extends Controller
             'status'        => 'draft',
         ]);
 
-        $frontendUrl = env('FRONTEND_URL', 'https://www.overmelhinho.com.br');
+        $frontendUrl = env('FRONTEND_URL', 'https://novo.overmelhinho.com.br');
         return response()->json([
             'id'      => $report->id,
             'token'   => $report->token,

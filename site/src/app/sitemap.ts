@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import api from '@/services/api';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://novo.overmelhinho.com.br';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     try {

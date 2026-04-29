@@ -818,23 +818,12 @@ export default function ClientesList() {
                       if (!selected) return;
                       const siteUrl = window.location.hostname === "localhost" 
                         ? "http://localhost:3000" 
-                        : "https://www.overmelhinho.com.br";
+                        : "https://novo.overmelhinho.com.br";
                       window.open(`${siteUrl}/cliente/${selected.slug || selected.id}`, "_blank");
                     }}
                   />
 
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700 hover:bg-red-100 transition-all duration-150 border border-red-200"
-                    onClick={() => {
-                      if (!selected) return;
-                      setClienteToDelete(selected);
-                      setDeleteModalOpen(true);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Excluir</span>
-                  </button>
+
                 </div>
               </div>
             </DialogHeader>
