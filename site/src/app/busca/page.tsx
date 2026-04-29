@@ -75,7 +75,7 @@ function SearchContent() {
 
     const filteredCities = useMemo(() => {
         if (!citySearchQuery) return availableCities;
-        return availableCities.filter(c =>
+        return availableCities.filter((c: any) =>
             c.nome.toLowerCase().includes(citySearchQuery.toLowerCase())
         );
     }, [availableCities, citySearchQuery]);
