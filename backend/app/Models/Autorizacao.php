@@ -125,7 +125,7 @@ class Autorizacao extends Model
     public static function proximoNumero(): string
     {
         $max = static::whereNull('parent_id')
-            ->selectRaw('MAX(CAST(numero AS UNSIGNED)) as max_num')
+            ->selectRaw('MAX(CAST(numero AS INTEGER)) as max_num')
             ->value('max_num');
             
         return str_pad((string) ((int) $max + 1), 5, '0', STR_PAD_LEFT);
