@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('enderecos', function (Blueprint $table) {
-            $table->boolean('is_cobranca')->default(false)->after('exibir_apenas_cidade');
-        });
+        if (!Schema::hasColumn('enderecos', 'is_cobranca')) {
+            Schema::table('enderecos', function (Blueprint $table) {
+                $table->boolean('is_cobranca')->default(false)->after('exibir_apenas_cidade');
+            });
+        }
     }
 
     /**

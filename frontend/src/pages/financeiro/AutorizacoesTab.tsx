@@ -475,7 +475,6 @@ export default function AutorizacoesTab() {
                 isOpen={isEditAutorizacaoOpen}
                 onClose={() => setIsEditAutorizacaoOpen(false)}
                 onSuccess={() => refetch()}
-                onSuccess={() => refetch()}
                 autorizacao={selectedEditAutorizacao}
             />
 

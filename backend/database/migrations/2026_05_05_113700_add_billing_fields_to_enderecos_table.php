@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('enderecos', function (Blueprint $table) {
-            $table->string('endereco_compacto', 255)->nullable()->after('rua');
-        });
+        if (!Schema::hasColumn('enderecos', 'endereco_compacto')) {
+            Schema::table('enderecos', function (Blueprint $table) {
+                $table->string('endereco_compacto', 255)->nullable()->after('rua');
+            });
+        }
     }
 
     /**
