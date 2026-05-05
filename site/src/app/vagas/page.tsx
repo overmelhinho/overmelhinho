@@ -385,7 +385,7 @@ export default function VagasPage() {
         });
 
         return result;
-    }, [searchTerm, selectedCategories, sortBy]);
+    }, [searchTerm, selectedCategories, sortBy, jobs]);
 
     const categoryCounts = useMemo(() =>
         CATEGORIES.map(cat => ({

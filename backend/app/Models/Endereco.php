@@ -18,16 +18,19 @@ class Endereco extends Model
         'bairro',
         'rua',
         'numero',
+        'endereco_compacto',
         'complemento',
         'caixa_postal',
         'link_maps',
         'link_waze',
         'iframe_maps',
         'exibir_apenas_cidade',
+        'is_cobranca',
     ];
 
     protected $casts = [
         'exibir_apenas_cidade' => 'boolean',
+        'is_cobranca' => 'boolean',
     ];
 
     public function cliente()

@@ -24,6 +24,8 @@ class EnderecoResource extends JsonResource
             'latitude'     => $this->latitude ? (float) $this->latitude : null,
             'longitude'    => $this->longitude ? (float) $this->longitude : null,
             'exibir_apenas_cidade' => (bool) $this->exibir_apenas_cidade,
+            'is_cobranca'          => (bool) $this->is_cobranca,
+            'endereco_compacto'    => $this->endereco_compacto,
             'created_at'   => $this->created_at,
             'updated_at'   => $this->updated_at,
         ];

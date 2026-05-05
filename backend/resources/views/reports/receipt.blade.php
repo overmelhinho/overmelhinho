@@ -117,7 +117,7 @@
         <!-- Texto de Quitação / Legal -->
         <div class="legal-text">
             <strong>VALOR POR EXTENSO:</strong> <span style="text-transform: uppercase;">{{ $payableAmount_extenso }}</span><br>
-            Recebemos a importância acima via <span class="highlight">{{ strtoupper($invoice->payment_method ?? 'PIX') }}</span>, referente ao plano {{ $invoice->plan->name ?? 'Publicidade Digital' }}. Damos por este recibo plena e geral quitação.
+            Recebemos a importância acima referente ao plano {{ $invoice->plan->name ?? 'Publicidade Digital' }}. Damos por este recibo plena e geral quitação.
         </div>
 
         <!-- Assinaturas do topo -->

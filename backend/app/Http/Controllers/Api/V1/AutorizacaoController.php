@@ -23,6 +23,20 @@ class AutorizacaoController extends Controller
 
     public function index(Request $request)
     {
+        // ✅ Auto-healing: Corrige números sem o padding de 5 dígitos (ex: 006-4 -> 00006-4)
+        static $healed = false;
+        if (!$healed) {
+            $toFix = Autorizacao::whereRaw("length(split_part(numero, '-', 1)) < 5")->get();
+            foreach ($toFix as $a) {
+                $parts = explode('-', (string)$a->numero);
+                $newNum = str_pad($parts[0], 5, '0', STR_PAD_LEFT);
+                if (isset($parts[1])) $newNum .= '-' . $parts[1];
+                
+                $a->update(['numero' => $newNum]);
+            }
+            $healed = true;
+        }
+
         $query = Autorizacao::with(['cliente:id,nome_fantasia,cpf_cnpj', 'vendedor:id,name', 'plan'])
             ->orderByDesc('id');
 
@@ -47,7 +61,7 @@ class AutorizacaoController extends Controller
                 // Busca por número do contrato (removendo # e zeros à esquerda para conferir com o integer no DB)
                 $numericQ = preg_replace('/\D/', '', $q);
                 if ($numericQ !== '') {
-                    $sq->orWhere('numero', (int)$numericQ);
+                    $sq->orWhere('numero', 'ilike', "%{$q}%");
                 }
             });
         }
@@ -92,7 +106,8 @@ class AutorizacaoController extends Controller
         if (!empty($validated['parent_id'])) {
             $parent = Autorizacao::find($validated['parent_id']);
             $count = Autorizacao::where('parent_id', $parent->id)->count();
-            $validated['numero'] = $parent->numero . '-' . ($count + 2);
+            $parentNum = preg_replace('/\D/', '', (string) $parent->numero);
+            $validated['numero'] = str_pad($parentNum, 5, '0', STR_PAD_LEFT) . '-' . ($count + 2);
             $validated['is_bonificacao'] = true;
             $validated['valor_total'] = 0;
             $validated['taxa_cadastro'] = 0;

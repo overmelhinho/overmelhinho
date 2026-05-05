@@ -123,7 +123,9 @@ export default function ClienteEdit() {
     nome_fantasia: Yup.string().required("Nome fantasia é obrigatório"),
     cnpj: Yup.string().required("CPF/CNPJ é obrigatório"),
     email: Yup.string().email("Email inválido").nullable(),
-    telefone_principal: Yup.string().required("Telefone principal é obrigatório"),
+    telefone_principal: Yup.string()
+      .min(8, "Telefone muito curto")
+      .required("Telefone principal é obrigatório"),
     responsavel: Yup.string().required("Responsável é obrigatório"),
   });
 
@@ -242,7 +244,7 @@ export default function ClienteEdit() {
       complemento: endereco0?.complemento || "",
 
       // NOVO
-      enderecos: enderecos.map((e: any) => ({
+      enderecos: enderecos.map((e: any, idx: number) => ({
         id: e?.id || null,
         nome_unidade: e?.nome_unidade || "",
         cep: e?.cep || "",
@@ -255,6 +257,8 @@ export default function ClienteEdit() {
         telefone: e?.telefone || "",
         link_maps: e?.link_maps || "",
         link_waze: e?.link_waze || "",
+        is_cobranca: e?.is_cobranca ?? (idx === 0), // Primeiro por padrão se não definido
+        endereco_compacto: e?.endereco_compacto || "",
       })),
 
       segmentos: Array.isArray(c?.segmentos) ? c.segmentos.map((s: any) => s.id ?? s) : [],
@@ -309,7 +313,19 @@ export default function ClienteEdit() {
     };
   }, [data]);
 
-  const handleNext = () => setStep((s) => Math.min(tabs.length - 1, s + 1));
+  const handleNext = () => {
+    const f = formikRef.current;
+    if (f && tabs[step]?.label === "Endereço") {
+      const hasError = f.values.enderecos?.some((e: any) => 
+        (e.is_cobranca !== false) && (e.endereco_compacto?.length || 0) > 40
+      );
+      if (hasError) {
+        toast.error("Atenção: O endereço de cobrança excede 40 caracteres. Ajuste para prosseguir.");
+        return;
+      }
+    }
+    setStep((s) => Math.min(tabs.length - 1, s + 1));
+  };
   const handlePrev = () => setStep((s) => Math.max(0, s - 1));
 
   const handleSave = async () => {
@@ -319,7 +335,9 @@ export default function ClienteEdit() {
 
     const errs = await f.validateForm();
     if (errs && Object.keys(errs).length) {
-      toast.error("Revise os campos obrigatórios antes de salvar.");
+      console.log("Erros de validação:", errs);
+      const campos = Object.keys(errs).join(", ");
+      toast.error(`Revise os campos obrigatórios: ${campos}`);
       return;
     }
 
@@ -400,6 +418,8 @@ export default function ClienteEdit() {
                 link_maps: e.link_maps || null,
                 link_waze: e.link_waze || null,
                 exibir_apenas_cidade: e.exibir_apenas_cidade ?? false,
+                is_cobranca: e.is_cobranca ?? false,
+                endereco_compacto: e.endereco_compacto || null,
               })),
 
               contatos: [

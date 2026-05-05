@@ -129,10 +129,6 @@ class FinancialController extends Controller
     {
         $invoice = Invoice::with(['client', 'plan'])->findOrFail($id);
 
-        if ($invoice->status !== 'paid') {
-            return response()->json(['message' => 'Recibo disponível apenas para faturas pagas.'], 400);
-        }
-
         // Buscar número da autorização se existir no group_id
         $authNumero = null;
         if (str_starts_with($invoice->group_id ?? '', 'autorizacao-')) {
@@ -753,6 +749,153 @@ class FinancialController extends Controller
             'desconto'    => $discount,
             'tiny_errors' => $tinyErrors,
         ]);
+    }
+
+    /**
+     * Baixa em lote de faturas selecionadas
+     */
+    public function settleBatch(Request $request)
+    {
+        $validated = $request->validate([
+            'ids'            => 'required|array',
+            'ids.*'          => 'exists:invoices,id',
+            'payment_method' => 'nullable|string|in:pix,dinheiro,cartao,boleto',
+            'justification'  => 'nullable|string',
+        ]);
+
+        $invoices = Invoice::whereIn('id', $validated['ids'])
+            ->where('status', 'pending')
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return response()->json(['message' => 'Nenhuma fatura pendente encontrada para processar.'], 404);
+        }
+
+        $settledCount = 0;
+        $tinyErrors = [];
+
+        foreach ($invoices as $invoice) {
+            $invoice->update([
+                'status'         => 'paid',
+                'payment_method' => $validated['payment_method'] ?? $invoice->payment_method ?? 'pix',
+                'justification'  => $validated['justification'] ?? 'Baixa em lote realizada pelo administrativo.',
+                'action_date'    => now(),
+            ]);
+
+            if ($invoice->tiny_account_id) {
+                try {
+                    $valorPago = (float)($invoice->payable_amount ?? $invoice->amount);
+                    $this->tinyService->payReceivable($invoice->tiny_account_id, $valorPago, 0);
+                } catch (\Exception $e) {
+                    $tinyErrors[] = "Fatura #{$invoice->id}: " . $e->getMessage();
+                    Log::error("[settleBatch] Erro ao baixar parcela {$invoice->id} no Tiny: " . $e->getMessage());
+                }
+            }
+            $settledCount++;
+        }
+
+        // Tenta ativar o cliente se houver pelo menos um
+        if ($invoices->first()) {
+            $invoices->first()->client->update(['status_assinatura' => 'ativo']);
+        }
+
+        return response()->json([
+            'message'     => "{$settledCount} fatura(s) baixada(s) com sucesso.",
+            'tiny_errors' => $tinyErrors,
+        ]);
+    }
+
+    /**
+     * Download em lote de recibos (ZIP)
+     */
+    public function downloadReceiptsBatch(Request $request)
+    {
+        $ids = $request->input('ids');
+        if (!$ids || !is_array($ids)) {
+            return response()->json(['message' => 'Nenhuma fatura selecionada.'], 422);
+        }
+
+        $invoices = Invoice::with(['client', 'plan'])
+            ->whereIn('id', $ids)
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return response()->json(['message' => 'Faturas não encontradas.'], 404);
+        }
+
+        $tempDir = storage_path('app/public/temp/' . now()->format('YmdHis') . '_' . uniqid());
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        // Carregar Logo em Base64 para o PDF
+        $logoPath = public_path('logo-contract.png');
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoData = base64_encode(file_get_contents($logoPath));
+            $logoBase64 = 'data:image/png;base64,' . $logoData;
+        }
+
+        $pdfFiles = [];
+        foreach ($invoices as $invoice) {
+            // Buscar número da autorização se existir no group_id
+            $authNumero = null;
+            if (str_starts_with($invoice->group_id ?? '', 'autorizacao-')) {
+                $authId = (int) str_replace('autorizacao-', '', $invoice->group_id);
+                $authNumero = \App\Models\Autorizacao::where('id', $authId)->value('numero');
+            }
+
+            $generatedAt = \Carbon\Carbon::now()->format('d/m/Y H:i');
+            $payableAmount = $invoice->payable_amount ?? $invoice->amount;
+            $payableAmount_extenso = $this->valorPorExtenso($payableAmount);
+
+            $data = [
+                'invoice' => $invoice,
+                'client' => $invoice->client,
+                'authNumero' => $authNumero ? str_pad($authNumero, 5, '0', STR_PAD_LEFT) : null,
+                'generatedAt' => $generatedAt,
+                'payableAmount_extenso' => $payableAmount_extenso,
+                'logoBase64' => $logoBase64
+            ];
+
+            $pdf = Pdf::loadView('reports.receipt', $data)
+                ->setPaper('a4', 'portrait')
+                ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
+            
+            $filename = "recibo_" . str_pad($invoice->id, 5, '0', STR_PAD_LEFT) . ".pdf";
+            $fullPath = $tempDir . DIRECTORY_SEPARATOR . $filename;
+            file_put_contents($fullPath, $pdf->output());
+            $pdfFiles[] = $fullPath;
+        }
+
+        $zipName = 'recibos_' . now()->format('YmdHis') . '.zip';
+        $zipPath = storage_path('app/public/temp/' . $zipName);
+
+        if (class_exists('\ZipArchive')) {
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
+                foreach ($pdfFiles as $path) {
+                    $zip->addFile($path, basename($path));
+                }
+                $zip->close();
+            }
+        } else {
+            // Fallback para Windows usando PowerShell
+            $quotedFiles = array_map(fn($f) => "'$f'", $pdfFiles);
+            $filesList = implode(',', $quotedFiles);
+            $cmd = "powershell -Command \"Compress-Archive -Path $filesList -DestinationPath '$zipPath' -Force\"";
+            exec($cmd, $output, $returnCode);
+        }
+
+        // Limpa os arquivos individuais
+        foreach ($pdfFiles as $f) { @unlink($f); }
+        @rmdir($tempDir);
+
+        if (!file_exists($zipPath)) {
+            return response()->json(['message' => 'Arquivo ZIP não foi gerado.'], 500);
+        }
+
+        return response()->download($zipPath)->deleteFileAfterSend(true);
     }
 
     /**

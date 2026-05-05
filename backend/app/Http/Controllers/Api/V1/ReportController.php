@@ -226,13 +226,15 @@ class ReportController extends Controller
             $query->whereBetween(DB::raw('DATE(created_at)'), [$request->data_cad_inicial, $request->data_cad_final]);
         }
 
-        // Filtro de Termo (Nome/Razão Social)
+        // Filtro de Termo (Nome/Razão Social) - Case Insensitive
         if ($request->filled('termo')) {
-            $termo = $request->termo;
+            $termo = mb_strtolower($request->termo);
             $query->whereHas('client', function ($q) use ($termo) {
-                $q->where('nome_fantasia', 'like', "%{$termo}%")
-                  ->orWhere('razao_social', 'like', "%{$termo}%")
-                  ->orWhere('cpf_cnpj', 'like', "%{$termo}%");
+                $q->where(function($sq) use ($termo) {
+                    $sq->whereRaw('LOWER(nome_fantasia) LIKE ?', ["%{$termo}%"])
+                      ->orWhereRaw('LOWER(razao_social) LIKE ?', ["%{$termo}%"])
+                      ->orWhereRaw('LOWER(cpf_cnpj) LIKE ?', ["%{$termo}%"]);
+                });
             });
         }
 
@@ -266,19 +268,37 @@ class ReportController extends Controller
             });
         }
 
-        // Filtro Autorizacao (Número e Tipo de Publicidade)
-        if ($request->filled('numero_autorizacao') || ($request->filled('tipo_publicidade') && $request->tipo_publicidade !== 'all')) {
+        // Filtro Autorizacao / Vendedor / Tipo Publicidade
+        $hasAuthFilter = $request->filled('numero_autorizacao') || 
+                        ($request->filled('tipo_publicidade') && $request->tipo_publicidade !== 'all') ||
+                        ($request->filled('vendedor_id') && $request->vendedor_id !== 'all');
+
+        if ($hasAuthFilter) {
             $authQuery = Autorizacao::query();
+            
             if ($request->filled('numero_autorizacao')) {
-                $authQuery->where('numero', 'like', '%' . $request->numero_autorizacao . '%');
+                $num = $request->numero_autorizacao;
+                // Remove zeros à esquerda se for numérico para busca mais flexível
+                $numClean = ltrim($num, '0');
+                $authQuery->where(function($q) use ($num, $numClean) {
+                    $q->where('numero', 'like', "%{$num}%");
+                    if ($numClean !== "") {
+                        $q->orWhere('numero', 'like', "%{$numClean}%");
+                    }
+                });
             }
+            
             if ($request->filled('tipo_publicidade') && $request->tipo_publicidade !== 'all') {
-                $authQuery->where('tipo_publicidade', clone $request->tipo_publicidade);
+                $authQuery->where('tipo_publicidade', $request->tipo_publicidade);
             }
+            
+            if ($request->filled('vendedor_id') && $request->vendedor_id !== 'all') {
+                $authQuery->where('vendedor_id', $request->vendedor_id);
+            }
+            
             $authIds = $authQuery->pluck('id');
             $groupIds = $authIds->map(fn($id) => 'autorizacao-' . $id)->toArray();
             
-            // Se buscou algo e não achou autorização, array será vazio.
             if (empty($groupIds)) {
                 $query->where('id', 0); // Força zero resultados
             } else {
@@ -344,7 +364,9 @@ class ReportController extends Controller
 
             return [
                 'id' => $inv->id,
-                'cliente' => $inv->client->nome_fantasia ?? $inv->client->razao_social ?? 'N/A',
+                'cliente' => $inv->client->razao_social ?? $inv->client->nome_fantasia ?? 'N/A',
+                'cliente_nome_fantasia' => $inv->client->nome_fantasia,
+                'cliente_id' => $inv->client_id,
                 'plano' => $inv->plan->name ?? 'Avulso',
                 'vendedor' => $auth?->vendedor?->name ?? 'N/A',
                 'vendedor_id' => $auth?->vendedor_id,
@@ -352,6 +374,7 @@ class ReportController extends Controller
                 'due_date' => $inv->due_date,
                 'status' => $inv->status,
                 'payment_method' => $inv->payment_method,
+                'autorizacao_id' => $auth?->id,
                 'autorizacao_numero' => $auth?->numero ? str_pad($auth->numero, 5, '0', STR_PAD_LEFT) : null,
                 'parcel_number' => $inv->parcel_number,
                 'total_parcels' => $inv->total_parcels,

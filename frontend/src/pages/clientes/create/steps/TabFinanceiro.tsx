@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "@/services/api";
 import toast from "react-hot-toast";
@@ -116,6 +116,7 @@ interface Autorizacao {
 
 export default function TabFinanceiro() {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
     // Form States
@@ -171,6 +172,10 @@ export default function TabFinanceiro() {
 
     const [isWarningOpen, setIsWarningOpen] = useState(false);
 
+    // Multi-select state
+    const [selectedInvoices, setSelectedInvoices] = useState<number[]>([]);
+    const [isBulkSettleModalOpen, setIsBulkSettleModalOpen] = useState(false);
+
     // Fetch Invoices
     const { data: invoices, isLoading: isLoadingInvoices, refetch: refetchInvoices } = useQuery<Invoice[]>({
         queryKey: ["client-invoices", id],
@@ -187,6 +192,20 @@ export default function TabFinanceiro() {
             return resp.data.data;
         },
     });
+
+    // Auto-open preview if auth_id is in URL
+    useEffect(() => {
+        const authIdParam = searchParams.get("auth_id");
+        if (authIdParam && autorizacoes && autorizacoes.length > 0) {
+            const targetAuth = autorizacoes.find(a => String(a.id) === authIdParam);
+            if (targetAuth) {
+                setSelectedAuth({ id: targetAuth.id, numero: targetAuth.numero });
+                setIsPreviewOpen(true);
+                // Clear the parameter to avoid re-opening if user navigates back
+                // window.history.replaceState({}, '', window.location.pathname + window.location.search.replace(/&?auth_id=[^&]*/, ''));
+            }
+        }
+    }, [searchParams, autorizacoes]);
 
     const [isEditAuthOpen, setIsEditAuthOpen] = useState(false);
     const [authToEdit, setAuthToEdit] = useState<any>(null);
@@ -344,6 +363,64 @@ export default function TabFinanceiro() {
             toast.success("Recibo gerado com sucesso!", { id: loadingToast });
         } catch (error) {
             toast.error("Erro ao baixar recibo.");
+        }
+    };
+
+    const handleBulkDownloadReceipts = async () => {
+        if (selectedInvoices.length === 0) return;
+        try {
+            const loadingToast = toast.loading("Gerando pacote de recibos...");
+            const response = await axios.post(`/v1/financial/invoices/batch-receipts`, {
+                ids: selectedInvoices
+            }, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Recibos_Lote_${id}_${format(new Date(), 'ddMMyyHHmm')}.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Download iniciado!", { id: loadingToast });
+            setSelectedInvoices([]);
+        } catch (error) {
+            toast.error("Erro ao gerar download em lote.");
+        }
+    };
+
+    const handleBulkMarkAsPaid = async () => {
+        if (selectedInvoices.length === 0) return;
+
+        try {
+            const loadingToast = toast.loading("Processando baixa em lote...");
+            await axios.post(`/v1/financial/invoices/settle-batch`, {
+                ids: selectedInvoices,
+                payment_method: 'pix',
+                justification: "Baixa em lote realizada pelo administrativo."
+            });
+            toast.success("Baixa em lote concluída!", { id: loadingToast });
+            setSelectedInvoices([]);
+            setIsBulkSettleModalOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+            queryClient.invalidateQueries({ queryKey: ["cliente-hub", id] });
+            queryClient.invalidateQueries({ queryKey: ["cliente", Number(id)] });
+        } catch (error) {
+            toast.error("Erro ao realizar baixa em lote.");
+        }
+    };
+
+    const toggleSelectInvoice = (id: number) => {
+        setSelectedInvoices(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedInvoices.length === invoices?.length) {
+            setSelectedInvoices([]);
+        } else {
+            setSelectedInvoices(invoices?.map(i => i.id) || []);
         }
     };
 
@@ -719,7 +796,6 @@ export default function TabFinanceiro() {
 
             <div className="h-px bg-gray-100 my-4" />
 
-
             <div className="flex justify-between items-center">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -728,20 +804,35 @@ export default function TabFinanceiro() {
                     </h3>
                     <p className="text-sm text-gray-500">Histórico de faturas e cobranças do cliente.</p>
                 </div>
-                <button
-                    onClick={() => {
-                        const hasPendingAuth = autorizacoes?.some(a => ['rascunho', 'aguardando_assinatura'].includes(a.status));
-                        if (hasPendingAuth) {
-                            setIsWarningOpen(true);
-                        } else {
-                            setIsModalOpen(true);
-                        }
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 transition-colors font-bold text-xs shadow-sm"
-                >
-                    <Plus size={18} />
-                    Gerar Cobrança Avulsa
-                </button>
+                
+                {selectedInvoices.length > 0 && (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+                        <span className="text-[10px] font-black uppercase text-gray-400 mr-2">
+                            {selectedInvoices.length} selecionado(s)
+                        </span>
+                        <button
+                            onClick={handleBulkDownloadReceipts}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors font-bold text-[10px] uppercase border border-emerald-100"
+                        >
+                            <Printer size={14} />
+                            Recibos em Lote
+                        </button>
+                        <button
+                            onClick={() => setIsBulkSettleModalOpen(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-bold text-[10px] uppercase border border-blue-100"
+                        >
+                            <CheckCircle2 size={14} />
+                            Baixar em Lote (Pago)
+                        </button>
+                        <button
+                            onClick={() => setSelectedInvoices([])}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Limpar seleção"
+                        >
+                            <Plus size={14} className="rotate-45" />
+                        </button>
+                    </div>
+                )}
             </div>
 
             {isLoadingInvoices ? (
@@ -755,6 +846,14 @@ export default function TabFinanceiro() {
                     <table className="w-full text-sm text-left text-gray-500">
                         <thead className="text-[11px] text-gray-400 uppercase font-black bg-gray-50/50 border-b border-gray-100">
                             <tr>
+                                <th className="px-4 py-4 w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={invoices?.length! > 0 && selectedInvoices.length === invoices?.length}
+                                        onChange={toggleSelectAll}
+                                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
+                                    />
+                                </th>
                                 <th className="px-6 py-4">Fatura</th>
                                 <th className="px-6 py-4">Vencimento</th>
                                 <th className="px-6 py-4">Valor</th>
@@ -768,7 +867,18 @@ export default function TabFinanceiro() {
                                 [...invoices]
                                     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
                                     .map((invoice) => (
-                                        <tr key={invoice.id} className="bg-white hover:bg-gray-50/80 transition-colors group">
+                                        <tr key={invoice.id} className={cn(
+                                            "bg-white hover:bg-gray-50/80 transition-colors group",
+                                            selectedInvoices.includes(invoice.id) && "bg-red-50/30"
+                                        )}>
+                                        <td className="px-4 py-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedInvoices.includes(invoice.id)}
+                                                onChange={() => toggleSelectInvoice(invoice.id)}
+                                                className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
+                                            />
+                                        </td>
                                         <td className="px-6 py-4 font-medium text-gray-900">
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
@@ -829,25 +939,6 @@ export default function TabFinanceiro() {
                                                             <Pencil size={15} />
                                                         </button>
 
-                                                        {invoice.group_id && invoice.total_parcels && invoice.total_parcels > 1 && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    const groupParcels = (invoices ?? []).filter(
-                                                                        i => i.group_id === invoice.group_id && i.status === 'pending'
-                                                                    );
-                                                                    setSettleGroupId(invoice.group_id!);
-                                                                    setSettleGroupParcels(groupParcels);
-                                                                    setSettleDiscount("");
-                                                                    setSettleJustification("");
-                                                                    setSettlePaymentMethod("pix");
-                                                                    setIsSettleModalOpen(true);
-                                                                }}
-                                                                className="p-2 text-purple-500 hover:bg-purple-50 rounded-xl transition-all"
-                                                                title="Quitar Parcelas Restantes"
-                                                            >
-                                                                <Landmark size={15} />
-                                                            </button>
-                                                        )}
 
                                                         <button
                                                             onClick={() => handleMarkAsPaid(invoice.id)}
@@ -880,25 +971,16 @@ export default function TabFinanceiro() {
                                                         </a>
                                                     </>
                                                 )}
-                                                {invoice.status === 'paid' ? (
-                                                    <button
-                                                        onClick={() => handleDownloadReceipt(invoice.id)}
-                                                        className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
-                                                        title="Imprimir Recibo de Pagamento"
-                                                    >
-                                                        <Printer size={16} />
-                                                    </button>
-                                                ) : (
-                                                    invoice.group_id && invoice.total_parcels! > 1 && (
-                                                        <button
-                                                            onClick={() => handleDownloadCarnet(invoice.group_id!)}
-                                                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                                                            title="Baixar Cronograma Completo"
-                                                        >
-                                                            <Printer size={16} />
-                                                        </button>
-                                                    )
-                                                )}
+
+                                                <button
+                                                    onClick={() => handleDownloadReceipt(invoice.id)}
+                                                    className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+                                                    title="Imprimir Recibo de Pagamento"
+                                                >
+                                                    <Printer size={16} />
+                                                </button>
+
+
                                             </div>
                                         </td>
                                     </tr>
@@ -1746,6 +1828,37 @@ export default function TabFinanceiro() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            {/* Modal de Confirmação de Baixa em Lote */}
+            <AlertDialog open={isBulkSettleModalOpen} onOpenChange={setIsBulkSettleModalOpen}>
+                <AlertDialogContent className="rounded-2xl border-gray-100 shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-gray-900">
+                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                <Landmark size={20} />
+                            </div>
+                            Confirmar Baixa em Lote
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-500 pt-2">
+                            Você está prestes a marcar <span className="font-bold text-gray-900">{selectedInvoices.length} faturas</span> como <span className="font-bold text-emerald-600 uppercase">PAGAS</span>. 
+                            Esta ação irá sincronizar a baixa com o Tiny ERP e não pode ser desfeita em massa.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="pt-4 gap-2">
+                        <AlertDialogCancel className="rounded-xl border-gray-200 font-bold text-xs uppercase tracking-wider">
+                            Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleBulkMarkAsPaid();
+                            }}
+                            className="rounded-xl bg-[#B70F0A] hover:bg-[#8e0c08] text-white font-black text-xs uppercase tracking-wider px-6"
+                        >
+                            Confirmar Recebimento
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

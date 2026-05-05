@@ -213,7 +213,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/lead-intel/fetch', [LeadIntelController::class , 'fetch']);
 
-    Route::get('/comerciais', fn() => \App\Models\User::role('Comercial')->get(['id', 'name', 'email']));
+    Route::get('/comerciais', fn() => \App\Models\User::role(['Comercial', 'Administrador', 'Admin', 'Diretor'])->get(['id', 'name', 'email']));
 
     Route::post('/segmentos', [SegmentoController::class , 'store']);
 
@@ -245,6 +245,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/financial/export-pdf', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportReport']);
     Route::get('/financial/group/{groupId}/carnet', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportCarnet']);
     Route::get('/financial/invoices/{id}/receipt', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportReceipt']);
+    Route::post('/financial/invoices/batch-receipts', [\App\Http\Controllers\Api\V1\FinancialController::class , 'downloadReceiptsBatch']);
+    Route::post('/financial/invoices/settle-batch', [\App\Http\Controllers\Api\V1\FinancialController::class , 'settleBatch']);
     Route::post('/financial/invoices/sync', [\App\Http\Controllers\Api\V1\FinancialController::class , 'syncInvoices']);
     Route::post('/financial/invoices/resend-to-tiny', [\App\Http\Controllers\Api\V1\FinancialController::class , 'resendToTiny']);
     Route::patch('/financial/invoices/{id}/status', [\App\Http\Controllers\Api\V1\FinancialController::class , 'updateStatus']);

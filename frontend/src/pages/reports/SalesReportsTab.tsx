@@ -14,9 +14,25 @@ import {
     Search,
     FileText,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Printer,
+    Plus,
+    ExternalLink,
+    Landmark
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import toast from "react-hot-toast";
 import {
     Select,
     SelectContent,
@@ -58,6 +74,11 @@ export default function SalesReportsTab() {
     // Search state to trigger queries cleanly
     const [searchTrigger, setSearchTrigger] = useState(0);
 
+    // Multi-select state
+    const [selectedInvoices, setSelectedInvoices] = useState<number[]>([]);
+    const [isBulkSettleModalOpen, setIsBulkSettleModalOpen] = useState(false);
+    const queryClient = useQueryClient();
+
     const getFilterParams = () => {
         const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
         if (planId !== "all") params.append("plan_id", planId);
@@ -83,7 +104,7 @@ export default function SalesReportsTab() {
     const { data: cidadesList } = useCidades();
 
     const { data: salesData, isLoading, refetch } = useQuery({
-        queryKey: ["sales-report-v2", startDate, endDate, planId, vendedorId, collectionType, status, searchTrigger],
+        queryKey: ["sales-report-v2", startDate, endDate, planId, vendedorId, collectionType, status, termo, numeroAutorizacao, cidade, bairro, searchTrigger],
         queryFn: async () => {
             const params = getFilterParams();
             const resp = await axios.get(`/v1/admin/reports/sales?${params.toString()}`);
@@ -159,6 +180,62 @@ export default function SalesReportsTab() {
         } catch (error) {
             console.error("Erro ao exportar PDF:", error);
             alert("Erro ao gerar PDF. Verifique os filtros e tente novamente.");
+        }
+    };
+
+    const handleBulkDownloadReceipts = async () => {
+        if (selectedInvoices.length === 0) return;
+        try {
+            const loadingToast = toast.loading("Gerando pacote de recibos...");
+            const response = await axios.post(`/v1/financial/invoices/batch-receipts`, {
+                ids: selectedInvoices
+            }, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Recibos_Vendas_Lote_${format(new Date(), 'ddMMyyHHmm')}.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Download iniciado!", { id: loadingToast });
+            setSelectedInvoices([]);
+        } catch (error) {
+            toast.error("Erro ao gerar download em lote.");
+        }
+    };
+
+    const handleBulkMarkAsPaid = async () => {
+        if (selectedInvoices.length === 0) return;
+
+        try {
+            const loadingToast = toast.loading("Processando baixa em lote...");
+            await axios.post(`/v1/financial/invoices/settle-batch`, {
+                ids: selectedInvoices,
+                payment_method: 'pix',
+                justification: "Baixa em lote realizada pelo administrativo via Relatório de Vendas."
+            });
+            toast.success("Baixa em lote concluída!", { id: loadingToast });
+            setSelectedInvoices([]);
+            setIsBulkSettleModalOpen(false);
+            refetch();
+        } catch (error) {
+            toast.error("Erro ao realizar baixa em lote.");
+        }
+    };
+
+    const toggleSelectInvoice = (id: number) => {
+        setSelectedInvoices(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedInvoices.length === salesData?.data?.length) {
+            setSelectedInvoices([]);
+        } else {
+            setSelectedInvoices(salesData?.data?.map((i: any) => i.id) || []);
         }
     };
 
@@ -434,7 +511,37 @@ export default function SalesReportsTab() {
                             <p className="text-[10px] font-bold text-gray-400 uppercase">Lista completa de faturas/parcelas (Nº Guia)</p>
                         </div>
                     </div>
+                    
                     <div className="flex gap-2">
+                        {selectedInvoices.length > 0 && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 mr-4">
+                                <span className="text-[10px] font-black uppercase text-gray-400 mr-2">
+                                    {selectedInvoices.length} selecionado(s)
+                                </span>
+                                <button
+                                    onClick={handleBulkDownloadReceipts}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors font-bold text-[10px] uppercase border border-emerald-100"
+                                >
+                                    <Printer size={14} />
+                                    Baixar Recibos
+                                </button>
+                                <button
+                                    onClick={() => setIsBulkSettleModalOpen(true)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-bold text-[10px] uppercase border border-blue-100"
+                                >
+                                    <CheckCircle2 size={14} />
+                                    Marcar como Pago
+                                </button>
+                                <button
+                                    onClick={() => setSelectedInvoices([])}
+                                    className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                                    title="Limpar seleção"
+                                >
+                                    <Plus size={14} className="rotate-45" />
+                                </button>
+                            </div>
+                        )}
+                        
                         <Button 
                             onClick={handleExportCSV}
                             variant="outline" 
@@ -457,6 +564,14 @@ export default function SalesReportsTab() {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-gray-50/30 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 border-b border-gray-50">
+                                <th className="px-4 py-5 w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={salesData?.data?.length > 0 && selectedInvoices.length === salesData?.data?.length}
+                                        onChange={toggleSelectAll}
+                                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
+                                    />
+                                </th>
                                 <th className="px-8 py-5">Nº Guia / Aut</th>
                                 <th className="px-6 py-5">Cliente</th>
                                 <th className="px-6 py-5">Plano / Parcela</th>
@@ -486,12 +601,34 @@ export default function SalesReportsTab() {
                                 </tr>
                             ) : (
                                 salesData?.data?.map((sale: any) => (
-                                    <tr key={sale.id} className="hover:bg-gray-50/50 transition-colors group">
+                                    <tr key={sale.id} className={cn(
+                                        "hover:bg-gray-50/50 transition-colors group",
+                                        selectedInvoices.includes(sale.id) && "bg-red-50/30"
+                                    )}>
+                                        <td className="px-4 py-5">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedInvoices.includes(sale.id)}
+                                                onChange={() => toggleSelectInvoice(sale.id)}
+                                                className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
+                                            />
+                                        </td>
                                         <td className="px-8 py-5">
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
-                                                    #{sale.id}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
+                                                        #{sale.id}
+                                                    </span>
+                                                    {sale.autorizacao_id && (
+                                                        <button
+                                                            onClick={() => window.open(`/clientes/${sale.cliente_id}/editar?step=12&auth_id=${sale.autorizacao_id}`, '_blank')}
+                                                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                                                            title="Abrir Financeiro do Cliente"
+                                                        >
+                                                            <ExternalLink size={12} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
                                                     Aut: {sale.autorizacao_numero ? `#${sale.autorizacao_numero.toString().padStart(5,'0')}` : 'N/A'}
                                                 </span>
@@ -500,7 +637,12 @@ export default function SalesReportsTab() {
                                         <td className="px-6 py-5">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-gray-800 tracking-tight">{sale.cliente}</span>
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                                {sale.cliente_nome_fantasia && sale.cliente_nome_fantasia !== sale.cliente && (
+                                                    <span className="text-[10px] font-medium text-gray-500 italic">
+                                                        {sale.cliente_nome_fantasia}
+                                                    </span>
+                                                )}
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-0.5">
                                                     {sale.payment_method === 'boleto' ? 'Boleto Bancário' : 
                                                      sale.payment_method === 'cartao' ? 'Cartão de Crédito/Débito' : 
                                                      sale.payment_method === 'pix' ? 'Pix / Transferência' :
@@ -558,6 +700,38 @@ export default function SalesReportsTab() {
                     </table>
                 </div>
             </Card>
+
+            {/* Modal de Confirmação de Baixa em Lote */}
+            <AlertDialog open={isBulkSettleModalOpen} onOpenChange={setIsBulkSettleModalOpen}>
+                <AlertDialogContent className="rounded-2xl border-gray-100 shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-gray-900">
+                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                <Landmark size={20} />
+                            </div>
+                            Confirmar Baixa em Lote
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-500 pt-2">
+                            Você está prestes a marcar <span className="font-bold text-gray-900">{selectedInvoices.length} faturas</span> como <span className="font-bold text-emerald-600 uppercase">PAGAS</span>. 
+                            Esta ação irá sincronizar a baixa com o Tiny ERP e não pode ser desfeita em massa.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="pt-4 gap-2">
+                        <AlertDialogCancel className="rounded-xl border-gray-200 font-bold text-xs uppercase tracking-wider">
+                            Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleBulkMarkAsPaid();
+                            }}
+                            className="rounded-xl bg-[#B70F0A] hover:bg-[#8e0c08] text-white font-black text-xs uppercase tracking-wider px-6"
+                        >
+                            Confirmar Recebimento
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

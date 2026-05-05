@@ -128,6 +128,6 @@ class Autorizacao extends Model
             ->selectRaw('MAX(CAST(numero AS UNSIGNED)) as max_num')
             ->value('max_num');
             
-        return (string) ((int) $max + 1);
+        return str_pad((string) ((int) $max + 1), 5, '0', STR_PAD_LEFT);
     }
 }

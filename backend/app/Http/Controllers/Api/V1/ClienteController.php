@@ -401,11 +401,13 @@ class ClienteController extends Controller
                                 if ($unaccentExists) {
                                     $wordSub->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$term}%"])
                                             ->orWhereRaw("unaccent(razao_social) ilike unaccent(?)", ["%{$term}%"])
-                                            ->orWhereRaw("unaccent(nome_alternativo) ilike unaccent(?)", ["%{$term}%"]);
+                                            ->orWhereRaw("unaccent(nome_alternativo) ilike unaccent(?)", ["%{$term}%"])
+                                            ->orWhereRaw("unaccent(responsavel) ilike unaccent(?)", ["%{$term}%"]);
                                 } else {
                                     $wordSub->where('nome_fantasia', 'ilike', "%{$term}%")
                                             ->orWhere('razao_social', 'ilike', "%{$term}%")
-                                            ->orWhere('nome_alternativo', 'ilike', "%{$term}%");
+                                            ->orWhere('nome_alternativo', 'ilike', "%{$term}%")
+                                            ->orWhere('responsavel', 'ilike', "%{$term}%");
                                 }
                             });
                         }
@@ -414,11 +416,13 @@ class ClienteController extends Controller
                     if ($unaccentExists) {
                         $sub->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$q}%"])
                             ->orWhereRaw("unaccent(razao_social) ilike unaccent(?)", ["%{$q}%"])
-                            ->orWhereRaw("unaccent(nome_alternativo) ilike unaccent(?)", ["%{$q}%"]);
+                            ->orWhereRaw("unaccent(nome_alternativo) ilike unaccent(?)", ["%{$q}%"])
+                            ->orWhereRaw("unaccent(responsavel) ilike unaccent(?)", ["%{$q}%"]);
                     } else {
                         $sub->where('nome_fantasia', 'ilike', "%{$q}%")
                             ->orWhere('razao_social', 'ilike', "%{$q}%")
-                            ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+                            ->orWhere('nome_alternativo', 'ilike', "%{$q}%")
+                            ->orWhere('responsavel', 'ilike', "%{$q}%");
                     }
                 }
 
@@ -1096,6 +1100,12 @@ public function historico(Request $request, int $id)
                 if (!Schema::hasColumn('enderecos', 'exibir_apenas_cidade')) {
                     DB::statement("ALTER TABLE enderecos ADD COLUMN exibir_apenas_cidade BOOLEAN DEFAULT FALSE");
                 }
+                if (!Schema::hasColumn('enderecos', 'is_cobranca')) {
+                    DB::statement("ALTER TABLE enderecos ADD COLUMN is_cobranca BOOLEAN DEFAULT FALSE");
+                }
+                if (!Schema::hasColumn('enderecos', 'endereco_compacto')) {
+                    DB::statement("ALTER TABLE enderecos ADD COLUMN endereco_compacto VARCHAR(255) NULL");
+                }
             } catch (\Exception $e) {
                 Log::warning("Auto-healing schema warning: " . $e->getMessage());
             }
@@ -1244,7 +1254,11 @@ public function historico(Request $request, int $id)
                 'enderecos.*.link_maps'    => 'nullable|string|max:500',
                 'enderecos.*.link_waze'    => 'nullable|string|max:500',
                 'enderecos.*.exibir_apenas_cidade' => 'nullable|boolean',
+                'enderecos.*.is_cobranca'          => 'nullable|boolean',
+                'enderecos.*.endereco_compacto'    => 'nullable|string|max:500',
                 'endereco.exibir_apenas_cidade'    => 'nullable|boolean',
+                'endereco.is_cobranca'             => 'nullable|boolean',
+                'endereco.endereco_compacto'       => 'nullable|string|max:500',
 
                 'contatos'                      => 'nullable|array',
                 'contatos.*.telefone_principal'  => 'nullable|string|max:50',
@@ -1407,7 +1421,22 @@ public function historico(Request $request, int $id)
                 if (!empty($enderecos)) {
                     $cliente->enderecos()->delete();
                     foreach ($enderecos as $end) {
-                        $cliente->enderecos()->create($end);
+                        $cliente->enderecos()->create([
+                            'nome_unidade'         => $end['nome_unidade'] ?? null,
+                            'telefone'             => $end['telefone'] ?? null,
+                            'cep'                  => $end['cep'] ?? null,
+                            'estado'               => $end['estado'] ?? null,
+                            'cidade'               => $end['cidade'] ?? null,
+                            'bairro'               => $end['bairro'] ?? null,
+                            'rua'                  => $end['rua'] ?? null,
+                            'numero'               => $end['numero'] ?? null,
+                            'complemento'          => $end['complemento'] ?? null,
+                            'link_maps'            => $end['link_maps'] ?? null,
+                            'link_waze'            => $end['link_waze'] ?? null,
+                            'exibir_apenas_cidade' => $end['exibir_apenas_cidade'] ?? false,
+                            'is_cobranca'          => $end['is_cobranca'] ?? false,
+                            'endereco_compacto'    => $end['endereco_compacto'] ?? null,
+                        ]);
                     }
                 }
             }

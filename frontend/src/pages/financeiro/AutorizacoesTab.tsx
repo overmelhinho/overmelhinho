@@ -34,7 +34,6 @@ import toast from "react-hot-toast";
 import CreateAutorizacaoModal from "./components/CreateAutorizacaoModal";
 import PreviewAutorizacaoModal from "./components/PreviewAutorizacaoModal";
 import EditAutorizacaoModal from "./components/EditAutorizacaoModal";
-import EditAutorizacaoContatoModal from "./components/EditAutorizacaoContatoModal";
 import { cn } from "@/lib/utils";
 import { User, Edit3, AlertTriangle } from "lucide-react";
 import {
@@ -78,8 +77,6 @@ export default function AutorizacoesTab() {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [selectedPreview, setSelectedPreview] = useState<{ id: number, numero: number } | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const [selectedEditContact, setSelectedEditContact] = useState<Autorizacao | null>(null);
-    const [isEditContactOpen, setIsEditContactOpen] = useState(false);
     const [selectedEditAutorizacao, setSelectedEditAutorizacao] = useState<Autorizacao | null>(null);
     const [isEditAutorizacaoOpen, setIsEditAutorizacaoOpen] = useState(false);
 
@@ -394,10 +391,7 @@ export default function AutorizacoesTab() {
                                                 </DropdownMenuItem>
 
                                                 <DropdownMenuItem
-                                                    onClick={() => {
-                                                        setSelectedEditContact(a);
-                                                        setIsEditContactOpen(true);
-                                                    }}
+                                                    onClick={() => window.open(`/clientes/${a.cliente.id}/editar`, '_blank')}
                                                     className="rounded-xl font-bold text-xs gap-2 py-2.5 cursor-pointer"
                                                 >
                                                     <User size={16} /> Editar Dados de Contato
@@ -475,12 +469,7 @@ export default function AutorizacoesTab() {
                 numero={selectedPreview?.numero || null}
             />
 
-            <EditAutorizacaoContatoModal
-                isOpen={isEditContactOpen}
-                onClose={() => setIsEditContactOpen(false)}
-                onSuccess={() => refetch()}
-                autorizacao={selectedEditContact}
-            />
+
 
             <EditAutorizacaoModal
                 isOpen={isEditAutorizacaoOpen}
