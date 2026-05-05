@@ -451,7 +451,7 @@ export default function ClienteCreateFromLead() {
               segmentos: [],
               cidades_atendidas: [],
               beneficios: [],
-              horario_atendimento: "",
+              horario_atendimento: [],
 
               logotipo: null,
               logotipo_path: null,
@@ -877,12 +877,13 @@ export default function ClienteCreateFromLead() {
                     {tabs[step]?.label === "Contato" && <TabContato />}
                     {tabs[step]?.label === "Segmentos" && <TabSegmentos />}
 
+                    {tabs[step]?.label === "Horário" && <TabHorarios />}
+
                     {tipoCliente === "pagante" && (
                       <>
                         {tabs[step]?.label === "Cidades" && <TabCidadesAtendidas />}
                         {tabs[step]?.label === "Redes Sociais" && <TabRedesSociais />}
                         {tabs[step]?.label === "Benefícios" && <TabBeneficios />}
-                        {tabs[step]?.label === "Horário" && <TabHorarios />}
                         {tabs[step]?.label === "Logotipo" && <TabLogotipo />}
                         {tabs[step]?.label === "Mídia" && <TabMidia />}
                         {tabs[step]?.label === "Galeria" && <TabGaleria />}
