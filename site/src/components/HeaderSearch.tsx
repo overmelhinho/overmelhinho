@@ -113,7 +113,7 @@ export const HeaderSearch = () => {
                     onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     onFocus={() => { setIsOpen(query.length >= 2); setIsExpanded(true); }}
-                    placeholder={isExpanded || isDesktop ? `Buscar em ${cityName || 'Farroupilha'}...` : ''}
+                    placeholder={isExpanded || isDesktop ? `Buscar em ${cityName || 'todas as cidades'}...` : ''}
                     className={`flex-1 bg-transparent border-none focus:ring-0 px-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none ${isExpanded ? 'block' : 'hidden md:block'}`}
                 />
                 <div className={`flex items-center space-x-2 ${isExpanded || isDesktop ? 'flex' : 'hidden'}`}>

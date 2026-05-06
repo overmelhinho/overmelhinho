@@ -72,11 +72,11 @@ class ClienteController extends Controller
 
             $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSimilarity) {
                 // Match Exato ou Parcial (Alta Prioridade)
-                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
-                    ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+                $sub->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$q}%"])
+                    ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$q}%"]);
 
                 if ($effectiveQ !== $normalizedQ) {
-                    $sub->orWhere('nome_fantasia', 'ilike', "%{$effectiveQ}%");
+                    $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$effectiveQ}%"]);
                 }
 
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
@@ -89,21 +89,21 @@ class ClienteController extends Controller
                     $words = explode(' ', $normalizedQ);
                     foreach ($words as $word) {
                         if (strlen($word) > 2) {
-                            $sub->orWhere('nome_fantasia', 'ilike', "%{$word}%");
+                            $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$word}%"]);
                         }
                     }
                 }
 
                 // 3. Busca em Segmentos e Endereços
                 $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ) {
-                        $sq->where('segmentos.nome', 'ilike', "%{$q}%")
-                           ->orWhere('segmentos.nome', 'ilike', "%{$effectiveQ}%");
+                        $sq->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
+                           ->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"]);
                     })
                     ->orWhereHas('enderecos', function ($eq) use ($q, $effectiveQ) {
-                        $eq->where('bairro', 'ilike', "%{$q}%")
-                           ->orWhere('cidade', 'ilike', "%{$q}%")
-                           ->orWhere('rua', 'ilike', "%{$q}%")
-                           ->orWhere('bairro', 'ilike', "%{$effectiveQ}%");
+                        $eq->whereRaw('unaccent(bairro) ilike unaccent(?)', ["%{$q}%"])
+                           ->orWhereRaw('unaccent(cidade) ilike unaccent(?)', ["%{$q}%"])
+                           ->orWhereRaw('unaccent(rua) ilike unaccent(?)', ["%{$q}%"])
+                           ->orWhereRaw('unaccent(bairro) ilike unaccent(?)', ["%{$effectiveQ}%"]);
                     });
             });
         }
@@ -125,9 +125,9 @@ class ClienteController extends Controller
         } elseif ($cityName) {
             $query->where(function($sub) use ($cityName) {
                 $sub->whereHas('cidadesAtendidas', function($c) use ($cityName) {
-                    $c->where('cidades.nome', 'ilike', "%{$cityName}%");
+                    $c->whereRaw('unaccent(cidades.nome) ilike unaccent(?)', ["%{$cityName}%"]);
                 })->orWhereHas('enderecos', function($e) use ($cityName) {
-                    $e->where('cidade', 'ilike', "%{$cityName}%");
+                    $e->whereRaw('unaccent(cidade) ilike unaccent(?)', ["%{$cityName}%"]);
                 });
             });
         }

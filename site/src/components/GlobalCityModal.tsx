@@ -21,7 +21,7 @@ export default function GlobalCityModal() {
     return (
         <AnimatePresence>
             {isCityModalOpen && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -61,6 +61,22 @@ export default function GlobalCityModal() {
                                 <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-2 flex-shrink-0">Sugestões próximos de você</p>
                                 
                                 <div className="grid grid-cols-1 gap-2 overflow-y-auto pr-2 max-h-[40vh] md:max-h-[50vh] custom-scrollbar scroll-smooth">
+                                    <button
+                                        onClick={() => {
+                                            setCity(null, null);
+                                            setIsCityModalOpen(false);
+                                        }}
+                                        className={`flex items-center justify-between p-4 md:p-5 rounded-3xl border-2 transition-all flex-shrink-0 ${cityName === null ? 'bg-brand-red/5 border-brand-red' : 'bg-white border-gray-50 hover:bg-gray-50'}`}
+                                    >
+                                        <div className="flex items-center space-x-4">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cityName === null ? 'bg-brand-red text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                                <MapPin size={20} />
+                                            </div>
+                                            <span className={`font-black tracking-tight text-sm md:text-base ${cityName === null ? 'text-brand-red' : 'text-gray-900'}`}>Qualquer Cidade</span>
+                                        </div>
+                                        {cityName === null && <CheckCircle2 size={20} className="text-brand-red flex-shrink-0" />}
+                                    </button>
+
                                     {filteredCities.length > 0 ? (
                                         filteredCities.map((city: any) => (
                                             <button

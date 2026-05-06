@@ -7,7 +7,7 @@ interface LocationContextType {
     cityName: string | null;
     coords: { lat: number; lng: number } | null;
     isLoading: boolean;
-    setCity: (id: number, name: string) => void;
+    setCity: (id: number | null, name: string | null) => void;
     isCityModalOpen: boolean;
     setIsCityModalOpen: (open: boolean) => void;
 }
@@ -21,10 +21,14 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [isLoading, setIsLoading] = useState(true);
     const [isCityModalOpen, setIsCityModalOpen] = useState(false);
 
-    const setCity = (id: number, name: string) => {
+    const setCity = (id: number | null, name: string | null) => {
         setCityId(id);
         setCityName(name);
-        localStorage.setItem('user_city', JSON.stringify({ id, name }));
+        if (id !== null && name !== null) {
+            localStorage.setItem('user_city', JSON.stringify({ id, name }));
+        } else {
+            localStorage.removeItem('user_city');
+        }
     };
 
     useEffect(() => {

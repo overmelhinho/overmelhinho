@@ -45,7 +45,7 @@ export default function Header() {
                             className="hidden lg:flex items-center space-x-2 px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl hover:border-brand-red transition-all group"
                         >
                             <MapPin size={14} className="text-brand-red" />
-                            <span className="text-[11px] font-black text-gray-900 uppercase tracking-widest truncate max-w-[100px]">{cityName || 'Cidade'}</span>
+                            <span className="text-[11px] font-black text-gray-900 uppercase tracking-widest truncate max-w-[150px]">{cityName || 'Qualquer Cidade'}</span>
                         </button>
                     )}
 
