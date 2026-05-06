@@ -444,7 +444,10 @@ export default function ClienteCreateFromLead() {
                   numero: "",
                   complemento: "",
                   link_maps: "",
-                  link_waze: ""
+                  link_waze: "",
+                  exibir_apenas_cidade: false,
+                  is_cobranca: true,
+                  endereco_compacto: ""
                 }
               ],
 

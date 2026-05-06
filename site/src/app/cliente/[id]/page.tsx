@@ -97,17 +97,17 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             "description": client.descricao,
             "address": {
                 "@type": "PostalAddress",
-                "streetAddress": `${end.rua || ''}, ${end.numero || ''}`,
+                "streetAddress": end.exibir_apenas_cidade ? undefined : `${end.rua || ''}, ${end.numero || ''}`,
                 "addressLocality": end.cidade || '',
                 "addressRegion": end.estado || '',
-                "postalCode": end.cep || '',
+                "postalCode": end.exibir_apenas_cidade ? undefined : (end.cep || ''),
                 "addressCountry": "BR"
             },
-            "geo": {
+            "geo": (end.latitude && !end.exibir_apenas_cidade) ? {
                 "@type": "GeoCoordinates",
                 "latitude": end.latitude,
                 "longitude": end.longitude
-            },
+            } : undefined,
             "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
             "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone),
             "areaServed": client.cidades_atendidas?.map((c: any) => ({

@@ -121,7 +121,7 @@ export default function ClienteEdit() {
 
   const validationSchema = Yup.object({
     nome_fantasia: Yup.string().required("Nome fantasia é obrigatório"),
-    cnpj: Yup.string().required("CPF/CNPJ é obrigatório"),
+    cnpj: Yup.string().nullable(),
     email: Yup.string().email("Email inválido").nullable(),
     telefone_principal: Yup.string()
       .min(8, "Telefone muito curto")
@@ -243,7 +243,6 @@ export default function ClienteEdit() {
       numero: endereco0?.numero || "",
       complemento: endereco0?.complemento || "",
 
-      // NOVO
       enderecos: enderecos.map((e: any, idx: number) => ({
         id: e?.id || null,
         nome_unidade: e?.nome_unidade || "",
@@ -257,6 +256,7 @@ export default function ClienteEdit() {
         telefone: e?.telefone || "",
         link_maps: e?.link_maps || "",
         link_waze: e?.link_waze || "",
+        exibir_apenas_cidade: e?.exibir_apenas_cidade ?? false,
         is_cobranca: e?.is_cobranca ?? (idx === 0), // Primeiro por padrão se não definido
         endereco_compacto: e?.endereco_compacto || "",
       })),

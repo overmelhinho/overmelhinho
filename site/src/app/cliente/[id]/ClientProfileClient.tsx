@@ -296,13 +296,13 @@ export default function ClientProfileClient() {
         "telephone": contactInfo?.telefone_principal || contactInfo?.celular,
         "address": client.enderecos?.[0] ? {
             "@type": "PostalAddress",
-            "streetAddress": `${client.enderecos[0].rua}, ${client.enderecos[0].numero}`,
+            "streetAddress": client.enderecos[0].exibir_apenas_cidade ? undefined : `${client.enderecos[0].rua}, ${client.enderecos[0].numero}`,
             "addressLocality": client.enderecos[0].cidade,
             "addressRegion": client.enderecos[0].estado,
-            "postalCode": client.enderecos[0].cep,
+            "postalCode": client.enderecos[0].exibir_apenas_cidade ? undefined : client.enderecos[0].cep,
             "addressCountry": "BR"
         } : undefined,
-        "geo": client.enderecos?.[0]?.latitude ? {
+        "geo": (client.enderecos?.[0]?.latitude && !client.enderecos[0].exibir_apenas_cidade) ? {
             "@type": "GeoCoordinates",
             "latitude": client.enderecos[0].latitude,
             "longitude": client.enderecos[0].longitude
@@ -449,7 +449,9 @@ export default function ClientProfileClient() {
                                     <p className="text-gray-400 flex items-center">
                                         <MapPin size={14} className="mr-1.5 text-brand-red" />
                                         {client.enderecos?.[0]
-                                            ? `${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].cidade}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`
+                                            ? (client.enderecos[0].exibir_apenas_cidade
+                                                ? `Atendimento em ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`
+                                                : `${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].cidade}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`)
                                             : 'Endereço não informado'}
                                     </p>
                                 </div>
@@ -473,7 +475,7 @@ export default function ClientProfileClient() {
                                         <Phone size={20} className="mr-2" /> Ligar Agora
                                     </button>
                                 )}
-                                {client.enderecos?.[0] && isPagante && (
+                                {client.enderecos?.[0] && !client.enderecos[0].exibir_apenas_cidade && isPagante && (
                                     <>
                                         {/* Waze: Apenas Mobile */}
                                         <a
@@ -1104,7 +1106,7 @@ export default function ClientProfileClient() {
                             <span>WhatsApp</span>
                         </button>
                     )}
-                    {(!hasPhone && !hasWhatsApp && client.enderecos?.[0] && isPagante) && (
+                    {(!hasPhone && !hasWhatsApp && client.enderecos?.[0] && !client.enderecos[0].exibir_apenas_cidade && isPagante) && (
                         <a
                             href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
                             target="_blank"
