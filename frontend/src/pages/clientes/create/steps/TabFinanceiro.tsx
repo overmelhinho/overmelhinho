@@ -34,7 +34,8 @@ import {
     Pencil,
     Landmark,
     Info,
-    Check
+    Check,
+    Undo2
 } from "lucide-react";
 import { useFormikContext } from "formik";
 import { cn } from "@/lib/utils";
@@ -148,6 +149,9 @@ export default function TabFinanceiro() {
 
     // Settle Group Modal States
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+
+    // Undo Payment States
+    const [undoInvoiceId, setUndoInvoiceId] = useState<number | null>(null);
     const [settleGroupId, setSettleGroupId] = useState("");
     const [settleGroupParcels, setSettleGroupParcels] = useState<Invoice[]>([]);
     const [settleDiscount, setSettleDiscount] = useState("");
@@ -353,16 +357,29 @@ export default function TabFinanceiro() {
             const response = await axios.get(`/v1/financial/invoices/${invoiceId}/receipt`, {
                 responseType: 'blob'
             });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Recibo_O_Vermelhinho_${invoiceId}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
             toast.success("Recibo gerado com sucesso!", { id: loadingToast });
         } catch (error) {
-            toast.error("Erro ao baixar recibo.");
+            toast.error("Erro ao gerar recibo.");
+        }
+    };
+
+    const handleUndoPayment = async () => {
+        if (!undoInvoiceId) return;
+        try {
+            const loadingToast = toast.loading("Desfazendo pagamento...");
+            await axios.patch(`/v1/financial/invoices/${undoInvoiceId}/status`, {
+                status: 'pending',
+                justification: 'Desfeito pelo painel administrativo (Gestão Financeira)'
+            });
+            toast.success("Pagamento desfeito com sucesso!", { id: loadingToast });
+            setUndoInvoiceId(null);
+            queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+        } catch (error) {
+            console.error("Erro ao desfazer pagamento:", error);
+            toast.error("Erro ao desfazer pagamento.");
         }
     };
 
@@ -980,7 +997,15 @@ export default function TabFinanceiro() {
                                                     <Printer size={16} />
                                                 </button>
 
-
+                                                {invoice.status === 'paid' && (
+                                                    <button
+                                                        onClick={() => setUndoInvoiceId(invoice.id)}
+                                                        className="p-2 text-orange-500 hover:bg-orange-50 rounded-xl transition-all"
+                                                        title="Desfazer Pagamento"
+                                                    >
+                                                        <Undo2 size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -1459,13 +1484,45 @@ export default function TabFinanceiro() {
 
             <EditAutorizacaoModal
                 isOpen={isEditAuthOpen}
-                onClose={() => setIsEditAuthOpen(false)}
-                onSuccess={() => {
+                onClose={() => {
                     setIsEditAuthOpen(false);
-                    refetchAuths();
+                    setAuthToEdit(null);
                 }}
-                autorizacao={authToEdit}
+                auth={authToEdit}
+                onSuccess={refetchAuths}
             />
+
+            {/* Modal de Confirmação de Desfazer Pagamento */}
+            <AlertDialog open={!!undoInvoiceId} onOpenChange={(open) => !open && setUndoInvoiceId(null)}>
+                <AlertDialogContent className="rounded-2xl border-gray-100 shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-gray-900">
+                            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
+                                <Undo2 size={20} />
+                            </div>
+                            Desfazer Pagamento
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-500 pt-2">
+                            Você está prestes a <span className="font-bold text-orange-600 uppercase">DESFAZER</span> o pagamento desta fatura. 
+                            Ela voltará para o status "Em Aberto". Deseja continuar?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="pt-4 gap-2">
+                        <AlertDialogCancel className="rounded-xl border-gray-200 font-bold text-xs uppercase tracking-wider">
+                            Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleUndoPayment();
+                            }}
+                            className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-wider px-6"
+                        >
+                            Sim, Desfazer
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* ── Edit Invoice Modal ───────────────────────── */}
             <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

@@ -422,14 +422,14 @@ class FinancialController extends Controller
         $invoice = Invoice::findOrFail($id);
 
         $validated = $request->validate([
-            'status'         => 'required|in:paid,canceled',
+            'status'         => 'required|in:paid,canceled,pending',
             'justification'  => 'nullable|string',
             'payment_method' => 'nullable|string|in:pix,dinheiro,cartao,boleto',
         ]);
 
         $updateData = [
             'status'        => $validated['status'],
-            'justification' => $validated['justification'],
+            'justification' => $validated['justification'] ?? null,
             'action_date'   => now(),
         ];
 

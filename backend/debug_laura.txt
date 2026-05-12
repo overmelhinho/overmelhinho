@@ -1,0 +1,9 @@
+[
+    {
+        "id": 32,
+        "nome_fantasia": "M\u00e3e Laura Conselheira Espiritual",
+        "tipo_cliente": "gratuito",
+        "status_assinatura": "cancelada",
+        "exibir_no_site": true
+    }
+]

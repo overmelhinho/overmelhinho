@@ -18,7 +18,8 @@ import {
     Printer,
     Plus,
     ExternalLink,
-    Landmark
+    Landmark,
+    Undo2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -52,8 +53,8 @@ export default function SalesReportsTab() {
     const lastDay = format(new Date(today.getFullYear(), today.getMonth() + 1, 0), "yyyy-MM-dd");
 
     // Basic Filters
-    const [startDate, setStartDate] = useState(firstDay);
-    const [endDate, setEndDate] = useState(lastDay);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const [planId, setPlanId] = useState("all");
     const [vendedorId, setVendedorId] = useState("all");
     const [collectionType, setCollectionType] = useState("all");
@@ -77,10 +78,15 @@ export default function SalesReportsTab() {
     // Multi-select state
     const [selectedInvoices, setSelectedInvoices] = useState<number[]>([]);
     const [isBulkSettleModalOpen, setIsBulkSettleModalOpen] = useState(false);
+    const [undoInvoiceId, setUndoInvoiceId] = useState<number | null>(null);
     const queryClient = useQueryClient();
 
     const getFilterParams = () => {
-        const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+        const params = new URLSearchParams();
+        if (startDate && endDate) {
+            params.append("start_date", startDate);
+            params.append("end_date", endDate);
+        }
         if (planId !== "all") params.append("plan_id", planId);
         if (vendedorId !== "all") params.append("vendedor_id", vendedorId);
         if (collectionType !== "all") params.append("collection_type", collectionType);
@@ -229,6 +235,39 @@ export default function SalesReportsTab() {
         setSelectedInvoices(prev => 
             prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
         );
+    };
+
+    const handlePrintReceipt = async (id: number) => {
+        try {
+            const loadingToast = toast.loading("Gerando recibo...");
+            const response = await axios.get(`/v1/financial/invoices/${id}/receipt`, {
+                responseType: 'blob'
+            });
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("Recibo gerado!", { id: loadingToast });
+        } catch (error) {
+            console.error("Erro ao gerar recibo:", error);
+            toast.error("Erro ao gerar recibo.");
+        }
+    };
+
+    const handleUndoPayment = async () => {
+        if (!undoInvoiceId) return;
+        try {
+            const loadingToast = toast.loading("Desfazendo pagamento...");
+            await axios.patch(`/v1/financial/invoices/${undoInvoiceId}/status`, {
+                status: 'pending',
+                justification: 'Desfeito pelo painel administrativo'
+            });
+            toast.success("Pagamento desfeito com sucesso!", { id: loadingToast });
+            setUndoInvoiceId(null);
+            refetch();
+        } catch (error) {
+            console.error("Erro ao desfazer pagamento:", error);
+            toast.error("Erro ao desfazer pagamento.");
+        }
     };
 
     const toggleSelectAll = () => {
@@ -581,6 +620,7 @@ export default function SalesReportsTab() {
                                 <th className="px-6 py-5">Restante</th>
                                 <th className="px-6 py-5">Vencimento</th>
                                 <th className="px-6 py-5">Situação</th>
+                                <th className="px-6 py-5 text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -615,20 +655,9 @@ export default function SalesReportsTab() {
                                         </td>
                                         <td className="px-8 py-5">
                                             <div className="flex flex-col">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
-                                                        #{sale.id}
-                                                    </span>
-                                                    {sale.autorizacao_id && (
-                                                        <button
-                                                            onClick={() => window.open(`/clientes/${sale.cliente_id}/editar?step=12&auth_id=${sale.autorizacao_id}`, '_blank')}
-                                                            className="text-gray-400 hover:text-blue-600 transition-colors"
-                                                            title="Abrir Financeiro do Cliente"
-                                                        >
-                                                            <ExternalLink size={12} />
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
+                                                    #{sale.id}
+                                                </span>
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
                                                     Aut: {sale.autorizacao_numero ? `#${sale.autorizacao_numero.toString().padStart(5,'0')}` : 'N/A'}
                                                 </span>
@@ -693,6 +722,35 @@ export default function SalesReportsTab() {
                                                 {sale.status === 'paid' ? 'Pago (PG)' : 'Aberto (AB)'}
                                             </span>
                                         </td>
+                                        <td className="px-6 py-5 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                {sale.autorizacao_id && (
+                                                    <button
+                                                        onClick={() => window.open(`/clientes/${sale.cliente_id}/editar?step=12&auth_id=${sale.autorizacao_id}`, '_blank')}
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                                        title="Abrir Financeiro do Cliente"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handlePrintReceipt(sale.id)}
+                                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                                    title="Imprimir Recibo"
+                                                >
+                                                    <Printer size={14} />
+                                                </button>
+                                                {sale.status === 'paid' && (
+                                                    <button
+                                                        onClick={() => setUndoInvoiceId(sale.id)}
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
+                                                        title="Desfazer Pagamento"
+                                                    >
+                                                        <Undo2 size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -700,6 +758,38 @@ export default function SalesReportsTab() {
                     </table>
                 </div>
             </Card>
+
+            {/* Modal de Confirmação de Desfazer Pagamento */}
+            <AlertDialog open={!!undoInvoiceId} onOpenChange={(open) => !open && setUndoInvoiceId(null)}>
+                <AlertDialogContent className="rounded-2xl border-gray-100 shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-gray-900">
+                            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
+                                <Undo2 size={20} />
+                            </div>
+                            Desfazer Pagamento
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-500 pt-2">
+                            Você está prestes a <span className="font-bold text-orange-600 uppercase">DESFAZER</span> o pagamento desta fatura. 
+                            Ela voltará para o status "Em Aberto". Deseja continuar?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="pt-4 gap-2">
+                        <AlertDialogCancel className="rounded-xl border-gray-200 font-bold text-xs uppercase tracking-wider">
+                            Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleUndoPayment();
+                            }}
+                            className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-wider px-6"
+                        >
+                            Sim, Desfazer
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* Modal de Confirmação de Baixa em Lote */}
             <AlertDialog open={isBulkSettleModalOpen} onOpenChange={setIsBulkSettleModalOpen}>
