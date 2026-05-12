@@ -31,11 +31,16 @@ export function DateRangePicker({ startDate, endDate, onRangeChange }: DateRange
         { label: "Últimos 7 dias", getRange: () => ({ start: subDays(new Date(), 7), end: new Date() }) },
         { label: "Últimos 30 dias", getRange: () => ({ start: subDays(new Date(), 30), end: new Date() }) },
         { label: "Todo o Ano", getRange: () => ({ start: startOfYear(new Date()), end: endOfYear(new Date()) }) },
+        { label: "Todo o Período", getRange: () => ({ start: null, end: null }) },
     ];
 
-    const handlePreset = (getRange: () => { start: Date, end: Date }) => {
+    const handlePreset = (getRange: () => { start: Date | null, end: Date | null }) => {
         const { start, end } = getRange();
-        onRangeChange(format(start, "yyyy-MM-dd"), format(end, "yyyy-MM-dd"));
+        if (start && end) {
+            onRangeChange(format(start, "yyyy-MM-dd"), format(end, "yyyy-MM-dd"));
+        } else {
+            onRangeChange("", "");
+        }
         setOpen(false);
     };
 
@@ -73,7 +78,12 @@ export function DateRangePicker({ startDate, endDate, onRangeChange }: DateRange
                             <button
                                 key={preset.label}
                                 onClick={() => handlePreset(preset.getRange)}
-                                className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                                className={cn(
+                                    "w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-colors",
+                                    preset.label === "Todo o Período" 
+                                        ? "text-gray-400 hover:bg-gray-200/50" 
+                                        : "text-gray-600 hover:bg-red-50 hover:text-red-700"
+                                )}
                             >
                                 {preset.label}
                             </button>
@@ -108,7 +118,17 @@ export function DateRangePicker({ startDate, endDate, onRangeChange }: DateRange
                             </div>
                         </div>
 
-                        <div className="pt-4 border-t border-gray-50 flex justify-end">
+                        <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                            <Button 
+                                variant="ghost"
+                                onClick={() => {
+                                    onRangeChange("", "");
+                                    setOpen(false);
+                                }}
+                                className="text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl font-bold text-xs h-9 px-4"
+                            >
+                                Limpar
+                            </Button>
                             <Button 
                                 onClick={() => setOpen(false)}
                                 className="bg-[#B70F0A] hover:bg-[#8e0c08] text-white rounded-xl font-bold text-xs h-9 px-6"
