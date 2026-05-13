@@ -330,7 +330,7 @@ class ReportController extends Controller
             }
         }
 
-        $invoices = $query->orderBy('due_date', 'desc')->get();
+        $invoices = $query->orderBy('due_date', 'asc')->get();
 
         // Mapear vendedores e autorizações manualmente devido ao prefixo no group_id
         $authIds = $invoices->filter(fn($i) => str_starts_with($i->group_id ?? '', 'autorizacao-'))

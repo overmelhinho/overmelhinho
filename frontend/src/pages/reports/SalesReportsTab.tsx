@@ -61,7 +61,6 @@ export default function SalesReportsTab() {
     const [status, setStatus] = useState("all");
 
     // Advanced Filters
-    const [showAdvanced, setShowAdvanced] = useState(false);
     const [termo, setTermo] = useState("");
     const [tipoPfPj, setTipoPfPj] = useState("all");
     const [cidade, setCidade] = useState("all");
@@ -287,17 +286,19 @@ export default function SalesReportsTab() {
                         <Filter size={18} className="text-red-600" />
                         <h2 className="text-sm font-black uppercase tracking-widest text-gray-900">Filtros do Relatório</h2>
                     </div>
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-xs font-bold text-gray-500 gap-1 hover:text-red-600 rounded-xl"
-                        onClick={() => setShowAdvanced(!showAdvanced)}
-                    >
-                        {showAdvanced ? <><ChevronUp size={14}/> Ocultar Filtros Avançados</> : <><ChevronDown size={14}/> Filtros Avançados</>}
-                    </Button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Nº Autorização</label>
+                        <Input 
+                            placeholder="Ex: 1045" 
+                            className="rounded-xl border-gray-100 bg-gray-50/50 h-10"
+                            value={numeroAutorizacao}
+                            onChange={e => setNumeroAutorizacao(e.target.value)}
+                        />
+                    </div>
+
                     <div className="space-y-2 lg:col-span-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Período Vencimento</label>
                         <DateRangePicker 
@@ -370,10 +371,6 @@ export default function SalesReportsTab() {
                             </SelectContent>
                         </Select>
                     </div>
-                </div>
-
-                {showAdvanced && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mt-6 pt-6 border-t border-gray-50 animate-in slide-in-from-top-4 duration-300">
                         <div className="space-y-2 lg:col-span-2">
                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Termo da Consulta (Nome/Razão/CNPJ)</label>
                             <Input 
@@ -395,15 +392,6 @@ export default function SalesReportsTab() {
                                     <SelectItem value="pj">Pessoa Jurídica</SelectItem>
                                 </SelectContent>
                             </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Nº Autorização</label>
-                            <Input 
-                                placeholder="Ex: 1045" 
-                                className="rounded-xl border-gray-100 bg-gray-50/50 h-10"
-                                value={numeroAutorizacao}
-                                onChange={e => setNumeroAutorizacao(e.target.value)}
-                            />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cidade</label>
@@ -472,7 +460,6 @@ export default function SalesReportsTab() {
                             </Button>
                         </div>
                     </div>
-                )}
             </Card>
 
             {/* Resumo */}
@@ -656,10 +643,10 @@ export default function SalesReportsTab() {
                                         <td className="px-8 py-5">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
-                                                    #{sale.id}
+                                                    {sale.autorizacao_numero ? sale.autorizacao_numero.toString().padStart(5,'0') : 'N/A'}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
-                                                    Aut: {sale.autorizacao_numero ? `#${sale.autorizacao_numero.toString().padStart(5,'0')}` : 'N/A'}
+                                                    Fatura: {sale.id}
                                                 </span>
                                             </div>
                                         </td>

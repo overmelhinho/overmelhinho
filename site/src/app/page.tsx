@@ -28,7 +28,7 @@ export default function Home() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const { cityId } = useLocation();
   const { data: homeAds } = useAds({ city_id: cityId, tipo: 'BANNER' });
-  const { data: realClients } = useClients({ city_id: cityId, per_page: 3 });
+  const { data: realClients } = useClients({ city_id: cityId, per_page: 4 });
 
   // Animação de escrita do título
   const [textIndex, setTextIndex] = useState(0);
@@ -127,6 +127,16 @@ export default function Home() {
           desc: "Musculação, cardio e aulas coletivas 6 dias por semana.",
           slug: "serra-fit-academia"
         },
+        {
+          name: "Oficina do João",
+          category: "Automotivo",
+          rating: 4.7,
+          img: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80",
+          location: "São José, Caxias do Sul - RS",
+          whatsapp: "5554999999004",
+          desc: "Serviços mecânicos completos com garantia.",
+          slug: "oficina-do-joao"
+        },
       ];
     }
 
@@ -161,20 +171,21 @@ export default function Home() {
         <div className="min-h-screen bg-cloud-dancer pb-0 font-sans">
             <main className="px-4 pt-10 pb-0 max-w-6xl mx-auto space-y-20 md:px-6">
                 {/* 2. HERO & VUI (Busca Conversacional) */}
-                <section className="text-center space-y-10 py-6">
-                    <div className="space-y-4">
-                        <h1 className="text-5xl md:text-8xl text-gray-900 tracking-tighter leading-none italic font-serif">
+                <section className="text-center space-y-10 py-10 md:py-16 relative">
+                    <div className="space-y-3">
+                        <h1 className="text-3xl md:text-5xl text-gray-800 tracking-tighter leading-tight italic font-serif">
                             <span className="font-normal">Encontre o melhor</span><br />
                             <span className="text-brand-red font-black relative inline-block min-h-[1em]">
                                 {currentPhrase || '\u200B'}
-                                <span className="absolute -right-2 top-0 bottom-0 w-2 bg-brand-red animate-pulse"></span>
+                                <span className="absolute -right-1.5 top-1 bottom-1 w-1.5 bg-brand-red/70 animate-pulse"></span>
                             </span>
                         </h1>
-                        <p className="text-gray-500 font-medium text-sm md:text-lg max-w-2xl mx-auto leading-relaxed font-sans">Milhares de empresas, serviços e profissionais perto de você em um só clique.</p>
+                        <p className="text-gray-400 font-normal text-xs md:text-sm max-w-xl mx-auto leading-relaxed font-sans tracking-wide">Milhares de empresas, serviços e profissionais perto de você em um só clique.</p>
                     </div>
 
-                    <SearchAutocomplete />
-
+                    <div className="relative z-[60]">
+                        <SearchAutocomplete />
+                    </div>
                 </section>
 
                 {/* 3. BENTO GRID CATEGORIAS */}
@@ -191,15 +202,15 @@ export default function Home() {
                             <div
                                 key={cat.id}
                                 onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
-                                className={`gummy-card p-6 md:p-8 rounded-[3rem] md:rounded-[4rem] flex flex-col justify-between cursor-pointer relative overflow-hidden transition-all duration-700 border-4 border-white ${cat.color} ${activeCategory === cat.id ? 'h-64 md:h-[18rem]' : 'h-40 md:h-56'
-                                    }`}
+                                className={`gummy-card p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] flex items-center cursor-pointer relative overflow-hidden transition-all duration-500 border-2 border-white ${cat.color} ${activeCategory === cat.id ? 'scale-[1.02] shadow-md' : 'hover:scale-[1.02] shadow-sm'}`}
                             >
-                                <div className={`bg-white/80 w-12 h-12 md:w-16 md:h-16 rounded-[1.4rem] md:rounded-[1.8rem] flex items-center justify-center text-2xl md:text-4xl shadow-xl transition-all duration-500 ${activeCategory === cat.id ? 'scale-110 md:scale-125 rotate-12' : ''}`}>
+                                <div className={`bg-white/80 w-10 h-10 md:w-12 md:h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xl md:text-2xl shadow-sm transition-all duration-500 ${activeCategory === cat.id ? 'rotate-12 scale-110' : ''}`}>
                                     {cat.icon}
                                 </div>
-                                <div className="relative z-10 transition-all duration-500">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1 font-sans">{cat.desc}</p>
-                                    <h3 className="font-black text-lg md:text-2xl text-gray-900 tracking-tighter font-serif leading-tight">{cat.name}</h3>
+                                <div className="relative z-10 transition-all duration-500 ml-3 md:ml-4 flex-1">
+                                    <p className="text-[8px] md:text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] font-sans leading-none mb-1">{cat.desc}</p>
+                                    <h3 className="font-black text-sm md:text-base text-gray-900 tracking-tighter font-serif leading-none">{cat.name}</h3>
+                                    
                                     {activeCategory === cat.id && (
                                         <div
                                             onClick={(e) => {
@@ -210,10 +221,10 @@ export default function Home() {
                                                     handleQuickSearch(cat.name);
                                                 }
                                             }}
-                                            className="mt-4 flex items-center space-x-2 text-brand-red font-black text-sm uppercase animate-in fade-in slide-in-from-left-2 transition-all font-sans cursor-pointer"
+                                            className="mt-2 flex items-center space-x-1 text-brand-red font-black text-[10px] uppercase animate-in fade-in slide-in-from-left-2 transition-all font-sans cursor-pointer"
                                         >
                                             <span>Descobrir</span>
-                                            <ArrowRight size={16} />
+                                            <ArrowRight size={12} />
                                         </div>
                                     )}
                                 </div>
@@ -223,7 +234,7 @@ export default function Home() {
                 </section>
 
                 {/* 5. MATCH PERFEITO */}
-                <section className="space-y-10 pb-0 pt-10">
+                <section className="space-y-10 pb-0 pt-16 md:pt-32 mt-10 md:mt-20 border-t border-gray-100">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <div className="space-y-3">
                             <h2 className="text-3xl font-black text-gray-900 md:text-5xl tracking-tighter leading-none font-serif">O Match Perfeito</h2>
@@ -236,43 +247,43 @@ export default function Home() {
                         </button>
                     </div>
 
-                    <div className="flex space-x-6 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:space-x-0 md:gap-10">
+                    <div className="flex space-x-4 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-4 md:space-x-0 md:gap-6">
                         {featured.map((item, idx) => (
-                            <div key={idx} className="snap-center min-w-[92%] md:min-w-0 bg-white rounded-[4rem] overflow-hidden shadow-[0_40px_100px_-30px_rgba(0,0,0,0.15)] border-4 border-white flex flex-col gummy-card group">
-                                <Link href={`/cliente/${item.slug}`} className="relative h-72 overflow-hidden block bg-gray-50 flex items-center justify-center">
+                            <div key={idx} className="snap-center min-w-[85%] md:min-w-0 bg-white rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border-4 border-white flex flex-col gummy-card group">
+                                <Link href={`/cliente/${item.slug}`} className="relative h-48 overflow-hidden block bg-gray-50 flex items-center justify-center">
                                     {item.img ? (
                                         <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                                     ) : (
                                         <div className="flex flex-col items-center justify-center text-gray-200">
-                                            <Building2 size={64} className="opacity-20" />
+                                            <Building2 size={48} className="opacity-20" />
                                         </div>
                                     )}
-                                    <div className="absolute top-8 right-8 bg-white/95 backdrop-blur-md px-5 py-3 rounded-full flex items-center space-x-2 shadow-2xl">
-                                        <span className="text-yellow-500 text-xl font-black">★</span>
-                                        <span className="text-lg font-black text-gray-900">{item.rating}</span>
+                                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-2 rounded-full flex items-center space-x-1 shadow-lg">
+                                        <span className="text-yellow-500 text-base font-black">★</span>
+                                        <span className="text-sm font-black text-gray-900">{item.rating}</span>
                                     </div>
-                                    <div className="absolute bottom-8 left-8 bg-black/60 backdrop-blur-md text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 font-sans">
-                                        Destaque Portal
+                                    <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/20 font-sans">
+                                        Destaque
                                     </div>
                                 </Link>
-                                <div className="p-8 flex-1 flex flex-col justify-between space-y-6">
-                                    <div className="space-y-2">
-                                        <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.4em] font-sans">{item.category}</span>
+                                <div className="p-5 md:p-6 flex-1 flex flex-col justify-between space-y-4">
+                                    <div className="space-y-1.5">
+                                        <span className="text-[9px] md:text-[10px] font-black text-brand-red uppercase tracking-[0.3em] font-sans">{item.category}</span>
                                         <Link href={`/cliente/${item.slug}`}>
-                                            <h4 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter leading-none font-serif hover:text-brand-red transition-colors cursor-pointer">{item.name}</h4>
+                                            <h4 className="text-lg md:text-xl font-black text-gray-900 tracking-tighter leading-none font-serif hover:text-brand-red transition-colors cursor-pointer">{item.name}</h4>
                                         </Link>
-                                        <p className="text-gray-400 font-bold tracking-tight font-sans">{item.location}</p>
-                                        <p className="text-gray-400 font-medium text-sm mt-2 line-clamp-3">{item.desc}</p>
+                                        <p className="text-gray-400 text-[10px] md:text-xs font-bold tracking-tight font-sans truncate">{item.location}</p>
+                                        <p className="text-gray-400 font-medium text-xs mt-2 line-clamp-2 leading-relaxed">{item.desc}</p>
                                     </div>
 
                                     <a
                                         href={`https://wa.me/${item.whatsapp}?text=Olá! Vi sua empresa no portal O Vermelhinho e gostaria de saber mais.`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="w-full bg-[#25D366] text-white py-4 md:py-5 rounded-2xl md:rounded-[2rem] font-black text-sm md:text-base active:scale-95 transition-all shadow-[0_20px_40px_-5px_rgba(37,211,102,0.4)] flex items-center justify-center space-x-3 border-b-4 border-[#128C7E]/40 hover:brightness-105 active:border-b-0 active:translate-y-1 font-sans"
+                                        className="w-full bg-[#25D366] text-white py-3 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs active:scale-95 transition-all shadow-[0_10px_20px_-5px_rgba(37,211,102,0.3)] flex items-center justify-center space-x-2 border-b-[3px] border-[#128C7E]/40 hover:brightness-105 active:border-b-0 active:translate-y-1 font-sans"
                                     >
-                                        <WhatsAppIcon size={20} />
-                                        <span>Contato pelo WhatsApp</span>
+                                        <WhatsAppIcon size={16} />
+                                        <span>WhatsApp</span>
                                     </a>
                                 </div>
                             </div>

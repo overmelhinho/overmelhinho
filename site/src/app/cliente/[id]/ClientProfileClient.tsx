@@ -48,6 +48,8 @@ export default function ClientProfileClient() {
     const [showShareToast, setShowShareToast] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
     const [isTagsExpanded, setIsTagsExpanded] = useState(false);
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    const [isCitiesExpanded, setIsCitiesExpanded] = useState(false);
 
     const citySlug = params.citySlug as string;
 
@@ -430,7 +432,7 @@ export default function ClientProfileClient() {
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-3">
-                                    <h1 className="text-2xl md:text-5xl font-black text-gray-900 tracking-tighter font-serif italic uppercase leading-tight">{client.nome_fantasia}</h1>
+                                    <h1 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif italic uppercase leading-tight">{client.nome_fantasia}</h1>
                                     <div className="w-5 h-5 bg-blue-500 rounded-full flex-shrink-0 flex items-center justify-center shadow-lg" title="Verificado">
                                         <CheckCircle2 size={12} className="text-white" fill="white" />
                                     </div>
@@ -548,10 +550,19 @@ export default function ClientProfileClient() {
                                     className="space-y-10"
                                 >
                                     <section className="space-y-6">
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Sobre a {client.nome_fantasia}</h2>
-                                        <p className="text-gray-500 leading-relaxed text-lg font-medium whitespace-pre-line break-words">
-                                            {client.descricao || `O ${client.nome_fantasia} oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.`}
-                                        </p>
+                                        <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Sobre a {client.nome_fantasia}</h2>
+                                        <div>
+                                            <p className={`text-gray-500 leading-relaxed text-sm md:text-lg font-medium whitespace-pre-line break-words ${!isDescriptionExpanded ? 'line-clamp-4 md:line-clamp-none' : ''}`}>
+                                                {client.descricao || `O ${client.nome_fantasia} oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.`}
+                                            </p>
+                                            <button 
+                                                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                                className="md:hidden mt-3 text-[10px] font-black uppercase tracking-widest text-brand-red hover:underline flex items-center"
+                                            >
+                                                {isDescriptionExpanded ? 'Ler menos' : 'Ler mais'}
+                                                <ChevronRight size={12} className={`ml-1 transition-transform ${isDescriptionExpanded ? '-rotate-90' : 'rotate-90'}`} />
+                                            </button>
+                                        </div>
 
                                         {/* Info Boxes */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -563,8 +574,8 @@ export default function ClientProfileClient() {
                                             )}
                                             {client.segmentos?.[0]?.nome && (
                                                 <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Segmento</p>
-                                                    <p className="text-lg font-black text-gray-900 font-serif italic">{client.segmentos[0].nome}</p>
+                                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">Segmento</p>
+                                                    <p className="text-lg text-gray-900 font-serif italic">{client.segmentos[0].nome}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -572,19 +583,19 @@ export default function ClientProfileClient() {
 
                                     {client.beneficios?.length > 0 && (
                                         <section className="space-y-6">
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Benefícios e Pagamentos</h2>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Benefícios e Pagamentos</h2>
+                                            <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                                                 {client.beneficios.map((benId: string) => {
                                                     const ben = BENEFICIOS_MAP[benId];
                                                     if (!ben) return null;
                                                     const Icon = ben.icon;
                                                     return (
-                                                        <div key={benId} className="relative flex flex-col items-center justify-center border-2 border-red-50 bg-red-50/50 rounded-[2rem] p-6 shadow-sm">
-                                                            <div className="absolute top-4 right-4 text-brand-red">
-                                                                <CheckCircle2 size={16} />
+                                                        <div key={benId} className="relative flex flex-col items-center justify-center border-2 border-red-50 bg-red-50/50 rounded-2xl p-4 shadow-sm">
+                                                            <div className="absolute top-2.5 right-2.5 text-brand-red">
+                                                                <CheckCircle2 size={14} />
                                                             </div>
-                                                            <Icon className="w-8 h-8 mb-3 text-brand-red" />
-                                                            <span className="text-xs font-black uppercase tracking-widest text-brand-red text-center leading-tight">
+                                                            <Icon className="w-6 h-6 mb-2 text-brand-red" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-brand-red text-center leading-tight">
                                                                 {ben.label}
                                                             </span>
                                                         </div>
@@ -596,55 +607,74 @@ export default function ClientProfileClient() {
 
                                     {client.cidades_atendidas?.length > 0 && (
                                         <section className="space-y-6">
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Cidades Atendidas</h2>
-                                            <div className="flex flex-wrap gap-3">
-                                                {client.cidades_atendidas.map((city: any, i: number) => {
-                                                    const cityUrlSlug = slugify(city.nome);
-                                                    const segmentUrlSlug = client.segmentos?.[0] ? slugify(client.segmentos[0].nome) : 'servicos';
-                                                    const clientUrlSlug = client.slug || client.id;
-                                                    
-                                                    return (
-                                                        <Link 
-                                                            key={i} 
-                                                            href={`/${cityUrlSlug}/${segmentUrlSlug}/${clientUrlSlug}`}
-                                                            className="bg-white hover:bg-brand-red/5 hover:border-brand-red/30 border border-gray-100 shadow-sm text-gray-500 hover:text-brand-red px-5 py-3 rounded-2xl text-xs font-bold flex items-center transition-all group"
-                                                        >
-                                                            <MapPin size={14} className="mr-2 text-brand-red group-hover:scale-110 transition-transform" />
-                                                            {city.nome} - {city.uf}
-                                                        </Link>
-                                                    );
-                                                })}
+                                            <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Cidades Atendidas</h2>
+                                            <div>
+                                                <div className="flex flex-wrap gap-3">
+                                                    {client.cidades_atendidas.map((city: any, i: number) => {
+                                                        const cityUrlSlug = slugify(city.nome);
+                                                        const segmentUrlSlug = client.segmentos?.[0] ? slugify(client.segmentos[0].nome) : 'servicos';
+                                                        const clientUrlSlug = client.slug || client.id;
+                                                        
+                                                        return (
+                                                            <Link 
+                                                                key={i} 
+                                                                href={`/${cityUrlSlug}/${segmentUrlSlug}/${clientUrlSlug}`}
+                                                                className={`bg-white hover:bg-brand-red/5 hover:border-brand-red/30 border border-gray-100 shadow-sm text-gray-500 hover:text-brand-red px-5 py-3 rounded-2xl text-[10px] md:text-xs font-bold flex items-center transition-all group ${!isCitiesExpanded && i >= 6 ? 'hidden md:flex' : ''}`}
+                                                            >
+                                                                <MapPin size={14} className="mr-2 text-brand-red group-hover:scale-110 transition-transform" />
+                                                                {city.nome} - {city.uf}
+                                                            </Link>
+                                                        );
+                                                    })}
+                                                </div>
+                                                {client.cidades_atendidas.length > 6 && (
+                                                    <button 
+                                                        onClick={() => setIsCitiesExpanded(!isCitiesExpanded)}
+                                                        className="md:hidden mt-4 text-[10px] font-black uppercase tracking-widest text-brand-red hover:underline flex items-center"
+                                                    >
+                                                        {isCitiesExpanded ? 'Ver menos' : `Ver mais ${client.cidades_atendidas.length - 6} cidades`}
+                                                        <ChevronRight size={12} className={`ml-1 transition-transform ${isCitiesExpanded ? '-rotate-90' : 'rotate-90'}`} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </section>
                                     )}
 
                                     {client.redes_sociais?.length > 0 && (
                                         <section className="lg:hidden space-y-6">
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Redes Sociais</h2>
+                                            <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Redes Sociais</h2>
                                             <div className="flex flex-wrap gap-4">
-                                                {client.redes_sociais.map((rede: any) => (
-                                                    <a
-                                                        key={rede.id}
-                                                        href={rede.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="w-14 h-14 bg-white shadow-xl rounded-2xl flex items-center justify-center text-gray-400 hover:text-brand-red border border-gray-50 active:scale-75 transition-all"
-                                                    >
-                                                        {rede.tipo?.toLowerCase().includes('instagram') && <Instagram size={24} />}
-                                                        {rede.tipo?.toLowerCase().includes('facebook') && <Facebook size={24} />}
-                                                        {rede.tipo?.toLowerCase().includes('linkedin') && <Linkedin size={24} />}
-                                                        {rede.tipo?.toLowerCase().includes('youtube') && <Youtube size={24} />}
-                                                        {(rede.tipo?.toLowerCase().includes('site') || rede.tipo?.toLowerCase().includes('globo') || rede.tipo?.toLowerCase().includes('website')) && <Globe size={24} />}
-                                                        {!['instagram', 'facebook', 'linkedin', 'youtube', 'site', 'globo', 'website'].some(t => rede.tipo?.toLowerCase().includes(t)) && <ExternalLink size={24} />}
-                                                    </a>
-                                                ))}
+                                                {client.redes_sociais.map((rede: any) => {
+                                                    const t = rede.tipo?.toLowerCase() || '';
+                                                    const colorClass = t.includes('instagram') ? 'text-[#E1306C] hover:bg-pink-50' :
+                                                                       t.includes('facebook') ? 'text-[#1877F2] hover:bg-blue-50' :
+                                                                       t.includes('linkedin') ? 'text-[#0A66C2] hover:bg-blue-50' :
+                                                                       t.includes('youtube') ? 'text-[#FF0000] hover:bg-red-50' :
+                                                                       'text-gray-500 hover:text-brand-red hover:bg-gray-100';
+                                                    return (
+                                                        <a
+                                                            key={rede.id}
+                                                            href={rede.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`w-14 h-14 bg-white shadow-xl rounded-2xl flex items-center justify-center border border-gray-50 active:scale-75 transition-all ${colorClass}`}
+                                                        >
+                                                            {t.includes('instagram') && <Instagram size={24} />}
+                                                            {t.includes('facebook') && <Facebook size={24} />}
+                                                            {t.includes('linkedin') && <Linkedin size={24} />}
+                                                            {t.includes('youtube') && <Youtube size={24} />}
+                                                            {(t.includes('site') || t.includes('globo') || t.includes('website')) && <Globe size={24} />}
+                                                            {!['instagram', 'facebook', 'linkedin', 'youtube', 'site', 'globo', 'website'].some(k => t.includes(k)) && <ExternalLink size={24} />}
+                                                        </a>
+                                                    );
+                                                })}
                                             </div>
                                         </section>
                                     )}
 
                                     {client.video && (
                                         <section className="space-y-6">
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Apresentação</h2>
+                                            <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Apresentação</h2>
                                             <div className="w-full aspect-video rounded-[3rem] overflow-hidden bg-gray-100 relative shadow-inner border-4 border-white gummy-card">
                                                 <iframe
                                                     width="100%"
@@ -661,7 +691,7 @@ export default function ClientProfileClient() {
 
                                     {client.portfolio_url && (
                                         <section className="space-y-6">
-                                            <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Materiais</h2>
+                                            <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Materiais</h2>
                                             <div className="bg-white p-8 rounded-[3rem] border-2 border-gray-50 shadow-xl gummy-card flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                                                 <div className="flex items-center space-x-4">
                                                     <div className="w-16 h-16 bg-red-50 text-brand-red rounded-2xl flex items-center justify-center">
@@ -686,7 +716,7 @@ export default function ClientProfileClient() {
                                     )}
 
                                     <section className="space-y-8">
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Onde nos Encontrar</h2>
+                                        <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Onde nos Encontrar</h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {client.enderecos?.length > 0 ? client.enderecos.map((end: any, i: number) => (
                                                 <div key={i} className="bg-white p-6 rounded-[2.5rem] border-2 border-gray-50 shadow-xl gummy-card group hover:border-brand-red/30 transition-all flex flex-col justify-between">
@@ -697,21 +727,21 @@ export default function ClientProfileClient() {
                                                                     {i + 1}
                                                                 </div>
                                                                 <div>
-                                                                    <h4 className="font-black text-gray-900 uppercase tracking-widest text-[10px] leading-tight">
+                                                                    <h4 className="font-black text-gray-900 uppercase tracking-widest text-xs leading-tight">
                                                                         {end.nome_unidade || (i === 0 ? 'Matriz' : `Unidade ${i + 1}`)}
                                                                     </h4>
-                                                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{end.cidade} - {end.estado}</p>
+                                                                    <p className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{end.cidade} - {end.estado}</p>
                                                                 </div>
                                                             </div>
                                                         </div>
 
                                                         {!end.exibir_apenas_cidade ? (
-                                                            <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                                                            <p className="text-base text-gray-500 font-medium leading-relaxed">
                                                                 {end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
                                                                 {end.bairro} • {end.cep}
                                                             </p>
                                                         ) : (
-                                                            <p className="text-sm text-gray-400 font-medium italic mt-2">
+                                                            <p className="text-base text-gray-400 font-medium italic mt-2">
                                                                 Endereço completo não exibido. Atendimento em {end.cidade} - {end.estado}.
                                                             </p>
                                                         )}
@@ -723,9 +753,9 @@ export default function ClientProfileClient() {
                                                                 <a 
                                                                     key={idx}
                                                                     href={`tel:${p.number.replace(/\D/g, '')}`}
-                                                                    className={`col-span-full bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2`}
+                                                                    className={`col-span-full bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2`}
                                                                 >
-                                                                    <Phone size={12} /> {p.label}: {p.number}
+                                                                    <Phone size={14} /> {p.label}: {p.number}
                                                                 </a>
                                                             )
                                                         ))}
@@ -737,7 +767,7 @@ export default function ClientProfileClient() {
                                                                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
+                                                                className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
                                                             >
                                                                 Google Maps
                                                             </a>
@@ -747,7 +777,7 @@ export default function ClientProfileClient() {
                                                                 href={`https://waze.com/ul?q=${encodeURIComponent(`${end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="md:hidden bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[9px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
+                                                                className="md:hidden bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
                                                             >
                                                                 Waze
                                                             </a>
@@ -944,18 +974,18 @@ export default function ClientProfileClient() {
 
                         {/* WhatsApp CTA */}
                         {hasWhatsApp && isPagante && (
-                            <div className="relative group overflow-hidden bg-[#25D366] rounded-[3rem] p-10 text-white shadow-2xl shadow-green-100 gummy-card cursor-pointer border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all" onClick={handleWhatsAppClick}>
-                                <div className="relative space-y-6">
-                                    <div className="bg-white/20 w-14 h-14 rounded-2xl flex items-center justify-center">
-                                        <MessageCircle size={32} fill="white" className="text-green-500" />
+                            <div className="relative group overflow-hidden bg-[#25D366] rounded-[2rem] p-5 md:p-6 text-white shadow-xl shadow-green-100 gummy-card cursor-pointer border-b-[3px] border-green-700 active:border-b-0 active:translate-y-1 transition-all" onClick={handleWhatsAppClick}>
+                                <div className="relative space-y-3">
+                                    <div className="bg-white/20 w-10 h-10 rounded-lg flex items-center justify-center">
+                                        <MessageCircle size={20} fill="white" className="text-green-500" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <h4 className="text-2xl font-black font-serif italic leading-none">Precisa de uma<br />resposta rápida?</h4>
-                                        <p className="text-white/70 text-xs font-bold font-sans">Entre em contato diretamente no WhatsApp.</p>
+                                    <div className="space-y-1.5">
+                                        <h4 className="text-lg md:text-xl font-black font-serif italic leading-none">Precisa de uma<br />resposta rápida?</h4>
+                                        <p className="text-white/80 text-[9px] md:text-[10px] font-bold font-sans">Entre em contato diretamente no WhatsApp.</p>
                                     </div>
-                                    <div className="flex items-center space-x-2 text-xs font-black uppercase tracking-widest pt-4">
+                                    <div className="flex items-center space-x-2 text-[9px] font-black uppercase tracking-widest pt-1">
                                         <span>Enviar Mensagem</span>
-                                        <ChevronRight size={16} />
+                                        <ChevronRight size={12} />
                                     </div>
                                 </div>
                             </div>
@@ -966,22 +996,30 @@ export default function ClientProfileClient() {
                             <div className="hidden lg:block bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                                 <h3 className="text-xl font-black font-serif italic text-gray-900">Redes Sociais</h3>
                                 <div className="flex flex-wrap gap-4">
-                                    {client.redes_sociais.map((rede: any) => (
-                                        <a
-                                            key={rede.id}
-                                            href={rede.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:text-brand-red hover:bg-red-50 transition-all border border-gray-100 active:scale-75"
-                                        >
-                                            {rede.tipo?.toLowerCase().includes('instagram') && <Instagram size={24} />}
-                                            {rede.tipo?.toLowerCase().includes('facebook') && <Facebook size={24} />}
-                                            {rede.tipo?.toLowerCase().includes('linkedin') && <Linkedin size={24} />}
-                                            {rede.tipo?.toLowerCase().includes('youtube') && <Youtube size={24} />}
-                                            {(rede.tipo?.toLowerCase().includes('site') || rede.tipo?.toLowerCase().includes('globo') || rede.tipo?.toLowerCase().includes('website')) && <Globe size={24} />}
-                                            {!['instagram', 'facebook', 'linkedin', 'youtube', 'site', 'globo', 'website'].some(t => rede.tipo?.toLowerCase().includes(t)) && <ExternalLink size={24} />}
-                                        </a>
-                                    ))}
+                                    {client.redes_sociais.map((rede: any) => {
+                                        const t = rede.tipo?.toLowerCase() || '';
+                                        const colorClass = t.includes('instagram') ? 'text-[#E1306C] hover:bg-pink-50' :
+                                                           t.includes('facebook') ? 'text-[#1877F2] hover:bg-blue-50' :
+                                                           t.includes('linkedin') ? 'text-[#0A66C2] hover:bg-blue-50' :
+                                                           t.includes('youtube') ? 'text-[#FF0000] hover:bg-red-50' :
+                                                           'text-gray-500 hover:text-brand-red hover:bg-gray-100';
+                                        return (
+                                            <a
+                                                key={rede.id}
+                                                href={rede.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={`w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 active:scale-75 transition-all ${colorClass}`}
+                                            >
+                                                {t.includes('instagram') && <Instagram size={24} />}
+                                                {t.includes('facebook') && <Facebook size={24} />}
+                                                {t.includes('linkedin') && <Linkedin size={24} />}
+                                                {t.includes('youtube') && <Youtube size={24} />}
+                                                {(t.includes('site') || t.includes('globo') || t.includes('website')) && <Globe size={24} />}
+                                                {!['instagram', 'facebook', 'linkedin', 'youtube', 'site', 'globo', 'website'].some(k => t.includes(k)) && <ExternalLink size={24} />}
+                                            </a>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -991,7 +1029,7 @@ export default function ClientProfileClient() {
                 {/* 🧩 RECOMMENDATIONS */}
                 {recommendations?.length > 0 && (
                     <section className="mt-20 space-y-8">
-                        <h2 className="text-3xl font-black text-gray-900 tracking-tighter font-serif">Poderá gostar também</h2>
+                        <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Poderá gostar também</h2>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                             {recommendations.map((rec: any) => (
                                 <div

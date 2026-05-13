@@ -8,7 +8,6 @@ import { HeaderSearch } from '@/components/HeaderSearch';
 import { useLocation } from '@/contexts/LocationContext';
 
 const navLinks = [
-    { label: 'Anuncie', href: '/anuncie' },
     { label: 'Como Funciona', href: '/como-funciona' },
     { label: 'Vagas', href: '/vagas' },
     { label: 'Blog', href: '/blog' },
