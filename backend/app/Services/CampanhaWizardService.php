@@ -76,12 +76,14 @@ class CampanhaWizardService
     {
         return DB::transaction(function () use ($payload, $actorUserId) {
             $now = now();
+            
+            $isInstitucional = (bool) ($payload['is_institucional'] ?? false);
 
-            if (empty($payload['cliente_id'])) abort(422, 'cliente_id é obrigatório.');
+            if (!$isInstitucional && empty($payload['cliente_id'])) abort(422, 'cliente_id é obrigatório.');
             if (empty($payload['nome'])) abort(422, 'nome é obrigatório.');
             if (empty($payload['tipo'])) abort(422, 'tipo é obrigatório.');
 
-            $clienteId = (int) $payload['cliente_id'];
+            $clienteId = empty($payload['cliente_id']) ? null : (int) $payload['cliente_id'];
 
             // 1) FINANCEIRO STATUS
             $fin = is_array($payload['financeiro'] ?? null) ? $payload['financeiro'] : [];
@@ -101,10 +103,10 @@ class CampanhaWizardService
                 'tipo'        => (string) $payload['tipo'],
                 'origem'      => $payload['origem'] ?? null,
                 'status'      => $campanhaStatus,
-                'data_inicio' => $payload['data_inicio'],
-                'data_fim'    => $payload['data_fim'],
+                'data_inicio' => $payload['data_inicio'] ?? null,
+                'data_fim'    => $payload['data_fim'] ?? null,
                 'url'         => $payload['url'] ?? null,
-                'is_institucional' => (bool) ($payload['is_institucional'] ?? false),
+                'is_institucional' => $isInstitucional,
                 'created_at'  => $now,
                 'updated_at'  => $now,
             ];
@@ -200,11 +202,13 @@ class CampanhaWizardService
                 abort(404, 'Campanha não encontrada.');
             }
 
-            if (empty($payload['cliente_id'])) abort(422, 'cliente_id é obrigatório.');
+            $isInstitucional = (bool) ($payload['is_institucional'] ?? false);
+
+            if (!$isInstitucional && empty($payload['cliente_id'])) abort(422, 'cliente_id é obrigatório.');
             if (empty($payload['nome'])) abort(422, 'nome é obrigatório.');
             if (empty($payload['tipo'])) abort(422, 'tipo é obrigatório.');
 
-            $clienteId = (int) $payload['cliente_id'];
+            $clienteId = empty($payload['cliente_id']) ? null : (int) $payload['cliente_id'];
 
             /* =========================
              * 1) FINANCEIRO
@@ -224,10 +228,10 @@ class CampanhaWizardService
                 'tipo'        => (string) $payload['tipo'],
                 'origem'      => $payload['origem'] ?? null,
                 'status'      => $campanhaStatus,
-                'data_inicio' => $payload['data_inicio'],
-                'data_fim'    => $payload['data_fim'],
+                'data_inicio' => $payload['data_inicio'] ?? null,
+                'data_fim'    => $payload['data_fim'] ?? null,
                 'url'         => $payload['url'] ?? null,
-                'is_institucional' => (bool) ($payload['is_institucional'] ?? false),
+                'is_institucional' => $isInstitucional,
                 'updated_at'  => $now,
             ];
 

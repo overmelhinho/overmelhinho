@@ -68,7 +68,7 @@ class CampanhaController extends Controller
     public function index(Request $request)
     {
         $q = DB::table('campanhas as c')
-            ->join('clientes as cli', 'cli.id', '=', 'c.cliente_id');
+            ->leftJoin('clientes as cli', 'cli.id', '=', 'c.cliente_id');
 
         // Join financeiro apenas se existir
         $hasFinanceiro = Schema::hasTable('campanha_financeiro');
@@ -157,7 +157,7 @@ class CampanhaController extends Controller
         $hasFinanceiro = Schema::hasTable('campanha_financeiro');
 
         $q = DB::table('campanhas as c')
-            ->join('clientes as cli', 'cli.id', '=', 'c.cliente_id')
+            ->leftJoin('clientes as cli', 'cli.id', '=', 'c.cliente_id')
             ->where('c.id', $campanha);
 
         if ($hasFinanceiro) {
@@ -360,12 +360,12 @@ class CampanhaController extends Controller
 
         // payload base
         $campUpdate = [
-            'cliente_id' => (int) $validated['cliente_id'],
+            'cliente_id' => empty($validated['cliente_id']) ? null : (int) $validated['cliente_id'],
             'nome' => (string) $validated['nome'],
             'tipo' => (string) $validated['tipo'],
             'origem' => $validated['origem'] ?? null,
-            'data_inicio' => $validated['data_inicio'],
-            'data_fim' => $validated['data_fim'],
+            'data_inicio' => $validated['data_inicio'] ?? null,
+            'data_fim' => $validated['data_fim'] ?? null,
             'url' => $validated['url'] ?? null,
             'is_institucional' => (bool) ($validated['is_institucional'] ?? false),
             'updated_at' => $now,

@@ -14,15 +14,15 @@ class CampanhaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cliente_id' => ['required', 'integer', 'exists:clientes,id'],
+            'is_institucional' => ['nullable', 'boolean'],
+            'cliente_id' => ['required_unless:is_institucional,true', 'nullable', 'integer', 'exists:clientes,id'],
             'nome' => ['required', 'string', 'max:191'],
             'tipo' => ['required', 'string', 'in:banner,popup,destaque,combo'],
             'origem' => ['nullable', 'string', 'in:venda_nova,renovacao,upgrade'],
 
-            'data_inicio' => ['required', 'date'],
-            'data_fim' => ['required', 'date', 'after_or_equal:data_inicio'],
+            'data_inicio' => ['required_unless:is_institucional,true', 'nullable', 'date'],
+            'data_fim' => ['required_unless:is_institucional,true', 'nullable', 'date', 'after_or_equal:data_inicio'],
             'url' => ['nullable', 'string', 'url', 'max:255'],
-            'is_institucional' => ['nullable', 'boolean'],
 
             /**
              * ✅ cidades_ids agora é opcional (placements globais não exigem cidades).

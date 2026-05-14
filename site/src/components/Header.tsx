@@ -1,6 +1,5 @@
 'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, Menu, X, Search, MapPin } from 'lucide-react';
 import Logo from '@/components/Logo';
@@ -20,11 +19,36 @@ export default function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
     const { cityName, setIsCityModalOpen } = useLocation();
 
+    // Scroll Control
+    const [isVisible, setIsVisible] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
+
+    useEffect(() => {
+        const controlNavbar = (e: Event) => {
+            if (typeof window !== 'undefined') {
+                const target = e.target as HTMLElement | Document;
+                const currentScrollY = target === document ? window.scrollY : (target as HTMLElement).scrollTop;
+                
+                if (currentScrollY === undefined) return;
+
+                if (currentScrollY > lastScrollY && currentScrollY > 80) { // Scrolling down
+                    setIsVisible(false);
+                } else if (currentScrollY < lastScrollY) { // Scrolling up
+                    setIsVisible(true);
+                }
+                setLastScrollY(currentScrollY);
+            }
+        };
+
+        window.addEventListener('scroll', controlNavbar, true);
+        return () => window.removeEventListener('scroll', controlNavbar, true);
+    }, [lastScrollY]);
+
     const isActive = (href: string) => pathname === href;
 
     return (
         <>
-            <header className={`sticky top-0 z-[200] border-b border-gray-100 shadow-sm transition-colors duration-300 ${menuOpen ? 'bg-white' : 'bg-white/80 backdrop-blur-xl'}`}>
+            <header className={`sticky top-0 z-[200] border-b border-gray-100 shadow-sm transition-all duration-300 ${menuOpen ? 'bg-white' : 'bg-white/90 backdrop-blur-xl'} ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4 md:gap-8">
 
                     {/* Logo */}

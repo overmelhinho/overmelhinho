@@ -138,15 +138,32 @@ class ClienteController extends Controller
         // ✅ ORDENAÇÃO INTELIGENTE (NEGÓCIO + RELEVÂNCIA)
         // Hierarquia: Match Exato > Pagante Local > Pagante Geral > Similaridade > Gratuito
         $qParam = $normalizedQ;
+        // Verificação de disponibilidade do unaccent (cacheada estaticamente)
+        static $unaccentExistsGlobal = null;
+        if ($unaccentExistsGlobal === null) {
+            try {
+                DB::select('SELECT unaccent(\'a\')');
+                $unaccentExistsGlobal = true;
+            } catch (\Exception $e) {
+                $unaccentExistsGlobal = false;
+            }
+        }
+
         $orderCityId = $cityId ?: 0;
+
+        $unaccentFunc = $unaccentExistsGlobal ? 'unaccent' : '';
 
         $query->orderByRaw("
             CASE 
-                -- 1. Match Exato (Prioridade Absoluta)
-                WHEN nome_fantasia ilike ? THEN 0
-                WHEN nome_alternativo ilike ? THEN 0
+                -- 1. Match Exato Absoluto (Prioridade Máxima)
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
                 
-                -- 2. Pagante Ativo na Cidade Buscada
+                -- 2. Começa com a palavra exata (Prioridade Altíssima)
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
+                
+                -- 3. Pagante Ativo na Cidade Buscada
                 WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') AND EXISTS (
                     SELECT 1 FROM enderecos 
                     WHERE enderecos.cliente_id = clientes.id 
@@ -154,15 +171,18 @@ class ClienteController extends Controller
                         enderecos.cidade ilike (SELECT nome FROM cidades WHERE id = ? LIMIT 1)
                         OR EXISTS (SELECT 1 FROM cliente_cidade cc WHERE cc.cliente_id = clientes.id AND cc.cidade_id = ?)
                     )
-                ) THEN 1
+                ) THEN 2
 
-                -- 3. Pagante Ativo Geral
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 2
+                -- 4. Pagante Ativo Geral
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 3
 
-                -- 4. Restante (Gratuitos ou Inativos)
-                ELSE 3
+                -- 5. Contém a palavra em qualquer lugar
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 4
+
+                -- 6. Restante (Gratuitos ou Inativos)
+                ELSE 5
             END ASC
-        ", [$q, $q, $orderCityId, $orderCityId]);
+        ", [$q, $q, "{$q} %", "{$q} %", $orderCityId, $orderCityId, "%{$q}%"]);
 
         // Desempate por similaridade fonética
         if ($canUseSimilarity) {

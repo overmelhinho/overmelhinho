@@ -166,9 +166,15 @@ export default function CampanhaWizard({
 
     const nextStep = () => {
         if (step === 2) {
-            if (!w.form.nome?.trim() || !w.form.cliente_id || !w.form.data_inicio || !w.form.data_fim) {
-                toast.error("Preencha Nome, Cliente e Período.");
+            if (!w.form.nome?.trim()) {
+                toast.error("Preencha o Nome da campanha.");
                 return;
+            }
+            if (!w.form.is_institucional) {
+                if (!w.form.cliente_id || !w.form.data_inicio || !w.form.data_fim) {
+                    toast.error("Preencha Cliente e Período.");
+                    return;
+                }
             }
         }
         setStep((prev) => prev + 1);
@@ -410,7 +416,7 @@ export default function CampanhaWizard({
                 <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-dashed border-gray-100 bg-gray-50/30">
                     <div className="space-y-0.5">
                         <label className="text-sm font-bold text-gray-900">Campanha Institucional</label>
-                        <p className="text-xs text-gray-500">Exibir como fallback quando não houver campanhas específicas</p>
+                        <p className="text-xs text-gray-500">Se não tiver outras campanhas, esta é a padrão</p>
                     </div>
                     <button
                         type="button"

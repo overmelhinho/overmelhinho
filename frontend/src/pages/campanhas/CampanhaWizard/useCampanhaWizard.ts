@@ -616,15 +616,15 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
   // ---- checklist e validação
   const checklist = useMemo(() => {
     const items: Array<{ key: string; label: string; ok: boolean; hint: string; optional?: boolean }> = [
-      { key: "cliente", label: "Cliente", ok: !!form.cliente_id, hint: "Selecione um cliente." },
+      { key: "cliente", label: "Cliente", ok: form.is_institucional || !!form.cliente_id, hint: "Selecione um cliente." },
       { key: "nome", label: "Nome", ok: !!form.nome.trim(), hint: "Defina um nome claro." },
-      { key: "periodo", label: "Período", ok: !!(form.data_inicio && form.data_fim), hint: "Escolha início e fim." },
+      { key: "periodo", label: "Período", ok: form.is_institucional || !!(form.data_inicio && form.data_fim), hint: "Escolha início e fim." },
       { key: "placements", label: "Exibição", ok: form.placements.length > 0, hint: "Selecione pelo menos 1." },
       {
         key: "cidades",
         label: "Cidades",
-        ok: hasGlobalPlacement || form.cidades_ids.length > 0,
-        hint: hasGlobalPlacement ? "Global não usa cidades." : "Selecione ao menos 1 cidade.",
+        ok: true, // É opcional, se vazio significa "Todas as cidades"
+        hint: "Opcional: Selecione cidades ou deixe vazio para Todas.",
       },
       { key: "financeiro", label: "Financeiro", ok: !!String(form.financeiro_status || "").trim(), hint: "Defina o status financeiro." },
       { key: "midias", label: "Mídias (opcional)", ok: true, hint: "Opcional: envie criativos desktop/mobile.", optional: true },
@@ -639,17 +639,15 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
   }, [form, hasGlobalPlacement]);
 
   const stepValid = useMemo(() => {
-    const s1 = !!form.cliente_id && !!form.nome.trim() && !!form.tipo && !!form.plano;
+    const s1 = (form.is_institucional || !!form.cliente_id) && !!form.nome.trim() && !!form.tipo && !!form.plano;
     const s2 =
-      !!form.data_inicio &&
-      !!form.data_fim &&
-      form.placements.length > 0 &&
-      (hasGlobalPlacement || form.cidades_ids.length > 0);
+      (form.is_institucional || (!!form.data_inicio && !!form.data_fim)) &&
+      form.placements.length > 0;
     const s3 = true;
     const s4 = !!String(form.financeiro_status || "").trim();
     const s5 = true;
     return { s1, s2, s3, s4, s5 };
-  }, [form, hasGlobalPlacement]);
+  }, [form]);
 
   const nextDisabled = useMemo(() => {
     if (activeKey === "basico") return !stepValid.s1;
@@ -659,13 +657,11 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
   }, [activeKey, stepValid]);
 
   const canSubmit =
-    !!form.cliente_id &&
+    (form.is_institucional || !!form.cliente_id) &&
     !!form.nome.trim() &&
     !!form.tipo &&
-    !!form.data_inicio &&
-    !!form.data_fim &&
+    (form.is_institucional || (!!form.data_inicio && !!form.data_fim)) &&
     form.placements.length > 0 &&
-    (!!hasGlobalPlacement || form.cidades_ids.length > 0) &&
     !!form.plano &&
     !!String(form.financeiro_status || "").trim() &&
     !(mode === "create" ? create.isPending : update.isPending);
@@ -679,12 +675,12 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
     }
 
     const payload: any = {
-      cliente_id: Number(form.cliente_id),
+      cliente_id: form.cliente_id ? Number(form.cliente_id) : null,
       nome: form.nome.trim(),
       tipo: form.tipo,
       origem: form.origem ? (form.origem as CampanhaOrigem) : null,
-      data_inicio: toISODate(form.data_inicio),
-      data_fim: toISODate(form.data_fim),
+      data_inicio: form.data_inicio ? toISODate(form.data_inicio) : null,
+      data_fim: form.data_fim ? toISODate(form.data_fim) : null,
       url: form.url.trim() || null,
       is_institucional: form.is_institucional,
 

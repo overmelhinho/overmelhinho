@@ -57,6 +57,7 @@ function SearchContent() {
     const [hoveredResult, setHoveredResult] = useState<number | null>(null);
     const [selectedMapResult, setSelectedMapResult] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [showMapDesktop, setShowMapDesktop] = useState(true);
     const { data: availableCities } = useCidades();
     const [citySearchQuery, setCitySearchQuery] = useState('');
     const [isListening, setIsListening] = useState(false);
@@ -116,13 +117,15 @@ function SearchContent() {
         tipo: 'BANNER'
     });
 
-    // 1. Hero Ad (Topo) - Prioriza SEARCH_RESULT
+    // 1. Hero Ad (Topo) - Exige midia de topo
     const heroAd = useMemo(() => {
         if (!searchAds || searchAds.length === 0) return null;
         
-        // Tenta encontrar um que seja especificamente para busca
-        const ad = searchAds.find(a => a.placements?.includes('SEARCH_RESULT')) || searchAds[0];
-        const midia = ad.midias['BANNER'] || ad.midias['banner_topo'] || Object.values(ad.midias)[0] || {};
+        // Procura campanha que tenha mídia de topo
+        const ad = searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_topo', 'BANNER', 'SEARCH_RESULT'].includes(k.toUpperCase()) || ['banner_topo', 'BANNER', 'SEARCH_RESULT'].includes(k)));
+        if (!ad) return null;
+
+        const midia = ad.midias['banner_topo'] || ad.midias['BANNER'] || Object.values(ad.midias)[0] || {};
         
         return {
             id: ad.id,
@@ -134,17 +137,16 @@ function SearchContent() {
         };
     }, [searchAds]);
 
-    // 2. Listing Ad (Meio) - Prioriza SEGMENT_LISTING
+    // 2. Listing Ad (Meio) - Exige midia de segmento/listagem
     const listAd = useMemo(() => {
         if (!searchAds || searchAds.length === 0) return null;
 
-        // Tenta encontrar um que seja para listagem e que não seja o mesmo do hero
-        const ad = searchAds.find(a => a.placements?.includes('SEGMENT_LISTING') && a.id !== heroAd?.id) 
-                 || searchAds.find(a => a.placements?.includes('SEGMENT_LISTING'))
-                 || (searchAds.length > 1 ? searchAds[1] : null);
+        // Procura campanha que tenha mídia de segmento
+        const ad = searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING'].includes(k)) && a.id !== heroAd?.id) 
+                 || searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING'].includes(k)));
 
         if (!ad) return null;
-        const midia = ad.midias['BANNER'] || ad.midias['banner_topo'] || Object.values(ad.midias)[0] || {};
+        const midia = ad.midias['banner_segmento'] || ad.midias['SEGMENT_LISTING'] || Object.values(ad.midias)[0] || {};
 
         return {
             id: ad.id,
@@ -298,8 +300,14 @@ function SearchContent() {
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     const matchPerfeito = allResults[0] ?? null;
-    const patrocinados = allResults.slice(1, 4);
-    const outrosResultados = allResults.length < 4 ? [] : allResults.slice(4);
+    const allRemaining = allResults.slice(1);
+    
+    // Acesso Rápido: até 3 clientes que sejam pagantes
+    const patrocinados = allRemaining.filter((item: any) => item.tipo_cliente === 'pagante').slice(0, 3);
+    
+    // Todos os Resultados: todos os que não entraram no acesso rápido
+    const patrocinadosIds = new Set(patrocinados.map((item: any) => item.id));
+    const outrosResultados = allRemaining.filter((item: any) => !patrocinadosIds.has(item.id));
 
     const selectedMapItem = useMemo(() => allResults.find((r: any) => r.id === selectedMapResult), [allResults, selectedMapResult]);
 
@@ -378,13 +386,13 @@ function SearchContent() {
     return (
         <div className="min-h-screen bg-cloud-dancer font-sans selection:bg-brand-red/10 overflow-x-hidden">
 
-            <div className="lg:flex lg:h-screen lg:overflow-hidden">
+            <div className="lg:flex lg:h-screen lg:overflow-hidden lg:justify-center">
 
                 {/* ============ LADO ESQUERDO: LISTA ============ */}
-                <div className={`flex-1 lg:w-[520px] lg:flex-shrink-0 lg:overflow-y-auto no-scrollbar lg:border-r border-gray-100 ${viewMode === 'map' ? 'hidden lg:block' : 'block'}`}>
+                <div className={`w-full lg:w-[65%] lg:flex-shrink-0 lg:overflow-y-auto no-scrollbar ${showMapDesktop ? 'lg:border-r border-gray-100' : 'border-x border-gray-100'} ${viewMode === 'map' ? 'hidden lg:block' : 'block'} transition-all duration-700 ease-in-out`}>
                     
-                    <div className="p-4 bg-cloud-dancer">
-                        <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1">
+                    <div className="p-4 bg-cloud-dancer flex justify-between items-center">
+                        <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1 flex-1">
                             {activeFilters.map((filter) => (
                                 <button
                                     key={filter}
@@ -397,6 +405,10 @@ function SearchContent() {
                                     {filter}
                                 </button>
                             ))}
+                        </div>
+                        <div className="hidden lg:flex bg-white/70 backdrop-blur-md rounded-full p-1 border border-gray-200 shadow-sm ml-4 flex-shrink-0">
+                            <button onClick={() => setShowMapDesktop(false)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${!showMapDesktop ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>📄 Lista</button>
+                            <button onClick={() => setShowMapDesktop(true)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${showMapDesktop ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>🗺️ Mapa</button>
                         </div>
                     </div>
 
@@ -415,16 +427,16 @@ function SearchContent() {
                                     }
                                 }}
                             >
-                                <div className={`relative h-auto md:h-auto rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl border-4 border-white transition-transform duration-700 ${heroAd.link ? 'group-hover:scale-[1.01]' : ''}`}>
+                                <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden transition-transform duration-700 ${heroAd.link ? 'group-hover:scale-[1.01]' : ''}`}>
                                     <img 
                                         src={heroAd.image} 
-                                        className="w-full h-full object-contain" 
+                                        className="w-full h-auto max-h-[300px] object-contain" 
                                         alt={heroAd.title} 
                                     />
                                     {/* Link Indicator (Optional but subtle) */}
                                     {heroAd.link && (
-                                        <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
-                                            <ExternalLink size={16} className="text-white" />
+                                        <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
+                                            <ExternalLink size={14} className="text-white" />
                                         </div>
                                     )}
                                 </div>
@@ -456,9 +468,9 @@ function SearchContent() {
                                 <div
                                     onMouseEnter={() => setHoveredResult(matchPerfeito.id)}
                                     onMouseLeave={() => setHoveredResult(null)}
-                                    className="relative bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-5 md:p-8 shadow-2xl border-4 border-white gummy-card overflow-hidden"
+                                    className="relative bg-white rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-6 shadow-2xl border-4 border-white gummy-card overflow-hidden"
                                 >
-                                    <div className="flex justify-between items-start mb-4 md:mb-10">
+                                    <div className="flex justify-between items-start mb-3 md:mb-5">
                                         <div className="bg-brand-red/5 px-4 py-1.5 rounded-full flex items-center space-x-2 border border-brand-red/10 shadow-sm">
                                             <Sparkles size={14} className="text-brand-red animate-pulse" />
                                             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-red">Sugestão Inteligente</span>
@@ -475,33 +487,84 @@ function SearchContent() {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center space-x-4 md:space-x-8 mb-4 md:mb-10 cursor-pointer group/item" onClick={() => router.push(getClientLink(matchPerfeito))}>
+                                    <div className="flex items-center space-x-4 md:space-x-6 mb-3 md:mb-5 cursor-pointer group/item" onClick={() => router.push(getClientLink(matchPerfeito))}>
                                         {matchPerfeito.tipo_cliente !== 'gratuito' && (
-                                            <div className="w-14 h-14 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-[2.5rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
+                                            <div className="w-14 h-14 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
                                                 <img src={matchPerfeito.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200"} alt="" className="w-full h-full object-cover" />
                                             </div>
                                         )}
-                                        <div className="space-y-0.5">
-                                            <h2 className="text-lg md:text-3xl font-black text-gray-900 tracking-tighter font-serif italic leading-tight">{matchPerfeito.nome_fantasia}</h2>
-                                            <div className="flex items-center text-[9px] md:text-[10px] font-bold text-gray-400 space-x-2">
-                                                <MapPin size={9} className="text-brand-red" />
-                                                <span className="truncate max-w-[110px] md:max-w-[140px] uppercase tracking-widest">{matchPerfeito.enderecos?.[0]?.bairro || 'Centro'}</span>
-                                                <span className="w-1 h-1 bg-gray-100 rounded-full"></span>
-                                                <span className="flex items-center text-yellow-500 font-black whitespace-nowrap"><Star size={10} className="mr-1 fill-yellow-500" /> 4.9</span>
+                                        <div className="space-y-1 md:space-y-2 flex-1">
+                                            <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tighter font-serif italic leading-tight">{matchPerfeito.nome_fantasia}</h2>
+                                            
+                                            <div className="flex flex-wrap gap-2 md:gap-4 text-[9px] md:text-[10px] font-bold text-gray-400 mt-1">
+                                                {matchPerfeito.enderecos?.[0] && (
+                                                    <span className="flex items-center space-x-1">
+                                                        <MapPin size={10} className="text-brand-red flex-shrink-0" />
+                                                        <span className="truncate max-w-[200px] md:max-w-none uppercase tracking-widest">{matchPerfeito.enderecos[0].logradouro}, {matchPerfeito.enderecos[0].numero} - {matchPerfeito.enderecos[0].bairro}</span>
+                                                    </span>
+                                                )}
+                                                
+                                                <span className="flex items-center text-green-500 font-black border-l border-gray-100 pl-2 md:pl-4 uppercase tracking-widest">
+                                                    Aberto Agora
+                                                </span>
+                                                <span className="flex items-center text-yellow-500 font-black border-l border-gray-100 pl-2 md:pl-4">
+                                                    <Star size={10} className="mr-1 fill-yellow-500" /> 4.9
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
+                                    
                                     {matchPerfeito.tipo_cliente !== 'gratuito' && (
-                                        <button
-                                            onClick={() => handleWhatsApp(matchPerfeito.id, matchPerfeito.contatos?.[0]?.celular || '')}
-                                            className="w-fit px-8 md:px-14 mx-auto bg-[#25D366] text-white py-3 md:py-5 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-sm uppercase tracking-[0.2em] shadow-[0_20px_40px_-5px_rgba(37,211,102,0.3)] hover:shadow-green-500/40 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn cursor-pointer border-b-4 border-green-700/40"
-                                        >
-                                            <WhatsAppIcon size={20} />
-                                            <span>Iniciar no WhatsApp</span>
-                                            <ChevronRight size={18} className="translate-x-0 group-hover/btn:translate-x-2 transition-transform" />
-                                        </button>
+                                        <div className="flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-4 mt-2 border-t border-gray-50 pt-6">
+                                            <button
+                                                onClick={() => handleWhatsApp(matchPerfeito.id, matchPerfeito.contatos?.[0]?.celular || '')}
+                                                className="w-full md:w-auto px-8 py-3 md:py-4 bg-[#25D366] text-white rounded-[1.5rem] md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.1em] shadow-[0_15px_30px_-5px_rgba(37,211,102,0.3)] hover:shadow-green-500/40 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn border-b-4 border-green-700/40"
+                                            >
+                                                <WhatsAppIcon size={18} />
+                                                <span>Chamar no WhatsApp</span>
+                                            </button>
+                                            
+                                            {matchPerfeito.enderecos?.[0]?.lat && (
+                                                <button
+                                                    onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${matchPerfeito.enderecos[0].lat},${matchPerfeito.enderecos[0].lng}`, '_blank')}
+                                                    className="w-full md:w-auto px-8 py-3 md:py-4 bg-gray-50 text-gray-600 rounded-[1.5rem] md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.1em] shadow-sm hover:bg-gray-100 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn border border-gray-200"
+                                                >
+                                                    <MapPin size={16} className="text-gray-400" />
+                                                    <span>Traçar Rota</span>
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
+                            </section>
+                        )}
+
+                        {/* AD BANNER (LISTAGEM) */}
+                        {listAd && (
+                            <section className="relative px-6 md:px-20">
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true }}
+                                    className={`relative rounded-[2rem] md:rounded-[3rem] overflow-hidden transition-all transform ${listAd.link ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'} w-full flex`}
+                                    onClick={() => {
+                                        if (listAd.link) {
+                                            trackAd(listAd.id, 'click', 'SEGMENT_LISTING');
+                                            window.open(listAd.link, listAd.link.startsWith('http') ? '_blank' : '_self');
+                                        }
+                                    }}
+                                >
+                                    <img 
+                                        src={listAd.image} 
+                                        className="w-full h-auto max-h-[180px] md:max-h-[220px] object-contain" 
+                                        alt={listAd.title} 
+                                    />
+                                    {listAd.link && (
+                                        <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
+                                            <ExternalLink size={14} className="text-white" />
+                                        </div>
+                                    )}
+                                </motion.div>
                             </section>
                         )}
 
@@ -553,46 +616,6 @@ function SearchContent() {
                                 </div>
                             </section>
                         )}
-
-                        {/* AD BANNER (DINÂMICO OU FALLBACK) */}
-                        <section className="relative px-2">
-                            {listAd ? (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    whileInView={{ opacity: 1, scale: 1 }}
-                                    viewport={{ once: true }}
-                                    className={`relative rounded-[2.5rem] md:rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white transition-all transform ${listAd.link ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'}`}
-                                    onClick={() => {
-                                        if (listAd.link) {
-                                            trackAd(listAd.id, 'click', 'SEGMENT_LISTING');
-                                            window.open(listAd.link, listAd.link.startsWith('http') ? '_blank' : '_self');
-                                        }
-                                    }}
-                                >
-                                    <img 
-                                        src={listAd.image} 
-                                        className="w-full h-full object-contain" 
-                                        alt={listAd.title} 
-                                    />
-                                    {listAd.link && (
-                                        <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity border border-white/30">
-                                            <ExternalLink size={16} className="text-white" />
-                                        </div>
-                                    )}
-                                </motion.div>
-                            ) : (
-                                <div className="bg-brand-red rounded-[2.5rem] md:rounded-[3rem] p-8 md:p-10 text-white shadow-[0_30px_60px_-15px_rgba(183,15,10,0.3)] relative overflow-hidden group cursor-pointer active:scale-95 transition-all">
-                                    <div className="relative z-10 space-y-4 md:space-y-6">
-                                        <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-tight font-serif italic uppercase">Seja o próximo<br />Match Perfeito</h3>
-                                        <p className="text-red-100 text-[8px] md:text-[9px] font-black uppercase tracking-[0.4em] opacity-80">Conecte sua empresa a novos clientes</p>
-                                        <button className="bg-white text-brand-red px-8 md:px-10 py-4 md:py-4.5 rounded-2xl md:rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl group-hover:scale-105 transition-transform duration-300">Quero Posicionar</button>
-                                    </div>
-                                    <div className="absolute -bottom-20 -right-20 w-64 h-64 md:w-80 md:h-80 bg-white/10 rounded-full blur-[100px] group-hover:bg-white/20 transition-all duration-1000" />
-                                    <Sparkles className="absolute top-6 right-6 md:top-8 md:right-8 rotate-12 opacity-10 group-hover:rotate-0 transition-transform duration-700" size={100} />
-                                </div>
-                            )}
-                        </section>
-
                         {/* 4. TODOS OS RESULTADOS + SCROLL INFINITO */}
                         {!isLoading && outrosResultados.length > 0 && (
                             <section className="space-y-8">
@@ -608,7 +631,7 @@ function SearchContent() {
                                                         onClick={() => router.push(getClientLink(item))}
                                                         onMouseEnter={() => setHoveredResult(item.id)}
                                                         onMouseLeave={() => setHoveredResult(null)}
-                                                        className={`flex items-center justify-between p-4 md:p-7 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
+                                                        className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
                                                     >
                                                         <div className="flex items-center space-x-4 md:space-x-6">
                                                             {item.tipo_cliente !== 'gratuito' && (
@@ -616,9 +639,9 @@ function SearchContent() {
                                                                     <img src={item.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
                                                                 </div>
                                                             )}
-                                                            <div className="space-y-1">
-                                                                <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-lg md:text-xl leading-none">{item.nome_fantasia}</h5>
-                                                                <p className="text-[9px] md:text-[10px] font-medium text-gray-400 uppercase tracking-widest">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
+                                                            <div className="space-y-0.5">
+                                                                <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-base md:text-lg leading-tight">{item.nome_fantasia}</h5>
+                                                                <p className="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
                                                             </div>
                                                         </div>
                                                     {item.tipo_cliente !== 'gratuito' && (
@@ -637,7 +660,7 @@ function SearchContent() {
                                                 {showAd && (
                                                     <div className="mx-4 my-8">
                                                         <div 
-                                                            className={`relative ${ad.bgColor} rounded-[3rem] p-8 overflow-hidden group/ad cursor-pointer`}
+                                                            className={`relative ${ad.bgColor} rounded-[2rem] p-6 overflow-hidden group/ad cursor-pointer shadow-sm`}
                                                             onClick={() => {
                                                                 if (ad.link) {
                                                                     trackAd(ad.id, 'click', 'INTERSTITIAL');
@@ -646,16 +669,16 @@ function SearchContent() {
                                                             }}
                                                         >
                                                             <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                                                                <div className="flex-1 space-y-2 text-center md:text-left">
-                                                                    <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">Publicidade</span>
-                                                                    <h4 className="text-2xl font-black text-white font-serif italic tracking-tight leading-none">
+                                                                <div className="flex-1 space-y-1 text-center md:text-left">
+                                                                    <span className="text-[8px] font-black text-white/50 uppercase tracking-widest">Publicidade</span>
+                                                                    <h4 className="text-xl font-black text-white font-serif italic tracking-tight leading-none">
                                                                         {ad.title}
                                                                     </h4>
-                                                                    <p className="text-white/70 text-xs font-medium leading-relaxed">
+                                                                    <p className="text-white/70 text-[10px] font-medium leading-relaxed">
                                                                         {ad.description}
                                                                     </p>
                                                                     <div className="pt-2">
-                                                                        <button className="bg-white text-gray-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-transform">
+                                                                        <button className="bg-white text-gray-900 px-5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-transform">
                                                                             {ad.cta}
                                                                         </button>
                                                                     </div>
@@ -695,7 +718,7 @@ function SearchContent() {
                 </div>
 
                 {/* ============ LADO DIREITO: MAPA LEAFLET REAL ============ */}
-                <div className={`flex-1 relative overflow-hidden ${viewMode === 'list' ? 'hidden lg:block' : 'block h-screen lg:h-auto'}`}>
+                <div className={`w-full ${showMapDesktop ? 'lg:w-[35%] lg:opacity-100' : 'lg:w-0 lg:opacity-0'} relative overflow-hidden ${viewMode === 'list' ? 'hidden lg:block' : 'block h-screen lg:h-auto'} transition-all duration-700 ease-in-out`}>
 
                     {/* Mapa real com OpenStreetMap */}
                     <SearchMap

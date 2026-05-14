@@ -21,8 +21,14 @@ class PublicAdController extends Controller
 
         $q = DB::table('campanhas as c')
             ->where('c.status', 'ativa')
-            ->whereDate('c.data_inicio', '<=', $now)
-            ->whereDate('c.data_fim', '>=', $now);
+            ->where(function ($query) use ($now) {
+                $query->where(function ($sub) use ($now) {
+                    $sub->whereDate('c.data_inicio', '<=', $now)
+                        ->whereDate('c.data_fim', '>=', $now);
+                })->orWhere(function ($sub) {
+                    $sub->whereNull('c.data_inicio')->whereNull('c.data_fim');
+                });
+            });
 
         if ($tipo) {
             $q->whereRaw('UPPER(c.tipo) = ?', [strtoupper($tipo)]);
@@ -91,8 +97,14 @@ class PublicAdController extends Controller
                 ->leftJoin('contatos as cont', 'cli.id', '=', 'cont.cliente_id')
                 ->where('c.status', 'ativa')
                 ->where('c.is_institucional', true)
-                ->whereDate('c.data_inicio', '<=', $now)
-                ->whereDate('c.data_fim', '>=', $now);
+                ->where(function ($query) use ($now) {
+                    $query->where(function ($sub) use ($now) {
+                        $sub->whereDate('c.data_inicio', '<=', $now)
+                            ->whereDate('c.data_fim', '>=', $now);
+                    })->orWhere(function ($sub) {
+                        $sub->whereNull('c.data_inicio')->whereNull('c.data_fim');
+                    });
+                });
                 
             if ($tipo) {
                 $qi->whereRaw('UPPER(c.tipo) = ?', [strtoupper($tipo)]);
@@ -106,7 +118,7 @@ class PublicAdController extends Controller
             // Pegar mídias ativas para esta campanha
             $midias = DB::table('campanha_midias')
                 ->where('campanha_id', $camp->id)
-                ->where('status', 'publicado')
+                ->whereIn('status', ['publicado', 'ativa'])
                 ->orderByDesc('versao')
                 ->orderByDesc('id')
                 ->get();

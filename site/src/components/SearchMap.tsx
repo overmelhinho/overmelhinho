@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Sparkles, Briefcase } from 'lucide-react';
+import { useLocation } from '@/contexts/LocationContext';
 
 // Tema do mapa: "Vermelhinho" - cinza claro + destaque vermelho
 const MAP_STYLE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -23,13 +24,25 @@ type SearchMapProps = {
   onMapClick?: () => void;
 };
 
-// Centro padrão — Petrolina, PE
-const DEFAULT_CENTER: [number, number] = [-9.3968, -40.5016];
+// Coordenadas base das cidades da Serra Gaúcha
+const CITY_COORDS: Record<string, [number, number]> = {
+  'Farroupilha': [-29.2272, -51.3486],
+  'Caxias do Sul': [-29.1682, -51.1794],
+  'Bento Gonçalves': [-29.1691, -51.5188],
+  'Garibaldi': [-29.2566, -51.5341],
+  'Carlos Barbosa': [-29.2974, -51.5034],
+  'Flores da Cunha': [-29.0287, -51.1824],
+};
+
+// Centro padrão — Caxias do Sul (Serra Gaúcha)
+const DEFAULT_CENTER: [number, number] = [-29.1682, -51.1794];
 
 export default function SearchMap({ results, highlighted, onHover, onClick, onMapClick }: SearchMapProps) {
   const mapRef = useRef<any>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<number, any>>(new Map());
+  const { cityName } = useLocation();
+  const currentCenter = (cityName && CITY_COORDS[cityName]) ? CITY_COORDS[cityName] : DEFAULT_CENTER;
 
   useEffect(() => {
     let isMounted = true;
@@ -55,7 +68,7 @@ export default function SearchMap({ results, highlighted, onHover, onClick, onMa
       }
 
       const map = L.map(mapDivRef.current!, {
-        center: DEFAULT_CENTER,
+        center: currentCenter,
         zoom: 13,
         zoomControl: false,
         attributionControl: false,
@@ -101,6 +114,7 @@ export default function SearchMap({ results, highlighted, onHover, onClick, onMa
     results.forEach((business, idx) => {
       const lat = business.enderecos?.[0]?.latitude;
       const lng = business.enderecos?.[0]?.longitude;
+      
       if (!lat || !lng) return;
 
       validPoints.push([lat, lng]);
@@ -158,8 +172,15 @@ export default function SearchMap({ results, highlighted, onHover, onClick, onMa
           map.fitBounds(validPoints, { padding: [60, 60], maxZoom: 15 });
         } catch (_) { /* ignore */ }
       }, 300);
+    } else {
+      // Se não tem pins (ou a pesquisa limpou), foca na cidade selecionada ou no centro padrão da Serra
+      setTimeout(() => {
+        try {
+          map.setView(currentCenter, 13);
+        } catch (_) { /* ignore */ }
+      }, 300);
     }
-  }, [results]);
+  }, [results, currentCenter]);
 
   // Destaque de pin ao hover na lista
   useEffect(() => {
