@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/services/api";
@@ -28,7 +28,7 @@ import {
     Landmark,
     Info,
 } from "lucide-react";
-import { format, isBefore, startOfDay, subDays, isAfter } from "date-fns";
+import { format, isBefore, startOfDay, subDays, isAfter, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
     Dialog,
@@ -89,12 +89,12 @@ interface Invoice {
     total_parcels?: number;
 }
 
-export default function InvoicesTab() {
+export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (filters: any) => void }) {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [syncFilter, setSyncFilter] = useState("all"); // all, synced, unsynced
-    const [dateRange, setDateRange] = useState("all"); // all, 7, 15, 30, custom
+    const [dateRange, setDateRange] = useState("current_month"); // all, current_month, 7, 15, 30, custom
     const [customStartDate, setCustomStartDate] = useState("");
     const [customEndDate, setCustomEndDate] = useState("");
 
@@ -163,10 +163,53 @@ export default function InvoicesTab() {
         }
     };
 
+    useEffect(() => {
+        if (onFiltersChange) {
+            const params: any = {};
+            if (statusFilter !== "all") params.status = statusFilter;
+            if (searchTerm) params.q = searchTerm;
+            
+            const today = new Date();
+            if (dateRange === "current_month") {
+                params.date_start = format(startOfMonth(today), 'yyyy-MM-dd');
+                params.date_end = format(endOfMonth(today), 'yyyy-MM-dd');
+            } else if (dateRange === "7") {
+                params.date_start = format(subDays(today, 7), 'yyyy-MM-dd');
+            } else if (dateRange === "15") {
+                params.date_start = format(subDays(today, 15), 'yyyy-MM-dd');
+            } else if (dateRange === "30") {
+                params.date_start = format(subDays(today, 30), 'yyyy-MM-dd');
+            } else if (dateRange === "custom") {
+                if (customStartDate) params.date_start = customStartDate;
+                if (customEndDate) params.date_end = customEndDate;
+            }
+            onFiltersChange(params);
+        }
+    }, [statusFilter, searchTerm, dateRange, customStartDate, customEndDate]);
+
     const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
-        queryKey: ["financial-invoices"],
+        queryKey: ["financial-invoices", statusFilter, searchTerm, dateRange, customStartDate, customEndDate],
         queryFn: async () => {
-            const response = await axios.get("/v1/financial/invoices");
+            const params: any = {};
+            if (statusFilter !== "all") params.status = statusFilter;
+            if (searchTerm) params.q = searchTerm;
+            
+            const today = new Date();
+            if (dateRange === "current_month") {
+                params.date_start = format(startOfMonth(today), 'yyyy-MM-dd');
+                params.date_end = format(endOfMonth(today), 'yyyy-MM-dd');
+            } else if (dateRange === "7") {
+                params.date_start = format(subDays(today, 7), 'yyyy-MM-dd');
+            } else if (dateRange === "15") {
+                params.date_start = format(subDays(today, 15), 'yyyy-MM-dd');
+            } else if (dateRange === "30") {
+                params.date_start = format(subDays(today, 30), 'yyyy-MM-dd');
+            } else if (dateRange === "custom") {
+                if (customStartDate) params.date_start = customStartDate;
+                if (customEndDate) params.date_end = customEndDate;
+            }
+
+            const response = await axios.get("/v1/financial/invoices", { params });
             return response.data;
         },
     });
@@ -214,7 +257,9 @@ export default function InvoicesTab() {
         const invoiceDate = new Date(invoice.due_date);
         const today = startOfDay(new Date());
 
-        if (dateRange === "7") {
+        if (dateRange === "current_month") {
+            matchesDate = invoiceDate >= startOfMonth(today) && invoiceDate <= endOfMonth(today);
+        } else if (dateRange === "7") {
             matchesDate = isAfter(invoiceDate, subDays(today, 7));
         } else if (dateRange === "15") {
             matchesDate = isAfter(invoiceDate, subDays(today, 15));
@@ -329,6 +374,7 @@ export default function InvoicesTab() {
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-gray-100 shadow-xl">
                                 <SelectItem value="all">Qualquer data</SelectItem>
+                                <SelectItem value="current_month">Mês Atual</SelectItem>
                                 <SelectItem value="7">Últimos 7 dias</SelectItem>
                                 <SelectItem value="15">Últimos 15 dias</SelectItem>
                                 <SelectItem value="30">Últimos 30 dias</SelectItem>
@@ -362,16 +408,16 @@ export default function InvoicesTab() {
 
                     {dateRange === "custom" && (
                         <div className="flex items-center gap-2 animate-in slide-in-from-right-2 duration-300">
-                            <Input
+                            <input
                                 type="date"
-                                className="w-32 h-9 rounded-xl border-gray-200 text-xs font-medium"
+                                className="w-32 h-9 rounded-xl border border-gray-200 px-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-red-500"
                                 value={customStartDate}
                                 onChange={(e) => setCustomStartDate(e.target.value)}
                             />
                             <span className="text-[10px] font-bold text-gray-400 uppercase">até</span>
-                            <Input
+                            <input
                                 type="date"
-                                className="w-32 h-9 rounded-xl border-gray-200 text-xs font-medium"
+                                className="w-32 h-9 rounded-xl border border-gray-200 px-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-red-500"
                                 value={customEndDate}
                                 onChange={(e) => setCustomEndDate(e.target.value)}
                             />

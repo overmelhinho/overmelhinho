@@ -92,6 +92,178 @@ class FinancialController extends Controller
     }
 
     /**
+     * Obter Estatísticas Globais Financeiras
+     */
+    public function getStats(Request $request)
+    {
+        $now = now();
+        $startOfMonth = $now->copy()->startOfMonth();
+        $endOfMonth = $now->copy()->endOfMonth();
+
+        $applyFilters = function($query) use ($request) {
+            if ($request->filled('status') && $request->status !== 'all') {
+                if ($request->status === 'overdue') {
+                    $query->where('status', 'pending')->where('due_date', '<', now()->startOfDay());
+                } else {
+                    $query->where('status', $request->status);
+                }
+            }
+            if ($request->filled('date_start')) {
+                $query->where('due_date', '>=', $request->date_start);
+            }
+            if ($request->filled('date_end')) {
+                $query->where('due_date', '<=', $request->date_end);
+            }
+            if ($request->filled('q')) {
+                $search = $request->q;
+                $query->whereHas('client', function($q) use ($search) {
+                    $q->where('nome_fantasia', 'ilike', "%{$search}%")
+                      ->orWhere('cpf_cnpj', 'like', "%{$search}%");
+                });
+                if (is_numeric($search)) {
+                    $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
+                    if ($authId) {
+                        $query->orWhere('group_id', 'autorizacao-' . $authId);
+                    }
+                }
+            }
+            return $query;
+        };
+
+        // MRR
+        $mrrQuery = Invoice::where('status', 'paid');
+        if (!$request->filled('date_start') && !$request->filled('date_end')) {
+            $mrrQuery->whereBetween('due_date', [$startOfMonth, $endOfMonth]);
+        }
+        $applyFilters($mrrQuery);
+        $mrr = $mrrQuery->sum('amount');
+        
+        $totalPaidQuery = Invoice::where('status', 'paid');
+        $applyFilters($totalPaidQuery);
+        $totalPaid = $totalPaidQuery->sum('amount');
+        
+        $uniqueClientsQuery = Invoice::where('status', 'paid');
+        $applyFilters($uniqueClientsQuery);
+        $uniqueClientsCount = $uniqueClientsQuery->distinct('client_id')->count('client_id');
+        
+        $ltv = $uniqueClientsCount > 0 ? ($totalPaid / $uniqueClientsCount) : 0;
+
+        $last30Days = $now->copy()->subDays(30);
+        $totalPeriod = Invoice::whereBetween('created_at', [$last30Days, $now])->count();
+        $canceledPeriod = Invoice::where('status', 'canceled')
+            ->whereBetween('updated_at', [$last30Days, $now])
+            ->count();
+        $churn = $totalPeriod > 0 ? ($canceledPeriod / $totalPeriod) * 100 : 0;
+
+        $overdueQuery = Invoice::where('status', 'pending')
+            ->where('due_date', '<', $now->startOfDay());
+        $applyFilters($overdueQuery);
+        $overdueTotal = $overdueQuery->sum('amount');
+        $overdueCount = $overdueQuery->count();
+
+        $pendingQuery = Invoice::where('status', 'pending');
+        $applyFilters($pendingQuery);
+        $pendingTotal = $pendingQuery->sum('amount');
+        $pendingCount = $pendingQuery->count();
+        
+        // Calcular evolução últimos 6 meses (chartDataMonthly) - Independente dos filtros de data
+        $sixMonthsAgo = $now->copy()->subMonths(5)->startOfMonth();
+        $recentPaidInvoicesQuery = Invoice::selectRaw('sum(amount) as total, to_char(due_date, \'MM/YY\') as month')
+            ->where('status', 'paid')
+            ->where('due_date', '>=', $sixMonthsAgo)
+            ->groupByRaw('to_char(due_date, \'MM/YY\'), to_char(due_date, \'YYYY-MM\')')
+            ->orderByRaw('to_char(due_date, \'YYYY-MM\') asc');
+        
+        // Aplicar filtros de pesquisa, mas ignorar datas (pois o grafico já tem escopo próprio)
+        if ($request->filled('q') || ($request->filled('status') && $request->status !== 'all')) {
+            $recentPaidInvoicesQuery = $applyFilters(Invoice::query()->mergeConstraintsFrom($recentPaidInvoicesQuery));
+            // Removemos as wheres de date_start/date_end que o applyFilters adicionou
+            $recentPaidInvoicesQuery->getQuery()->wheres = array_filter($recentPaidInvoicesQuery->getQuery()->wheres, function($w) {
+                return !in_array($w['column'] ?? '', ['due_date']); // Mantém a where >= sixMonthsAgo, mas na vdd remove tudo de due_date. Isso é arriscado.
+            });
+            // Melhor: não aplicar applyFilters no chart, ou fazer manual
+        }
+
+        // Refazendo para o chart sem zoar
+        $recentPaidInvoicesQuery = Invoice::selectRaw('sum(amount) as total, to_char(due_date, \'MM/YY\') as month')
+            ->where('status', 'paid')
+            ->where('due_date', '>=', $sixMonthsAgo);
+            
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $recentPaidInvoicesQuery->whereHas('client', function($q) use ($search) {
+                $q->where('nome_fantasia', 'ilike', "%{$search}%")
+                  ->orWhere('cpf_cnpj', 'like', "%{$search}%");
+            });
+            if (is_numeric($search)) {
+                $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
+                if ($authId) {
+                    $recentPaidInvoicesQuery->orWhere('group_id', 'autorizacao-' . $authId);
+                }
+            }
+        }
+        $recentPaidInvoicesQuery->groupByRaw('to_char(due_date, \'MM/YY\'), to_char(due_date, \'YYYY-MM\')')
+            ->orderByRaw('to_char(due_date, \'YYYY-MM\') asc');
+            
+        $recentPaidInvoices = $recentPaidInvoicesQuery->get();
+
+        $chartDataMonthly = $recentPaidInvoices->map(function ($item) {
+            return [
+                'name' => $item->month,
+                'total' => (float) $item->total,
+            ];
+        });
+
+        // Quarterly data
+        $fourQuartersAgo = $now->copy()->subMonths(11)->startOfMonth();
+        $quarterlyInvoicesQuery = Invoice::selectRaw('sum(amount) as total, extract(year from due_date) as year, extract(quarter from due_date) as quarter')
+            ->where('status', 'paid')
+            ->where('due_date', '>=', $fourQuartersAgo);
+            
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $quarterlyInvoicesQuery->whereHas('client', function($q) use ($search) {
+                $q->where('nome_fantasia', 'ilike', "%{$search}%")
+                  ->orWhere('cpf_cnpj', 'like', "%{$search}%");
+            });
+            if (is_numeric($search)) {
+                $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
+                if ($authId) {
+                    $quarterlyInvoicesQuery->orWhere('group_id', 'autorizacao-' . $authId);
+                }
+            }
+        }
+        
+        $quarterlyInvoicesQuery->groupByRaw('extract(year from due_date), extract(quarter from due_date)')
+            ->orderByRaw('extract(year from due_date) asc, extract(quarter from due_date) asc');
+            
+        $quarterlyInvoices = $quarterlyInvoicesQuery->get();
+
+        $chartDataQuarterly = $quarterlyInvoices->map(function ($item) {
+            return [
+                'name' => 'Q' . $item->quarter . '/' . substr($item->year, -2),
+                'total' => (float) $item->total,
+            ];
+        });
+
+        // Contar todos os clientes ativos
+        $activeClientsCount = Cliente::where('status_assinatura', 'ativo')->count();
+
+        return response()->json([
+            'mrr' => $mrr,
+            'ltv' => $ltv,
+            'churn' => $churn,
+            'overdueTotal' => $overdueTotal,
+            'overdueCount' => $overdueCount,
+            'pendingTotal' => $pendingTotal,
+            'pendingCount' => $pendingCount,
+            'activeClients' => $activeClientsCount,
+            'chartDataMonthly' => $chartDataMonthly,
+            'chartDataQuarterly' => $chartDataQuarterly
+        ]);
+    }
+
+    /**
      * Exportar Carnê de Parcelas (PDF Único)
      */
     public function exportCarnet($groupId)
@@ -251,11 +423,44 @@ class FinancialController extends Controller
     /**
      * Listar TODAS as faturas (Financeiro Geral)
      */
-    public function indexAllInvoices()
+    public function indexAllInvoices(Request $request)
     {
-        $invoices = Invoice::with(['client.contatos', 'plan'])
-            ->orderBy('due_date', 'asc')
-            ->limit(100)
+        $query = Invoice::with(['client.contatos', 'plan']);
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            if ($request->status === 'overdue') {
+                $query->where('status', 'pending')
+                      ->where('due_date', '<', now()->startOfDay());
+            } else {
+                $query->where('status', $request->status);
+            }
+        }
+
+        if ($request->filled('date_start')) {
+            $query->where('due_date', '>=', $request->date_start);
+        }
+
+        if ($request->filled('date_end')) {
+            $query->where('due_date', '<=', $request->date_end);
+        }
+
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->whereHas('client', function($q) use ($search) {
+                $q->where('nome_fantasia', 'ilike', "%{$search}%")
+                  ->orWhere('cpf_cnpj', 'like', "%{$search}%");
+            });
+            // Also search by autorizacao_numero via group_id
+            if (is_numeric($search)) {
+                $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
+                if ($authId) {
+                    $query->orWhere('group_id', 'autorizacao-' . $authId);
+                }
+            }
+        }
+
+        $invoices = $query->orderBy('due_date', 'asc')
+            ->limit(300)
             ->get();
 
         // Mapear números de autorização via group_id

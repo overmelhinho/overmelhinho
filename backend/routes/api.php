@@ -240,7 +240,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/clientes/{id}/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'indexClientInvoices']);
     Route::post('/clientes/{id}/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'storeInvoice']);
 
-    // Listagem Geral de Faturas
+    Route::get('/financial/stats', [\App\Http\Controllers\Api\V1\FinancialController::class , 'getStats']);
     Route::get('/financial/invoices', [\App\Http\Controllers\Api\V1\FinancialController::class , 'indexAllInvoices']);
     Route::get('/financial/export-pdf', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportReport']);
     Route::get('/financial/group/{groupId}/carnet', [\App\Http\Controllers\Api\V1\FinancialController::class , 'exportCarnet']);

@@ -27,10 +27,10 @@ interface Invoice {
 }
 
 interface MetricsTabProps {
-    invoices: Invoice[] | undefined;
+    stats: any;
 }
 
-export default function MetricsTab({ invoices }: MetricsTabProps) {
+export default function MetricsTab({ stats }: MetricsTabProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [chartView, setChartView] = useState<'monthly' | 'quarterly'>('monthly');
 
@@ -63,55 +63,14 @@ export default function MetricsTab({ invoices }: MetricsTabProps) {
         }
     };
 
-    // Basic calculations
-    const paidInvoices = invoices?.filter(i => i.status === 'paid') || [];
-    const totalPaidRevenue = paidInvoices.reduce((acc, i) => acc + Number(i.amount), 0);
-    const uniqueClients = new Set(invoices?.map(i => i.client?.id).filter(Boolean));
-    const totalClientsCount = uniqueClients.size || 1; // Avoid division by zero
-
     // LTV (Lifetime Value) = Total Revenue / Total Unique Clients
-    const realLTV = totalPaidRevenue / totalClientsCount;
+    const realLTV = stats?.ltv || 0;
 
-    // Churn Rate Calculation (Simulated based on canceled invoices vs total in last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Churn Rate Calculation
+    const realChurnRate = stats?.churn || 0;
 
-    const recentInvoices = invoices?.filter(i => new Date(i.due_date) > thirtyDaysAgo) || [];
-    const canceledRecent = recentInvoices.filter(i => i.status === 'canceled').length;
-    const totalRecent = recentInvoices.length || 1;
-    const realChurnRate = (canceledRecent / totalRecent) * 100;
-
-    // Process data for the chart (Group by month)
-    const processedMonthlyData = paidInvoices.reduce((acc: any[], inv) => {
-        const date = new Date(inv.due_date);
-        const monthYear = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-
-        const existing = acc.find(item => item.name === monthYear);
-        if (existing) {
-            existing.total += Number(inv.amount);
-            existing.timestamp = date.getTime();
-        } else {
-            acc.push({ name: monthYear, total: Number(inv.amount), timestamp: date.getTime() });
-        }
-        return acc;
-    }, []).sort((a, b) => a.timestamp - b.timestamp).slice(-6);
-
-    // Process data for the chart (Group by quarter)
-    const processedQuarterlyData = paidInvoices.reduce((acc: any[], inv) => {
-        const date = new Date(inv.due_date);
-        const quarter = Math.floor(date.getMonth() / 3) + 1;
-        const year = date.getFullYear().toString().slice(-2);
-        const quarterKey = `Q${quarter}/${year}`;
-
-        const existing = acc.find(item => item.name === quarterKey);
-        if (existing) {
-            existing.total += Number(inv.amount);
-            existing.timestamp = date.getTime();
-        } else {
-            acc.push({ name: quarterKey, total: Number(inv.amount), timestamp: date.getTime() });
-        }
-        return acc;
-    }, []).sort((a, b) => a.timestamp - b.timestamp).slice(-4);
+    const processedMonthlyData = stats?.chartDataMonthly || [];
+    const processedQuarterlyData = stats?.chartDataQuarterly || [];
 
     const chartData = chartView === 'monthly' ? processedMonthlyData : processedQuarterlyData;
 

@@ -263,7 +263,7 @@
             <tr>
                 <td>{{ $p->numero }} de {{ count($autorizacao->parcelas) }}</td>
                 <td>{{ $p->vencimento?->format('d/m/Y') ?? 'N/I' }}</td>
-                <td>R$ {{ number_format($p->payable_amount, 2, ',', '.') }}</td>
+                <td>R$ {{ number_format($p->payable_amount ?: $p->valor, 2, ',', '.') }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -296,7 +296,30 @@
                         @if($autorizacao->justificativa_assinatura)
                             <div style="font-size: 8px; color: #059669; font-weight: bold; margin-bottom: 8px;">ACEITE REGISTRADO ELETRONICAMENTE</div>
                         @elseif($autorizacao->assinatura_base64)
-                            <img src="{{ $autorizacao->assinatura_base64 }}" style="max-height: 40px; margin-bottom: -10px; z-index: -1;">
+                            @php
+                                $sigSrc = $autorizacao->assinatura_base64;
+                                if (!str_starts_with($sigSrc, 'data:') && !str_starts_with($sigSrc, 'http')) {
+                                    $remoteUrl = 'https://www.overmelhinho.com.br/arquivos/assinaturas/' . $sigSrc;
+                                    try {
+                                        $context = stream_context_create([
+                                            "ssl" => [
+                                                "verify_peer" => false,
+                                                "verify_peer_name" => false,
+                                            ],
+                                            "http" => ["timeout" => 3]
+                                        ]);
+                                        $imageData = @file_get_contents($remoteUrl, false, $context);
+                                        if ($imageData) {
+                                            $sigSrc = 'data:image/png;base64,' . base64_encode($imageData);
+                                        }
+                                    } catch (\Exception $e) {
+                                        $sigSrc = '';
+                                    }
+                                }
+                            @endphp
+                            @if($sigSrc)
+                                <img src="{{ $sigSrc }}" style="max-height: 40px; margin-bottom: -10px; z-index: -1;">
+                            @endif
                         @endif
                     @endif
                     <div class="sign-line"></div>

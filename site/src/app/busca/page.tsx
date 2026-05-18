@@ -644,7 +644,12 @@ function SearchContent() {
                                                                 </div>
                                                             )}
                                                             <div className="space-y-0.5">
-                                                                <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-base md:text-lg leading-tight">{item.nome_fantasia}</h5>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-base md:text-lg leading-tight">{item.nome_fantasia}</h5>
+                                                                    {item.tipo_cliente === 'pagante' && (
+                                                                        <span className="text-[8px] md:text-[9px] font-black text-brand-red bg-brand-red/5 px-2 py-0.5 rounded-lg border border-brand-red/10">PREMIUM</span>
+                                                                    )}
+                                                                </div>
                                                                 <p className="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
                                                             </div>
                                                         </div>

@@ -15,6 +15,7 @@ import {
     RefreshCw
 } from "lucide-react";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/services/api";
 import { isBefore, startOfDay } from "date-fns";
@@ -28,20 +29,15 @@ interface Invoice {
 }
 
 export default function FinanceiroPage() {
-    const { data: invoices, isLoading } = useQuery<Invoice[]>({
-        queryKey: ["financial-invoices"],
+    const [statsFilters, setStatsFilters] = useState<any>({});
+
+    const { data: stats, isLoading } = useQuery({
+        queryKey: ["financial-stats", statsFilters],
         queryFn: async () => {
-            const response = await axios.get("/v1/financial/invoices");
+            const response = await axios.get("/v1/financial/stats", { params: statsFilters });
             return response.data;
         },
     });
-
-    const stats = {
-        mrr: invoices?.filter(i => i.status === "paid").reduce((acc, i) => acc + Number(i.amount), 0) || 0,
-        pendingCount: invoices?.filter(i => i.status === "pending").length || 0,
-        overdueAmount: invoices?.filter(i => i.status === "pending" && i.due_date && isBefore(new Date(i.due_date), startOfDay(new Date()))).reduce((acc, i) => acc + Number(i.amount), 0) || 0,
-        activeClients: new Set(invoices?.filter(i => i?.client?.id).map(i => i.client.id)).size || 0
-    };
 
     return (
         <DashboardLayout>
@@ -68,10 +64,10 @@ export default function FinanceiroPage() {
                     </div>
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Receita (Recorrente)</p>
-                        {isLoading ? (
+                        {isLoading || !stats ? (
                             <div className="h-8 w-24 bg-gray-100 animate-pulse rounded mt-1"></div>
                         ) : (
-                            <h3 className="text-2xl font-black text-gray-900">R$ {stats.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+                            <h3 className="text-2xl font-black text-gray-900">R$ {Number(stats.mrr).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                         )}
                     </div>
                 </div>
@@ -81,14 +77,14 @@ export default function FinanceiroPage() {
                         <div className="rounded-xl bg-red-50 p-2.5 text-red-600">
                             <AlertCircle size={20} />
                         </div>
-                        <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-lg">{stats.pendingCount} faturas</span>
+                        <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-lg">{stats?.pendingCount || 0} faturas</span>
                     </div>
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Inadimplência (Vencido)</p>
-                        {isLoading ? (
+                        {isLoading || !stats ? (
                             <div className="h-8 w-24 bg-gray-100 animate-pulse rounded mt-1"></div>
                         ) : (
-                            <h3 className="text-2xl font-black text-red-600">R$ {stats.overdueAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+                            <h3 className="text-2xl font-black text-red-600">R$ {stats.overdueTotal ? Number(stats.overdueTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00'}</h3>
                         )}
                     </div>
                 </div>
@@ -101,10 +97,10 @@ export default function FinanceiroPage() {
                     </div>
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Base de Clientes</p>
-                        {isLoading ? (
+                        {isLoading || !stats ? (
                             <div className="h-8 w-16 bg-gray-100 animate-pulse rounded mt-1"></div>
                         ) : (
-                            <h3 className="text-2xl font-black text-gray-900">{stats.activeClients} Ativos</h3>
+                            <h3 className="text-2xl font-black text-gray-900">{stats.activeClients || 0} Ativos</h3>
                         )}
                     </div>
                 </div>
@@ -143,7 +139,7 @@ export default function FinanceiroPage() {
                 </TabsContent>
 
                 <TabsContent value="invoices" className="focus-visible:outline-none">
-                    <InvoicesTab />
+                    <InvoicesTab onFiltersChange={setStatsFilters} />
                 </TabsContent>
 
                 <TabsContent value="renewals" className="focus-visible:outline-none">
@@ -151,7 +147,7 @@ export default function FinanceiroPage() {
                 </TabsContent>
 
                 <TabsContent value="dashboard" className="focus-visible:outline-none">
-                    <MetricsTab invoices={invoices} />
+                    <MetricsTab stats={stats} />
                 </TabsContent>
             </Tabs>
         </DashboardLayout>
