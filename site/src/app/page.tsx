@@ -10,6 +10,7 @@ import { useClients } from '@/hooks/useClients';
 import { useLocation } from '@/contexts/LocationContext';
 import Logo from '@/components/Logo';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
+import { getClientSeoUrl } from '@/utils/seo';
 
 function WhatsAppIcon({ size = 20 }) {
   return (
@@ -150,7 +151,8 @@ export default function Home() {
         : 'Sua Cidade',
       whatsapp: client.contatos?.[0]?.whatsapp_selected || client.contatos?.[0]?.celular || '',
       desc: client.descricao || 'Empresa destaque no portal O Vermelhinho.',
-      slug: client.slug
+      slug: client.slug || client.id,
+      _raw: client
     }));
   }, [realClients]);
 
@@ -248,9 +250,11 @@ export default function Home() {
                     </div>
 
                     <div className="flex space-x-4 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-4 md:space-x-0 md:gap-6">
-                        {featured.map((item, idx) => (
+                        {featured.map((item, idx) => {
+                            const clientLink = item._raw ? getClientSeoUrl(item._raw) : `/cliente/${item.slug}`;
+                            return (
                             <div key={idx} className="snap-center min-w-[85%] md:min-w-0 bg-white rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border-4 border-white flex flex-col gummy-card group">
-                                <Link href={`/cliente/${item.slug}`} className="relative h-48 overflow-hidden block bg-gray-50 flex items-center justify-center">
+                                <Link href={clientLink} className="relative h-48 overflow-hidden block bg-gray-50 flex items-center justify-center">
                                     {item.img ? (
                                         <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                                     ) : (
@@ -269,7 +273,7 @@ export default function Home() {
                                 <div className="p-5 md:p-6 flex-1 flex flex-col justify-between space-y-4">
                                     <div className="space-y-1.5">
                                         <span className="text-[9px] md:text-[10px] font-black text-brand-red uppercase tracking-[0.3em] font-sans">{item.category}</span>
-                                        <Link href={`/cliente/${item.slug}`}>
+                                        <Link href={clientLink}>
                                             <h4 className="text-lg md:text-xl font-black text-gray-900 tracking-tighter leading-none font-serif hover:text-brand-red transition-colors cursor-pointer">{item.name}</h4>
                                         </Link>
                                         <p className="text-gray-400 text-[10px] md:text-xs font-bold tracking-tight font-sans truncate">{item.location}</p>
@@ -287,7 +291,8 @@ export default function Home() {
                                     </a>
                                 </div>
                             </div>
-                        ))}
+                        );
+                        })}
                     </div>
                 </section>
 
@@ -347,7 +352,7 @@ export default function Home() {
                                     if (scrollyAd) {
                                         trackAdInteraction(scrollyAd.id, 'click', 'HOME_TOP', scrollyAd.cliente.id);
                                         if (scrollyAd.cliente.whatsapp) window.open(`https://wa.me/55${scrollyAd.cliente.whatsapp.replace(/\D/g, '')}`, '_blank');
-                                        else router.push(`/cliente/${scrollyAd.cliente.slug}`);
+                                        else router.push(getClientSeoUrl(scrollyAd.cliente));
                                     } else {
                                         router.push('/anuncie');
                                     }

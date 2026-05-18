@@ -5,6 +5,7 @@ import { Search, Mic, Sparkles, MapPin, Star, ChevronRight, X, Clock } from 'luc
 import { useRouter } from 'next/navigation';
 import { useLocation } from '@/contexts/LocationContext';
 import api from '@/services/api';
+import { getClientSeoUrl } from '@/utils/seo';
 
 interface Suggestion {
     id: number;
@@ -201,7 +202,7 @@ export const SearchAutocomplete = () => {
                                     {suggestions.results.map(res => (
                                         <div
                                             key={res.id}
-                                            onClick={() => router.push(`/cliente/${res.slug || res.id}`)}
+                                            onClick={() => router.push(res.seo_url || `/cliente/${res.slug || res.id}`)}
                                             className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-all cursor-pointer group"
                                         >
                                             <div className="flex items-center space-x-4">

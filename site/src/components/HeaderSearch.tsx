@@ -161,7 +161,7 @@ export const HeaderSearch = () => {
                                 suggestions.results.map(res => (
                                     <div
                                         key={res.id}
-                                        onClick={() => { router.push(`/cliente/${res.slug || res.id}`); setIsOpen(false); }}
+                                        onClick={() => { router.push(res.seo_url || `/cliente/${res.slug || res.id}`); setIsOpen(false); }}
                                         className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-all cursor-pointer group"
                                     >
                                         <div className="flex items-center space-x-3">

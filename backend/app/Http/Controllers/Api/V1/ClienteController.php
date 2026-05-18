@@ -255,6 +255,7 @@ class ClienteController extends Controller
             })
             ->where('exibir_no_site', 'true')
             ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])->orWhere('tipo_cliente', 'gratuito'))
+            ->with(['segmentos', 'enderecos', 'cidadesAtendidas'])
             ->when($cityId, function($sq) use ($cityId) {
                 $sq->where(function($sub) use ($cityId) {
                     $sub->whereHas('cidadesAtendidas', fn($c) => $c->where('cidades.id', $cityId))
@@ -285,15 +286,45 @@ class ClienteController extends Controller
             ->get();
 
         return response()->json([
-            'results' => $clientes->map(function($c) {
+            'results' => $clientes->map(function($c) use ($cityId) {
                 $isPagante = ($c->tipo_cliente === 'pagante' && in_array($c->status_assinatura, ['ativa', 'ativo']));
+                
+                // Gerar SEO URL
+                $seoUrl = null;
+                $segmento = $c->segmentos->first();
+                if ($segmento) {
+                    $targetCity = null;
+                    if ($cityId) {
+                        $cityObj = \App\Models\Cidade::find($cityId);
+                        if ($cityObj) $targetCity = $cityObj->nome;
+                    }
+
+                    if (!$targetCity) {
+                        $end = $c->enderecos->first();
+                        if ($end && $end->cidade) {
+                            $targetCity = $end->cidade;
+                        } else {
+                            $cad = $c->cidadesAtendidas->first();
+                            if ($cad) $targetCity = $cad->nome;
+                        }
+                    }
+
+                    if ($targetCity) {
+                        $citySlug = \Illuminate\Support\Str::slug($targetCity);
+                        $segSlug = \Illuminate\Support\Str::slug($segmento->nome);
+                        $cliSlug = $c->slug ?: $c->id;
+                        $seoUrl = "/{$citySlug}/{$segSlug}/{$cliSlug}";
+                    }
+                }
+
                 return [
                     'id' => $c->id,
                     'slug' => $c->slug,
                     'title' => $c->nome_fantasia,
-                    'image' => $isPagante ? $c->logo_url : null,
+                    'image' => $isPagante && $c->logo_url ? (\Illuminate\Support\Str::startsWith($c->logo_url, ['http://', 'https://']) ? $c->logo_url : asset('storage/' . $c->logo_url)) : null,
                     'type' => 'client',
-                    'priority' => $isPagante
+                    'priority' => $isPagante,
+                    'seo_url' => $seoUrl ?: ("/cliente/" . ($c->slug ?: $c->id))
                 ];
             }),
             'categories' => $segmentos->map(fn($s) => [

@@ -38,6 +38,7 @@ import { useLocation } from '@/contexts/LocationContext';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useAds } from '@/hooks/useAds';
 import { useCidades } from '@/hooks/useCidades';
+import { getClientSeoUrl } from '@/utils/seo';
 import 'leaflet/dist/leaflet.css';
 
 // Importação dinâmica do mapa (sem SSR, obrigatório para Leaflet)
@@ -229,31 +230,8 @@ function SearchContent() {
     }, [data]);
  
     // ✅ Helper para gerar links SEO (Cidade/Segmento/Cliente)
-    const getClientLink = (client: any) => {
-        if (!cityName || !client.segmentos?.[0]?.nome) {
-            return `/cliente/${client.slug || client.id}`;
-        }
+    const getClientLink = (client: any) => getClientSeoUrl(client, cityName || null);
 
-        // Verifica se o cliente atende esta cidade (usando camelCase ou snake_case conforme vier do backend)
-        const cidadesAtendidas = client.cidades_atendidas || client.cidadesAtendidas || [];
-        const enderecos = client.enderecos || [];
-
-        const servesCity = cidadesAtendidas.some((c: any) => 
-            c.nome.toLowerCase() === cityName.toLowerCase()
-        ) || enderecos.some((e: any) => 
-            e.cidade?.toLowerCase() === cityName.toLowerCase()
-        );
-
-        if (!servesCity) {
-            return `/cliente/${client.slug || client.id}`;
-        }
-
-        const citySlug = cityName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-        const segmentSlug = client.segmentos[0].nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-        const clientSlug = client.slug || client.id;
-
-        return `/${citySlug}/${segmentSlug}/${clientSlug}`;
-    };
  
     const { trackSearch, trackInteraction, trackAdInteraction: trackAd } = useAnalytics();
  
