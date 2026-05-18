@@ -36,8 +36,12 @@ return [
     ],
 
     'google' => [
-        'places_key' => env('GOOGLE_PLACES_KEY'),    ],    'openai' => [
-        'key' => env('OPENAI_API_KEY'),    ],
+        'places_key' => env('GOOGLE_PLACES_KEY'),
+        'indexing_key_path' => env('GOOGLE_INDEXING_KEY_PATH', storage_path('app/google-indexing-key.json')),
+    ],
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+    ],
 
 
 

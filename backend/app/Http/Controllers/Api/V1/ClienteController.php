@@ -31,7 +31,7 @@ class ClienteController extends Controller
                 $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])
                     ->orWhere('tipo_cliente', 'gratuito');
             })
-            ->where('exibir_no_site', true)
+            ->where('exibir_no_site', 'true')
             ->get();
     }
 
@@ -43,7 +43,7 @@ class ClienteController extends Controller
         $cityName = $request->input('city_name');
         
         $query = Cliente::query()
-            ->where('exibir_no_site', true)
+            ->where('exibir_no_site', 'true')
             ->where(function($sub) {
                 $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])
                     ->orWhere('tipo_cliente', 'gratuito');
@@ -253,7 +253,7 @@ class ClienteController extends Controller
                     $sub->orWhere('nome_fantasia', 'ilike', substr($normalizedQ, 0, 3) . "%");
                 }
             })
-            ->where('exibir_no_site', true)
+            ->where('exibir_no_site', 'true')
             ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])->orWhere('tipo_cliente', 'gratuito'))
             ->when($cityId, function($sq) use ($cityId) {
                 $sq->where(function($sub) use ($cityId) {

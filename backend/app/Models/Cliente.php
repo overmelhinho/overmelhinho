@@ -14,8 +14,8 @@ class Cliente extends Model
     {
         static::saving(function ($cliente) {
             if (empty($cliente->slug) && !empty($cliente->nome_fantasia)) {
-                // Gera o slug a partir do nome fantasia
-                $slug = \Illuminate\Support\Str::slug($cliente->nome_fantasia);
+                // Gera o slug altamente sanitizado
+                $slug = \App\Services\SlugService::create($cliente->nome_fantasia);
                 
                 // Garante que o slug seja único (adiciona sufixo se necessário)
                 $count = static::where('slug', 'LIKE', "{$slug}%")->where('id', '<>', $cliente->id)->count();
@@ -34,6 +34,7 @@ class Cliente extends Model
     protected $table = 'clientes';
 
     protected $fillable = [
+        'id',
         'nome_fantasia',
         'slug',
         'razao_social',

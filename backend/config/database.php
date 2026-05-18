@@ -95,6 +95,24 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            'connect_timeout' => 60,
+            'options' => [
+                \PDO::ATTR_EMULATE_PREPARES => true,
+            ],
+        ],
+
+        'legacy' => [
+            'driver' => 'mysql',
+            'host' => '31.97.27.242',
+            'port' => '3306',
+            'database' => 'overmelhinho',
+            'username' => 'overmelhinhocom',
+            'password' => 'w$JkD69Vzz6*n5',
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
         ],
 
         'sqlsrv' => [

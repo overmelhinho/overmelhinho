@@ -32,7 +32,12 @@ class AutorizacaoController extends Controller
                 $newNum = str_pad($parts[0], 5, '0', STR_PAD_LEFT);
                 if (isset($parts[1])) $newNum .= '-' . $parts[1];
                 
-                $a->update(['numero' => $newNum]);
+                try {
+                    $a->update(['numero' => $newNum]);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                    // Se houver colisão de número (ex: múltiplos cadastros com numero 0), gera um novo
+                    $a->update(['numero' => Autorizacao::proximoNumero()]);
+                }
             }
             $healed = true;
         }

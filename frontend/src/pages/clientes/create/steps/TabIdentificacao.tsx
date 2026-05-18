@@ -288,19 +288,37 @@ export default function TabIdentificacao() {
   const descricao = (values.descricao || "") as string;
   const descricaoLen = descricao.length;
 
+  const segmentName = useMemo(() => {
+    if (!values.segmentos || values.segmentos.length === 0) return "";
+    // Se for objeto (com nome), usa o nome, se for ID, não temos o nome aqui fácil, mas tentamos
+    return values.segmentos_nomes?.[0] || "o serviço";
+  }, [values.segmentos, values.segmentos_nomes]);
+
   const descricaoHint = useMemo(() => {
-    if (!descricaoLen) return "Dica: descreva em 2 parágrafos e 3–6 itens em lista.";
-    if (descricaoLen < 200) return "Está curto. Se fizer sentido, adicione diferenciais e atuação local.";
-    if (descricaoLen <= 800) return "Tamanho ótimo para SEO e leitura.";
-    return "Está longo. Considere reduzir para melhorar escaneabilidade.";
-  }, [descricaoLen]);
+    if (!descricaoLen) return "Dica: Descreva o serviço e mencione a cidade para melhor ranqueamento.";
+    
+    const mentionsCity = values.cidade && values.descricao?.toLowerCase().includes(values.cidade.toLowerCase());
+    const mentionsSegment = segmentName && values.descricao?.toLowerCase().includes(segmentName.toLowerCase());
+
+    if (!mentionsCity || !mentionsSegment) {
+        return `⚠️ Falta mencionar ${!mentionsSegment ? 'o serviço' : ''}${!mentionsSegment && !mentionsCity ? ' e ' : ''}${!mentionsCity ? 'a cidade' : ''} no texto.`;
+    }
+
+    if (descricaoLen < 200) return "Texto muito curto para indexação profunda.";
+    if (descricaoLen <= 800) return "Tamanho perfeito! Texto rico e escaneável.";
+    return "Texto muito longo. Pode prejudicar a retenção do usuário.";
+  }, [descricaoLen, values.cidade, values.descricao, segmentName]);
 
   const hintColor = useMemo(() => {
     if (!descricaoLen) return "text-gray-500";
+    const mentionsCity = values.cidade && values.descricao?.toLowerCase().includes(values.cidade.toLowerCase());
+    const mentionsSegment = segmentName && values.descricao?.toLowerCase().includes(segmentName.toLowerCase());
+    
+    if (!mentionsCity || !mentionsSegment) return "text-red-500 font-bold";
     if (descricaoLen < 200) return "text-amber-600";
     if (descricaoLen <= 800) return "text-green-700";
     return "text-red-600";
-  }, [descricaoLen]);
+  }, [descricaoLen, values.cidade, values.descricao, segmentName]);
 
   return (
     <div className="space-y-6">
@@ -696,6 +714,34 @@ export default function TabIdentificacao() {
               </div>
             </div>
           )}
+
+          {/* ✅ SEO Checklist Real-time */}
+          <div className="mt-4 p-4 bg-slate-50 border rounded-xl grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Checklist de SEO</p>
+              <ul className="text-xs space-y-2">
+                <li className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${values.descricao?.toLowerCase().includes(values.cidade?.toLowerCase()) ? 'bg-green-500' : 'bg-gray-300'}`} />
+                    Menciona a Cidade: <span className="font-bold">{values.cidade || "(Não definida)"}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${segmentName && values.descricao?.toLowerCase().includes(segmentName.toLowerCase()) ? 'bg-green-500' : 'bg-gray-300'}`} />
+                    Menciona o Serviço: <span className="font-bold">{segmentName || "(Não definido)"}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${descricaoLen >= 200 && descricaoLen <= 800 ? 'bg-green-500' : 'bg-amber-400'}`} />
+                    Densidade Ideal (200-800 chars)
+                </li>
+              </ul>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-slate-200">
+               <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Por que isso importa?</p>
+               <p className="text-[10px] text-slate-600 leading-relaxed">
+                  O Google prioriza empresas que descrevem claramente <b>O QUE FAZEM</b> e <b>ONDE ATUAM</b>. 
+                  Evite apenas listar palavras; escreva frases naturais que ajudem o usuário e o buscador.
+               </p>
+            </div>
+          </div>
 
           <div className="mt-2 flex flex-wrap gap-2">
             <button

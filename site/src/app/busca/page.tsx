@@ -488,9 +488,9 @@ function SearchContent() {
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-4 md:space-x-6 mb-3 md:mb-5 cursor-pointer group/item" onClick={() => router.push(getClientLink(matchPerfeito))}>
-                                        {matchPerfeito.tipo_cliente !== 'gratuito' && (
+                                        {matchPerfeito.tipo_cliente !== 'gratuito' && matchPerfeito.logotipo_url && (
                                             <div className="w-14 h-14 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
-                                                <img src={matchPerfeito.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200"} alt="" className="w-full h-full object-cover" />
+                                                <img src={matchPerfeito.logotipo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                             </div>
                                         )}
                                         <div className="space-y-1 md:space-y-2 flex-1">
@@ -585,18 +585,22 @@ function SearchContent() {
                                             className="bg-white rounded-[2rem] md:rounded-[3.5rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer"
                                         >
                                             <div className="h-28 md:h-52 overflow-hidden relative">
-                                                <img src={item.galeria?.[0]?.url || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600"} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+                                                {item.galeria?.[0]?.url ? (
+                                                    <img src={item.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+                                                ) : (
+                                                    <div className="w-full h-full bg-brand-red/10 group-hover:scale-110 transition-transform duration-1000"></div>
+                                                )}
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                                             </div>
                                             <div className="px-4 pb-6 md:px-8 md:pb-10 pt-1 relative">
-                                                {item.tipo_cliente !== 'gratuito' && (
+                                                {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
                                                     <div className="absolute -top-8 left-4 w-16 h-16 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[2.5rem] bg-white p-1 shadow-2xl border-2 border-white group-hover:-translate-y-4 transition-transform duration-500">
-                                                        <img src={item.logotipo_url || "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200"} className="w-full h-full object-cover rounded-[1rem] md:rounded-[2rem]" alt="" />
+                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[2rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                                     </div>
                                                 )}
                                                 <div className="pt-10 md:pt-16 space-y-2 md:space-y-4">
                                                     <div className="flex justify-between items-center">
-                                                        <h4 className="text-lg md:text-2xl font-black text-gray-900 tracking-tight font-serif italic leading-none truncate max-w-[160px] md:max-w-[200px]">{item.nome_fantasia}</h4>
+                                                        <h4 className="text-lg md:text-2xl font-black text-gray-900 tracking-tight font-serif italic leading-tight break-words">{item.nome_fantasia}</h4>
                                                         {isExpansionClient(item) ? (
                                                             <div className="flex flex-col items-end">
                                                                 <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">✨ ATENDE AQUI</span>
@@ -634,9 +638,9 @@ function SearchContent() {
                                                         className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
                                                     >
                                                         <div className="flex items-center space-x-4 md:space-x-6">
-                                                            {item.tipo_cliente !== 'gratuito' && (
+                                                            {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
                                                                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
-                                                                    <img src={item.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100"} className="w-full h-full object-cover" alt="" />
+                                                                    <img src={item.logotipo_url} className="w-full h-full object-cover" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                                                 </div>
                                                             )}
                                                             <div className="space-y-0.5">
@@ -733,9 +737,9 @@ function SearchContent() {
                     <div className="absolute top-6 left-6 z-[1000]">
                         <div className="bg-white/90 backdrop-blur-3xl px-6 py-3 rounded-full shadow-2xl border border-white/60 flex items-center space-x-4 cursor-default">
                             <div className="flex -space-x-3">
-                                {allResults.filter((r: any) => r.tipo_cliente !== 'gratuito').slice(0, 3).map((item: any, i: number) => (
+                                {allResults.filter((r: any) => r.tipo_cliente !== 'gratuito' && r.logotipo_url).slice(0, 3).map((item: any, i: number) => (
                                     <div key={i} className="inline-block h-8 w-8 rounded-full ring-4 ring-white shadow-sm overflow-hidden bg-gray-100 flex-shrink-0">
-                                        <img src={item.logotipo_url || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=50"} alt="" className="w-full h-full object-cover" />
+                                        <img src={item.logotipo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                     </div>
                                 ))}
                             </div>
@@ -763,11 +767,15 @@ function SearchContent() {
                             <div className="bg-white/80 backdrop-blur-3xl p-3 border border-white/50 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] gummy-card">
                                 <div className="relative group/modal cursor-pointer" onClick={() => router.push(`/cliente/${selectedMapItem.slug || selectedMapItem.id}`)}>
                                     <div className="h-44 w-full rounded-[2rem] overflow-hidden relative shadow-inner">
-                                        <img
-                                            src={selectedMapItem.galeria?.[0]?.url || selectedMapItem.logotipo_url || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400"}
-                                            className="w-full h-full object-cover group-hover/modal:scale-110 transition-transform duration-700"
-                                            alt={selectedMapItem.nome_fantasia}
-                                        />
+                                        {selectedMapItem.galeria?.[0]?.url || selectedMapItem.logotipo_url ? (
+                                            <img
+                                                src={selectedMapItem.galeria?.[0]?.url || selectedMapItem.logotipo_url}
+                                                className="w-full h-full object-cover group-hover/modal:scale-110 transition-transform duration-700"
+                                                alt={selectedMapItem.nome_fantasia}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-brand-red/10 group-hover/modal:scale-110 transition-transform duration-700"></div>
+                                        )}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-5">
                                             <div className="flex justify-between items-end">
                                                 <div className="space-y-1">

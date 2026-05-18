@@ -38,21 +38,19 @@ export async function generateMetadata({ params }: { params: Promise<{ citySlug:
     
     if (!client) return { title: 'O Vermelhinho | Guia de Empresas' };
 
-    // Tenta encontrar o nome real da cidade no array de cidades atendidas do cliente
-    const cityName = client.cidades_atendidas?.find((c: any) => {
-        const s = c.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-        return s === citySlug;
-    })?.nome || formatSlug(citySlug);
-
+    const address = client.enderecos?.[0] || {};
+    const cityName = address.cidade || formatSlug(citySlug);
+    const uf = address.estado || 'RS';
     const segmentName = client.segmentos?.[0]?.nome || formatSlug(segmentSlug);
     
-    const title = `${client.nome_fantasia} em ${cityName} | ${segmentName} | O Vermelhinho`;
-    const description = `Precisando de ${segmentName} em ${cityName}? Conheça a ${client.nome_fantasia}. Confira endereços, telefones e horários de atendimento no portal O Vermelhinho.`;
+    // Padrão Exigido: [Categoria] em [Cidade] - [UF]: [Nome da Empresa] | O Vermelhinho
+    const title = `${segmentName} em ${cityName} - ${uf}: ${client.nome_fantasia} | O Vermelhinho`;
+    const description = `Precisando de ${segmentName} em ${cityName}? Conheça a ${client.nome_fantasia}. Confira endereços, telefones e horários no portal O Vermelhinho.`;
 
     return {
         title,
         description,
-        keywords: [client.nome_fantasia, cityName, segmentName, ...(client.seo_keywords || [])].filter(Boolean).join(', '),
+        keywords: [client.nome_fantasia, cityName, segmentName, uf, ...(client.seo_keywords || [])].filter(Boolean).join(', '),
         alternates: {
             // ✅ CANONICAL: Aponta para a página principal para evitar conteúdo duplicado
             canonical: `${SITE_URL}/cliente/${client.slug || client.id}`,

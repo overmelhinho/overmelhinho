@@ -217,7 +217,7 @@
         <tr>
             <td>
                 <span class="label">Vigência Comercial</span>
-                <span class="value">{{ $autorizacao->data_inicio->format('d/m/Y') }} até {{ $autorizacao->data_fim->format('d/m/Y') }}</span>
+                <span class="value">{{ $autorizacao->data_inicio?->format('d/m/Y') ?? 'N/I' }} até {{ $autorizacao->data_fim?->format('d/m/Y') ?? 'N/I' }}</span>
             </td>
             <td>
                 <span class="label">Vendedor</span>
@@ -262,7 +262,7 @@
             @foreach($autorizacao->parcelas as $p)
             <tr>
                 <td>{{ $p->numero }} de {{ count($autorizacao->parcelas) }}</td>
-                <td>{{ $p->vencimento->format('d/m/Y') }}</td>
+                <td>{{ $p->vencimento?->format('d/m/Y') ?? 'N/I' }}</td>
                 <td>R$ {{ number_format($p->payable_amount, 2, ',', '.') }}</td>
             </tr>
             @endforeach
@@ -304,7 +304,7 @@
                     <div style="font-size: 8px; color: #6B7280; font-weight: normal; margin-top:2px; height: 20px;">
                         {{ $autorizacao->cliente->razao_social ?: $autorizacao->cliente->nome_fantasia }}
                         @if($autorizacao->status === 'assinado')
-                            <br>Assinado em {{ $autorizacao->assinado_em->format('d/m/Y H:i') }} | IP: {{ $autorizacao->assinatura_ip ?? 'N/A' }}
+                            <br>Assinado em {{ $autorizacao->assinado_em?->format('d/m/Y H:i') ?? 'Data Indisponível' }} | IP: {{ $autorizacao->assinatura_ip ?? 'N/A' }}
                         @endif
                     </div>
                 </td>

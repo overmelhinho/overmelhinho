@@ -23,22 +23,25 @@ async function getClient(id: string) {
     }
 }
 
-// 🔍 SEO Dinâmico: Título, Descrição e Keywords baseadas na empresa real
+// 🔍 SEO Dinâmico: Título, Descrição e Keywords baseadas na intenção de busca (Serviço + Cidade)
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
     const { id } = await params;
     const client = await getClient(id);
     if (!client) return { title: 'O Vermelhinho | Guia de Empresas' };
 
-    const city = client.enderecos?.[0]?.cidade || '';
-    const segment = client.segmentos?.[0]?.nome || '';
-    const mainKeyword = client.seo_keywords?.[0] ? ` | ${client.seo_keywords[0]}` : '';
-    const title = `${client.nome_fantasia} em ${city}${mainKeyword} | ${segment} | O Vermelhinho`;
-    const description = client.descricao?.substring(0, 160) || `Encontre ${client.nome_fantasia} em ${city}. Confira fotos, contatos, horários e vagas de emprego no guia O Vermelhinho.`;
+    const address = client.enderecos?.[0] || {};
+    const city = address.cidade || '';
+    const uf = address.estado || 'RS';
+    const segment = client.segmentos?.[0]?.nome || 'Empresa';
+    
+    // Padrão Exigido: [Categoria do Serviço] em [Cidade] - [UF]: [Nome da Empresa] | O Vermelhinho
+    const title = `${segment} em ${city} - ${uf}: ${client.nome_fantasia} | O Vermelhinho`;
+    const description = client.descricao?.substring(0, 160) || `Precisa de ${segment} em ${city}? Conheça a ${client.nome_fantasia}. Confira endereços, contatos e horários no guia O Vermelhinho.`;
 
     return {
         title,
         description,
-        keywords: [client.nome_fantasia, city, segment, ...(client.seo_keywords || [])].filter(Boolean).join(', '),
+        keywords: [client.nome_fantasia, city, segment, uf, ...(client.seo_keywords || [])].filter(Boolean).join(', '),
         openGraph: {
             title,
             description,
@@ -59,8 +62,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         return <ClientProfileClient />;
     }
 
-    const city = client.enderecos?.[0]?.cidade || '';
-    const segment = client.segmentos?.[0] || {};
+    const address = client.enderecos?.[0] || {};
+    const city = address.cidade || '';
+    const uf = address.estado || 'RS';
+    const segment = client.segmentos?.[0]?.nome || 'Empresa';
+    
+    // Padrão H1: Idêntico ao Title para relevância máxima
+    const h1Title = `${segment} em ${city} - ${uf}: ${client.nome_fantasia}`;
     
     // Esquemas JSON-LD para SEO
     const breadcrumbJsonLd = {
@@ -76,8 +84,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             {
                 "@type": "ListItem",
                 "position": 2,
-                "name": segment.nome || "Empresas",
-                "item": `${SITE_URL}/busca?segmento=${segment.id || ''}`
+                "name": segment || "Empresas",
+                "item": `${SITE_URL}/busca?segmento=${client.segmentos?.[0]?.id || ''}`
             },
             {
                 "@type": "ListItem",
@@ -110,24 +118,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             } : undefined,
             "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
             "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone),
-            "areaServed": client.cidades_atendidas?.map((c: any) => ({
-                "@type": "City",
-                "name": c.nome,
-                "addressCountry": "BR"
-            }))
         }))
-        : {
-            "@context": "https://schema.org",
-            "@type": "LocalBusiness",
-            "name": client.nome_fantasia,
-            "description": client.descricao,
-            "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
-            "areaServed": client.cidades_atendidas?.map((c: any) => ({
-                "@type": "City",
-                "name": c.nome,
-                "addressCountry": "BR"
-            }))
-        };
+        : null;
 
     return (
         <>
@@ -135,10 +127,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
             />
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
-            />
+            {localBusinessJsonLd && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+                />
+            )}
+            
+            {/* H1 Oculto visualmente ou passado para o componente para garantir SEO */}
+            <h1 className="sr-only">{h1Title}</h1>
+            
             <ClientProfileClient />
         </>
     );
