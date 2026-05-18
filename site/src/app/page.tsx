@@ -251,7 +251,7 @@ export default function Home() {
 
                     <div className="flex space-x-4 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-4 md:space-x-0 md:gap-6">
                         {featured.map((item, idx) => {
-                            const clientLink = item._raw ? getClientSeoUrl(item._raw) : `/cliente/${item.slug}`;
+                            const clientLink = (item as any)._raw ? getClientSeoUrl((item as any)._raw) : `/cliente/${item.slug}`;
                             return (
                             <div key={idx} className="snap-center min-w-[85%] md:min-w-0 bg-white rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border-4 border-white flex flex-col gummy-card group">
                                 <Link href={clientLink} className="relative h-48 overflow-hidden block bg-gray-50 flex items-center justify-center">

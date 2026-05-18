@@ -14,6 +14,7 @@ interface Suggestion {
     image?: string;
     type: 'client' | 'category';
     priority?: boolean;
+    seo_url?: string;
 }
 
 export const SearchAutocomplete = () => {
