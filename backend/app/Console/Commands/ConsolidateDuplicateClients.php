@@ -76,8 +76,8 @@ class ConsolidateDuplicateClients extends Command
 
                     // 5. Mover Segmentos
                     $segmentos = DB::table('cliente_segmento')->where('cliente_id', $duplicate->id)->pluck('segmento_id')->toArray();
-                    if (!empty($segmentos)) {
-                        $matriz->segmentos()->syncWithoutDetaching($segmentos);
+                    foreach (array_unique($segmentos) as $segId) {
+                        DB::statement("INSERT INTO cliente_segmento (cliente_id, segmento_id) VALUES (?, ?) ON CONFLICT DO NOTHING", [$matriz->id, $segId]);
                     }
 
                     // 6. Atualizar a Matriz se ela não tiver logo, mas a duplicata tiver
@@ -95,9 +95,14 @@ class ConsolidateDuplicateClients extends Command
                     DB::table('redes_sociais')->where('cliente_id', $duplicate->id)->delete();
                     DB::table('cliente_segmento')->where('cliente_id', $duplicate->id)->delete();
                     DB::table('cliente_cidade')->where('cliente_id', $duplicate->id)->delete();
+                    
+                    // Excluir os logs de auditoria do duplicado para não violar Foreign Key na hora de deletar
+                    DB::table('audit_logs')->where('cliente_id', $duplicate->id)->delete();
 
-                    // 9. Finalmente, deletar o cliente duplicado
-                    $duplicate->delete();
+                    // 9. Finalmente, deletar o cliente duplicado (desabilitando eventos para não disparar Observer)
+                    Cliente::withoutEvents(function() use ($duplicate) {
+                        $duplicate->delete();
+                    });
 
                     DB::commit();
                 } catch (\Exception $e) {
