@@ -377,10 +377,10 @@ class ClienteController extends Controller
         }
 
         if ($visibilidade === 'visible') {
-            $query->where('exibir_no_site', true);
+            $query->where('exibir_no_site', 'true');
         } elseif ($visibilidade === 'hidden') {
             $query->where(function($q) {
-                $q->where('exibir_no_site', false)->orWhereNull('exibir_no_site');
+                $q->where('exibir_no_site', 'false')->orWhereNull('exibir_no_site');
             });
         }
 
@@ -538,7 +538,7 @@ class ClienteController extends Controller
     public function showPublic($id)
     {
         $query = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews', 'jobOpportunities'])
-            ->where('exibir_no_site', true);
+            ->where('exibir_no_site', 'true');
         
         if (is_numeric($id)) {
             $cliente = $query->find($id);
@@ -572,7 +572,7 @@ class ClienteController extends Controller
         // Base da query: Clientes que NÃO são o atual e NÃO pertencem aos mesmos segmentos
         $baseQuery = Cliente::with(['enderecos', 'segmentos'])
             ->where('id', '!=', $id)
-            ->where('exibir_no_site', true)
+            ->where('exibir_no_site', 'true')
             ->whereDoesntHave('segmentos', function($q) use ($segmentIds) {
                 $q->whereIn('segmentos.id', $segmentIds);
             });
@@ -2309,10 +2309,10 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         }
 
         if ($visibilidade === 'visible') {
-            $query->where('exibir_no_site', true);
+            $query->where('exibir_no_site', 'true');
         } elseif ($visibilidade === 'hidden') {
             $query->where(function($q) {
-                $q->where('exibir_no_site', false)->orWhereNull('exibir_no_site');
+                $q->where('exibir_no_site', 'false')->orWhereNull('exibir_no_site');
             });
         }
 
