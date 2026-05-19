@@ -14,11 +14,19 @@ class ClienteResource extends JsonResource
      */
     public function toArray($request)
     {
+        $tipoCliente = $this->tipo_cliente ?? 'gratuito';
+        $statusAssinatura = $this->status_assinatura ?? 'ativa';
+
+        // ✅ Se é pagante mas está vencido/cancelado, trata como gratuito no site público
+        if ($tipoCliente === 'pagante' && in_array(strtolower($statusAssinatura), ['vencida', 'vencido', 'cancelada', 'cancelado'])) {
+            $tipoCliente = 'gratuito';
+        }
+
         // Tratamento de URL do Logo (Suporta local e externo)
         $logoUrl = $this->logo_url;
         
         // ✅ Clientes Gratuitos NÃO exibem logotipo no site frontend
-        if (($this->tipo_cliente ?? 'gratuito') === 'gratuito') {
+        if ($tipoCliente === 'gratuito') {
             $logoUrl = null;
         } elseif ($logoUrl && !Str::startsWith($logoUrl, ['http://', 'https://'])) {
             $logoUrl = asset('storage/' . $logoUrl);
@@ -38,8 +46,8 @@ class ClienteResource extends JsonResource
             'observacoes' => $this->observacoes,
 
             // ✅ Atributos Consolidados (Removido checks de Schema p/ performance)
-            'tipo_cliente' => $this->tipo_cliente ?? 'gratuito',
-            'status_assinatura' => $this->status_assinatura ?? 'ativa',
+            'tipo_cliente' => $tipoCliente,
+            'status_assinatura' => $statusAssinatura,
 
             'palavras_chave' => $this->palavras_chave,
             'exibir_no_site' => (bool) ($this->exibir_no_site ?? true),

@@ -45,7 +45,7 @@ class ClienteController extends Controller
         $query = Cliente::query()
             ->where('exibir_no_site', 'true')
             ->where(function($sub) {
-                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])
+                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido'])
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
@@ -264,7 +264,7 @@ class ClienteController extends Controller
                 }
             })
             ->where('exibir_no_site', 'true')
-            ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])->orWhere('tipo_cliente', 'gratuito'))
+            ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido'])->orWhere('tipo_cliente', 'gratuito'))
             ->with(['segmentos', 'enderecos', 'cidadesAtendidas'])
             ->when($cityId, function($sq) use ($cityId) {
                 $sq->where(function($sub) use ($cityId) {
