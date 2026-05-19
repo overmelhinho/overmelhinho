@@ -82,8 +82,9 @@ class ClienteController extends Controller
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
                 if ($canUseSimilarity) {
                     // Threshold seguro (0.3) para evitar falsos positivos como 'Deseju Pasteis' em 'desentupidora'
-                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.3", [$normalizedQ])
-                        ->orWhereRaw("similarity(nome_alternativo, ?) > 0.3", [$normalizedQ]);
+                    // Utilizamos word_similarity para buscar o termo "q" DENTRO de frases maiores
+                    $sub->orWhereRaw("word_similarity(?, nome_fantasia) > 0.3", [$normalizedQ])
+                        ->orWhereRaw("word_similarity(?, nome_alternativo) > 0.3", [$normalizedQ]);
                 } else {
                     // Fallback agressivo por palavras
                     $words = explode(' ', $normalizedQ);
@@ -95,9 +96,13 @@ class ClienteController extends Controller
                 }
 
                 // 3. Busca em Segmentos e Endereços
-                $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ) {
+                $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ, $canUseSimilarity, $normalizedQ) {
                         $sq->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
                            ->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+                           
+                        if ($canUseSimilarity) {
+                            $sq->orWhereRaw("word_similarity(?, segmentos.nome) > 0.3", [$normalizedQ]);
+                        }
                     })
                     ->orWhereHas('enderecos', function ($eq) use ($q, $effectiveQ) {
                         $eq->whereRaw('unaccent(bairro) ilike unaccent(?)', ["%{$q}%"])
