@@ -1015,7 +1015,7 @@ public function historico(Request $request, int $id)
             if (!empty($validated['segmentos'])) {
                 $segmentosData = [];
                 foreach (array_values($validated['segmentos']) as $index => $segId) {
-                    $segmentosData[$segId] = ['is_primary' => $index === 0];
+                    $segmentosData[$segId] = ['is_primary' => $index === 0 ? 'true' : 'false'];
                 }
                 $cliente->segmentos()->sync($segmentosData);
             }
@@ -1504,7 +1504,7 @@ public function historico(Request $request, int $id)
                 $segmentosData = [];
                 if (!empty($validated['segmentos'])) {
                     foreach (array_values($validated['segmentos']) as $index => $segId) {
-                        $segmentosData[$segId] = ['is_primary' => $index === 0];
+                        $segmentosData[$segId] = ['is_primary' => $index === 0 ? 'true' : 'false'];
                     }
                 }
                 $cliente->segmentos()->sync($segmentosData);
