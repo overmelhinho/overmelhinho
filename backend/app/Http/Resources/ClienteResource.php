@@ -17,8 +17,10 @@ class ClienteResource extends JsonResource
         $tipoCliente = $this->tipo_cliente ?? 'gratuito';
         $statusAssinatura = $this->status_assinatura ?? 'ativa';
 
-        // ✅ Se é pagante mas está vencido/cancelado, trata como gratuito no site público
-        if ($tipoCliente === 'pagante' && in_array(strtolower((string) $statusAssinatura), ['vencida', 'vencido', 'cancelada', 'cancelado'])) {
+        $isDashboard = (bool) $request->user();
+
+        // ✅ Se é pagante mas está vencido/cancelado, trata como gratuito apenas no site público
+        if (!$isDashboard && $tipoCliente === 'pagante' && in_array(strtolower((string) $statusAssinatura), ['vencida', 'vencido', 'cancelada', 'cancelado'])) {
             $tipoCliente = 'gratuito';
         }
 
