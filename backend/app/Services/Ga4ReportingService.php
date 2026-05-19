@@ -22,6 +22,10 @@ class Ga4ReportingService
     public function __construct()
     {
         $this->propertyId = env('GA4_PROPERTY_ID', '');
+        $credPath = env('GOOGLE_APPLICATION_CREDENTIALS', base_path('storage/app/google-credentials.json'));
+        if (file_exists($credPath)) {
+            putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $credPath);
+        }
     }
 
     /**
@@ -316,12 +320,6 @@ class Ga4ReportingService
     {
         if (empty($this->propertyId)) return ['activeUsers' => 0, 'topPages' => []];
 
-        // Forçamos o caminho das credenciais para garantir consistência com o teste standalone
-        $credPath = base_path('storage/app/google-credentials.json');
-        if (file_exists($credPath)) {
-            putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $credPath);
-        }
-
         $client = new BetaAnalyticsDataClient();
         try {
             // 1. Pega o Total (Exatamente como no teste standalone que funcionou)
@@ -378,11 +376,6 @@ class Ga4ReportingService
     {
         if (empty($this->propertyId) || empty($clientName)) {
             return ['total_views' => 0, 'total_users' => 0, 'avg_time' => 0, 'total_events' => 0, 'cities' => []];
-        }
-
-        $credPath = base_path('storage/app/google-credentials.json');
-        if (file_exists($credPath)) {
-            putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $credPath);
         }
 
         $gaClient = new BetaAnalyticsDataClient();
