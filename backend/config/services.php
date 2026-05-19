@@ -38,6 +38,8 @@ return [
     'google' => [
         'places_key' => env('GOOGLE_PLACES_KEY'),
         'indexing_key_path' => env('GOOGLE_INDEXING_KEY_PATH', storage_path('app/google-indexing-key.json')),
+        'ga4_property_id' => env('GA4_PROPERTY_ID'),
+        'application_credentials' => env('GOOGLE_APPLICATION_CREDENTIALS', storage_path('app/google-credentials.json')),
     ],
     'openai' => [
         'key' => env('OPENAI_API_KEY'),

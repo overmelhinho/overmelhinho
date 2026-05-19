@@ -21,8 +21,8 @@ class Ga4ReportingService
 
     public function __construct()
     {
-        $this->propertyId = env('GA4_PROPERTY_ID', '');
-        $credPath = env('GOOGLE_APPLICATION_CREDENTIALS', base_path('storage/app/google-credentials.json'));
+        $this->propertyId = config('services.google.ga4_property_id', '');
+        $credPath = config('services.google.application_credentials', base_path('storage/app/google-credentials.json'));
         if (file_exists($credPath)) {
             putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $credPath);
         }
@@ -174,6 +174,7 @@ class Ga4ReportingService
             ];
 
         } catch (\Exception $e) {
+            Log::error('GA4 Global Metrics Error: ' . $e->getMessage());
             return ['views' => 0, 'conversions' => 0, 'history' => []];
         } finally {
             $client->close();
