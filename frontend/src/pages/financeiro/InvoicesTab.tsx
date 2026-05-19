@@ -98,6 +98,10 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     const [customStartDate, setCustomStartDate] = useState("");
     const [customEndDate, setCustomEndDate] = useState("");
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(50);
+
     // Modal State
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -164,6 +168,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     };
 
     useEffect(() => {
+        setCurrentPage(1);
         if (onFiltersChange) {
             const params: any = {};
             if (statusFilter !== "all") params.status = statusFilter;
@@ -185,7 +190,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
             }
             onFiltersChange(params);
         }
-    }, [statusFilter, searchTerm, dateRange, customStartDate, customEndDate]);
+    }, [statusFilter, searchTerm, dateRange, customStartDate, customEndDate, syncFilter]);
 
     const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
         queryKey: ["financial-invoices", statusFilter, searchTerm, dateRange, customStartDate, customEndDate],
@@ -317,6 +322,13 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                 return <span className="text-gray-500">{invoice.status}</span>;
         }
     };
+
+    const totalItems = filteredInvoices?.length || 0;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const paginatedInvoices = filteredInvoices?.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     return (
         <div className="space-y-6">
@@ -466,14 +478,14 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                     <p className="mt-2 text-sm">Carregando faturas...</p>
                                 </td>
                             </tr>
-                        ) : filteredInvoices?.length === 0 ? (
+                        ) : paginatedInvoices?.length === 0 ? (
                             <tr>
                                 <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                                     Nenhuma fatura encontrada.
                                 </td>
                             </tr>
                         ) : (
-                            filteredInvoices?.map((invoice) => {
+                            paginatedInvoices?.map((invoice) => {
                                 const isOverdue = invoice.status === "pending" && isBefore(new Date(invoice.due_date), startOfDay(new Date()));
 
                                 return (
@@ -698,12 +710,56 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                     </tbody>
                 </table>
                 <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                    <div className="flex justify-between items-center text-sm">
-                        <div className="text-gray-500">
-                            Mostrando <span className="font-bold text-gray-900">{filteredInvoices?.length || 0}</span> faturas
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-gray-500 font-medium">Mostrar:</span>
+                                <Select value={String(itemsPerPage)} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
+                                    <SelectTrigger className="w-[70px] h-8 bg-white border-gray-200 text-xs font-bold rounded-lg">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                                        <SelectItem value="50">50</SelectItem>
+                                        <SelectItem value="100">100</SelectItem>
+                                        <SelectItem value="150">150</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <span className="text-gray-500">
+                                Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} a {Math.min(currentPage * itemsPerPage, totalItems)} de <span className="font-bold text-gray-900">{totalItems}</span> faturas
+                            </span>
                         </div>
-                        <div className="text-gray-500">
-                            Total: <span className="font-bold text-gray-900">
+
+                        {totalPages > 1 && (
+                            <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="h-7 px-3 text-xs font-bold rounded-md"
+                                >
+                                    Anterior
+                                </Button>
+                                
+                                <span className="text-gray-500 px-3 text-xs">
+                                    Pág <span className="font-bold text-gray-900">{currentPage}</span> de {totalPages}
+                                </span>
+
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="h-7 px-3 text-xs font-bold rounded-md"
+                                >
+                                    Próxima
+                                </Button>
+                            </div>
+                        )}
+
+                        <div className="text-gray-500 font-medium">
+                            Total filtrado: <span className="font-bold text-gray-900 text-base">
                                 R$ {filteredInvoices?.reduce((acc, inv) => acc + Number(inv.amount), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                         </div>
