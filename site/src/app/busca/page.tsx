@@ -280,8 +280,8 @@ function SearchContent() {
     const matchPerfeito = allResults[0] ?? null;
     const allRemaining = allResults.slice(1);
     
-    // Acesso Rápido: até 3 clientes que sejam pagantes
-    const patrocinados = allRemaining.filter((item: any) => item.tipo_cliente === 'pagante').slice(0, 3);
+    // Acesso Rápido: até 3 clientes que sejam pagantes ativos
+    const patrocinados = allRemaining.filter((item: any) => item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura)).slice(0, 3);
     
     // Todos os Resultados: todos os que não entraram no acesso rápido
     const patrocinadosIds = new Set(patrocinados.map((item: any) => item.id));
@@ -466,7 +466,7 @@ function SearchContent() {
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-4 md:space-x-6 mb-3 md:mb-5 cursor-pointer group/item" onClick={() => router.push(getClientLink(matchPerfeito))}>
-                                        {matchPerfeito.tipo_cliente !== 'gratuito' && matchPerfeito.logotipo_url && (
+                                        {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && matchPerfeito.logotipo_url && (
                                             <div className="w-14 h-14 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
                                                 <img src={matchPerfeito.logotipo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                             </div>
@@ -492,7 +492,7 @@ function SearchContent() {
                                         </div>
                                     </div>
                                     
-                                    {matchPerfeito.tipo_cliente !== 'gratuito' && (
+                                    {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && (
                                         <div className="flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-4 mt-2 border-t border-gray-50 pt-6">
                                             <button
                                                 onClick={() => handleWhatsApp(matchPerfeito.id, matchPerfeito.contatos?.[0]?.celular || '')}
@@ -616,7 +616,7 @@ function SearchContent() {
                                                         className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
                                                     >
                                                         <div className="flex items-center space-x-4 md:space-x-6">
-                                                            {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
+                                                            {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && item.logotipo_url && (
                                                                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
                                                                     <img src={item.logotipo_url} className="w-full h-full object-cover" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                                                 </div>
@@ -624,14 +624,14 @@ function SearchContent() {
                                                             <div className="space-y-0.5">
                                                                 <div className="flex items-center space-x-2">
                                                                     <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-base md:text-lg leading-tight">{item.nome_fantasia}</h5>
-                                                                    {item.tipo_cliente === 'pagante' && (
+                                                                    {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && (
                                                                         <span className="text-[8px] md:text-[9px] font-black text-brand-red bg-brand-red/5 px-2 py-0.5 rounded-lg border border-brand-red/10">PREMIUM</span>
                                                                     )}
                                                                 </div>
                                                                 <p className="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
                                                             </div>
                                                         </div>
-                                                    {item.tipo_cliente !== 'gratuito' && (
+                                                    {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && (
                                                         <button 
                                                             onClick={(e) => {
                                                                 e.stopPropagation();

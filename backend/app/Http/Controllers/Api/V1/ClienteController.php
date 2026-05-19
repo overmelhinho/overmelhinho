@@ -155,15 +155,7 @@ class ClienteController extends Controller
 
         $query->orderByRaw("
             CASE 
-                -- 1. Match Exato Absoluto (Prioridade Máxima)
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
-                
-                -- 2. Começa com a palavra exata (Prioridade Altíssima)
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
-                
-                -- 3. Pagante Ativo na Cidade Buscada
+                -- 1. Pagante Ativo na Cidade Buscada
                 WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') AND EXISTS (
                     SELECT 1 FROM enderecos 
                     WHERE enderecos.cliente_id = clientes.id 
@@ -171,18 +163,31 @@ class ClienteController extends Controller
                         enderecos.cidade ilike (SELECT nome FROM cidades WHERE id = ? LIMIT 1)
                         OR EXISTS (SELECT 1 FROM cliente_cidade cc WHERE cc.cliente_id = clientes.id AND cc.cidade_id = ?)
                     )
-                ) THEN 2
+                ) THEN 0
 
-                -- 4. Pagante Ativo Geral
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 3
+                -- 2. Pagante Ativo Geral
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 1
 
-                -- 5. Contém a palavra em qualquer lugar
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 4
-
-                -- 6. Restante (Gratuitos ou Inativos)
-                ELSE 5
+                -- 3. Gratuito
+                ELSE 2
             END ASC
-        ", [$q, $q, "{$q} %", "{$q} %", $orderCityId, $orderCityId, "%{$q}%"]);
+        ", [$orderCityId, $orderCityId]);
+
+        $query->orderByRaw("
+            CASE 
+                -- A. Match Exato
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
+                
+                -- B. Começa com a palavra exata
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
+                
+                -- C. Contém a palavra em qualquer lugar
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
+                ELSE 3
+            END ASC
+        ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
 
         // Desempate por similaridade fonética
         if ($canUseSimilarity) {
