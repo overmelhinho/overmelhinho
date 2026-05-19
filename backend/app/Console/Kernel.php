@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\GenerateRecurringInvoices::class,
         \App\Console\Commands\CheckOverdueInvoicesAndCreateTickets::class,
         \App\Console\Commands\GenerateRenewals::class,
+        \App\Console\Commands\UpdateClientStatuses::class,
     ];
 
     /**
@@ -33,6 +34,9 @@ class Kernel extends ConsoleKernel
 
         // 🔄 Gera renovações no dia 1 de cada mês às 05:00 (contratos que vencem no mês seguinte)
         $schedule->command('renewals:generate')->monthlyOn(1, '05:00');
+
+        // 📅 Verifica a vigência de contratos e inativa clientes vencidos todos os dias às 00:30
+        $schedule->command('app:update-client-statuses')->dailyAt('00:30');
     }
 
     /**
