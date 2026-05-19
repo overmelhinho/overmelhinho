@@ -103,8 +103,23 @@ class ReportController extends Controller
             ->join('plans', 'clientes.plan_id', '=', 'plans.id')
             ->sum('plans.price');
 
-        $revenue = Invoice::where('status', 'paid')->sum('amount');
-        $pendente = Invoice::where('status', 'pending')->sum('amount');
+        $days = (int)str_replace('d', '', $period);
+        if ($days == 0) $days = 30;
+
+        $revenueQuery = Invoice::where('status', 'paid');
+        $pendenteQuery = Invoice::where('status', 'pending');
+
+        if ($startDate && $endDate) {
+            $revenueQuery->whereBetween('due_date', [$startDate, $endDate]);
+            $pendenteQuery->whereBetween('due_date', [$startDate, $endDate]);
+        } else {
+            $revenueQuery->where('due_date', '>=', now()->subDays($days));
+            $pendenteQuery->where('due_date', '>=', now()->subDays($days));
+        }
+
+        $revenue = $revenueQuery->sum('amount');
+        $pendente = $pendenteQuery->sum('amount');
+
         $totalClientesAtivos = Cliente::where('status_assinatura', 'ativo')->count();
 
         $totalQuotes = Quote::count();
@@ -141,8 +156,6 @@ class ReportController extends Controller
                 ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
                 ->count();
         } else {
-            $days = (int)str_replace('d', '', $period);
-            if ($days == 0) $days = 30;
             $totalConversions = ClientInteraction::whereIn('interaction_type', ['whatsapp_click', 'waze_click'])
                 ->where('created_at', '>=', now()->subDays($days))
                 ->count();
