@@ -124,10 +124,13 @@ export default function SearchMap({ results, highlighted, onHover, onClick, onMa
       const isPremium = business.tipo_cliente === 'pagante' || business.tipo_cliente === 'premium';
       const hasLogo = !!business.logotipo_url;
 
-      // Se for premium/pagante E tiver logo próprio, mostra logo arredondado.
-      // Caso contrário (gratuito ou sem logo), SEMPRE mostra o ícone genérico (Briefcase ou Estrela se for 1º)
-      const iconInnerHtml = (isPremium && hasLogo)
-        ? `<img src="${business.logotipo_url}" class="pin-logo w-full h-full object-cover rounded-[1.2rem] p-[2px]" />`
+      // Se for premium/pagante, mostra logo arredondado (se tiver) ou Avatar (primeira letra)
+      // Caso contrário (gratuito), SEMPRE mostra o ícone genérico (Briefcase ou Estrela se for 1º)
+      const firstLetter = business.nome_fantasia ? business.nome_fantasia.charAt(0).toUpperCase() : '';
+      const iconInnerHtml = isPremium
+        ? (hasLogo 
+            ? `<img src="${business.logotipo_url}" class="pin-logo w-full h-full object-cover rounded-[1.2rem] p-[2px]" onerror="this.outerHTML='<span class=\\'text-lg font-black text-gray-400 uppercase\\'>${firstLetter}</span>'" />`
+            : `<span class="text-lg font-black text-gray-400 uppercase">${firstLetter}</span>`)
         : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     ${isFirst
           ? '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'

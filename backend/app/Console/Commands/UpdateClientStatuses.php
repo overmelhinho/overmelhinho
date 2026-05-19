@@ -34,48 +34,36 @@ class UpdateClientStatuses extends Command
         $this->info("Iniciando verificação de vigência de autorizações ({$today})...");
         Log::info("Iniciando verificação de vigência de autorizações ({$today})...");
 
-        // 1. Encontrar todos os clientes pagantes que estão ativos ou pendentes
-        $clientesPagantes = Cliente::where('tipo_cliente', 'pagante')
+        // 1. Marcar como 'vencida' os clientes pagantes/ativos que NÃO possuem nenhuma autorização vigente
+        $vencidosCount = DB::table('clientes')
+            ->where('tipo_cliente', 'pagante')
             ->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'premium'])
-            ->get();
-            
-        $atualizadosParaVencido = 0;
-        $atualizadosParaAtivo = 0;
+            ->whereNotExists(function ($query) use ($today) {
+                $query->select(DB::raw(1))
+                    ->from('autorizacoes')
+                    ->whereColumn('autorizacoes.cliente_id', 'clientes.id')
+                    ->where('autorizacoes.status', 'assinado')
+                    ->where('autorizacoes.data_fim', '>=', $today);
+            })
+            ->update(['status_assinatura' => 'vencida', 'updated_at' => now()]);
 
-        foreach ($clientesPagantes as $cliente) {
-            // Verifica se possui pelo menos UMA autorização vigente e assinada
-            // Ou seja, status = 'assinado' E data_fim >= hoje
-            $temVigente = DB::table('autorizacoes')
-                ->where('cliente_id', $cliente->id)
-                ->where('status', 'assinado')
-                ->where('data_fim', '>=', $today)
-                ->exists();
-
-            if (!$temVigente) {
-                // Não tem contrato vigente -> status deve ser 'vencida'
-                $oldStatus = $cliente->status_assinatura;
-                $cliente->status_assinatura = 'vencida';
-                $cliente->save();
-                
-                $atualizadosParaVencido++;
-                $this->warn("Cliente ID {$cliente->id} ({$cliente->nome_fantasia}): {$oldStatus} -> vencida (Sem contrato vigente)");
-            } else {
-                // Tem contrato vigente -> garantir que status seja 'ativa'
-                if (!in_array($cliente->status_assinatura, ['ativa', 'ativo'])) {
-                    $oldStatus = $cliente->status_assinatura;
-                    $cliente->status_assinatura = 'ativa';
-                    $cliente->save();
-                    
-                    $atualizadosParaAtivo++;
-                    $this->info("Cliente ID {$cliente->id} ({$cliente->nome_fantasia}): {$oldStatus} -> ativa (Contrato vigente encontrado)");
-                }
-            }
-        }
+        // 2. Marcar como 'ativa' os clientes pagantes que POSSUEM autorização vigente, mas estão com status vencido ou pendente
+        $reativadosCount = DB::table('clientes')
+            ->where('tipo_cliente', 'pagante')
+            ->whereNotIn('status_assinatura', ['ativa', 'ativo'])
+            ->whereExists(function ($query) use ($today) {
+                $query->select(DB::raw(1))
+                    ->from('autorizacoes')
+                    ->whereColumn('autorizacoes.cliente_id', 'clientes.id')
+                    ->where('autorizacoes.status', 'assinado')
+                    ->where('autorizacoes.data_fim', '>=', $today);
+            })
+            ->update(['status_assinatura' => 'ativa', 'updated_at' => now()]);
         
         $this->info("Processo concluído!");
-        $this->line("Clientes marcados como VENCIDA: {$atualizadosParaVencido}");
-        $this->line("Clientes reativados: {$atualizadosParaAtivo}");
+        $this->line("Clientes marcados como VENCIDA: {$vencidosCount}");
+        $this->line("Clientes reativados: {$reativadosCount}");
         
-        Log::info("Verificação de contratos concluída. Vencidos: {$atualizadosParaVencido}. Reativados: {$atualizadosParaAtivo}");
+        Log::info("Verificação de contratos concluída. Vencidos: {$vencidosCount}. Reativados: {$reativadosCount}");
     }
 }

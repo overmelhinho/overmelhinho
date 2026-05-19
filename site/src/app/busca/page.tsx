@@ -466,9 +466,13 @@ function SearchContent() {
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-4 md:space-x-6 mb-3 md:mb-5 cursor-pointer group/item" onClick={() => router.push(getClientLink(matchPerfeito))}>
-                                        {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && matchPerfeito.logotipo_url && (
-                                            <div className="w-14 h-14 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500">
-                                                <img src={matchPerfeito.logotipo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                        {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && (
+                                            <div className="w-14 h-14 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                                {matchPerfeito.logotipo_url ? (
+                                                    <img src={matchPerfeito.logotipo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-2xl font-black text-gray-400 uppercase">${matchPerfeito.nome_fantasia.charAt(0)}</span>`; }} />
+                                                ) : (
+                                                    <span className="text-3xl font-black text-gray-400 uppercase">{matchPerfeito.nome_fantasia.charAt(0)}</span>
+                                                )}
                                             </div>
                                         )}
                                         <div className="space-y-1 md:space-y-2 flex-1">
@@ -616,9 +620,13 @@ function SearchContent() {
                                                         className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
                                                     >
                                                         <div className="flex items-center space-x-4 md:space-x-6">
-                                                            {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && item.logotipo_url && (
-                                                                <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
-                                                                    <img src={item.logotipo_url} className="w-full h-full object-cover" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                            {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && (
+                                                                <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                                                    {item.logotipo_url ? (
+                                                                        <img src={item.logotipo_url} className="w-full h-full object-cover" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-xl font-black text-gray-400 uppercase">${item.nome_fantasia.charAt(0)}</span>`; }} />
+                                                                    ) : (
+                                                                        <span className="text-2xl font-black text-gray-400 uppercase">{item.nome_fantasia.charAt(0)}</span>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                             <div className="space-y-0.5">
