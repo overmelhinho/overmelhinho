@@ -795,6 +795,22 @@ public function historico(Request $request, int $id)
                 }
             }
 
+            $segmentos = $request->input('segmentos');
+            if (is_array($segmentos)) {
+                $segmentosNorm = array_map(function ($s) {
+                    return is_array($s) && isset($s['id']) ? (int) $s['id'] : (int) $s;
+                }, $segmentos);
+                $request->merge(['segmentos' => $segmentosNorm]);
+            }
+
+            $cidadesAtendidas = $request->input('cidades_atendidas');
+            if (is_array($cidadesAtendidas)) {
+                $cidadesNorm = array_map(function ($c) {
+                    return is_array($c) && isset($c['id']) ? (int) $c['id'] : (int) $c;
+                }, $cidadesAtendidas);
+                $request->merge(['cidades_atendidas' => $cidadesNorm]);
+            }
+
             $request->merge(['redes_sociais' => $redesNormalized]);
 
             $validated = $request->validate([
@@ -1185,6 +1201,22 @@ public function historico(Request $request, int $id)
                 'video'         => $request->input('video') ?? $request->input('video_link'),
                 'portfolio_url' => $request->input('portfolio_url') ?? $request->input('arquivo_midia'),
             ]);
+
+            $segmentos = $request->input('segmentos');
+            if (is_array($segmentos)) {
+                $segmentosNorm = array_map(function ($s) {
+                    return is_array($s) && isset($s['id']) ? (int) $s['id'] : (int) $s;
+                }, $segmentos);
+                $request->merge(['segmentos' => $segmentosNorm]);
+            }
+
+            $cidadesAtendidas = $request->input('cidades_atendidas');
+            if (is_array($cidadesAtendidas)) {
+                $cidadesNorm = array_map(function ($c) {
+                    return is_array($c) && isset($c['id']) ? (int) $c['id'] : (int) $c;
+                }, $cidadesAtendidas);
+                $request->merge(['cidades_atendidas' => $cidadesNorm]);
+            }
 
             // Normaliza redes_sociais (mesma lógica do store)
             $redesNormalized = [];
