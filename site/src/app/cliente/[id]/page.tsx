@@ -23,6 +23,19 @@ async function getClient(id: string) {
     }
 }
 
+// Função auxiliar para criar slug a partir de string
+function slugify(text: string) {
+    return text
+        .toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, '-')
+        .replace(/--+/g, '-')
+        .trim();
+}
+
 // 🔍 SEO Dinâmico: Título, Descrição e Keywords baseadas na intenção de busca (Serviço + Cidade)
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
     const { id } = await params;
@@ -34,6 +47,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const uf = address.estado || 'RS';
     const segment = client.segmentos?.[0]?.nome || 'Empresa';
     
+    // Canonical URL generation based on SEO pattern
+    const canonicalCitySlug = city ? slugify(city) : 'cidade';
+    const canonicalSegmentSlug = segment ? slugify(segment) : 'segmento';
+    const canonicalUrl = `${SITE_URL}/${canonicalCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`;
+
     // Padrão Exigido: [Categoria do Serviço] em [Cidade] - [UF]: [Nome da Empresa] | O Vermelhinho
     const title = `${segment} em ${city} - ${uf}: ${client.nome_fantasia} | O Vermelhinho`;
     const description = client.descricao?.substring(0, 160) || `Precisa de ${segment} em ${city}? Conheça a ${client.nome_fantasia}. Confira endereços, contatos e horários no guia O Vermelhinho.`;
@@ -49,7 +67,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             type: 'website',
         },
         alternates: {
-            canonical: `/cliente/${client.slug || client.id}`,
+            canonical: canonicalUrl,
         }
     };
 }
@@ -118,6 +136,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             } : undefined,
             "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
             "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone),
+            "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
+                "@type": "City",
+                "name": c.nome,
+                "addressRegion": c.uf || "RS",
+                "addressCountry": "BR"
+            })) : undefined,
         }))
         : null;
 

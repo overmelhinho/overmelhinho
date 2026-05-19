@@ -81,9 +81,9 @@ class ClienteController extends Controller
 
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
                 if ($canUseSimilarity) {
-                    // Threshold mais baixo (0.1) para capturar "caza" vs "casa"
-                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.1", [$normalizedQ])
-                        ->orWhereRaw("similarity(nome_alternativo, ?) > 0.1", [$normalizedQ]);
+                    // Threshold seguro (0.3) para evitar falsos positivos como 'Deseju Pasteis' em 'desentupidora'
+                    $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.3", [$normalizedQ])
+                        ->orWhereRaw("similarity(nome_alternativo, ?) > 0.3", [$normalizedQ]);
                 } else {
                     // Fallback agressivo por palavras
                     $words = explode(' ', $normalizedQ);
@@ -992,7 +992,11 @@ public function historico(Request $request, int $id)
             $cliente = Cliente::create($clienteData);
 
             if (!empty($validated['segmentos'])) {
-                $cliente->segmentos()->sync($validated['segmentos']);
+                $segmentosData = [];
+                foreach (array_values($validated['segmentos']) as $index => $segId) {
+                    $segmentosData[$segId] = ['is_primary' => $index === 0];
+                }
+                $cliente->segmentos()->sync($segmentosData);
             }
 
             if (!empty($validated['cidades_atendidas'])) {
@@ -1460,7 +1464,13 @@ public function historico(Request $request, int $id)
 
             // relações pivot
             if (array_key_exists('segmentos', $validated)) {
-                $cliente->segmentos()->sync($validated['segmentos'] ?? []);
+                $segmentosData = [];
+                if (!empty($validated['segmentos'])) {
+                    foreach (array_values($validated['segmentos']) as $index => $segId) {
+                        $segmentosData[$segId] = ['is_primary' => $index === 0];
+                    }
+                }
+                $cliente->segmentos()->sync($segmentosData);
             }
 
             if (array_key_exists('cidades_atendidas', $validated)) {

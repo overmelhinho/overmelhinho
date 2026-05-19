@@ -13,7 +13,12 @@ class RecoverCitiesFromLegacy extends Command
 
     public function handle()
     {
-        $this->info('Iniciando recuperação de cidades das filiais/duplicatas deletadas...');
+        $this->info('Iniciando recuperação de cidades das filiais/duplicatas deletadas (CORREÇÃO)...');
+
+        // Carregar mapeamento correto
+        $this->info('Lendo endereços e endereços_bairros...');
+        $enderecosBairrosMap = DB::connection('legacy')->table('enderecos_bairros')->get()->keyBy('id');
+        $enderecosMap = DB::connection('legacy')->table('enderecos')->get()->keyBy('id');
 
         // 1. Pegar todos os nomes que tinham duplicatas no banco legado
         $duplicates = DB::connection('legacy')->table('clientes')
@@ -47,16 +52,19 @@ class RecoverCitiesFromLegacy extends Command
 
             foreach ($legacyFiliais as $lf) {
                 if ($lf->id_endereco) {
-                    $legacyEnd = DB::connection('legacy')->table('enderecos')->where('id', $lf->id_endereco)->first();
-                    if ($legacyEnd && $legacyEnd->id_cidade) {
-                        $cidadesToAttach[] = $legacyEnd->id_cidade;
+                    $leb = $enderecosBairrosMap[$lf->id_endereco] ?? null;
+                    if ($leb) {
+                        $legacyEnd = $enderecosMap[$leb->id_endereco] ?? null;
+                        if ($legacyEnd && $legacyEnd->id_cidade) {
+                            $cidadesToAttach[] = $legacyEnd->id_cidade;
+                        }
                     }
                 }
             }
 
             if (!empty($cidadesToAttach)) {
                 $cidadesToAttach = array_unique($cidadesToAttach);
-                $matriz->cidadesAtendidas()->syncWithoutDetaching($cidadesToAttach);
+                $matriz->cidadesAtendidas()->sync($cidadesToAttach);
                 $cidadesCorrigidas += count($cidadesToAttach);
             }
 

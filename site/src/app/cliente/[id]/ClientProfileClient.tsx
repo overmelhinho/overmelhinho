@@ -323,7 +323,13 @@ export default function ClientProfileClient() {
             "reviewCount": client.reviews_count || 1
         } : undefined,
         "keywords": client.seo_keywords?.join(", "),
-        "sameAs": client.redes_sociais?.map((r: any) => r.url) || []
+        "sameAs": client.redes_sociais?.map((r: any) => r.url) || [],
+        "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
+            "@type": "City",
+            "name": c.nome,
+            "addressRegion": c.uf || "RS",
+            "addressCountry": "BR"
+        })) : undefined
     };
 
     const breadcrumbData = {
@@ -572,10 +578,16 @@ export default function ClientProfileClient() {
                                                     <p className="text-lg font-black text-gray-900 font-serif italic">{new Date(client.data_fundacao).getFullYear()}</p>
                                                 </div>
                                             )}
-                                            {client.segmentos?.[0]?.nome && (
+                                            {client.segmentos?.length > 0 && (
                                                 <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
-                                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">Segmento</p>
-                                                    <p className="text-lg text-gray-900 font-serif italic">{client.segmentos[0].nome}</p>
+                                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {client.segmentos.map((seg: any) => (
+                                                            <span key={seg.id} className="text-sm text-gray-900 font-serif italic bg-white px-3 py-1 rounded-xl border border-gray-100 shadow-sm">
+                                                                {seg.nome}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

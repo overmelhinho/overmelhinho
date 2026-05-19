@@ -426,7 +426,7 @@ export default function ClienteCreateFromLead() {
               telefone_secundario: "",
               celular: "",
               telefone_outro: "",
-              whatsapp_selected: "telefone_principal",
+              whatsapp_selected: "",
               has_whatsapp_principal: false,
               has_whatsapp_secundario: false,
               has_whatsapp_celular: false,

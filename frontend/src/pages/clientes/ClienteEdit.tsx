@@ -221,7 +221,7 @@ export default function ClienteEdit() {
       telefone_secundario: contato?.telefone_secundario || "",
       celular: contato?.celular || "",
       telefone_outro: contato?.telefone_outro || "",
-      whatsapp_selected: contato?.whatsapp_selected || "telefone_principal",
+      whatsapp_selected: contato?.whatsapp_selected || "",
       has_whatsapp_principal: !!contato?.has_whatsapp_principal,
       has_whatsapp_secundario: !!contato?.has_whatsapp_secundario,
       has_whatsapp_celular: !!contato?.has_whatsapp_celular,

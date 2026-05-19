@@ -13,6 +13,13 @@ class Cliente extends Model
     protected static function booted()
     {
         static::saving(function ($cliente) {
+            // Extract the src URL from an iframe if provided
+            if (!empty($cliente->video) && str_contains($cliente->video, '<iframe')) {
+                if (preg_match('/src=["\']([^"\']+)["\']/', $cliente->video, $matches)) {
+                    $cliente->video = $matches[1];
+                }
+            }
+
             if (empty($cliente->slug) && !empty($cliente->nome_fantasia)) {
                 // Gera o slug altamente sanitizado
                 $slug = \App\Services\SlugService::create($cliente->nome_fantasia);
@@ -125,7 +132,9 @@ class Cliente extends Model
 
     public function segmentos()
     {
-        return $this->belongsToMany(Segmento::class , 'cliente_segmento', 'cliente_id', 'segmento_id');
+        return $this->belongsToMany(Segmento::class , 'cliente_segmento', 'cliente_id', 'segmento_id')
+                    ->withPivot('is_primary')
+                    ->orderByDesc('cliente_segmento.is_primary');
     }
 
     public function cidadesAtendidas()
