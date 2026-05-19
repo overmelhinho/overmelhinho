@@ -418,10 +418,10 @@ export default function ClientProfileClient() {
                 <div className="bg-white rounded-[2.5rem] md:rounded-[4rem] p-7 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.12)] border-2 border-white gummy-card relative">
 
                     {/* Floating Profile Image */}
-                    {isPagante && (
+                    {isPagante && client.logotipo_url && (
                         <div className="absolute -top-10 md:-top-20 left-8 md:left-10 w-20 h-20 md:w-40 md:h-40 rounded-3xl md:rounded-full bg-white p-1 shadow-2xl border-4 border-white overflow-hidden group">
                             <img
-                                src={client.logotipo_url || "https://images.unsplash.com/photo-1599305090598-fe179d501227?w=400"}
+                                src={client.logotipo_url}
                                 className="w-full h-full object-contain p-2 rounded-[1rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
                                 alt={`Logotipo de ${client.nome_fantasia}`}
                             />
@@ -1040,12 +1040,16 @@ export default function ClientProfileClient() {
                                     }}
                                     className="bg-white rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white gummy-card group cursor-pointer hover:-translate-y-2 transition-all"
                                 >
-                                    <div className="h-48 overflow-hidden relative bg-gray-100">
-                                        <img
-                                            src={rec.galeria?.[0]?.url || rec.logotipo_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500"}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
-                                            alt={rec.nome_fantasia}
-                                        />
+                                    <div className="h-48 overflow-hidden relative bg-gray-100 flex items-center justify-center">
+                                        {(rec.galeria?.[0]?.url || rec.logotipo_url) ? (
+                                            <img
+                                                src={rec.galeria?.[0]?.url || rec.logotipo_url}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
+                                                alt={rec.nome_fantasia}
+                                            />
+                                        ) : (
+                                            <Briefcase size={40} className="text-gray-300 group-hover:scale-110 transition-all duration-700" />
+                                        )}
                                         <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[8px] font-black text-white uppercase tracking-widest">
                                             {rec.segmentos?.[0]?.nome || 'Negócio Local'}
                                         </div>
