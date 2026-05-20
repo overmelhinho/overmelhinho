@@ -436,13 +436,13 @@ class MigrateLegacyData extends Command
                         [
                             'client_id' => $lv->id_clientes,
                             'title' => $lv->titulo,
-                            'description' => $lv->descricao,
-                            'salary_range' => $lv->faixa_salarial,
-                            'hiring_type' => $lv->tipo_contrato,
-                            'work_model' => $lv->metodo_trabalho,
+                            'description' => $this->cleanLegacyHtml($lv->descricao),
+                            'salary_range' => $this->mapSalaryRange($lv->faixa_salarial),
+                            'hiring_type' => $this->mapContractType($lv->tipo_contrato),
+                            'work_model' => $lv->metodo_trabalho == '1' ? 'Presencial' : null,
                             'vacancies' => $lv->nro_vagas,
                             'experience_required' => $lv->experiencia_exigida,
-                            'education_level' => $lv->nivel_escolaridade,
+                            'education_level' => $this->mapEducationLevel($lv->nivel_escolaridade),
                             'contact_email' => $lv->email,
                             'contact_whatsapp' => $lv->whatsapp,
                             'is_active' => 'true',
@@ -502,6 +502,46 @@ class MigrateLegacyData extends Command
 
         $bar->finish();
         $this->newLine();
+    }
+
+    private function cleanLegacyHtml($html)
+    {
+        if (!$html) return null;
+        $desc = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $desc = str_ireplace(['<br>', '<br/>', '<br />'], "\n", $desc);
+        $desc = strip_tags($desc);
+        $desc = html_entity_decode($desc, ENT_QUOTES, 'UTF-8');
+        return trim(preg_replace("/\n{3,}/", "\n\n", $desc));
+    }
+
+    private function mapSalaryRange($id)
+    {
+        $map = [
+            '1' => 'Até R$ 1.000,00', '2' => 'R$ 1.000,00 a R$ 2.000,00', '3' => 'R$ 2.000,00 a R$ 3.000,00',
+            '4' => 'R$ 3.000,00 a R$ 4.000,00', '5' => 'R$ 4.000,00 a R$ 5.000,00', '6' => 'Acima de R$ 5.000,00',
+            '7' => 'A Combinar', '8' => 'A Combinar',
+        ];
+        return $map[$id] ?? null;
+    }
+
+    private function mapContractType($id)
+    {
+        $map = [
+            '1' => 'CLT (Efetivo)', '2' => 'PJ (Pessoa Jurídica)', '3' => 'Estágio',
+            '4' => 'Temporário', '5' => 'Freelancer', '6' => 'Trainee',
+        ];
+        return $map[$id] ?? null;
+    }
+
+    private function mapEducationLevel($id)
+    {
+        $map = [
+            '1' => 'Ensino Fundamental Incompleto', '2' => 'Ensino Fundamental Completo', '3' => 'Ensino Médio Incompleto',
+            '4' => 'Ensino Médio Completo', '5' => 'Ensino Técnico Incompleto', '6' => 'Ensino Técnico Completo',
+            '7' => 'Ensino Superior Incompleto', '8' => 'Ensino Superior Completo', '9' => 'Pós-graduação',
+            '10' => 'Indiferente / Não Informado',
+        ];
+        return $map[$id] ?? null;
     }
 
     private function migrateUsuarios()
