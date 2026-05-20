@@ -834,6 +834,14 @@ class CampanhaMidiaController extends Controller
             $m->meta_json = (json_last_error() === JSON_ERROR_NONE) ? $decoded : null;
         }
 
+        if (property_exists($m, 'desktop_url') && !empty($m->desktop_url) && str_starts_with($m->desktop_url, '/storage/')) {
+            $m->desktop_url = rtrim(config('app.url'), '/') . $m->desktop_url;
+        }
+        
+        if (property_exists($m, 'mobile_url') && !empty($m->mobile_url) && str_starts_with($m->mobile_url, '/storage/')) {
+            $m->mobile_url = rtrim(config('app.url'), '/') . $m->mobile_url;
+        }
+
         return $m;
     }
 

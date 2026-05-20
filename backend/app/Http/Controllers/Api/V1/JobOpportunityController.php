@@ -71,14 +71,25 @@ class JobOpportunityController extends Controller
         }
 
         if ($request->search) {
-            $query->where('title', 'like', '%' . $request->search . '%');
+            $query->where(function ($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('city', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('client', function ($q2) use ($request) {
+                      $q2->where('nome_fantasia', 'like', '%' . $request->search . '%')
+                         ->orWhere('razao_social', 'like', '%' . $request->search . '%');
+                  });
+            });
+        }
+
+        if ($request->city) {
+            $query->where('city', 'like', '%' . $request->city . '%');
         }
 
         if ($request->status) {
             $query->where('status', $request->status);
         }
 
-        $jobs = $query->orderBy('created_at', 'desc')->paginate(15);
+        $jobs = $query->orderBy('created_at', 'desc')->paginate(20);
 
         return response()->json($jobs);
     }
@@ -208,15 +219,23 @@ class JobOpportunityController extends Controller
         // Upload do currículo
         $resumePath = $request->file('resume')->store('curriculos', 'public');
 
-        $candidate = Candidate::create([
-            'job_opportunity_id' => $id,
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
-            'linkedin_url' => $validated['linkedin_url'] ?? null,
-            'resume_path' => $resumePath,
-            'status' => 'New',
-        ]);
+        try {
+            $candidate = Candidate::create([
+                'job_opportunity_id' => $id,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+                'linkedin_url' => $validated['linkedin_url'] ?? null,
+                'resume_path' => $resumePath,
+                'status' => 'New',
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Caso ocorra Race Condition (usuário clicar várias vezes seguidas no botão)
+            if ($e->getCode() === '23505') { // Postgres Unique Violation
+                return response()->json(['message' => 'Você já se candidatou a esta vaga.'], 422);
+            }
+            throw $e;
+        }
 
         return response()->json([
             'message' => 'Candidatura enviada com sucesso!',

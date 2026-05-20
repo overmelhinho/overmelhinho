@@ -52,7 +52,7 @@ class JobOpportunity extends Model
     // Scope: apenas vagas ativas e publicadas (para o site público)
     public function scopePublished($query)
     {
-        return $query->where('is_active', true)
+        return $query->where('is_active', \Illuminate\Support\Facades\DB::raw('true'))
             ->where('status', 'Published')
             ->where(function ($q) {
             $q->whereNull('expires_at')

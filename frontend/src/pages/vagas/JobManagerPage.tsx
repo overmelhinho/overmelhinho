@@ -14,6 +14,8 @@ interface Job {
     is_active: boolean;
     candidates_count: number;
     created_at: string;
+    published_at: string | null;
+    expires_at: string | null;
     client?: { nome_fantasia: string };
 }
 
@@ -33,18 +35,24 @@ const statusColors: Record<string, string> = {
 
 export default function JobManagerPage() {
     const [jobs, setJobs] = useState<Job[]>([]);
+    const [total, setTotal] = useState<number>(0);
+    const [page, setPage] = useState<number>(1);
+    const [lastPage, setLastPage] = useState<number>(1);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState("");
 
-    const fetchJobs = async () => {
+    const fetchJobs = async (pageNumber = 1) => {
         setLoading(true);
         try {
-            const params: Record<string, string> = {};
+            const params: Record<string, string | number> = { page: pageNumber };
             if (search) params.search = search;
             if (filterStatus) params.status = filterStatus;
             const { data } = await api.get("/v1/jobs", { params });
             setJobs(data.data || data);
+            setTotal(data.total || (Array.isArray(data) ? data.length : 0));
+            setLastPage(data.last_page || 1);
+            setPage(pageNumber);
         } catch {
             toast.error("Erro ao carregar vagas.");
         } finally {
@@ -52,7 +60,7 @@ export default function JobManagerPage() {
         }
     };
 
-    useEffect(() => { fetchJobs(); }, []);
+    useEffect(() => { fetchJobs(1); }, []);
 
     const toggleActive = async (job: Job) => {
         try {
@@ -81,7 +89,7 @@ export default function JobManagerPage() {
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800">Vagas de Emprego</h1>
-                    <p className="text-sm text-slate-500">Gerencie as vagas e candidatos</p>
+                    <p className="text-sm text-slate-500">Gerencie as vagas e candidatos {total ? `(Total: ${total})` : ''}</p>
                 </div>
                 <Link
                     to="/vagas/nova"
@@ -94,8 +102,8 @@ export default function JobManagerPage() {
             {/* Filtros */}
             <div className="mb-5 flex flex-wrap gap-3">
                 <input
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 transition"
-                    placeholder="Buscar por título..."
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 transition min-w-[300px]"
+                    placeholder="Buscar por título, empresa ou cidade..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && fetchJobs()}
@@ -136,9 +144,12 @@ export default function JobManagerPage() {
             ) : (
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <table className="w-full text-sm">
+                        {/* Table content unchanged */}
                         <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th className="px-5 py-3 text-left">Vaga</th>
+                                <th className="px-5 py-3 text-left">Data Publicado</th>
+                                <th className="px-5 py-3 text-left">Data Validade</th>
                                 <th className="px-5 py-3 text-left">Status</th>
                                 <th className="px-5 py-3 text-center">Ativo no Site</th>
                                 <th className="px-5 py-3 text-center">Candidatos</th>
@@ -158,6 +169,16 @@ export default function JobManagerPage() {
                                         {job.client && (
                                             <p className="text-xs text-slate-400">🏢 {job.client.nome_fantasia}</p>
                                         )}
+                                    </td>
+                                    <td className="px-5 py-4">
+                                        <span className="text-xs text-slate-600">
+                                            {job.published_at ? new Date(job.published_at).toLocaleDateString('pt-BR') : '-'}
+                                        </span>
+                                    </td>
+                                    <td className="px-5 py-4">
+                                        <span className="text-xs text-slate-600">
+                                            {job.expires_at ? new Date(job.expires_at).toLocaleDateString('pt-BR') : '-'}
+                                        </span>
                                     </td>
                                     <td className="px-5 py-4">
                                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColors[job.status] ?? "bg-gray-100 text-gray-600"}`}>
@@ -201,6 +222,31 @@ export default function JobManagerPage() {
                             ))}
                         </tbody>
                     </table>
+
+                    {/* Pagination */}
+                    {lastPage > 1 && (
+                        <div className="flex items-center justify-between border-t border-slate-200 bg-white px-5 py-3">
+                            <span className="text-sm text-slate-500">
+                                Página {page} de {lastPage}
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    disabled={page === 1}
+                                    onClick={() => fetchJobs(page - 1)}
+                                    className="rounded-lg border border-slate-200 px-3 py-1 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                                >
+                                    Anterior
+                                </button>
+                                <button
+                                    disabled={page === lastPage}
+                                    onClick={() => fetchJobs(page + 1)}
+                                    className="rounded-lg border border-slate-200 px-3 py-1 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                                >
+                                    Próxima
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
