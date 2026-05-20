@@ -136,9 +136,19 @@ class PublicAdController extends Controller
                 $mobile = $base->whereNotNull('mobile_url')->first();
 
                 if ($desktop || $mobile) {
+                    $dUrl = $desktop ? $desktop->desktop_url : null;
+                    if ($dUrl && !\Illuminate\Support\Str::startsWith($dUrl, ['http://', 'https://'])) {
+                        $dUrl = url($dUrl);
+                    }
+
+                    $mUrl = $mobile ? $mobile->mobile_url : null;
+                    if ($mUrl && !\Illuminate\Support\Str::startsWith($mUrl, ['http://', 'https://'])) {
+                        $mUrl = url($mUrl);
+                    }
+
                     $midiaRes[$tm] = [
-                        'desktop' => $desktop ? ['url' => $desktop->desktop_url] : null,
-                        'mobile'  => $mobile ? ['url' => $mobile->mobile_url] : null,
+                        'desktop' => $desktop ? ['url' => $dUrl] : null,
+                        'mobile'  => $mobile ? ['url' => $mUrl] : null,
                     ];
                 }
             }
