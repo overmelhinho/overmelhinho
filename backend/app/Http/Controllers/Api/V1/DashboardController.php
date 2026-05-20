@@ -21,9 +21,12 @@ class DashboardController extends Controller
 
         // 2. Financeiro
         $activeClients = \App\Models\Cliente::where('status_assinatura', 'ativo')->count();
-        // Faturamento Real (Faturas pagas nos últimos 30 dias)
-        $revenue = \App\Models\Invoice::where('status', 'paid')
-            ->whereBetween('created_at', [$thirtyDaysAgo, $now])
+        // Receita Prévia do Mês Atual (Soma de faturas com vencimento neste mês, excluindo canceladas/inadimplentes se houver, ou apenas pegando paid + pending)
+        $startOfMonth = now()->startOfMonth();
+        $endOfMonth = now()->endOfMonth();
+        
+        $revenue = \App\Models\Invoice::whereIn('status', ['paid', 'pending'])
+            ->whereBetween('due_date', [$startOfMonth, $endOfMonth])
             ->sum('amount');
         
         // 3. Renovações Próximas
