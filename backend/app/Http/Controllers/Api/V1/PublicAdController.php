@@ -52,15 +52,20 @@ class PublicAdController extends Controller
 
         // 2) Filtro de Keywords
         if ($keywords) {
-            $words = array_filter(explode(',', str_replace(' ', ',', $keywords)));
-            if (!empty($words)) {
-                $q->whereExists(function ($sub) use ($words) {
+            $phrases = array_filter(array_map('trim', explode(',', $keywords)));
+            if (!empty($phrases)) {
+                $q->whereExists(function ($sub) use ($phrases) {
                     $sub->select(DB::raw(1))
                         ->from('campanha_keywords')
                         ->whereColumn('campanha_id', 'c.id')
-                        ->where(function ($subInner) use ($words) {
-                            foreach ($words as $word) {
-                                $subInner->orWhere('keyword_normalizada', 'LIKE', '%' . $word . '%');
+                        ->where(function ($subInner) use ($phrases) {
+                            foreach ($phrases as $phrase) {
+                                $subInner->orWhere(function ($qAnd) use ($phrase) {
+                                    $words = array_filter(explode(' ', $phrase));
+                                    foreach ($words as $word) {
+                                        $qAnd->where('keyword_normalizada', 'LIKE', '%' . $word . '%');
+                                    }
+                                });
                             }
                         });
                 });
