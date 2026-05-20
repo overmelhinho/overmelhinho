@@ -557,16 +557,16 @@ function SearchContent() {
                                     <h3 className="text-2xl font-black text-gray-900 tracking-tighter font-serif">Acesso Rápido</h3>
                                     <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.4em] mb-1">Destaque</span>
                                 </div>
-                                <div className="grid grid-cols-1 gap-12">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {patrocinados.map((item: any) => (
                                         <div
                                             key={item.id}
                                             onClick={() => router.push(getClientLink(item))}
                                             onMouseEnter={() => setHoveredResult(item.id)}
                                             onMouseLeave={() => setHoveredResult(null)}
-                                            className="bg-white rounded-[2rem] md:rounded-[3.5rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer"
+                                            className="bg-white rounded-[2rem] md:rounded-[2rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer flex flex-col"
                                         >
-                                            <div className="h-28 md:h-52 overflow-hidden relative">
+                                            <div className="h-28 md:h-32 overflow-hidden relative flex-shrink-0">
                                                 {item.galeria?.[0]?.url ? (
                                                     <img src={item.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                                                 ) : (
@@ -574,26 +574,26 @@ function SearchContent() {
                                                 )}
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                                             </div>
-                                            <div className="px-4 pb-6 md:px-8 md:pb-10 pt-1 relative">
+                                            <div className="px-4 pb-6 md:px-5 md:pb-6 pt-1 relative flex-1 flex flex-col">
                                                 {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
-                                                    <div className="absolute -top-8 left-4 w-16 h-16 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[2.5rem] bg-white p-1 shadow-2xl border-2 border-white group-hover:-translate-y-4 transition-transform duration-500">
-                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[2rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                    <div className="absolute -top-8 left-4 w-16 h-16 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.2rem] bg-white p-1 shadow-2xl border-2 border-white group-hover:-translate-y-2 transition-transform duration-500">
+                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                                     </div>
                                                 )}
-                                                <div className="pt-10 md:pt-16 space-y-2 md:space-y-4">
-                                                    <div className="flex justify-between items-center">
-                                                        <h4 className="text-lg md:text-2xl font-black text-gray-900 tracking-tight font-serif italic leading-tight break-words">{item.nome_fantasia}</h4>
+                                                <div className="pt-10 md:pt-10 space-y-2 flex-1 flex flex-col">
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <h4 className="text-lg md:text-xl font-black text-gray-900 tracking-tight font-serif italic leading-tight break-words flex-1">{item.nome_fantasia}</h4>
                                                         {isExpansionClient(item) ? (
-                                                            <div className="flex flex-col items-end">
+                                                            <div className="flex flex-col items-end flex-shrink-0">
                                                                 <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">✨ ATENDE AQUI</span>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-[8px] md:text-xs font-black text-brand-red bg-brand-red/5 px-2 py-1 rounded-lg border border-brand-red/10">PREMIUM</span>
+                                                            <span className="text-[8px] font-black text-brand-red bg-brand-red/5 px-2 py-1 rounded-lg border border-brand-red/10 flex-shrink-0 mt-1">PREMIUM</span>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center text-[10px] font-bold text-gray-400 space-x-4 uppercase tracking-[0.1em]">
-                                                        <span className="flex items-center"><MapPin size={14} className="mr-1 text-brand-red" /> {item.enderecos?.[0]?.bairro || 'Local'}</span>
-                                                        <span className="text-green-500 font-black border-l border-gray-100 pl-4">Aberto Agora</span>
+                                                    <div className="flex flex-wrap items-center text-[9px] font-bold text-gray-400 gap-y-2 gap-x-3 uppercase tracking-[0.1em] mt-auto pt-2">
+                                                        <span className="flex items-center"><MapPin size={12} className="mr-1 text-brand-red" /> <span className="truncate max-w-[120px]">{item.enderecos?.[0]?.bairro || 'Local'}</span></span>
+                                                        <span className="text-green-500 font-black flex items-center"><div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></div>Aberto</span>
                                                     </div>
                                                 </div>
                                             </div>
