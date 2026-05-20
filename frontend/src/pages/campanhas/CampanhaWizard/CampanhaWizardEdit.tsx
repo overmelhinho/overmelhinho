@@ -287,9 +287,12 @@ export default function CampanhaWizardEdit() {
 
   const clienteLabel = useMemo(() => {
     const c = (clientes as any[]).find((x: any) => x.id === clienteIdNum);
-    if (!c) return form.cliente_id ? `Cliente #${form.cliente_id}` : "";
+    if (!c) {
+      if (campanha?.cliente_nome) return campanha.cliente_nome;
+      return form.cliente_id ? `Cliente #${form.cliente_id}` : "";
+    }
     return c.nome_fantasia || c.razao_social || `Cliente #${c.id}`;
-  }, [clientes, clienteIdNum, form.cliente_id]);
+  }, [clientes, clienteIdNum, form.cliente_id, campanha]);
 
   const filteredClientes = useMemo(() => (clientes as any[]) ?? [], [clientes]);
 

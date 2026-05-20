@@ -460,9 +460,12 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
 
   const clienteLabel = useMemo(() => {
     const c = (clientes as any[]).find((x: any) => x.id === clienteIdNum);
-    if (!c) return form.cliente_id ? `Cliente #${form.cliente_id}` : "";
+    if (!c) {
+      if ((detalhe as any)?.campanha?.cliente_nome) return (detalhe as any).campanha.cliente_nome;
+      return form.cliente_id ? `Cliente #${form.cliente_id}` : "";
+    }
     return c.nome_fantasia || c.razao_social || `Cliente #${c.id}`;
-  }, [clientes, clienteIdNum, form.cliente_id]);
+  }, [clientes, clienteIdNum, form.cliente_id, detalhe]);
 
   const filteredClientes = useMemo(() => (clientes as any[]) ?? [], [clientes]);
 
