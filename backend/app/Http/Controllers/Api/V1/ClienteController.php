@@ -1032,12 +1032,20 @@ public function historico(Request $request, int $id)
 
             if (!empty($enderecos)) {
                 foreach ($enderecos as $end) {
+                    $end['exibir_apenas_cidade'] = filter_var($end['exibir_apenas_cidade'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+                    $end['is_cobranca']          = filter_var($end['is_cobranca'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
                     $cliente->enderecos()->create($end);
                 }
             }
 
             if (!empty($validated['contatos']) && is_array($validated['contatos'])) {
                 foreach ($validated['contatos'] as $contato) {
+                    $boolFields = ['has_whatsapp_principal', 'has_whatsapp_secundario', 'has_whatsapp_celular', 'has_whatsapp_outro', 'exibir_tel_principal', 'exibir_tel_secundario', 'exibir_celular', 'exibir_tel_outro', 'exibir_email'];
+                    foreach ($boolFields as $bf) {
+                        if (array_key_exists($bf, $contato)) {
+                            $contato[$bf] = filter_var($contato[$bf], FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+                        }
+                    }
                     $cliente->contatos()->create($contato);
                 }
             }
@@ -1536,8 +1544,8 @@ public function historico(Request $request, int $id)
                             'complemento'          => $end['complemento'] ?? null,
                             'link_maps'            => $end['link_maps'] ?? null,
                             'link_waze'            => $end['link_waze'] ?? null,
-                            'exibir_apenas_cidade' => $end['exibir_apenas_cidade'] ?? false,
-                            'is_cobranca'          => $end['is_cobranca'] ?? false,
+                            'exibir_apenas_cidade' => filter_var($end['exibir_apenas_cidade'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
+                            'is_cobranca'          => filter_var($end['is_cobranca'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
                             'endereco_compacto'    => $end['endereco_compacto'] ?? null,
                         ]);
                     }
@@ -1552,6 +1560,12 @@ public function historico(Request $request, int $id)
             if (!empty($validated['contatos']) && is_array($validated['contatos'])) {
                 $c0 = $validated['contatos'][0] ?? null;
                 if (is_array($c0)) {
+                    $boolFields = ['has_whatsapp_principal', 'has_whatsapp_secundario', 'has_whatsapp_celular', 'has_whatsapp_outro', 'exibir_tel_principal', 'exibir_tel_secundario', 'exibir_celular', 'exibir_tel_outro', 'exibir_email'];
+                    foreach ($boolFields as $bf) {
+                        if (array_key_exists($bf, $c0)) {
+                            $c0[$bf] = filter_var($c0[$bf], FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+                        }
+                    }
                     $c = $cliente->contatos()->orderBy('id', 'asc')->first();
                     if ($c) {
                         $c->update($c0);

@@ -8,7 +8,7 @@ let LazyInputMask: any = null;
  * ✅ Funciona com React 18+ e build minificado (Vite + nginx)
  */
 const MaskedInput = forwardRef<HTMLInputElement, any>(
-  ({ mask, maskChar = "", value = "", onChange, ...props }, ref) => {
+  ({ mask, maskChar = "", value = "", onChange, formatChars, ...props }, ref) => {
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
@@ -47,6 +47,7 @@ const MaskedInput = forwardRef<HTMLInputElement, any>(
       <InputMask
         mask={mask}
         maskChar={maskChar}
+        formatChars={formatChars}
         value={value || ""}
         onChange={onChange}
         alwaysShowMask={false}
