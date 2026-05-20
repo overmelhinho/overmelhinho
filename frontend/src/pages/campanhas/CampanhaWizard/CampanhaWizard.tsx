@@ -498,6 +498,11 @@ export default function CampanhaWizard({
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                     e.preventDefault();
+                                    const max = w.form.plano === 'premium' ? 20 : w.form.plano === 'profissional' ? 10 : 5;
+                                    if (w.keywordsParsed.length >= max) {
+                                        toast.error(`Limite de ${max} palavras-chave atingido para o plano ${w.form.plano}.`);
+                                        return;
+                                    }
                                     const val = e.currentTarget.value.trim();
                                     if (!val) return;
                                     const current = w.form.keywords_text || "";

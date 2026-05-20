@@ -123,7 +123,7 @@ function SearchContent() {
         if (!searchAds || searchAds.length === 0) return null;
         
         // Procura campanha que tenha mídia de topo
-        const ad = searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_topo', 'BANNER', 'SEARCH_RESULT'].includes(k.toUpperCase()) || ['banner_topo', 'BANNER', 'SEARCH_RESULT'].includes(k)));
+        const ad = searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_topo', 'BANNER', 'SEARCH_RESULT', 'IMAGEM'].includes(k.toUpperCase()) || ['banner_topo', 'BANNER', 'SEARCH_RESULT', 'IMAGEM'].includes(k)));
         if (!ad) return null;
 
         const midia = ad.midias['banner_topo'] || ad.midias['BANNER'] || Object.values(ad.midias)[0] || {};
@@ -143,8 +143,8 @@ function SearchContent() {
         if (!searchAds || searchAds.length === 0) return null;
 
         // Procura campanha que tenha mídia de segmento
-        const ad = searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING'].includes(k)) && a.id !== heroAd?.id) 
-                 || searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING'].includes(k)));
+        const ad = searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING', 'IMAGEM'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING', 'IMAGEM'].includes(k)) && a.id !== heroAd?.id) 
+                 || searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING', 'IMAGEM'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING', 'IMAGEM'].includes(k)));
 
         if (!ad) return null;
         const midia = ad.midias['banner_segmento'] || ad.midias['SEGMENT_LISTING'] || Object.values(ad.midias)[0] || {};

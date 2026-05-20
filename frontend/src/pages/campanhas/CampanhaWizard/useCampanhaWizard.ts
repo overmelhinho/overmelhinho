@@ -482,8 +482,8 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
   const keywordsLimit = useMemo(() => keywordLimitByPlano(form.plano), [form.plano]);
 
   const keywordsParsed = useMemo(() => {
-    return parseKeywords(form.keywords_text).slice(0, keywordsLimit);
-  }, [form.keywords_text, keywordsLimit]);
+    return parseKeywords(form.keywords_text); // Limite temporariamente desativado a pedido do admin: .slice(0, keywordsLimit);
+  }, [form.keywords_text]);
 
   function goStep(key: WizardKey) {
     setActiveKey(key);
