@@ -28,11 +28,12 @@ class TestGoogle extends Command
         $cidade = 'Farroupilha';
         $segmento = 'Joalherias';
 
-        $clientesNaCidade = \App\Models\Cliente::where('cidade', 'ILIKE', '%' . $cidade . '%')
+        $clientesNaCidade = \App\Models\Cliente::whereHas('enderecos', function($q) use ($cidade) {
+                $q->where('cidade', 'ILIKE', '%' . $cidade . '%');
+            })
             ->pluck('nome_fantasia')
-            ->filter()
             ->map(function($n) {
-                $clean = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $n)));
+                $clean = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(\Illuminate\Support\Str::ascii($n)));
                 return array_values(array_filter(explode(' ', $clean), fn($w) => strlen($w) > 2));
             })->toArray();
 
@@ -40,13 +41,18 @@ class TestGoogle extends Command
         $query = $segmento . ' em ' . $cidade . ' - RS';
         $places = $googleService->searchPlaces($query);
 
-        $stopwords = ['loja', 'comercial', 'comercio', 'industria', 'mercado', 'supermercado', 'padaria', 'farmacia', 'restaurante', 'lanchonete', 'pizzaria', 'bar', 'cafe', 'joalheria', 'otica', 'clinica', 'consultorio', 'escritorio', 'advocacia', 'centro', 'estetica', 'salao', 'auto', 'posto', 'mecanica', 'oficina', 'servicos', 'distribuidora', 'transportes', 'imobiliaria', 'construtora', 'arquitetura', 'engenharia', 'contabilidade', 'escola', 'academia', 'pet', 'shop', 'veterinaria', 'hospital', 'hotel', 'pousada', 'motel', 'clube', 'sindicato', 'igreja', 'templo', 'centro', 'veiculos', 'pecas', 'motopeças', 'autopeças', 'informatica', 'celulares', 'assistencia', 'tecnica'];
+        $stopwords = ['loja', 'comercial', 'comercio', 'industria', 'mercado', 'supermercado', 'padaria', 'farmacia', 'restaurante', 'lanchonete', 'pizzaria', 'bar', 'cafe', 'joalheria', 'otica', 'clinica', 'consultorio', 'escritorio', 'advocacia', 'centro', 'estetica', 'salao', 'auto', 'posto', 'mecanica', 'oficina', 'servicos', 'distribuidora', 'transportes', 'imobiliaria', 'construtora', 'arquitetura', 'engenharia', 'contabilidade', 'escola', 'academia', 'pet', 'shop', 'veterinaria', 'hospital', 'hotel', 'pousada', 'motel', 'clube', 'sindicato', 'igreja', 'templo', 'centro', 'veiculos', 'pecas', 'motopeças', 'autopeças', 'informatica', 'celulares', 'assistencia', 'tecnica', 'rs', 'brasil', 'ltda', 'me', 'epp', 'sa', 'cia', 'e', 'do', 'da', 'de', 'dos', 'das', 'com', 'para', 'por', 'na', 'no', 'nas', 'nos'];
+
+        if ($cidade) {
+            $cidadeWords = explode(' ', mb_strtolower(\Illuminate\Support\Str::ascii($cidade)));
+            $stopwords = array_merge($stopwords, $cidadeWords);
+        }
 
         $this->info(count($places) . " lugares encontrados no Google");
         $targets = [];
         foreach ($places as $place) {
             $name = $place['name'];
-            $cleanGName = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
+            $cleanGName = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(\Illuminate\Support\Str::ascii($name)));
             $gWords = array_values(array_filter(explode(' ', $cleanGName), fn($w) => strlen($w) > 2 && !in_array($w, $stopwords)));
             
             $existsByName = false;
