@@ -430,6 +430,10 @@ export default function ClientProfileClient() {
                                 src={client.logotipo_url}
                                 className="w-full h-full object-contain p-2 rounded-[1rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
                                 alt={`Logotipo de ${client.nome_fantasia}`}
+                                onError={(e) => {
+                                    e.currentTarget.src = '/logo-overmelhinho.png';
+                                    e.currentTarget.onerror = null;
+                                }}
                             />
                         </div>
                     )}
@@ -658,6 +662,7 @@ export default function ClientProfileClient() {
                                             <div className="flex flex-wrap gap-4">
                                                 {client.redes_sociais.map((rede: any) => {
                                                     const t = rede.tipo?.toLowerCase() || '';
+                                                    const formattedUrl = rede.url?.startsWith('http') ? rede.url : `https://${rede.url}`;
                                                     const colorClass = t.includes('instagram') ? 'text-[#E1306C] hover:bg-pink-50' :
                                                                        t.includes('facebook') ? 'text-[#1877F2] hover:bg-blue-50' :
                                                                        t.includes('linkedin') ? 'text-[#0A66C2] hover:bg-blue-50' :
@@ -666,7 +671,7 @@ export default function ClientProfileClient() {
                                                     return (
                                                         <a
                                                             key={rede.id}
-                                                            href={rede.url}
+                                                            href={formattedUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className={`w-14 h-14 bg-white shadow-xl rounded-2xl flex items-center justify-center border border-gray-50 active:scale-75 transition-all ${colorClass}`}
@@ -966,7 +971,7 @@ export default function ClientProfileClient() {
                                                 <div className="flex items-center justify-between">
                                                     <a 
                                                         href={`mailto:${client.contatos[0].email_principal}`} 
-                                                        className="text-sm md:text-base font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic break-all mr-2"
+                                                        className="text-xs md:text-sm font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic break-words mr-2"
                                                         title={client.contatos[0].email_principal}
                                                     >
                                                         {client.contatos[0].email_principal}
@@ -1037,6 +1042,7 @@ export default function ClientProfileClient() {
                                 <div className="flex flex-wrap gap-4">
                                     {client.redes_sociais.map((rede: any) => {
                                         const t = rede.tipo?.toLowerCase() || '';
+                                        const formattedUrl = rede.url?.startsWith('http') ? rede.url : `https://${rede.url}`;
                                         const colorClass = t.includes('instagram') ? 'text-[#E1306C] hover:bg-pink-50' :
                                                            t.includes('facebook') ? 'text-[#1877F2] hover:bg-blue-50' :
                                                            t.includes('linkedin') ? 'text-[#0A66C2] hover:bg-blue-50' :
@@ -1045,7 +1051,7 @@ export default function ClientProfileClient() {
                                         return (
                                             <a
                                                 key={rede.id}
-                                                href={rede.url}
+                                                href={formattedUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className={`w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 active:scale-75 transition-all ${colorClass}`}
