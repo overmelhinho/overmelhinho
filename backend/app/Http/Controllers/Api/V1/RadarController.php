@@ -198,7 +198,8 @@ class RadarController extends Controller
                 $stopwords = array_merge($stopwords, $cidadeWords);
             }
             $cleanGName = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(\Illuminate\Support\Str::ascii($name)));
-            $gWords = array_values(array_filter(explode(' ', $cleanGName), fn($w) => strlen($w) > 2 && !in_array($w, $stopwords)));
+            $gWordsAll = array_values(array_filter(explode(' ', $cleanGName), fn($w) => strlen($w) > 2));
+            $gWords = array_values(array_filter($gWordsAll, fn($w) => !in_array($w, $stopwords)));
             
             $existsByName = false;
             foreach ($clientesNaCidade as $dbWords) {

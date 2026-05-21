@@ -17,7 +17,7 @@ class ProspectController extends Controller
             'segmento' => 'required|string',
         ]);
 
-        $cidade = $request->cidade;
+        $cidade = ($request->cidade === 'Região Geral' || mb_strtolower($request->cidade) === 'geral') ? '' : $request->cidade;
         $segmento = $request->segmento;
         $googleApiKey = config('services.google.places_key');
 
@@ -27,7 +27,7 @@ class ProspectController extends Controller
 
         try {
             // 1. Busca no Google Places (Text Search)
-            $query = "{$segmento} em {$cidade} - RS";
+            $query = $segmento . ($cidade ? ' em ' . $cidade . ' - RS' : ' na Serra Gaúcha - RS');
             $response = Http::timeout(15)->get("https://maps.googleapis.com/maps/api/place/textsearch/json", [
                 'query' => $query,
                 'key' => $googleApiKey,
@@ -57,7 +57,10 @@ class ProspectController extends Controller
                 ->filter()
                 ->map(function($n) {
                     $clean = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(\Illuminate\Support\Str::ascii($n)));
-                    return array_values(array_filter(explode(' ', $clean), fn($w) => strlen($w) > 2));
+                    $words = array_filter(explode(' ', $clean), function($w) {
+                        return strlen($w) > 2;
+                    });
+                    return array_values($words);
                 })->toArray();
 
             foreach ($rawResults as $r) {
@@ -77,18 +80,28 @@ class ProspectController extends Controller
                     $stopwords = array_merge($stopwords, $cidadeWords);
                 }
                 $cleanGName = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(\Illuminate\Support\Str::ascii($name)));
-                $gWords = array_values(array_filter(explode(' ', $cleanGName), fn($w) => strlen($w) > 2 && !in_array($w, $stopwords)));
+                $gWordsAll = array_values(array_filter(explode(' ', $cleanGName), fn($w) => strlen($w) > 2));
+                $gWords = array_values(array_filter($gWordsAll, fn($w) => !in_array($w, $stopwords)));
                 
                 $existsByName = false;
                 foreach ($clientesNaCidade as $dbWords) {
-                    // Remove stopwords do banco também para a comparação
                     $dbWordsFiltered = array_values(array_filter($dbWords, fn($w) => !in_array($w, $stopwords)));
                     
-                    if (empty($dbWordsFiltered) || empty($gWords)) continue;
+                    $gCompare = $gWords;
+                    $dbCompare = $dbWordsFiltered;
+
+                    // Se a empresa do Google ou do Banco for composta APENAS de stopwords (ex: 'otica farroupilha'), 
+                    // comparamos usando todas as palavras originais para não ignorar o match.
+                    if (empty($gCompare) || empty($dbCompare)) {
+                        $gCompare = $gWordsAll;
+                        $dbCompare = $dbWords;
+                    }
                     
-                    $intersect = array_intersect($gWords, $dbWordsFiltered);
+                    if (empty($dbCompare) || empty($gCompare)) continue;
+                    
+                    $intersect = array_intersect($gCompare, $dbCompare);
                     // Se compartilharem pelo menos 2 palavras, ou 1 palavra se a empresa só tem 1 palavra útil
-                    if (count($intersect) >= min(2, count($dbWordsFiltered))) {
+                    if (count($intersect) >= min(2, count($dbCompare))) {
                         $existsByName = true;
                         break;
                     }
