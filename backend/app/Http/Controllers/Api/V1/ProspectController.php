@@ -52,9 +52,23 @@ class ProspectController extends Controller
             foreach ($rawResults as $r) {
                 $placeId = $r['place_id'] ?? null;
                 
-                // Pular se já for cliente
+                $name = $r['name'] ?? 'Empresa sem nome';
+
+                // Pular se já for cliente pelo Place ID
                 if ($placeId && in_array($placeId, $placeIdsExistentes)) {
                     continue;
+                }
+
+                // Fallback (legado): Pular se já existir cliente com nome parecido no BD
+                $nomeParaBusca = trim(preg_replace('/[^A-Za-z0-9 ]/', '', $name)); // limpa caracteres
+                if (strlen($nomeParaBusca) > 3) {
+                    $existsByName = Cliente::where('nome_fantasia', 'ILIKE', '%' . $nomeParaBusca . '%')
+                        ->orWhere('razao_social', 'ILIKE', '%' . $nomeParaBusca . '%')
+                        ->exists();
+
+                    if ($existsByName) {
+                        continue;
+                    }
                 }
 
                 $leads[] = [
