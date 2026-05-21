@@ -52,8 +52,8 @@ class ClienteResource extends JsonResource
             'status_assinatura' => $statusAssinatura,
 
             'palavras_chave' => $this->palavras_chave,
-            'exibir_no_site' => (bool) ($this->exibir_no_site ?? true),
-            'exibir_data_fundacao' => (bool) ($this->exibir_data_fundacao ?? true),
+            'exibir_no_site' => filter_var($this->exibir_no_site ?? true, FILTER_VALIDATE_BOOLEAN),
+            'exibir_data_fundacao' => filter_var($this->exibir_data_fundacao ?? true, FILTER_VALIDATE_BOOLEAN),
             'horario_atendimento' => $this->horario_atendimento,
             'legacy_horario' => $this->legacy_horario,
             'beneficios' => is_string($this->beneficios) ? (json_decode($this->beneficios, true) ?: []) : ($this->beneficios ?: []),

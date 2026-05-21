@@ -590,7 +590,7 @@ export default function ClientesList() {
                           <div className="min-w-0">
                             <div className="font-medium text-gray-900 flex items-center gap-2">
                               {c.nome_fantasia}
-                              {c.exibir_no_site === false && (
+                              {(c.exibir_no_site === false || c.exibir_no_site === "false") && (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200">
                                   <EyeOff className="w-3 h-3" /> Oculto no Site
                                 </span>

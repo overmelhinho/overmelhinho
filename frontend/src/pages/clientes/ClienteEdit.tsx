@@ -256,8 +256,8 @@ export default function ClienteEdit() {
         telefone: e?.telefone || "",
         link_maps: e?.link_maps || "",
         link_waze: e?.link_waze || "",
-        exibir_apenas_cidade: e?.exibir_apenas_cidade ?? false,
-        is_cobranca: e?.is_cobranca ?? (idx === 0), // Primeiro por padrão se não definido
+        exibir_apenas_cidade: e?.exibir_apenas_cidade === "false" || e?.exibir_apenas_cidade === false ? false : (e?.exibir_apenas_cidade ? true : false),
+        is_cobranca: e?.is_cobranca === "false" || e?.is_cobranca === false ? false : (e?.is_cobranca === "true" || e?.is_cobranca === true ? true : (idx === 0)),
         endereco_compacto: e?.endereco_compacto || "",
       })),
 
@@ -270,7 +270,7 @@ export default function ClienteEdit() {
       horario_atendimento: Array.isArray(c?.horario_atendimento) ? c.horario_atendimento : [],
       data_fundacao: c?.data_fundacao ? c.data_fundacao.split("T")[0] : "",
       google_place_id: c?.google_place_id || "",
-      exibir_data_fundacao: c?.exibir_data_fundacao ?? true,
+      exibir_data_fundacao: c?.exibir_data_fundacao === "true" || c?.exibir_data_fundacao === true ? true : false,
 
       // uploads
       logotipo: c?.logotipo_url || c?.logo_url || c?.logotipo || null,
@@ -309,7 +309,7 @@ export default function ClienteEdit() {
         google_review_id: r.google_review_id || (r.time && r.author_name ? `${r.time}_${r.author_name}` : null),
         profile_photo_url: r.author_photo_url || r.profile_photo_url || ""
       })) : [],
-      exibir_no_site: c?.exibir_no_site ?? true,
+      exibir_no_site: c?.exibir_no_site === "false" || c?.exibir_no_site === false ? false : true,
     };
   }, [data]);
 

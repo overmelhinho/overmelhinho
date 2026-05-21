@@ -481,7 +481,7 @@ export default function ClienteCreateFromLead() {
               selected_reviews: [],
               galeria: [],
               exibir_no_site: true,
-              exibir_data_fundacao: true,
+              exibir_data_fundacao: false,
             }}
             validationSchema={validationSchema}
             onSubmit={async (values) => {
@@ -746,7 +746,10 @@ export default function ClienteCreateFromLead() {
 
                 if (dados.google_place_id) setFieldValue("google_place_id", String(dados.google_place_id));
                 if (dados.data_fundacao) setFieldValue("data_fundacao", String(dados.data_fundacao));
-                if (dados.exibir_data_fundacao !== undefined) setFieldValue("exibir_data_fundacao", !!dados.exibir_data_fundacao);
+                if (dados.exibir_data_fundacao !== undefined) {
+                  const val = dados.exibir_data_fundacao;
+                  setFieldValue("exibir_data_fundacao", val === "false" || val === false ? false : true);
+                }
 
                 toast.success("Dados aplicados ao cadastro.");
               };
