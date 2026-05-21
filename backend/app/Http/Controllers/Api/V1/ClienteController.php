@@ -426,7 +426,10 @@ class ClienteController extends Controller
         }
 
         if ($statusAss !== '') {
-            $allowed = ['ativa', 'pendente', 'atrasada', 'suspensa', 'cancelada'];
+            $allowed = ['ativa', 'ativo', 'pendente', 'vencida', 'vencido', 'cancelada', 'cancelado'];
+            if ($statusAss === 'atrasada') {
+                $statusAss = 'vencida';
+            }
             if (in_array($statusAss, $allowed, true)) {
                 $query->where('status_assinatura', $statusAss);
             }
