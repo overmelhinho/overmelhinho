@@ -1034,6 +1034,12 @@ public function historico(Request $request, int $id)
                 foreach ($enderecos as $end) {
                     $end['exibir_apenas_cidade'] = filter_var($end['exibir_apenas_cidade'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
                     $end['is_cobranca']          = filter_var($end['is_cobranca'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+                    $end['cep'] = $end['cep'] ?? '';
+                    $end['estado'] = $end['estado'] ?? '';
+                    $end['cidade'] = $end['cidade'] ?? '';
+                    $end['bairro'] = $end['bairro'] ?? '';
+                    $end['rua'] = $end['rua'] ?? '';
+                    $end['numero'] = $end['numero'] ?? '';
                     $cliente->enderecos()->create($end);
                 }
             }
@@ -1535,12 +1541,12 @@ public function historico(Request $request, int $id)
                         $cliente->enderecos()->create([
                             'nome_unidade'         => $end['nome_unidade'] ?? null,
                             'telefone'             => $end['telefone'] ?? null,
-                            'cep'                  => $end['cep'] ?? null,
-                            'estado'               => $end['estado'] ?? null,
-                            'cidade'               => $end['cidade'] ?? null,
-                            'bairro'               => $end['bairro'] ?? null,
-                            'rua'                  => $end['rua'] ?? null,
-                            'numero'               => $end['numero'] ?? null,
+                            'cep'                  => $end['cep'] ?? '',
+                            'estado'               => $end['estado'] ?? '',
+                            'cidade'               => $end['cidade'] ?? '',
+                            'bairro'               => $end['bairro'] ?? '',
+                            'rua'                  => $end['rua'] ?? '',
+                            'numero'               => $end['numero'] ?? '',
                             'complemento'          => $end['complemento'] ?? null,
                             'link_maps'            => $end['link_maps'] ?? null,
                             'link_waze'            => $end['link_waze'] ?? null,
