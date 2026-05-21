@@ -959,9 +959,9 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => $validated['registro_profissional'] ?? null,
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
-                'exibir_no_site'        => $request->boolean('exibir_no_site', true) ? 'true' : 'false',
-                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', true) ? 'true' : 'false',
-                'possui_publicidade'    => $request->boolean('possui_publicidade') ? 'true' : 'false',
+                'exibir_no_site'        => $request->boolean('exibir_no_site', true),
+                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', true),
+                'possui_publicidade'    => $request->boolean('possui_publicidade'),
             ];
 
             if (Schema::hasColumn('clientes', 'horario_atendimento')) {
@@ -1015,7 +1015,7 @@ public function historico(Request $request, int $id)
             if (!empty($validated['segmentos'])) {
                 $segmentosData = [];
                 foreach (array_values($validated['segmentos']) as $index => $segId) {
-                    $segmentosData[$segId] = ['is_primary' => $index === 0 ? 'true' : 'false'];
+                    $segmentosData[$segId] = ['is_primary' => $index === 0];
                 }
                 $cliente->segmentos()->sync($segmentosData);
             }
@@ -1032,8 +1032,8 @@ public function historico(Request $request, int $id)
 
             if (!empty($enderecos)) {
                 foreach ($enderecos as $end) {
-                    $end['exibir_apenas_cidade'] = filter_var($end['exibir_apenas_cidade'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
-                    $end['is_cobranca']          = filter_var($end['is_cobranca'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+                    $end['exibir_apenas_cidade'] = filter_var($end['exibir_apenas_cidade'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    $end['is_cobranca']          = filter_var($end['is_cobranca'] ?? false, FILTER_VALIDATE_BOOLEAN);
                     $end['cep'] = $end['cep'] ?? '';
                     $end['estado'] = $end['estado'] ?? '';
                     $end['cidade'] = $end['cidade'] ?? '';
@@ -1049,7 +1049,7 @@ public function historico(Request $request, int $id)
                     $boolFields = ['has_whatsapp_principal', 'has_whatsapp_secundario', 'has_whatsapp_celular', 'has_whatsapp_outro', 'exibir_tel_principal', 'exibir_tel_secundario', 'exibir_celular', 'exibir_tel_outro', 'exibir_email'];
                     foreach ($boolFields as $bf) {
                         if (array_key_exists($bf, $contato)) {
-                            $contato[$bf] = filter_var($contato[$bf], FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+                            $contato[$bf] = filter_var($contato[$bf], FILTER_VALIDATE_BOOLEAN);
                         }
                     }
                     $cliente->contatos()->create($contato);
@@ -1437,9 +1437,9 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => $validated['registro_profissional'] ?? null,
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
-                'exibir_no_site'        => $request->boolean('exibir_no_site', $cliente->exibir_no_site ?? true) ? 'true' : 'false',
-                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', $cliente->exibir_data_fundacao ?? true) ? 'true' : 'false',
-                'possui_publicidade'    => $request->boolean('possui_publicidade', $cliente->possui_publicidade ?? false) ? 'true' : 'false',
+                'exibir_no_site'        => $request->boolean('exibir_no_site', $cliente->exibir_no_site ?? true),
+                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', $cliente->exibir_data_fundacao ?? true),
+                'possui_publicidade'    => $request->boolean('possui_publicidade', $cliente->possui_publicidade ?? false),
                 'audit_status'          => $validated['audit_status'] ?? $cliente->audit_status,
                 'audit_differences'     => $validated['audit_differences'] ?? $cliente->audit_differences,
                 'contact_preference'    => $validated['contact_preference'] ?? $cliente->contact_preference,
@@ -1518,7 +1518,7 @@ public function historico(Request $request, int $id)
                 $segmentosData = [];
                 if (!empty($validated['segmentos'])) {
                     foreach (array_values($validated['segmentos']) as $index => $segId) {
-                        $segmentosData[$segId] = ['is_primary' => $index === 0 ? 'true' : 'false'];
+                        $segmentosData[$segId] = ['is_primary' => $index === 0];
                     }
                 }
                 $cliente->segmentos()->sync($segmentosData);
@@ -1550,8 +1550,8 @@ public function historico(Request $request, int $id)
                             'complemento'          => $end['complemento'] ?? null,
                             'link_maps'            => $end['link_maps'] ?? null,
                             'link_waze'            => $end['link_waze'] ?? null,
-                            'exibir_apenas_cidade' => filter_var($end['exibir_apenas_cidade'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
-                            'is_cobranca'          => filter_var($end['is_cobranca'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
+                            'exibir_apenas_cidade' => filter_var($end['exibir_apenas_cidade'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                            'is_cobranca'          => filter_var($end['is_cobranca'] ?? false, FILTER_VALIDATE_BOOLEAN),
                             'endereco_compacto'    => $end['endereco_compacto'] ?? null,
                         ]);
                     }
@@ -1569,7 +1569,7 @@ public function historico(Request $request, int $id)
                     $boolFields = ['has_whatsapp_principal', 'has_whatsapp_secundario', 'has_whatsapp_celular', 'has_whatsapp_outro', 'exibir_tel_principal', 'exibir_tel_secundario', 'exibir_celular', 'exibir_tel_outro', 'exibir_email'];
                     foreach ($boolFields as $bf) {
                         if (array_key_exists($bf, $c0)) {
-                            $c0[$bf] = filter_var($c0[$bf], FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+                            $c0[$bf] = filter_var($c0[$bf], FILTER_VALIDATE_BOOLEAN);
                         }
                     }
                     $c = $cliente->contatos()->orderBy('id', 'asc')->first();
