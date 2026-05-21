@@ -90,20 +90,38 @@ class ProspectController extends Controller
                     $gCompare = $gWords;
                     $dbCompare = $dbWordsFiltered;
 
+                    $isFallback = false;
                     // Se a empresa do Google ou do Banco for composta APENAS de stopwords (ex: 'otica farroupilha'), 
                     // comparamos usando todas as palavras originais para não ignorar o match.
                     if (empty($gCompare) || empty($dbCompare)) {
                         $gCompare = $gWordsAll;
                         $dbCompare = $dbWords;
+                        $isFallback = true;
                     }
                     
                     if (empty($dbCompare) || empty($gCompare)) continue;
                     
                     $intersect = array_intersect($gCompare, $dbCompare);
-                    // Se compartilharem pelo menos 2 palavras, ou 1 palavra se a empresa só tem 1 palavra útil
-                    if (count($intersect) >= min(2, count($dbCompare))) {
-                        $existsByName = true;
-                        break;
+                    
+                    if ($isFallback) {
+                        $cidadeArr = $cidade ? explode(' ', mb_strtolower(\Illuminate\Support\Str::ascii($cidade))) : [];
+                        $intersectSemCidade = array_diff($intersect, $cidadeArr);
+                        
+                        // Se a única coisa em comum é o nome da cidade, ignora o match
+                        if (count($intersectSemCidade) === 0) {
+                            continue;
+                        }
+
+                        if (count($intersect) >= count($dbCompare) || count($intersect) >= 2) {
+                            $existsByName = true;
+                            break;
+                        }
+                    } else {
+                        // Se compartilharem pelo menos 2 palavras, ou 1 palavra se a empresa só tem 1 palavra útil
+                        if (count($intersect) >= min(2, count($dbCompare))) {
+                            $existsByName = true;
+                            break;
+                        }
                     }
                 }
 
