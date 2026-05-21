@@ -67,17 +67,22 @@ class ProspectController extends Controller
                     continue;
                 }
 
-                // Filtro Inteligente Avançado (Intersecção de Palavras)
+                // Filtro Inteligente Avançado com Stopwords
+                $stopwords = ['loja', 'comercial', 'comercio', 'industria', 'mercado', 'supermercado', 'padaria', 'farmacia', 'restaurante', 'lanchonete', 'pizzaria', 'bar', 'cafe', 'joalheria', 'otica', 'clinica', 'consultorio', 'escritorio', 'advocacia', 'centro', 'estetica', 'salao', 'auto', 'posto', 'mecanica', 'oficina', 'servicos', 'distribuidora', 'transportes', 'imobiliaria', 'construtora', 'arquitetura', 'engenharia', 'contabilidade', 'escola', 'academia', 'pet', 'shop', 'veterinaria', 'hospital', 'hotel', 'pousada', 'motel', 'clube', 'sindicato', 'igreja', 'templo', 'centro', 'veiculos', 'pecas', 'motopeças', 'autopeças', 'informatica', 'celulares', 'assistencia', 'tecnica'];
+
                 $cleanGName = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
-                $gWords = array_values(array_filter(explode(' ', $cleanGName), fn($w) => strlen($w) > 2));
+                $gWords = array_values(array_filter(explode(' ', $cleanGName), fn($w) => strlen($w) > 2 && !in_array($w, $stopwords)));
                 
                 $existsByName = false;
                 foreach ($clientesNaCidade as $dbWords) {
-                    if (empty($dbWords) || empty($gWords)) continue;
+                    // Remove stopwords do banco também para a comparação
+                    $dbWordsFiltered = array_values(array_filter($dbWords, fn($w) => !in_array($w, $stopwords)));
                     
-                    $intersect = array_intersect($gWords, $dbWords);
-                    // Se compartilharem pelo menos 2 palavras, ou 1 palavra se a empresa só tem 1 palavra
-                    if (count($intersect) >= min(2, count($dbWords))) {
+                    if (empty($dbWordsFiltered) || empty($gWords)) continue;
+                    
+                    $intersect = array_intersect($gWords, $dbWordsFiltered);
+                    // Se compartilharem pelo menos 2 palavras, ou 1 palavra se a empresa só tem 1 palavra útil
+                    if (count($intersect) >= min(2, count($dbWordsFiltered))) {
                         $existsByName = true;
                         break;
                     }
