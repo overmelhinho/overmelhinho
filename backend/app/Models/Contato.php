@@ -33,15 +33,15 @@ class Contato extends Model
     ];
 
     protected $casts = [
-        'has_whatsapp_principal'  => 'boolean',
-        'has_whatsapp_secundario' => 'boolean',
-        'has_whatsapp_celular'    => 'boolean',
-        'has_whatsapp_outro'      => 'boolean',
-        'exibir_tel_principal'             => 'boolean',
-        'exibir_tel_secundario'            => 'boolean',
-        'exibir_celular'                   => 'boolean',
-        'exibir_tel_outro'                 => 'boolean',
-        'exibir_email'                     => 'boolean',
+        'has_whatsapp_principal'  => \App\Casts\PostgresBoolean::class,
+        'has_whatsapp_secundario' => \App\Casts\PostgresBoolean::class,
+        'has_whatsapp_celular'    => \App\Casts\PostgresBoolean::class,
+        'has_whatsapp_outro'      => \App\Casts\PostgresBoolean::class,
+        'exibir_tel_principal'             => \App\Casts\PostgresBoolean::class,
+        'exibir_tel_secundario'            => \App\Casts\PostgresBoolean::class,
+        'exibir_celular'                   => \App\Casts\PostgresBoolean::class,
+        'exibir_tel_outro'                 => \App\Casts\PostgresBoolean::class,
+        'exibir_email'                     => \App\Casts\PostgresBoolean::class,
         'telefone_principal_hidden_until'   => 'datetime',
     ];
 

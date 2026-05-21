@@ -32,8 +32,8 @@ class Endereco extends Model
     ];
 
     protected $casts = [
-        'exibir_apenas_cidade' => 'boolean',
-        'is_cobranca' => 'boolean',
+        'exibir_apenas_cidade' => \App\Casts\PostgresBoolean::class,
+        'is_cobranca' => \App\Casts\PostgresBoolean::class,
     ];
 
     public function cliente()

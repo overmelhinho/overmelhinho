@@ -98,14 +98,15 @@ class Cliente extends Model
 
     protected $casts = [
         'possui_publicidade' => 'boolean',
-        'exibir_no_site' => 'boolean',
+        'possui_publicidade' => \App\Casts\PostgresBoolean::class,
+        'exibir_no_site' => \App\Casts\PostgresBoolean::class,
         'seo_keywords' => 'array',
         'beneficios' => 'array',
         'horario_atendimento' => 'array',
         'seo_keywords_updated_at' => 'datetime',
         'contract_ends_at' => 'date',
         'data_fundacao' => 'date',
-        'exibir_data_fundacao' => 'boolean',
+        'exibir_data_fundacao' => \App\Casts\PostgresBoolean::class,
         'last_audit_at' => 'datetime',
         'audit_differences' => 'array',
     ];
