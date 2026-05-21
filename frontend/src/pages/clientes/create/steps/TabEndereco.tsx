@@ -197,7 +197,7 @@ export default function TabEndereco() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div>
                     <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <Hash className="w-4 h-4 text-[#B70F0A]" /> CEP*
+                      <Hash className="w-4 h-4 text-[#B70F0A]" /> CEP{!endereco.exibir_apenas_cidade && "*"}
                     </label>
                     <input
                       type="text"
@@ -255,7 +255,7 @@ export default function TabEndereco() {
 
                   <div>
                     <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <Map className="w-4 h-4 text-[#B70F0A]" /> Bairro*
+                      <Map className="w-4 h-4 text-[#B70F0A]" /> Bairro{!endereco.exibir_apenas_cidade && "*"}
                     </label>
                     <input
                       type="text"
@@ -268,7 +268,7 @@ export default function TabEndereco() {
 
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <Home className="w-4 h-4 text-[#B70F0A]" /> Rua*
+                      <Home className="w-4 h-4 text-[#B70F0A]" /> Rua{!endereco.exibir_apenas_cidade && "*"}
                     </label>
                     <input
                       type="text"
@@ -281,7 +281,7 @@ export default function TabEndereco() {
 
                   <div>
                     <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <Hash className="w-4 h-4 text-[#B70F0A]" /> Número*
+                      <Hash className="w-4 h-4 text-[#B70F0A]" /> Número{!endereco.exibir_apenas_cidade && "*"}
                     </label>
                     <input
                       type="text"
