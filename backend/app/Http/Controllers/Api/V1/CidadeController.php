@@ -18,10 +18,10 @@ class CidadeController extends Controller
             ->unique()
             ->values();
 
-        // Query base: buscar cidades
+        // Query base: buscar cidades sem duplicar os nomes
         $query = Cidade::query()
-            ->select(['id', 'nome', 'uf'])
-            ->distinct()
+            ->select([\Illuminate\Support\Facades\DB::raw('MAX(id) as id'), 'nome', 'uf'])
+            ->groupBy('nome', 'uf')
             ->orderBy('nome');
 
         // 1. Caso venha ids=1,2,3 (hidratar labels das selecionadas) - Sem filtro restrito para não bugar exibição

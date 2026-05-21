@@ -49,9 +49,17 @@ class ProspectController extends Controller
                 ->pluck('google_place_id')
                 ->toArray();
 
+            // Pré-carrega e tokeniza nomes de clientes na mesma cidade para o filtro inteligente
+            $clientesNaCidade = Cliente::where('cidade', 'ILIKE', '%' . $cidade . '%')
+                ->pluck('nome_fantasia')
+                ->filter()
+                ->map(function($n) {
+                    $clean = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $n)));
+                    return array_values(array_filter(explode(' ', $clean), fn($w) => strlen($w) > 2));
+                })->toArray();
+
             foreach ($rawResults as $r) {
                 $placeId = $r['place_id'] ?? null;
-                
                 $name = $r['name'] ?? 'Empresa sem nome';
 
                 // Pular se já for cliente pelo Place ID
@@ -59,16 +67,24 @@ class ProspectController extends Controller
                     continue;
                 }
 
-                // Fallback (legado): Pular se já existir cliente com nome parecido no BD
-                $nomeParaBusca = trim(preg_replace('/[^A-Za-z0-9 ]/', '', $name)); // limpa caracteres
-                if (strlen($nomeParaBusca) > 3) {
-                    $existsByName = Cliente::where('nome_fantasia', 'ILIKE', '%' . $nomeParaBusca . '%')
-                        ->orWhere('razao_social', 'ILIKE', '%' . $nomeParaBusca . '%')
-                        ->exists();
-
-                    if ($existsByName) {
-                        continue;
+                // Filtro Inteligente Avançado (Intersecção de Palavras)
+                $cleanGName = preg_replace('/[^a-z0-9]/', ' ', mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
+                $gWords = array_values(array_filter(explode(' ', $cleanGName), fn($w) => strlen($w) > 2));
+                
+                $existsByName = false;
+                foreach ($clientesNaCidade as $dbWords) {
+                    if (empty($dbWords) || empty($gWords)) continue;
+                    
+                    $intersect = array_intersect($gWords, $dbWords);
+                    // Se compartilharem pelo menos 2 palavras, ou 1 palavra se a empresa só tem 1 palavra
+                    if (count($intersect) >= min(2, count($dbWords))) {
+                        $existsByName = true;
+                        break;
                     }
+                }
+
+                if ($existsByName) {
+                    continue;
                 }
 
                 $leads[] = [
