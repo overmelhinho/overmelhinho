@@ -966,7 +966,7 @@ export default function ClientProfileClient() {
                                                 <div className="flex items-center justify-between">
                                                     <a 
                                                         href={`mailto:${client.contatos[0].email_principal}`} 
-                                                        className="text-base md:text-lg font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic break-all mr-2"
+                                                        className="text-sm md:text-base font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic break-all mr-2"
                                                         title={client.contatos[0].email_principal}
                                                     >
                                                         {client.contatos[0].email_principal}
