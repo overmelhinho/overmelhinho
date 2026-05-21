@@ -50,6 +50,7 @@ export default function ClientProfileClient() {
     const [isTagsExpanded, setIsTagsExpanded] = useState(false);
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [isCitiesExpanded, setIsCitiesExpanded] = useState(false);
+    const [copiedEmail, setCopiedEmail] = useState(false);
 
     const citySlug = params.citySlug as string;
 
@@ -968,15 +969,26 @@ export default function ClientProfileClient() {
                                             {allPhones.length > 0 && <div className="h-px bg-gray-50 mb-4" />}
                                             <div className="flex flex-col">
                                                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">E-mail</span>
-                                                <div className="flex items-center justify-between">
+                                                <div className="flex items-center justify-between gap-2">
                                                     <a 
                                                         href={`mailto:${client.contatos[0].email_principal}`} 
-                                                        className="text-xs md:text-sm font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic break-words mr-2"
+                                                        className="flex-1 min-w-0 text-sm font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic truncate"
                                                         title={client.contatos[0].email_principal}
                                                     >
                                                         {client.contatos[0].email_principal}
                                                     </a>
-                                                    <div className="flex gap-2">
+                                                    <div className="flex-shrink-0 flex gap-2">
+                                                        <button 
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(client.contatos[0].email_principal);
+                                                                setCopiedEmail(true);
+                                                                setTimeout(() => setCopiedEmail(false), 2000);
+                                                            }}
+                                                            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-brand-red hover:bg-red-50 transition-all border border-gray-100"
+                                                            title="Copiar E-mail"
+                                                        >
+                                                            {copiedEmail ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                                                        </button>
                                                         <a 
                                                             href={`mailto:${client.contatos[0].email_principal}`}
                                                             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-brand-red hover:bg-red-50 transition-all border border-gray-100"
