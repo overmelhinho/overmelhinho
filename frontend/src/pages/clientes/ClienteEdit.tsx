@@ -531,10 +531,22 @@ export default function ClienteEdit() {
 
             // Galeria (se usuário adicionou itens temp via TabGaleria)
             const galeria = Array.isArray((values as any).galeria) ? (values as any).galeria : [];
+            const originalGaleria = Array.isArray(initialValues.galeria) ? initialValues.galeria : [];
+            const currentIds = new Set(galeria.map((g: any) => String(g.id)));
+
+            // 1) Deletar removidos
+            const toDelete = originalGaleria.filter((g: any) => !g.temp && !currentIds.has(String(g.id)));
+            for (const img of toDelete) {
+              try {
+                await axios.delete(`/v1/clientes/${clienteId}/galeria/${img.id}`);
+              } catch (e) {
+                console.error("Falha ao deletar imagem da galeria", e);
+              }
+            }
+
             const itemsToCommit: Array<{ id: number; temp_path: string }> = [];
 
-            // cria/atualiza itens (se existir endpoint específico, você já tem no create)
-            // Aqui mantemos a compatibilidade: se vierem itens com temp=true, criamos novos e comitamos
+            // 2) Cria/Atualiza itens
             for (let i = 0; i < galeria.length; i++) {
               const img = galeria[i];
               const url = img?.url;
@@ -545,24 +557,35 @@ export default function ClienteEdit() {
                 (typeof img?.path === "string" && img.path.includes("temp/")) ||
                 !!extractTempPathFromPublicUrl(url);
 
-              if (!isTemp) continue;
+              if (isTemp) {
+                try {
+                  const r = await axios.post(`/v1/clientes/${clienteId}/galeria`, {
+                    url,
+                    legenda: img?.legenda ?? null,
+                    ordem: i,
+                    thumb_url: img?.thumb_url ?? null,
+                  });
 
-              try {
-                const r = await axios.post(`/v1/clientes/${clienteId}/galeria`, {
-                  url,
-                  legenda: img?.legenda ?? null,
-                  ordem: i,
-                  thumb_url: img?.thumb_url ?? null,
-                });
+                  const galeriaId = r?.data?.data?.id;
 
-                const galeriaId = r?.data?.data?.id;
+                  const tempPath =
+                    normalizeTempPath(img?.path) || normalizeTempPath(extractTempPathFromPublicUrl(url));
 
-                const tempPath =
-                  normalizeTempPath(img?.path) || normalizeTempPath(extractTempPathFromPublicUrl(url));
-
-                if (galeriaId && tempPath) itemsToCommit.push({ id: galeriaId, temp_path: tempPath });
-              } catch (e) {
-                console.error("Falha criando item galeria:", e);
+                  if (galeriaId && tempPath) itemsToCommit.push({ id: galeriaId, temp_path: tempPath });
+                } catch (e) {
+                  console.error("Falha criando item galeria:", e);
+                }
+              } else {
+                try {
+                  await axios.put(`/v1/clientes/${clienteId}/galeria/${img.id}`, {
+                    url,
+                    legenda: img?.legenda ?? null,
+                    ordem: i,
+                    thumb_url: img?.thumb_url ?? null,
+                  });
+                } catch (e) {
+                  console.error("Falha atualizando item galeria:", e);
+                }
               }
             }
 
