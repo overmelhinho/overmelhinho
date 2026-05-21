@@ -204,11 +204,21 @@ class RadarController extends Controller
             foreach ($clientesNaCidade as $dbWords) {
                 $dbWordsFiltered = array_values(array_filter($dbWords, fn($w) => !in_array($w, $stopwords)));
                 
-                if (empty($dbWordsFiltered) || empty($gWords)) continue;
+                $gCompare = $gWords;
+                $dbCompare = $dbWordsFiltered;
+
+                // Se a empresa do Google ou do Banco for composta APENAS de stopwords (ex: 'otica farroupilha'), 
+                // comparamos usando todas as palavras originais para não ignorar o match.
+                if (empty($gCompare) || empty($dbCompare)) {
+                    $gCompare = $gWordsAll;
+                    $dbCompare = $dbWords;
+                }
                 
-                $intersect = array_intersect($gWords, $dbWordsFiltered);
+                if (empty($dbCompare) || empty($gCompare)) continue;
+                
+                $intersect = array_intersect($gCompare, $dbCompare);
                 // Se compartilharem pelo menos 2 palavras, ou 1 palavra se a empresa só tem 1 palavra útil
-                if (count($intersect) >= min(2, count($dbWordsFiltered))) {
+                if (count($intersect) >= min(2, count($dbCompare))) {
                     $existsByName = true;
                     break;
                 }
