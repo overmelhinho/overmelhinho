@@ -144,7 +144,7 @@ class RadarController extends Controller
         ]);
 
         $termo = $request->termo;
-        $cidade = $request->cidade === 'Região Geral' ? '' : $request->cidade;
+        $cidade = ($request->cidade === 'Região Geral' || mb_strtolower($request->cidade) === 'geral') ? '' : $request->cidade;
 
         $query = $termo . ($cidade ? ' em ' . $cidade . ' - RS' : ' na Serra Gaúcha - RS');
         $places = $googleService->searchPlaces($query);
