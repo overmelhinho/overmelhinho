@@ -69,6 +69,30 @@ export default function TabHorarios() {
     }
   };
 
+  const handleImportLegacy = async () => {
+    if (!values.legacy_horario) {
+      toast.error("Este cliente não possui um horário legado.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await axios.post("/v1/clientes/parse-legacy-horario", {
+        texto: values.legacy_horario
+      });
+
+      if (data.success && data.horarios && data.horarios.length > 0) {
+        setFieldValue("horario_atendimento", data.horarios);
+        toast.success("Horários extraídos com sucesso pela IA!");
+      } else {
+        toast.error("A IA não conseguiu interpretar o texto.");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao processar horário legado.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -76,16 +100,37 @@ export default function TabHorarios() {
           <Clock className="w-5 h-5 text-[#B70F0A]" /> Horário de Atendimento
         </h3>
 
-        <button
-          type="button"
-          onClick={handleImport}
-          disabled={loading}
-          className="text-xs px-4 py-2 bg-white border border-[#B70F0A] text-[#B70F0A] hover:bg-[#B70F0A] hover:text-white rounded-lg flex items-center gap-2 transition-all shadow-sm disabled:opacity-50"
-        >
-          {loading ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-          Importar do Google Maps
-        </button>
+        <div className="flex items-center gap-2">
+          {values.legacy_horario && (
+            <button
+              type="button"
+              onClick={handleImportLegacy}
+              disabled={loading}
+              className="text-xs px-4 py-2 bg-white border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg flex items-center gap-2 transition-all shadow-sm disabled:opacity-50"
+            >
+              {loading ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <span className="text-sm">🤖</span>}
+              Importar Horário Antigo (IA)
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={loading}
+            className="text-xs px-4 py-2 bg-white border border-[#B70F0A] text-[#B70F0A] hover:bg-[#B70F0A] hover:text-white rounded-lg flex items-center gap-2 transition-all shadow-sm disabled:opacity-50"
+          >
+            {loading ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+            Importar do Google Maps
+          </button>
+        </div>
       </div>
+
+      {values.legacy_horario && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-3 rounded-xl flex flex-col gap-1">
+          <span className="font-bold">Texto Legado (Anotação Antiga):</span>
+          <span>{values.legacy_horario}</span>
+        </div>
+      )}
 
       <div className="bg-white border rounded-xl overflow-hidden shadow-sm overflow-x-auto">
         <table className="w-full text-sm min-w-[700px]">

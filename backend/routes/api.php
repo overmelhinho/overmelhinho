@@ -122,6 +122,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/clientes/google-hours', [ClienteController::class, 'getGoogleHours']);
     Route::get('/clientes/google-lookup', [ClienteController::class, 'getPlaceIdByQuery']);
     Route::get('/clientes/ai-foundation', [ClienteController::class, 'getFoundationDateByAi']);
+    Route::post('/clientes/parse-legacy-horario', [ClienteController::class, 'parseLegacyHorario']);
 
     Route::get('/clientes/{id}/google-reviews', [ClienteController::class, 'getGoogleReviews']);
     Route::post('/clientes/{id}/google-reviews', [ClienteController::class, 'saveGoogleReviews']);

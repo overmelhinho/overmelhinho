@@ -137,6 +137,10 @@ class AutorizacaoController extends Controller
         $validated['vendedor_id'] = Auth::id();
         $validated['taxa_cadastro'] = $validated['taxa_cadastro'] ?? 0;
         $validated['payment_method'] = $validated['payment_method'] ?? 'pix';
+        $validated['is_permuta'] = $request->boolean('is_permuta') ? 'true' : 'false';
+        if (isset($validated['is_bonificacao'])) {
+            $validated['is_bonificacao'] = $request->boolean('is_bonificacao') ? 'true' : 'false';
+        }
 
         $autorizacao = Autorizacao::create($validated);
 
@@ -218,6 +222,10 @@ class AutorizacaoController extends Controller
             'responsavel_preferencia' => 'nullable|string|max:255',
             'responsavel_turno'       => 'nullable|string|max:255',
         ]);
+
+        if ($request->has('is_permuta')) {
+            $validated['is_permuta'] = $request->boolean('is_permuta') ? 'true' : 'false';
+        }
 
         $autorizacao->update($validated);
 

@@ -66,7 +66,7 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         valor_total: "",
         taxa_cadastro: "0",
         data_inicio: format(new Date(), "yyyy-MM-dd"),
-        data_fim: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), "yyyy-MM-dd"),
+        data_fim: format(new Date(new Date().getFullYear() + 1, new Date().getMonth() + 1, 0), "yyyy-MM-dd"),
         modo_pagamento: "parcelado",
         num_parcelas: "12",
         data_primeira_parcela: format(new Date(), "yyyy-MM-dd"),

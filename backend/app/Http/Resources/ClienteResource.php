@@ -55,6 +55,7 @@ class ClienteResource extends JsonResource
             'exibir_no_site' => (bool) ($this->exibir_no_site ?? true),
             'exibir_data_fundacao' => (bool) ($this->exibir_data_fundacao ?? true),
             'horario_atendimento' => $this->horario_atendimento,
+            'legacy_horario' => $this->legacy_horario,
             'beneficios' => is_string($this->beneficios) ? (json_decode($this->beneficios, true) ?: []) : ($this->beneficios ?: []),
 
             'logotipo_url' => $logoUrl,

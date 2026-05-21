@@ -703,7 +703,11 @@ export default function TabFinanceiro() {
                                     </td>
                                 </tr>
                             ) : (
-                                autorizacoes?.map((auth) => (
+                                [...autorizacoes]?.sort((a, b) => {
+                                    const numA = parseInt(a.numero.toString().split('-')[0], 10) || 0;
+                                    const numB = parseInt(b.numero.toString().split('-')[0], 10) || 0;
+                                    return numB - numA;
+                                }).map((auth) => (
                                     <tr key={auth.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-6 py-4 font-black text-gray-900">
                                             #{auth.numero.toString().padStart(5, '0')}

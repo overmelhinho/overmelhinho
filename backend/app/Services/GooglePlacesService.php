@@ -142,12 +142,14 @@ class GooglePlacesService
                     'day'    => $systemDay,
                     'open'   => $openTime,
                     'close'  => $closeTime,
+                    'open2'  => '',
+                    'close2' => '',
                     'closed' => false,
                 ];
             } else {
-                // Período adicional (ex: tarde após almoço): apenas atualiza o fechamento
-                // Mantém o "open" do primeiro período (manhã) e estende o "close"
-                $map[$systemDay]['close'] = $closeTime;
+                // Período adicional (ex: tarde após almoço): guarda no 2º turno
+                $map[$systemDay]['open2'] = $openTime;
+                $map[$systemDay]['close2'] = $closeTime;
             }
         }
 
@@ -158,6 +160,8 @@ class GooglePlacesService
                     'day'    => $i,
                     'open'   => '',
                     'close'  => '',
+                    'open2'  => '',
+                    'close2' => '',
                     'closed' => true,
                 ];
             }

@@ -959,9 +959,9 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => $validated['registro_profissional'] ?? null,
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
-                'exibir_no_site'        => $request->boolean('exibir_no_site', true),
-                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', true),
-                'possui_publicidade'    => $request->boolean('possui_publicidade'),
+                'exibir_no_site'        => $request->boolean('exibir_no_site', true) ? 'true' : 'false',
+                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', true) ? 'true' : 'false',
+                'possui_publicidade'    => $request->boolean('possui_publicidade') ? 'true' : 'false',
             ];
 
             if (Schema::hasColumn('clientes', 'horario_atendimento')) {
@@ -1431,9 +1431,9 @@ public function historico(Request $request, int $id)
                 'registro_profissional' => $validated['registro_profissional'] ?? null,
                 'descricao'             => $validated['descricao'] ?? null,
                 'observacoes'           => $validated['observacoes'] ?? null,
-                'exibir_no_site'        => $request->boolean('exibir_no_site', $cliente->exibir_no_site ?? true),
-                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', $cliente->exibir_data_fundacao ?? true),
-                'possui_publicidade'    => $request->boolean('possui_publicidade', $cliente->possui_publicidade ?? false),
+                'exibir_no_site'        => $request->boolean('exibir_no_site', $cliente->exibir_no_site ?? true) ? 'true' : 'false',
+                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', $cliente->exibir_data_fundacao ?? true) ? 'true' : 'false',
+                'possui_publicidade'    => $request->boolean('possui_publicidade', $cliente->possui_publicidade ?? false) ? 'true' : 'false',
                 'audit_status'          => $validated['audit_status'] ?? $cliente->audit_status,
                 'audit_differences'     => $validated['audit_differences'] ?? $cliente->audit_differences,
                 'contact_preference'    => $validated['contact_preference'] ?? $cliente->contact_preference,
@@ -2133,6 +2133,20 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         return response()->json([
             'success' => true,
             'description' => $description
+        ]);
+    }
+
+    public function parseLegacyHorario(Request $request, ClientAiService $aiService)
+    {
+        $request->validate([
+            'texto' => 'required|string',
+        ]);
+
+        $horarios = $aiService->parseLegacyHorario($request->input('texto'));
+
+        return response()->json([
+            'success' => true,
+            'horarios' => $horarios
         ]);
     }
 

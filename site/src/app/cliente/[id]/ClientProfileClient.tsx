@@ -8,7 +8,7 @@ import {
     User, Menu, Info, ImageIcon, MessageSquare, Instagram,
     Facebook, Globe, ExternalLink, ChevronLeft, Linkedin, Youtube,
     X, Maximize2, Copy, Check, Bike, Utensils, CreditCard, DollarSign,
-    Smartphone, Banknote, Coins, FileText, BookOpen
+    Smartphone, Banknote, Coins, FileText, BookOpen, Mail
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -916,7 +916,7 @@ export default function ClientProfileClient() {
                     <aside className="w-full lg:w-96 space-y-8">
 
                         {/* Telefones Section */}
-                        {allPhones.length > 0 && (
+                        {(allPhones.length > 0 || (client.contatos?.[0]?.email_principal && client.contatos?.[0]?.exibir_email !== false)) && (
                             <div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                                 <h3 className="text-xl font-black font-serif italic text-gray-900">Contatos</h3>
                                 <div className="space-y-4">
@@ -948,7 +948,7 @@ export default function ClientProfileClient() {
                                                                 className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500 hover:bg-green-100 transition-all border border-green-100"
                                                                 title="WhatsApp"
                                                             >
-                                                                <WhatsAppIcon size={18} />
+                                                                <MessageCircle size={18} />
                                                             </button>
                                                         )}
                                                     </div>
@@ -957,6 +957,33 @@ export default function ClientProfileClient() {
                                             {idx < allPhones.length - 1 && <div className="h-px bg-gray-50 mt-4" />}
                                         </div>
                                     ))}
+                                    
+                                    {client.contatos?.[0]?.email_principal && client.contatos?.[0]?.exibir_email !== false && (
+                                        <div className="group relative mt-4">
+                                            {allPhones.length > 0 && <div className="h-px bg-gray-50 mb-4" />}
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">E-mail</span>
+                                                <div className="flex items-center justify-between">
+                                                    <a 
+                                                        href={`mailto:${client.contatos[0].email_principal}`} 
+                                                        className="text-base md:text-lg font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic break-all mr-2"
+                                                        title={client.contatos[0].email_principal}
+                                                    >
+                                                        {client.contatos[0].email_principal}
+                                                    </a>
+                                                    <div className="flex gap-2">
+                                                        <a 
+                                                            href={`mailto:${client.contatos[0].email_principal}`}
+                                                            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-brand-red hover:bg-red-50 transition-all border border-gray-100"
+                                                            title="Enviar E-mail"
+                                                        >
+                                                            <Mail size={16} />
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

@@ -190,4 +190,43 @@ class ClientAiService
             return [];
         }
     }
+
+    public function parseLegacyHorario(string $legacyText): array
+    {
+        if (!$this->openaiKey || empty($legacyText)) return [];
+
+        $prompt = "Converta o seguinte texto livre de horário comercial em um array JSON.\n" .
+                  "TEXTO: \"{$legacyText}\"\n\n" .
+                  "Instruções:\n" .
+                  "- Retorne um objeto JSON contendo a chave 'horarios' com um array de 7 objetos (um para cada dia de 1 a 7).\n" .
+                  "- 1=Segunda, 2=Terça, ..., 7=Domingo.\n" .
+                  "- Em cada objeto, use as chaves: 'day' (int), 'closed' (boolean), 'open' (string HH:mm), 'close' (string), 'open2' (string), 'close2' (string).\n" .
+                  "- Retorne os 7 dias completos.\n" .
+                  "- Se não abrir de tarde, open2 e close2 devem ser vazios.\n" .
+                  "- Se fechado o dia todo, closed = true, o resto vazio.";
+
+        try {
+            $response = Http::withToken($this->openaiKey)
+                ->timeout(20)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature' => 0.0
+                ]);
+
+            if (!$response->successful()) return [];
+
+            $json = $response->json('choices.0.message.content');
+            $data = is_string($json) ? json_decode($json, true) : $json;
+
+            return (isset($data['horarios']) && is_array($data['horarios'])) ? $data['horarios'] : [];
+
+        } catch (\Throwable $e) {
+            Log::error('[ClientAiService] Erro no parseLegacyHorario', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
 }
