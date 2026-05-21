@@ -168,7 +168,9 @@ class RadarController extends Controller
 
         // Pré-carrega e tokeniza nomes de clientes para o filtro inteligente
         $clientesNaCidade = \App\Models\Cliente::when($cidade, function($q) use ($cidade) {
-                $q->where('cidade', 'ILIKE', '%' . $cidade . '%');
+                $q->whereHas('enderecos', function($subQ) use ($cidade) {
+                    $subQ->where('cidade', 'ILIKE', '%' . $cidade . '%');
+                });
             })
             ->pluck('nome_fantasia')
             ->filter()

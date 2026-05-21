@@ -50,7 +50,9 @@ class ProspectController extends Controller
                 ->toArray();
 
             // Pré-carrega e tokeniza nomes de clientes na mesma cidade para o filtro inteligente
-            $clientesNaCidade = Cliente::where('cidade', 'ILIKE', '%' . $cidade . '%')
+            $clientesNaCidade = \App\Models\Cliente::whereHas('enderecos', function($q) use ($cidade) {
+                    $q->where('cidade', 'ILIKE', '%' . $cidade . '%');
+                })
                 ->pluck('nome_fantasia')
                 ->filter()
                 ->map(function($n) {
