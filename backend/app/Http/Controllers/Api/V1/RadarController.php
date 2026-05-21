@@ -19,9 +19,20 @@ class RadarController extends Controller
         $perPage = (int) $request->input('per_page', 8);
         $statusFilter = $request->input('status', 'all');
 
+        $cidadesPermitidas = [
+            'alto feliz', 'arroio do sal', 'barão', 'bento gonçalves', 'boa vista do sul',
+            'bom princípio', 'campo bom', 'canela', 'carlos barbosa', 'caxias do sul',
+            'coronel pilar', 'farroupilha', 'feliz', 'flores da cunha', 'garibaldi',
+            'gramado', 'lajeado', 'monte belo do sul', 'nova prata', 'nova roma do sul',
+            'novo hamburgo', 'pinto bandeira', 'salvador do sul', 'são marcos',
+            'são pedro da serra', 'são sebastião do caí', 'são vendelino', 'veranópolis',
+            'geral', '', 'região geral'
+        ];
+
         // Puxa as buscas REAIS registradas no portal
         $query = \App\Models\SearchLog::selectRaw('term, city, count(*) as buscas, max(results_count) as max_concorrentes')
             ->where('created_at', '>=', $thirtyDaysAgo)
+            ->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(COALESCE(city, \'\'))'), $cidadesPermitidas)
             ->groupBy('term', 'city')
             // Oportunidades são termos que tem POUCOS CONCORRENTES (ex: <= 3 na região) e alto volume
             ->havingRaw('max(results_count) <= 3')
