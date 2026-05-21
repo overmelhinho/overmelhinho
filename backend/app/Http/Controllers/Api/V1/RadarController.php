@@ -135,12 +135,12 @@ class RadarController extends Controller
         $termo = $request->termo;
         $cidade = $request->cidade === 'Região Geral' ? '' : $request->cidade;
 
-        $query = $termo . ($cidade ? ' em ' . $cidade : '');
+        $query = $termo . ($cidade ? ' em ' . $cidade . ' - RS' : ' no estado do RS');
         $places = $googleService->searchPlaces($query);
 
-        // Clientes existentes (para filtro de quem não está no portal)
-        $existingClients = \App\Models\Cliente::pluck('nome_fantasia')
-            ->map(fn($n) => mb_strtolower(trim($n)))
+        // Clientes existentes por Place ID
+        $placeIdsExistentes = \App\Models\Cliente::whereNotNull('google_place_id')
+            ->pluck('google_place_id')
             ->toArray();
 
         // Alvos já prospectados
@@ -151,9 +151,21 @@ class RadarController extends Controller
             $name = $place['name'];
             $placeId = $place['place_id'];
             
-            // Filtro simplificado: se o nome bate com algum cliente, ignoramos
-            if (in_array(mb_strtolower(trim($name)), $existingClients)) {
+            // Filtro 1: Google Place ID
+            if ($placeId && in_array($placeId, $placeIdsExistentes)) {
                 continue;
+            }
+
+            // Filtro 2: Nome Fantasia (Legado)
+            $nomeParaBusca = trim(preg_replace('/[^A-Za-z0-9 ]/', '', $name));
+            if (strlen($nomeParaBusca) > 3) {
+                $existsByName = \App\Models\Cliente::where('nome_fantasia', 'ILIKE', '%' . $nomeParaBusca . '%')
+                    ->orWhere('razao_social', 'ILIKE', '%' . $nomeParaBusca . '%')
+                    ->exists();
+
+                if ($existsByName) {
+                    continue;
+                }
             }
 
             $targets[] = [
