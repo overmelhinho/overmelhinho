@@ -34,10 +34,9 @@ class UpdateClientStatuses extends Command
         $this->info("Iniciando verificação de vigência de autorizações ({$today})...");
         Log::info("Iniciando verificação de vigência de autorizações ({$today})...");
 
-        // 1. Marcar como 'vencida' os clientes pagantes/ativos que NÃO possuem nenhuma autorização vigente
+        // 1. Rebaixar para 'gratuito' (e status 'cancelada') os clientes pagantes que NÃO possuem nenhuma autorização vigente
         $vencidosCount = DB::table('clientes')
             ->where('tipo_cliente', 'pagante')
-            ->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'premium'])
             ->whereNotExists(function ($query) use ($today) {
                 $query->select(DB::raw(1))
                     ->from('autorizacoes')
@@ -45,12 +44,14 @@ class UpdateClientStatuses extends Command
                     ->where('autorizacoes.status', 'assinado')
                     ->where('autorizacoes.data_fim', '>=', $today);
             })
-            ->update(['status_assinatura' => 'vencida', 'updated_at' => now()]);
+            ->update(['tipo_cliente' => 'gratuito', 'status_assinatura' => 'cancelada', 'updated_at' => now()]);
 
-        // 2. Marcar como 'ativa' os clientes pagantes que POSSUEM autorização vigente, mas estão com status vencido ou pendente
+        // 2. Promover para 'pagante' (e status 'ativa') os clientes que POSSUEM autorização vigente
         $reativadosCount = DB::table('clientes')
-            ->where('tipo_cliente', 'pagante')
-            ->whereNotIn('status_assinatura', ['ativa', 'ativo'])
+            ->where(function($q) {
+                $q->where('tipo_cliente', '!=', 'pagante')
+                  ->orWhereNotIn('status_assinatura', ['ativa', 'ativo']);
+            })
             ->whereExists(function ($query) use ($today) {
                 $query->select(DB::raw(1))
                     ->from('autorizacoes')
@@ -58,7 +59,7 @@ class UpdateClientStatuses extends Command
                     ->where('autorizacoes.status', 'assinado')
                     ->where('autorizacoes.data_fim', '>=', $today);
             })
-            ->update(['status_assinatura' => 'ativa', 'updated_at' => now()]);
+            ->update(['tipo_cliente' => 'pagante', 'status_assinatura' => 'ativa', 'updated_at' => now()]);
         
         $this->info("Processo concluído!");
         $this->line("Clientes marcados como VENCIDA: {$vencidosCount}");
