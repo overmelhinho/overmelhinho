@@ -146,7 +146,7 @@ class RadarController extends Controller
         $termo = $request->termo;
         $cidade = $request->cidade === 'Região Geral' ? '' : $request->cidade;
 
-        $query = $termo . ($cidade ? ' em ' . $cidade . ' - RS' : ' no estado do RS');
+        $query = $termo . ($cidade ? ' em ' . $cidade . ' - RS' : ' na Serra Gaúcha - RS');
         $places = $googleService->searchPlaces($query);
 
         // Clientes existentes por Place ID
@@ -157,10 +157,20 @@ class RadarController extends Controller
         // Alvos já prospectados
         $prospectados = \App\Models\RadarAlvoProspectado::pluck('place_id')->toArray();
 
+        $cidadesPermitidas = [
+            'alto feliz', 'arroio do sal', 'barão', 'bento gonçalves', 'boa vista do sul',
+            'bom princípio', 'campo bom', 'canela', 'carlos barbosa', 'caxias do sul',
+            'coronel pilar', 'farroupilha', 'feliz', 'flores da cunha', 'garibaldi',
+            'gramado', 'lajeado', 'monte belo do sul', 'nova prata', 'nova roma do sul',
+            'novo hamburgo', 'pinto bandeira', 'salvador do sul', 'são marcos',
+            'são pedro da serra', 'são sebastião do caí', 'são vendelino', 'veranópolis'
+        ];
+
         $targets = [];
-        foreach (array_slice($places, 0, 10) as $place) {
+        foreach ($places as $place) {
             $name = $place['name'];
             $placeId = $place['place_id'];
+            $address = $place['formatted_address'] ?? '';
             
             // Filtro 1: Google Place ID
             if ($placeId && in_array($placeId, $placeIdsExistentes)) {
@@ -179,6 +189,20 @@ class RadarController extends Controller
                 }
             }
 
+            // Filtro 3: Estritamente dentro das 28 cidades
+            $addressLower = mb_strtolower($address);
+            $cidadeValida = false;
+            foreach ($cidadesPermitidas as $cp) {
+                if (str_contains($addressLower, $cp)) {
+                    $cidadeValida = true;
+                    break;
+                }
+            }
+            
+            if (!$cidadeValida) {
+                continue; // Pula se a empresa não estiver em nenhuma das 28 cidades
+            }
+
             $targets[] = [
                 'place_id' => $placeId,
                 'name' => $name,
@@ -187,6 +211,11 @@ class RadarController extends Controller
                 'user_ratings_total' => $place['user_ratings_total'] ?? 0,
                 'status' => in_array($placeId, $prospectados) ? 'prospectado' : 'pendente'
             ];
+
+            // Retorna no máximo 10 alvos por vez
+            if (count($targets) >= 10) {
+                break;
+            }
         }
 
         return response()->json([
