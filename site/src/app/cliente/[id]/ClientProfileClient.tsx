@@ -225,11 +225,26 @@ export default function ClientProfileClient() {
     const isPrincipalHidden = contactInfo?.telefone_principal_hidden_until
         && new Date(contactInfo.telefone_principal_hidden_until) > new Date();
 
+    const formatPhone = (phone: string | null | undefined) => {
+        if (!phone) return '';
+        const clean = phone.replace(/\D/g, '');
+        if (clean.startsWith('0800')) {
+            return clean.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3');
+        }
+        if (clean.length === 11) {
+            return clean.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+        }
+        if (clean.length === 10) {
+            return clean.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+        }
+        return phone;
+    };
+
     const allPhones = contactInfo ? [
-        { label: 'Telefone Principal', number: contactInfo.telefone_principal, flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal },
-        { label: 'Telefone Secundário', number: contactInfo.telefone_secundario, flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario },
-        { label: 'Celular', number: contactInfo.celular, flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular },
-        { label: 'Outro Telefone / 0800', number: contactInfo.telefone_outro, flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro },
+        { label: 'Telefone Principal', number: formatPhone(contactInfo.telefone_principal), flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal },
+        { label: 'Telefone Secundário', number: formatPhone(contactInfo.telefone_secundario), flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario },
+        { label: 'Celular', number: formatPhone(contactInfo.celular), flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular },
+        { label: 'Outro Telefone / 0800', number: formatPhone(contactInfo.telefone_outro), flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro },
     ].filter(p => p.number && p.flag && !p.hidden) : [];
 
     const primaryPhone = allPhones[0]?.number;

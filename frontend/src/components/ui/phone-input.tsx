@@ -6,7 +6,17 @@ import React, { forwardRef } from "react";
  * - 11 dígitos     → (XX) XXXXX-XXXX (celular)
  */
 function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 11);
+  let digits = raw.replace(/\D/g, "");
+
+  // Se o usuário colar com o código do país +55
+  if (digits.length === 13 && digits.startsWith("55")) {
+    digits = digits.slice(2);
+  } else if (digits.length === 12 && digits.startsWith("0")) {
+    // Se o usuário colar com o 0 na frente do DDD (ex: 054)
+    digits = digits.slice(1);
+  }
+
+  digits = digits.slice(0, 11);
 
   if (digits.length === 0) return "";
   if (digits.length <= 2) return `(${digits}`;

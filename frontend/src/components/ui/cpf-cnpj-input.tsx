@@ -1,7 +1,11 @@
 import React, { forwardRef } from "react";
 
 function formatCpfCnpj(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 14);
+  let digits = raw.replace(/\D/g, "");
+
+  // Se for maior que 14, pode ser um erro de colar 2 vezes ou copiar texto sujo.
+  // Vamos pegar os últimos 14 se tiver zeros a mais na frente? Não, é melhor pegar os primeiros 14.
+  digits = digits.slice(0, 14);
 
   if (digits.length === 0) return "";
   
