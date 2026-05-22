@@ -479,11 +479,11 @@ export default function VagasPage() {
     return (
         <div className="min-h-screen bg-cloud-dancer font-sans">
 
-            <main className="flex-1 bg-gray-50/50">
-                <div className="max-w-7xl mx-auto px-6 pt-6 pb-12 md:py-20 space-y-8 md:space-y-12">
-                    {/* Header: Título + Busca */}
+            {/* ── HEADER ── */}
+            <div className="bg-white border-b border-gray-100 pt-10 md:pt-32 pb-12">
+                <div className="max-w-7xl mx-auto px-6">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                        <div className="space-y-4 md:space-y-6">
+                        <div className="space-y-4">
                             <button
                                 onClick={() => router.back()}
                                 className="p-3 bg-gray-50 rounded-2xl hover:bg-brand-red hover:text-white transition-all text-gray-400"
