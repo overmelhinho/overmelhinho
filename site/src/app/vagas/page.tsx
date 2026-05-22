@@ -216,7 +216,7 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
                                 {job.clientSlug && (
                                     <div className="pt-6 border-t border-gray-800 mt-6 text-center">
                                         <a
-                                            href={`/clientes/${job.clientSlug}`}
+                                            href={`/cliente/${job.clientSlug}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="inline-flex items-center gap-2 text-gray-400 hover:text-white font-bold text-sm transition-colors"
