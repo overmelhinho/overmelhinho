@@ -32,20 +32,24 @@ export default function Header() {
                 let currentScrollY = 0;
 
                 if (isDesktop) {
-                    // No desktop, o scroll principal é dentro da div com overflow-y-auto
                     if (target === document) return;
                     const el = target as HTMLElement;
                     if (!el.classList?.contains('overflow-y-auto')) return;
                     currentScrollY = el.scrollTop;
                 } else {
-                    // No mobile, usamos o scroll da janela. 
-                    // Lemos o window.scrollY independente de qual elemento disparou o evento.
-                    currentScrollY = window.scrollY;
+                    // Evitar falsos positivos do mobile
+                    if (target !== document && target !== window && target !== document.body && target !== document.documentElement) return;
+                    currentScrollY = window.scrollY || document.documentElement.scrollTop;
                 }
                 
                 if (currentScrollY <= 0) {
                     setIsVisible(true);
                     lastScrollY.current = 0;
+                    return;
+                }
+
+                // Threshold anti-jitter: ignora micro-scrolls (ex: expansão da barra do Chrome/Safari)
+                if (Math.abs(currentScrollY - lastScrollY.current) < 10) {
                     return;
                 }
 
