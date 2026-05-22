@@ -196,9 +196,9 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
                                 <div className="space-y-3">
                                     <button
                                         onClick={() => setIsApplying(true)}
-                                        className="w-full bg-brand-red text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30"
+                                        className="w-full bg-brand-red text-white py-4 px-4 rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30 text-center"
                                     >
-                                        Quero me Candidatar pelo Site
+                                        Candidatar pelo Site
                                     </button>
                                     
                                     {job.whatsapp && (
@@ -206,9 +206,9 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
                                             href={`https://wa.me/55${job.whatsapp.replace(/\\D/g, '')}?text=Olá! Gostaria de me candidatar para a vaga de ${job.title} que vi no Vermelhinho.`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="w-full bg-[#25D366] text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#25D366]/30"
+                                            className="w-full bg-[#25D366] text-white py-4 px-4 rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#25D366]/30 text-center"
                                         >
-                                            <Phone size={20} />
+                                            <Phone size={18} />
                                             Candidatar via WhatsApp
                                         </a>
                                     )}
@@ -339,6 +339,30 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
     );
 }
 
+// ── COMPONENTES AUXILIARES ────────────────────────────────────────
+const CompanyLogo = ({ company, logo, className = '' }: { company: string, logo?: string, className?: string }) => {
+    const [error, setError] = useState(false);
+    
+    if (!logo || error) {
+        return (
+            <div className={`flex items-center justify-center font-black flex-shrink-0 ${className}`}>
+                {company.charAt(0).toUpperCase()}
+            </div>
+        );
+    }
+
+    return (
+        <div className={`flex items-center justify-center flex-shrink-0 overflow-hidden ${className}`}>
+            <img 
+                src={logo} 
+                alt={company} 
+                className="w-full h-full object-contain p-2"
+                onError={() => setError(true)}
+            />
+        </div>
+    );
+};
+
 // ── PÁGINA PRINCIPAL ──────────────────────────────────────────────
 export default function VagasPage() {
     const router = useRouter();
@@ -455,11 +479,11 @@ export default function VagasPage() {
     return (
         <div className="min-h-screen bg-cloud-dancer font-sans">
 
-            {/* ── HEADER ── */}
-            <div className="bg-white border-b border-gray-100 pt-32 pb-12">
-                <div className="max-w-7xl mx-auto px-6">
+            <main className="flex-1 bg-gray-50/50">
+                <div className="max-w-7xl mx-auto px-6 pt-6 pb-12 md:py-20 space-y-8 md:space-y-12">
+                    {/* Header: Título + Busca */}
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                        <div className="space-y-4">
+                        <div className="space-y-4 md:space-y-6">
                             <button
                                 onClick={() => router.back()}
                                 className="p-3 bg-gray-50 rounded-2xl hover:bg-brand-red hover:text-white transition-all text-gray-400"
@@ -670,13 +694,11 @@ export default function VagasPage() {
                                     >
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                             <div className="flex items-start gap-5">
-                                                <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-200 group-hover:bg-brand-red/5 group-hover:text-brand-red transition-colors flex-shrink-0 overflow-hidden">
-                                                    {job.logo ? (
-                                                        <img src={job.logo} alt={job.company} className="w-full h-full object-contain p-2 rounded-2xl" />
-                                                    ) : (
-                                                        <Building2 size={28} />
-                                                    )}
-                                                </div>
+                                                <CompanyLogo 
+                                                    company={job.company} 
+                                                    logo={job.logo} 
+                                                    className="w-14 h-14 bg-gray-50 rounded-2xl text-2xl text-gray-300 group-hover:bg-brand-red/5 group-hover:text-brand-red transition-colors" 
+                                                />
                                                 <div className="space-y-2 min-w-0">
                                                     <div className="flex items-center gap-3 flex-wrap">
                                                         <h3 className="text-xl font-black text-gray-900 tracking-tight group-hover:text-brand-red transition-colors">{job.title}</h3>
