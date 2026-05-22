@@ -60,6 +60,7 @@ class ClienteResource extends JsonResource
 
             'logotipo_url' => $logoUrl,
             'logo_url' => $logoUrl, // ✅ Alias para o frontend identificar pendência
+            'banner_url' => $this->banner_url && !Str::startsWith($this->banner_url, ['http://', 'https://']) ? asset('storage/' . $this->banner_url) : $this->banner_url,
 
             'seo_keywords' => $this->seo_keywords ?? [],
             'seo_keywords_source' => $this->seo_keywords_source ?? 'generated',
