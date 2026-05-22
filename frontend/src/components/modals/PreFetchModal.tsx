@@ -13,7 +13,7 @@ import {
   ChevronUp,
   ExternalLink,
 } from "lucide-react";
-import MaskedInput from "@/components/ui/masked-input";
+import CpfCnpjInput from "@/components/ui/cpf-cnpj-input";
 import { useNavigate } from "react-router-dom";
 
 const cidadesSerra = [
@@ -487,10 +487,7 @@ export default function PreFetchModal({
                 CPF / CNPJ
               </label>
               <div className="relative group">
-                <MaskedInput
-                  mask={onlyDigits(cnpj).length < 11 ? "999.999.999-99" : "99.999.999/9999-99"}
-                  maskChar=""
-                  formatChars={{ '9': '[0-9]' }}
+                <CpfCnpjInput
                   value={cnpj}
                   onChange={(e: any) => setCnpj(e.target.value)}
                   className={`w-full bg-gray-50 border-2 transition-all duration-200 rounded-xl px-4 py-3 text-gray-700 outline-none

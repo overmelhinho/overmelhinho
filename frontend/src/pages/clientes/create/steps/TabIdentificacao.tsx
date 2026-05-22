@@ -1,7 +1,7 @@
 import { useFormikContext } from "formik";
 import { useMemo, useRef, useState } from "react";
 import { Building2, FileText, Hash, Briefcase, Tag, Eye, EyeOff, Sparkles, X, Calendar, MapPin, Search } from "lucide-react";
-import MaskedInput from "@/components/ui/masked-input";
+import CpfCnpjInput from "@/components/ui/cpf-cnpj-input";
 import axios from "@/services/api";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -393,10 +393,7 @@ export default function TabIdentificacao() {
           <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
             <Hash className="w-4 h-4 text-[#B70F0A]" /> CPF / CNPJ
           </label>
-          <MaskedInput
-            mask={(values.cnpj || "").replace(/\D/g, "").length <= 11 ? "999.999.999-999" : "99.999.999/9999-99"}
-            maskChar=""
-            formatChars={{ '9': '[0-9]' }}
+          <CpfCnpjInput
             name="cnpj"
             value={values.cnpj || ""}
             onChange={(e: any) => {
