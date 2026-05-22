@@ -261,8 +261,8 @@ export default function ClientProfileClient() {
     const hasWhatsApp = !!primaryWhatsApp;
 
     const tabs = isPagante ? ['Sobre', 'Fotos'] : ['Sobre'];
-    if (client.reviews?.length > 0) tabs.push('Avaliações');
-    if (client.job_opportunities?.length > 0) tabs.push('Vagas');
+    if (client.reviews?.length > 0 && isPagante) tabs.push('Avaliações');
+    if (client.job_opportunities?.length > 0 && isPagante) tabs.push('Vagas');
     const daysMap: Record<number, string> = {
         1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado', 7: 'Domingo'
     };
@@ -467,7 +467,7 @@ export default function ClientProfileClient() {
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-4 text-[11px] md:text-xs font-black uppercase tracking-widest font-sans">
-                                    {status && (
+                                    {status && isPagante && (
                                         <>
                                             <div className={`flex items-center py-1 px-3 rounded-full ${status.open ? 'bg-green-50 text-green-500 border border-green-100' : 'bg-red-50 text-brand-red border border-red-100'}`}>
                                                 <div className={`w-2 h-2 rounded-full mr-2 ${status.open ? 'bg-green-500' : 'bg-brand-red'} animate-pulse`}></div>
@@ -600,7 +600,7 @@ export default function ClientProfileClient() {
                                                     <p className="text-lg font-black text-gray-900 font-serif italic">{new Date(client.data_fundacao).getFullYear()}</p>
                                                 </div>
                                             )}
-                                            {client.segmentos?.length > 0 && (
+                                            {client.segmentos?.length > 0 && isPagante && (
                                                 <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
                                                     <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
                                                     <div className="flex flex-wrap gap-2">
@@ -750,7 +750,7 @@ export default function ClientProfileClient() {
                                         </section>
                                     )}
 
-                                    <section className="space-y-8">
+                                    {isPagante && (<section className="space-y-8">
                                         <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Onde nos Encontrar</h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {client.enderecos?.length > 0 ? client.enderecos.map((end: any, i: number) => (
@@ -828,7 +828,7 @@ export default function ClientProfileClient() {
                                                 </div>
                                             )}
                                         </div>
-                                    </section>
+                                    </section>)}
                                 </motion.div>
                             )}
 
@@ -1025,7 +1025,7 @@ export default function ClientProfileClient() {
                         )}
 
                         {/* Hours Section (Real Data) */}
-                        <div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
+                        {isPagante && (<div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                             <h3 className="text-xl font-black font-serif italic text-gray-900">Funcionamento</h3>
                             <div className="space-y-3 font-black text-[10px] uppercase tracking-widest">
                                 {schedule.length > 0 ? schedule.map((s: any) => (
@@ -1045,7 +1045,7 @@ export default function ClientProfileClient() {
                                     </div>
                                 )) : <p className="text-gray-400 font-bold italic lowercase">Não informado</p>}
                             </div>
-                        </div>
+                        </div>)}
 
                         {/* WhatsApp CTA */}
                         {hasWhatsApp && isPagante && (
