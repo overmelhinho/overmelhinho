@@ -17,7 +17,7 @@ class JobOpportunityController extends Controller
     public function indexPublic(Request $request)
     {
         $query = JobOpportunity::published()
-            ->with('client:id,nome_fantasia')
+            ->with(['client:id,nome_fantasia,logo_url,slug', 'client.contatos'])
             ->withCount('candidates');
 
         if ($request->city) {
@@ -28,6 +28,11 @@ class JobOpportunityController extends Controller
             $query->where('title', 'like', '%' . $request->search . '%');
         }
 
+        if ($request->has('areas')) {
+            $areas = is_array($request->areas) ? $request->areas : explode(',', $request->areas);
+            $query->whereIn('area', $areas);
+        }
+
         if ($request->hiring_type) {
             $query->where('hiring_type', $request->hiring_type);
         }
@@ -36,7 +41,7 @@ class JobOpportunityController extends Controller
             $query->where('work_model', $request->work_model);
         }
 
-        $jobs = $query->orderBy('published_at', 'desc')->paginate(12);
+        $jobs = $query->orderBy('published_at', 'desc')->paginate(500);
 
         return response()->json($jobs);
     }
@@ -48,7 +53,7 @@ class JobOpportunityController extends Controller
     public function showPublic($id)
     {
         $job = JobOpportunity::published()
-            ->with('client:id,nome_fantasia')
+            ->with('client:id,nome_fantasia,logo_url')
             ->findOrFail($id);
 
         // Incrementar contador de visualizações
@@ -63,7 +68,7 @@ class JobOpportunityController extends Controller
      */
     public function index(Request $request)
     {
-        $query = JobOpportunity::with('client:id,nome_fantasia')
+        $query = JobOpportunity::with('client:id,nome_fantasia,logo_url')
             ->withCount('candidates');
 
         if ($request->client_id) {

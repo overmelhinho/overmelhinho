@@ -40,11 +40,18 @@ interface Job {
     contact: string;
     logo?: string;
     timestamp: number; // para ordenação precisa por data
+    clientSlug?: string;
+    whatsapp?: string | null;
 }
 
 // ── DADOS ─────────────────────────────────────────────────────────
-// Os dados agora são puxados da API. (Mock removido)
-const CATEGORIES = ['Vendas', 'Administrativo', 'Indústria', 'TI & Digital', 'Logística', 'Serviços', 'Outros'];
+const CATEGORIES = [
+    'Administrativo', 'Alimentação', 'Beleza e Estética', 'Comercial', 'Construção', 
+    'Contábil', 'Direito', 'Educação', 'Educação Física', 'Elétrica', 'Finanças', 
+    'Hidráulica', 'Industrial', 'Informática | TI', 'Logística', 'Marketing', 
+    'Orçamentista', 'Portaria | Zeladoria', 'Produção', 'Recursos Humanos', 'Saúde', 
+    'Saúde Animal', 'Serviços', 'Serviços Gerais', 'Telemarketing', 'Vendas', 'Outros'
+];
 
 // ── MÁSCARA FONE ──────────────────────────────────────────────────
 function maskPhone(value: string): string {
@@ -134,8 +141,8 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
                 <div className="px-8 py-8 space-y-8">
                     {!isApplying ? (
                         <>
-                            {/* Salário + Tipo + Horário */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {/* Salário + Tipo */}
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-gray-50 rounded-2xl p-5 space-y-1">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Salário</p>
                                     <p className="font-black text-gray-900">{job.salary}</p>
@@ -143,10 +150,6 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
                                 <div className="bg-gray-50 rounded-2xl p-5 space-y-1">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Contrato</p>
                                     <p className="font-black text-gray-900">{job.type}</p>
-                                </div>
-                                <div className="bg-gray-50 rounded-2xl p-5 space-y-1 col-span-2 sm:col-span-1">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Publicada</p>
-                                    <p className="font-black text-gray-900">{job.date}</p>
                                 </div>
                             </div>
 
@@ -190,12 +193,38 @@ function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
                             <div className="bg-gray-900 rounded-[2rem] p-8 space-y-4">
                                 <p className="text-white font-black text-lg">Interessado(a)?</p>
                                 <p className="text-gray-400 text-sm font-medium">Preencha seus dados e anexe seu currículo para esta vaga.</p>
-                                <button
-                                    onClick={() => setIsApplying(true)}
-                                    className="w-full bg-brand-red text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30"
-                                >
-                                    Quero me Candidatar
-                                </button>
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={() => setIsApplying(true)}
+                                        className="w-full bg-brand-red text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30"
+                                    >
+                                        Quero me Candidatar pelo Site
+                                    </button>
+                                    
+                                    {job.whatsapp && (
+                                        <a
+                                            href={`https://wa.me/55${job.whatsapp.replace(/\\D/g, '')}?text=Olá! Gostaria de me candidatar para a vaga de ${job.title} que vi no Vermelhinho.`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full bg-[#25D366] text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#25D366]/30"
+                                        >
+                                            <Phone size={20} />
+                                            Candidatar via WhatsApp
+                                        </a>
+                                    )}
+                                </div>
+                                {job.clientSlug && (
+                                    <div className="pt-6 border-t border-gray-800 mt-6 text-center">
+                                        <a
+                                            href={`/clientes/${job.clientSlug}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 text-gray-400 hover:text-white font-bold text-sm transition-colors"
+                                        >
+                                            <Building2 size={16} /> Ver Página da Empresa <ExternalLink size={14} />
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         </>
                     ) : isSuccess ? (
@@ -316,14 +345,21 @@ export default function VagasPage() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [selectedCity, setSelectedCity] = useState<string>('Todas as Cidades');
     const [sortBy, setSortBy] = useState<'recentes' | 'salario'>('recentes');
     const [showFilters, setShowFilters] = useState(false);
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
     const [jobs, setJobs] = useState<Job[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const ITEMS_PER_PAGE = 20;
+
+    // Reset pagination on filter change
+    useEffect(() => { setPage(1); }, [searchTerm, selectedCategories, selectedCity, sortBy]);
 
     useEffect(() => {
         const fetchJobs = async () => {
+            setIsLoading(true);
             try {
                 const res = await api.get('/jobs/public');
                 const data = res.data.data || [];
@@ -340,11 +376,14 @@ export default function VagasPage() {
                     timestamp: j.published_at ? new Date(j.published_at).getTime() : new Date().getTime(),
                     daysAgo: j.published_at ? Math.floor((new Date().getTime() - new Date(j.published_at).getTime()) / (1000 * 3600 * 24)) : 0,
                     tags: [j.work_model, j.role, j.education_level].filter(Boolean),
-                    category: j.area || 'Outros',
+                    category: CATEGORIES.includes(j.area) ? j.area : 'Outros',
                     desc: j.description || 'Sem descrição.',
                     requirements: j.experience_required ? [j.experience_required] : [],
                     benefits: [], // TODO: Mapear se houver no backend
                     contact: j.contact_whatsapp || j.contact_email || 'Não informado',
+                    logo: j.client?.logo_url ? (j.client.logo_url.startsWith('http') ? j.client.logo_url : `https://painel.overmelhinho.com.br/storage/${j.client.logo_url}`) : undefined,
+                    clientSlug: j.client?.slug,
+                    whatsapp: (j.contact_whatsapp) || (j.client?.contatos?.[0]?.whatsapp_selected) || (j.client?.contatos?.[0]?.exibir_tel_principal && j.client?.contatos?.[0]?.has_whatsapp_principal ? j.client?.contatos?.[0]?.telefone_principal : null) || (j.client?.contatos?.[0]?.exibir_celular && j.client?.contatos?.[0]?.has_whatsapp_celular ? j.client?.contatos?.[0]?.celular : null) || null,
                 }));
                 
                 setJobs(mappedJobs);
@@ -373,8 +412,11 @@ export default function VagasPage() {
                 || job.company.toLowerCase().includes(term)
                 || job.location.toLowerCase().includes(term)
                 || job.tags.some(t => t.toLowerCase().includes(term));
+            
             const matchesCat = selectedCategories.length === 0 || selectedCategories.includes(job.category);
-            return matchesSearch && matchesCat;
+            const matchesCity = selectedCity === 'Todas as Cidades' || job.location === selectedCity;
+            
+            return matchesSearch && matchesCat && matchesCity;
         });
 
         result = [...result].sort((a, b) => {
@@ -385,13 +427,29 @@ export default function VagasPage() {
         });
 
         return result;
-    }, [searchTerm, selectedCategories, sortBy, jobs]);
+    }, [searchTerm, selectedCategories, selectedCity, sortBy, jobs]);
+
+    const paginatedJobs = useMemo(() => {
+        return filteredJobs.slice(0, page * ITEMS_PER_PAGE);
+    }, [filteredJobs, page]);
+
+    const hasMore = filteredJobs.length > page * ITEMS_PER_PAGE;
 
     const categoryCounts = useMemo(() =>
         CATEGORIES.map(cat => ({
             cat,
             count: jobs.filter(j => j.category === cat).length
         })), [jobs]);
+
+    const availableCities = useMemo(() => {
+        const cities = new Set<string>();
+        jobs.forEach(j => {
+            if (j.location && j.location !== 'Não informado') {
+                cities.add(j.location);
+            }
+        });
+        return ['Todas as Cidades', ...Array.from(cities).sort()];
+    }, [jobs]);
 
 
     return (
@@ -420,13 +478,30 @@ export default function VagasPage() {
 
                         {/* Barra de busca + filtro */}
                         <div className="flex gap-3 w-full md:w-auto">
-                            <div className="relative group flex-1 sm:w-80">
+                            {/* Select de Cidades nativo */}
+                            <div className="relative group hidden sm:block flex-shrink-0 w-56 lg:w-64">
+                                <div className={`absolute inset-y-0 left-5 flex items-center pointer-events-none transition-colors ${selectedCity === 'Todas as Cidades' ? 'text-gray-400 group-hover:text-gray-600' : 'text-brand-red'}`}>
+                                    <MapPin size={18} />
+                                </div>
+                                <select
+                                    className={`w-full h-full bg-gray-50 border-2 border-transparent focus:border-brand-red focus:bg-white hover:bg-gray-100 rounded-2xl py-4 pl-12 pr-10 outline-none font-black text-sm transition-all appearance-none cursor-pointer ${selectedCity === 'Todas as Cidades' ? 'text-gray-500' : 'text-gray-900'}`}
+                                    value={selectedCity}
+                                    onChange={e => setSelectedCity(e.target.value)}
+                                >
+                                    {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
+                                    <ChevronDown size={16} />
+                                </div>
+                            </div>
+
+                            <div className="relative group flex-1 sm:w-64 md:w-80">
                                 <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-300 group-focus-within:text-brand-red transition-colors">
                                     <Search size={18} />
                                 </div>
                                 <input
                                     type="text"
-                                    placeholder="Buscar cargo, empresa ou tag..."
+                                    placeholder="Buscar cargo ou empresa..."
                                     className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red focus:bg-white rounded-2xl py-4 pl-14 pr-6 outline-none font-bold text-gray-900 transition-all placeholder:text-gray-300"
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
@@ -434,7 +509,7 @@ export default function VagasPage() {
                             </div>
                             <button
                                 onClick={() => setShowFilters(v => !v)}
-                                className={`p-4 rounded-2xl flex items-center justify-center transition-all active:scale-95 border-2 ${showFilters ? 'bg-brand-red text-white border-brand-red' : 'bg-white text-gray-400 border-gray-100 hover:border-brand-red hover:text-brand-red'}`}
+                                className={`p-4 rounded-2xl flex items-center justify-center transition-all active:scale-95 border-2 lg:hidden ${showFilters ? 'bg-brand-red text-white border-brand-red' : 'bg-white text-gray-400 border-gray-100 hover:border-brand-red hover:text-brand-red'}`}
                             >
                                 <Filter size={20} />
                             </button>
@@ -443,18 +518,33 @@ export default function VagasPage() {
 
                     {/* Painel de filtros mobile */}
                     {showFilters && (
-                        <div className="mt-6 md:hidden bg-gray-50 rounded-3xl p-6 space-y-4 border border-gray-100">
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Categorias</p>
-                            <div className="flex flex-wrap gap-3">
-                                {categoryCounts.map(({ cat, count }) => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => toggleCategory(cat)}
-                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border-2 transition-all ${selectedCategories.includes(cat) ? 'bg-brand-red text-white border-brand-red' : 'bg-white text-gray-500 border-gray-100 hover:border-brand-red'}`}
+                        <div className="mt-6 md:hidden bg-gray-50 rounded-3xl p-6 space-y-6 border border-gray-100">
+                            <div className="space-y-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Cidade</p>
+                                <div className="relative">
+                                    <select
+                                        className="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 outline-none font-bold text-gray-900 appearance-none cursor-pointer"
+                                        value={selectedCity}
+                                        onChange={e => setSelectedCity(e.target.value)}
                                     >
-                                        {cat} ({count})
-                                    </button>
-                                ))}
+                                        {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                    <ChevronDown size={16} className="absolute right-4 top-3.5 text-gray-400 pointer-events-none" />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Áreas</p>
+                                <div className="flex flex-wrap gap-3 max-h-64 overflow-y-auto pr-2">
+                                    {categoryCounts.filter(c => c.count > 0 || selectedCategories.includes(c.cat)).map(({ cat, count }) => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => toggleCategory(cat)}
+                                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border-2 transition-all ${selectedCategories.includes(cat) ? 'bg-brand-red text-white border-brand-red' : 'bg-white text-gray-500 border-gray-100 hover:border-brand-red'}`}
+                                        >
+                                            {cat} ({count})
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -467,10 +557,10 @@ export default function VagasPage() {
 
                     {/* Sidebar filtros desktop */}
                     <div className="lg:col-span-3 space-y-8 hidden lg:block">
-                        <div className="space-y-4 bg-white p-8 rounded-[2.5rem] border border-gray-50 shadow-sm">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Categorias</h3>
-                            <div className="space-y-1">
-                                {categoryCounts.map(({ cat, count }) => {
+                        <div className="space-y-4 bg-white p-8 rounded-[2.5rem] border border-gray-50 shadow-sm flex flex-col max-h-[600px]">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 flex-shrink-0">Áreas</h3>
+                            <div className="space-y-1 overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300 scrollbar-track-transparent">
+                                {categoryCounts.filter(c => c.count > 0 || selectedCategories.includes(c.cat)).map(({ cat, count }) => {
                                     const active = selectedCategories.includes(cat);
                                     return (
                                         <button
@@ -479,10 +569,10 @@ export default function VagasPage() {
                                             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${active ? 'bg-brand-red/5 text-brand-red' : 'hover:bg-gray-50 text-gray-500'}`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                {active ? <CheckSquare size={16} className="text-brand-red" /> : <Square size={16} className="text-gray-300" />}
-                                                <span className="text-sm font-black">{cat}</span>
+                                                {active ? <CheckSquare size={16} className="text-brand-red flex-shrink-0" /> : <Square size={16} className="text-gray-300 flex-shrink-0" />}
+                                                <span className="text-sm font-black text-left">{cat}</span>
                                             </div>
-                                            <span className="text-xs font-black text-gray-300">{count}</span>
+                                            <span className="text-xs font-black text-gray-300 ml-2">{count}</span>
                                         </button>
                                     );
                                 })}
@@ -490,7 +580,7 @@ export default function VagasPage() {
                             {selectedCategories.length > 0 && (
                                 <button
                                     onClick={() => setSelectedCategories([])}
-                                    className="w-full text-xs font-black text-brand-red hover:underline pt-2"
+                                    className="w-full text-xs font-black text-brand-red hover:underline pt-4 border-t border-gray-50 flex-shrink-0"
                                 >
                                     Limpar filtros
                                 </button>
@@ -572,7 +662,7 @@ export default function VagasPage() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {filteredJobs.map(job => (
+                                {paginatedJobs.map(job => (
                                     <div
                                         key={job.id}
                                         className="group bg-white p-6 md:p-8 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 hover:border-brand-red/10 transition-all cursor-pointer"
@@ -596,7 +686,6 @@ export default function VagasPage() {
                                                     <div className="flex flex-wrap items-center gap-4 text-gray-400 text-sm font-bold">
                                                         <span className="flex items-center gap-1"><MapPin size={14} className="text-brand-red" />{job.location}</span>
                                                         <span className="flex items-center gap-1"><Briefcase size={14} />{job.company}</span>
-                                                        <span className="flex items-center gap-1"><Clock size={14} />{job.date}</span>
                                                     </div>
                                                     <div className="flex flex-wrap gap-2 pt-1">
                                                         {job.tags.map(tag => (
@@ -626,9 +715,17 @@ export default function VagasPage() {
                         )}
 
                         {filteredJobs.length > 0 && (
-                            <div className="pt-8 text-center">
-                                <p className="text-gray-300 text-xs font-black uppercase tracking-widest">
-                                    Exibindo todas as {filteredJobs.length} vagas disponíveis
+                            <div className="pt-8 text-center space-y-4">
+                                {hasMore && (
+                                    <button
+                                        onClick={() => setPage(p => p + 1)}
+                                        className="bg-white border-2 border-brand-red text-brand-red px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all"
+                                    >
+                                        Carregar Mais Vagas
+                                    </button>
+                                )}
+                                <p className="text-gray-300 text-xs font-black uppercase tracking-widest block">
+                                    Exibindo {filteredJobs.length} vagas
                                 </p>
                             </div>
                         )}
