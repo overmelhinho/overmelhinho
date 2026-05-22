@@ -129,17 +129,18 @@ export const SearchAutocomplete = () => {
 
     return (
         <>
-            {/* EFEITO IMERSIVO (Backdrop) */}
+            {/* EFEITO IMERSIVO (Backdrop) - Removido o blur quando aberto pois a busca inicia em foco */}
             <div 
-                className={`fixed inset-0 bg-cloud-dancer/80 backdrop-blur-md z-[50] transition-all duration-500 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 bg-transparent z-[50] transition-all duration-500 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 onClick={() => setIsOpen(false)}
             />
 
-            <div className={`relative w-full max-w-2xl mx-auto z-[60] transition-all duration-500 ${isOpen ? 'scale-[1.02]' : ''}`} ref={dropdownRef}>
+            <div className={`relative w-full max-w-2xl mx-auto z-[60] transition-all duration-500`} ref={dropdownRef}>
                 {/* INPUT PRINCIPAL */}
                 <div className={`relative gummy-card bg-white rounded-full p-2 flex items-center shadow-[0_20px_60px_-15px_rgba(255,0,0,0.15)] hover:shadow-[0_30px_80px_-20px_rgba(255,0,0,0.2)] border-4 transition-all duration-700 ${isListening ? 'border-brand-red ring-[15px] ring-red-100/30' : 'border-white'} ${isOpen ? 'rounded-b-none shadow-2xl' : ''}`}>
                     <input
                         type="text"
+                        autoFocus
                         value={query}
                         onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
