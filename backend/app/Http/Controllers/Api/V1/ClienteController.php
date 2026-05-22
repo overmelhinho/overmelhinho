@@ -581,8 +581,17 @@ class ClienteController extends Controller
 
     public function showPublic($id)
     {
-        $query = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews', 'jobOpportunities'])
-            ->where('exibir_no_site', 'true');
+        $query = Cliente::with([
+            'enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews',
+            'jobOpportunities' => function($q) {
+                $q->where('is_active', 'true')
+                  ->where('status', 'Published')
+                  ->where(function($sub) {
+                      $sub->whereNull('expires_at')
+                          ->orWhere('expires_at', '>=', now());
+                  });
+            }
+        ])->where('exibir_no_site', 'true');
         
         if (is_numeric($id)) {
             $cliente = $query->find($id);
@@ -615,7 +624,7 @@ class ClienteController extends Controller
 
         // Base da query: Clientes que NÃO são o atual e NÃO pertencem aos mesmos segmentos
         $baseQuery = Cliente::with(['enderecos', 'segmentos'])
-            ->where('id', '!=', $id)
+            ->where('id', '!=', $cliente->id)
             ->where('exibir_no_site', 'true')
             ->whereDoesntHave('segmentos', function($q) use ($segmentIds) {
                 $q->whereIn('segmentos.id', $segmentIds);
