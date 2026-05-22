@@ -21,11 +21,11 @@ class JobOpportunityController extends Controller
             ->withCount('candidates');
 
         if ($request->city) {
-            $query->where('city', 'like', '%' . $request->city . '%');
+            $query->where('city', 'ilike', '%' . $request->city . '%');
         }
 
         if ($request->search) {
-            $query->where('title', 'like', '%' . $request->search . '%');
+            $query->where('title', 'ilike', '%' . $request->search . '%');
         }
 
         if ($request->has('areas')) {
@@ -68,6 +68,16 @@ class JobOpportunityController extends Controller
      */
     public function index(Request $request)
     {
+        // 1. Controle Automático de Validade (Lazy Update)
+        // Se a vaga passou da data de expiração, marcamos como Encerrada e inativa
+        JobOpportunity::where('status', '!=', 'Closed')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->update([
+                'status' => 'Closed',
+                'is_active' => \Illuminate\Support\Facades\DB::raw('false')
+            ]);
+
         $query = JobOpportunity::with('client:id,nome_fantasia,logo_url')
             ->withCount('candidates');
 
@@ -76,25 +86,34 @@ class JobOpportunityController extends Controller
         }
 
         if ($request->search) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('city', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('client', function ($q2) use ($request) {
-                      $q2->where('nome_fantasia', 'like', '%' . $request->search . '%')
-                         ->orWhere('razao_social', 'like', '%' . $request->search . '%');
-                  });
+            $terms = explode(' ', $request->search);
+            $query->where(function ($q) use ($terms) {
+                foreach ($terms as $term) {
+                    if (trim($term) === '') continue;
+                    $q->where(function ($q2) use ($term) {
+                        $q2->where('title', 'ilike', '%' . $term . '%')
+                          ->orWhere('city', 'ilike', '%' . $term . '%')
+                          ->orWhereHas('client', function ($q3) use ($term) {
+                              $q3->where('nome_fantasia', 'ilike', '%' . $term . '%')
+                                 ->orWhere('razao_social', 'ilike', '%' . $term . '%');
+                          });
+                    });
+                }
             });
         }
 
         if ($request->city) {
-            $query->where('city', 'like', '%' . $request->city . '%');
+            $query->where('city', 'ilike', '%' . $request->city . '%');
         }
 
         if ($request->status) {
             $query->where('status', $request->status);
         }
 
-        $jobs = $query->orderBy('created_at', 'desc')->paginate(20);
+        $jobs = $query->orderByRaw("CASE WHEN status = 'Published' THEN 1 ELSE 2 END")
+                      ->orderBy('published_at', 'desc')
+                      ->orderBy('created_at', 'desc')
+                      ->paginate(20);
 
         return response()->json($jobs);
     }

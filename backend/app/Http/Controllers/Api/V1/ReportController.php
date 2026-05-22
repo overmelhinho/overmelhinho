@@ -513,7 +513,16 @@ class ReportController extends Controller
         $query = Candidate::with('jobOpportunity');
 
         if ($request->start_date && $request->end_date) {
-            $query->whereBetween('created_at', [$request->start_date, $request->end_date]);
+            $query->whereBetween('created_at', [
+                $request->start_date . ' 00:00:00',
+                $request->end_date . ' 23:59:59'
+            ]);
+        }
+
+        if ($request->client_id) {
+            $query->whereHas('jobOpportunity', function ($q) use ($request) {
+                $q->where('client_id', $request->client_id);
+            });
         }
 
         $candidates = $query->orderBy('created_at', 'desc')->get()->map(function($c) {
@@ -529,5 +538,18 @@ class ReportController extends Controller
         });
 
         return response()->json($candidates);
+    }
+
+    /**
+     * Clientes que possuem vagas
+     */
+    public function jobClients()
+    {
+        $clients = Cliente::whereHas('jobOpportunities')
+            ->select('id', 'nome_fantasia', 'razao_social')
+            ->orderBy('nome_fantasia')
+            ->get();
+            
+        return response()->json($clients);
     }
 }

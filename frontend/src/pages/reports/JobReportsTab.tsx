@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/services/api";
 import { format } from "date-fns";
@@ -23,11 +23,30 @@ export default function JobReportsTab() {
         format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd")
     );
     const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+    const [selectedClient, setSelectedClient] = useState("");
+    const [clients, setClients] = useState<{ id: number; nome_fantasia: string }[]>([]);
+    const [resumeModal, setResumeModal] = useState<string | null>(null);
+
+    useEffect(() => {
+        axios.get("/v1/admin/reports/jobs/clients").then((res) => {
+            setClients(res.data);
+        }).catch(() => {});
+    }, []);
+
+    const openResume = async (candidateId: number) => {
+        try {
+            const { data } = await axios.get(`/v1/candidates/${candidateId}/resume`);
+            setResumeModal(data.url);
+        } catch {
+            alert("Currículo não encontrado.");
+        }
+    };
 
     const { data: candidates, isLoading } = useQuery({
-        queryKey: ["job-report", startDate, endDate],
+        queryKey: ["job-report", startDate, endDate, selectedClient],
         queryFn: async () => {
             const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+            if (selectedClient) params.append("client_id", selectedClient);
             const resp = await axios.get(`/v1/admin/reports/jobs?${params.toString()}`);
             return resp.data;
         }
@@ -55,6 +74,20 @@ export default function JobReportsTab() {
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
                         />
+                    </div>
+                    <div className="w-px h-6 bg-gray-100" />
+                    <div className="flex items-center gap-2 px-3">
+                        <Briefcase size={14} className="text-gray-400" />
+                        <select 
+                            className="border-none bg-transparent h-8 text-xs font-bold focus-visible:ring-0 outline-none text-gray-600"
+                            value={selectedClient}
+                            onChange={(e) => setSelectedClient(e.target.value)}
+                        >
+                            <option value="">Todos os Clientes</option>
+                            {clients.map(c => (
+                                <option key={c.id} value={c.id}>{c.nome_fantasia}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
                 
@@ -178,7 +211,11 @@ export default function JobReportsTab() {
                                         {candidate.created_at}
                                     </td>
                                     <td className="px-6 py-5 text-right pr-8">
-                                        <Button variant="ghost" className="h-8 px-4 text-[10px] font-black uppercase tracking-widest text-red-600 hover:bg-red-50 rounded-lg">
+                                        <Button 
+                                            variant="ghost" 
+                                            onClick={() => openResume(candidate.id)}
+                                            className="h-8 px-4 text-[10px] font-black uppercase tracking-widest text-red-600 hover:bg-red-50 rounded-lg"
+                                        >
                                             Visualizar
                                         </Button>
                                     </td>
@@ -188,6 +225,34 @@ export default function JobReportsTab() {
                     </table>
                 </div>
             </Card>
+
+            {/* Modal de Currículo */}
+            {resumeModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+                    <div className="relative h-[85vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b px-5 py-3">
+                            <span className="font-semibold text-slate-700">Visualizador de Currículo</span>
+                            <div className="flex gap-2">
+                                <a
+                                    href={resumeModal}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                                >
+                                    Abrir em nova aba
+                                </a>
+                                <button
+                                    onClick={() => setResumeModal(null)}
+                                    className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+                        <iframe src={resumeModal} className="h-full w-full" title="Currículo" />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

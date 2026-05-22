@@ -37,6 +37,29 @@ function WhatsAppIcon({ size = 20 }) {
   );
 }
 
+const CompanyLogo = ({ company, logo, className = '' }: { company: string, logo?: string, className?: string }) => {
+    const [error, setError] = useState(false);
+    
+    if (!logo || error) {
+        return (
+            <div className={`flex items-center justify-center font-black flex-shrink-0 ${className}`}>
+                {company.charAt(0).toUpperCase()}
+            </div>
+        );
+    }
+
+    return (
+        <div className={`flex items-center justify-center flex-shrink-0 overflow-hidden ${className}`}>
+            <img 
+                src={logo} 
+                alt={company} 
+                className="w-full h-full object-contain p-2"
+                onError={() => setError(true)}
+            />
+        </div>
+    );
+};
+
 export default function ClientProfileClient() {
     const params = useParams();
     const id = (params.id || params.clientSlug) as string;
@@ -870,9 +893,11 @@ export default function ClientProfileClient() {
                                     {client.job_opportunities?.length > 0 ? client.job_opportunities.map((job: any) => (
                                         <div key={job.id} className="bg-white p-8 rounded-[2.5rem] border-2 border-gray-50 shadow-xl flex items-center justify-between group gummy-card">
                                             <div className="flex items-center space-x-6">
-                                                <div className="w-16 h-16 bg-red-50 text-brand-red rounded-2xl flex items-center justify-center">
-                                                    <Briefcase size={28} />
-                                                </div>
+                                                <CompanyLogo 
+                                                    company={client.nome_fantasia} 
+                                                    logo={client.logotipo_url} 
+                                                    className="w-16 h-16 bg-red-50 text-brand-red text-3xl rounded-2xl" 
+                                                />
                                                 <div>
                                                     <h4 className="text-xl font-black font-serif italic text-gray-900">{job.title}</h4>
                                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">

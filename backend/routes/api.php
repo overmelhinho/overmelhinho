@@ -285,6 +285,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/admin/reports/sales/pdf', [ReportController::class, 'exportSalesPdf']);
     Route::get('/admin/reports/commissions', [ReportController::class, 'commissionReport']);
     Route::get('/admin/reports/jobs', [ReportController::class, 'jobReport']);
+    Route::get('/admin/reports/jobs/clients', [ReportController::class, 'jobClients']);
 
     // 📄 Relatórios de Performance do Cliente
     Route::get('/clients/{id}/reports/preview', [ClientReportController::class, 'preview']);
