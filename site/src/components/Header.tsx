@@ -38,7 +38,7 @@ export default function Header() {
                     currentScrollY = el.scrollTop;
                 } else {
                     // Evitar falsos positivos do mobile
-                    if (target !== document && target !== window && target !== document.body && target !== document.documentElement) return;
+                    if (target !== document && (target as any) !== window && target !== document.body && target !== document.documentElement) return;
                     currentScrollY = window.scrollY || document.documentElement.scrollTop;
                 }
                 
