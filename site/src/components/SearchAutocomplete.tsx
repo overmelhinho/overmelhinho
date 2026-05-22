@@ -137,7 +137,7 @@ export const SearchAutocomplete = () => {
 
             <div className={`relative w-full max-w-2xl mx-auto z-[60] transition-all duration-500`} ref={dropdownRef}>
                 {/* INPUT PRINCIPAL */}
-                <div className={`relative gummy-card bg-white rounded-full p-2 flex items-center shadow-[0_20px_60px_-15px_rgba(255,0,0,0.15)] hover:shadow-[0_30px_80px_-20px_rgba(255,0,0,0.2)] border-4 transition-all duration-700 ${isListening ? 'border-brand-red ring-[15px] ring-red-100/30' : 'border-white'} ${isOpen ? 'rounded-b-none shadow-2xl' : ''}`}>
+                <div className={`relative gummy-card bg-white rounded-full p-2 flex items-center shadow-[0_20px_60px_-15px_rgba(255,0,0,0.15)] hover:shadow-[0_30px_80px_-20px_rgba(255,0,0,0.2)] border-4 transition-all duration-700 ${isListening ? 'border-brand-red ring-[15px] ring-red-100/30' : 'border-white'} ${isOpen && query.length >= 2 ? 'rounded-b-none shadow-2xl' : ''}`}>
                     <input
                         type="text"
                         autoFocus
