@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, Menu, X, Search, MapPin } from 'lucide-react';
 import Logo from '@/components/Logo';
