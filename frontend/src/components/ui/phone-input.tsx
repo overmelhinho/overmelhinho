@@ -45,7 +45,6 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         value={formatPhone(String(value))}
         onChange={handleChange}
         placeholder="(00) 0000-0000"
-        maxLength={15}
         {...props}
       />
     );
