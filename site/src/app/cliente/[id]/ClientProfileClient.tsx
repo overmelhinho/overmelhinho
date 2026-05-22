@@ -782,19 +782,21 @@ export default function ClientProfileClient() {
                                                         )}
                                                     </div>
 
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-                                                        {(i === 0 ? allPhones : [{ label: 'Telefone', number: end.telefone, isWhatsApp: false }]).map((p: any, idx: number) => (
-                                                            p.number && (
-                                                                <a 
-                                                                    key={idx}
-                                                                    href={`tel:${p.number.replace(/\D/g, '')}`}
-                                                                    className={`col-span-full bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2`}
-                                                                >
-                                                                    <Phone size={14} /> {p.label}: {p.number}
-                                                                </a>
-                                                            )
-                                                        ))}
-                                                    </div>
+                                                    {isPagante && (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                                                            {(i === 0 ? allPhones : [{ label: 'Telefone', number: end.telefone, isWhatsApp: false }]).map((p: any, idx: number) => (
+                                                                p.number && (
+                                                                    <a 
+                                                                        key={idx}
+                                                                        href={`tel:${p.number.replace(/\D/g, '')}`}
+                                                                        className={`col-span-full bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2`}
+                                                                    >
+                                                                        <Phone size={14} /> {p.label}: {p.number}
+                                                                    </a>
+                                                                )
+                                                            ))}
+                                                        </div>
+                                                    )}
 
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                                                         {!end.exibir_apenas_cidade && (
