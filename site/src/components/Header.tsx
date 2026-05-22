@@ -27,9 +27,23 @@ export default function Header() {
         const controlNavbar = (e: Event) => {
             if (typeof window !== 'undefined') {
                 const target = e.target as HTMLElement | Document;
-                const currentScrollY = target === document ? window.scrollY : (target as HTMLElement).scrollTop;
+                
+                // Ignora scrolls horizontais ou de pequenos containers (como a barra de filtros)
+                // Apenas consideramos o scroll se for no documento inteiro (mobile) ou no container principal (desktop)
+                const isDocument = target === document;
+                const isMainContainer = target !== document && (target as HTMLElement).classList?.contains('overflow-y-auto') && (target as HTMLElement).scrollHeight > (target as HTMLElement).clientHeight;
+
+                if (!isDocument && !isMainContainer) return;
+
+                const currentScrollY = isDocument ? window.scrollY : (target as HTMLElement).scrollTop;
                 
                 if (currentScrollY === undefined) return;
+
+                if (currentScrollY <= 0) {
+                    setIsVisible(true);
+                    setLastScrollY(0);
+                    return;
+                }
 
                 if (currentScrollY > lastScrollY && currentScrollY > 80) { // Scrolling down
                     setIsVisible(false);
@@ -40,7 +54,7 @@ export default function Header() {
             }
         };
 
-        window.addEventListener('scroll', controlNavbar, true);
+        window.addEventListener('scroll', controlNavbar, true); // true (capture) is needed because div scrolls don't bubble
         return () => window.removeEventListener('scroll', controlNavbar, true);
     }, [lastScrollY]);
 
