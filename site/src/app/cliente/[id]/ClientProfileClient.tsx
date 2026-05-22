@@ -459,9 +459,11 @@ export default function ClientProfileClient() {
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-3">
                                     <h1 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif italic uppercase leading-tight">{client.nome_fantasia}</h1>
-                                    <div className="w-5 h-5 bg-blue-500 rounded-full flex-shrink-0 flex items-center justify-center shadow-lg" title="Verificado">
-                                        <CheckCircle2 size={12} className="text-white" fill="white" />
-                                    </div>
+                                    {isPagante && (
+                                        <div className="w-5 h-5 bg-blue-500 rounded-full flex-shrink-0 flex items-center justify-center shadow-lg" title="Verificado">
+                                            <CheckCircle2 size={12} className="text-white" fill="white" />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-4 text-[11px] md:text-xs font-black uppercase tracking-widest font-sans">
@@ -495,7 +497,7 @@ export default function ClientProfileClient() {
                                         <MessageCircle size={20} className="mr-2" fill="currentColor" /> WhatsApp
                                     </button>
                                 )}
-                                {hasPhone && (
+                                {hasPhone && isPagante && (
                                     <button
                                         onClick={handleCallClick}
                                         className="bg-gray-100 text-gray-900 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-gray-200"
@@ -937,7 +939,7 @@ export default function ClientProfileClient() {
                     <aside className="w-full lg:w-96 space-y-8">
 
                         {/* Telefones Section */}
-                        {(allPhones.length > 0 || (client.contatos?.[0]?.email_principal && client.contatos?.[0]?.exibir_email !== false)) && (
+                        {(allPhones.length > 0 || (client.contatos?.[0]?.email_principal && client.contatos?.[0]?.exibir_email !== false)) && isPagante && (
                             <div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                                 <h3 className="text-xl font-black font-serif italic text-gray-900">Contatos</h3>
                                 <div className="space-y-4">
@@ -1063,7 +1065,7 @@ export default function ClientProfileClient() {
                         )}
 
                         {/* Redes Sociais Dinâmicas */}
-                        {client.redes_sociais?.length > 0 && (
+                        {client.redes_sociais?.length > 0 && isPagante && (
                             <div className="hidden lg:block bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                                 <h3 className="text-xl font-black font-serif italic text-gray-900">Redes Sociais</h3>
                                 <div className="flex flex-wrap gap-4">
@@ -1201,7 +1203,7 @@ export default function ClientProfileClient() {
             {/* 📱 MOBILE STICKY CONVERSION BAR */}
             <footer className="md:hidden fixed bottom-0 left-0 right-0 p-6 z-[100] pointer-events-none">
                 <div className="flex space-x-3 pointer-events-auto">
-                    {hasPhone && (
+                    {hasPhone && isPagante && (
                         <button
                             onClick={handleCallClick}
                             className="flex-[0.4] bg-white text-gray-900 py-6 rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border-2 border-white font-black text-xs uppercase tracking-widest flex items-center justify-center space-x-2 active:scale-95 transition-all font-sans"
