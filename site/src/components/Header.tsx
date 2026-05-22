@@ -21,42 +21,47 @@ export default function Header() {
 
     // Scroll Control
     const [isVisible, setIsVisible] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
+    const lastScrollY = useRef(0);
 
     useEffect(() => {
         const controlNavbar = (e: Event) => {
             if (typeof window !== 'undefined') {
                 const target = e.target as HTMLElement | Document;
+                const isDesktop = window.innerWidth >= 1024;
                 
-                // Ignora scrolls horizontais ou de pequenos containers (como a barra de filtros)
-                // Apenas consideramos o scroll se for no documento inteiro (mobile) ou no container principal (desktop)
-                const isDocument = target === document;
-                const isMainContainer = target !== document && (target as HTMLElement).classList?.contains('overflow-y-auto') && (target as HTMLElement).scrollHeight > (target as HTMLElement).clientHeight;
+                let currentScrollY = 0;
 
-                if (!isDocument && !isMainContainer) return;
-
-                const currentScrollY = isDocument ? window.scrollY : (target as HTMLElement).scrollTop;
+                if (isDesktop) {
+                    // No desktop, o scroll principal é dentro da div com overflow-y-auto
+                    if (target === document) return;
+                    const el = target as HTMLElement;
+                    if (!el.classList?.contains('overflow-y-auto')) return;
+                    currentScrollY = el.scrollTop;
+                } else {
+                    // No mobile, usamos o scroll da janela. 
+                    // Lemos o window.scrollY independente de qual elemento disparou o evento.
+                    currentScrollY = window.scrollY;
+                }
                 
-                if (currentScrollY === undefined) return;
-
                 if (currentScrollY <= 0) {
                     setIsVisible(true);
-                    setLastScrollY(0);
+                    lastScrollY.current = 0;
                     return;
                 }
 
-                if (currentScrollY > lastScrollY && currentScrollY > 80) { // Scrolling down
+                if (currentScrollY > lastScrollY.current && currentScrollY > 80) { // Scrolling down
                     setIsVisible(false);
-                } else if (currentScrollY < lastScrollY) { // Scrolling up
+                } else if (currentScrollY < lastScrollY.current) { // Scrolling up
                     setIsVisible(true);
                 }
-                setLastScrollY(currentScrollY);
+                
+                lastScrollY.current = currentScrollY;
             }
         };
 
-        window.addEventListener('scroll', controlNavbar, true); // true (capture) is needed because div scrolls don't bubble
+        window.addEventListener('scroll', controlNavbar, true); 
         return () => window.removeEventListener('scroll', controlNavbar, true);
-    }, [lastScrollY]);
+    }, []);
 
     const isActive = (href: string) => pathname === href;
 
