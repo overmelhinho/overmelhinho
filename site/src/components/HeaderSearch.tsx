@@ -100,22 +100,19 @@ export const HeaderSearch = () => {
     const isDesktop = mounted && typeof window !== 'undefined' && window.innerWidth > 1024;
 
     return (
-        <div className={`relative flex-1 transition-all duration-500 z-[210] ${isExpanded ? 'fixed inset-x-0 top-0 h-20 bg-white px-6 flex items-center lg:relative lg:inset-auto lg:h-auto lg:bg-transparent lg:px-0' : 'max-w-[40px] md:max-w-md'}`} ref={dropdownRef}>
-            <div className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl ${isExpanded ? 'w-full px-4 py-3 border-brand-red bg-white' : 'w-10 h-10 md:w-full md:h-auto md:px-4 md:py-2 border-transparent hover:bg-gray-100'} ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}>
-                <button 
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className={`flex-shrink-0 transition-colors md:pointer-events-none ${isOpen || isExpanded ? 'text-brand-red' : 'text-gray-400'}`}
-                >
+        <div className={`relative flex-1 transition-all duration-500 z-[210] ${isExpanded ? 'fixed inset-x-0 top-0 h-20 bg-white px-6 flex items-center lg:relative lg:inset-auto lg:h-auto lg:bg-transparent lg:px-0' : 'w-full max-w-md'}`} ref={dropdownRef}>
+            <div className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl ${isExpanded ? 'w-full px-4 py-3 border-brand-red bg-white' : 'w-full h-10 md:h-auto px-3 md:px-4 md:py-2 border-transparent hover:bg-gray-100'} ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}>
+                <div className={`flex-shrink-0 transition-colors ${isOpen || isExpanded ? 'text-brand-red' : 'text-gray-400'}`}>
                     <Search size={16} />
-                </button>
+                </div>
                 <input
                     type="text"
                     value={query}
                     onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     onFocus={() => { setIsOpen(query.length >= 2); setIsExpanded(true); }}
-                    placeholder={isExpanded || isDesktop ? `Buscar em ${cityName || 'todas as cidades'}...` : ''}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 px-3 text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none ${isExpanded ? 'block' : 'hidden md:block'}`}
+                    placeholder={isExpanded || isDesktop ? `Buscar em ${cityName || 'todas as cidades'}...` : 'Buscar...'}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-sm md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none block w-full truncate`}
                 />
                 <div className={`flex items-center space-x-2 ${isExpanded || isDesktop ? 'flex' : 'hidden'}`}>
                     {query && (
