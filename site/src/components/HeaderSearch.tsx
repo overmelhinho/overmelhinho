@@ -101,11 +101,15 @@ export const HeaderSearch = () => {
 
     return (
         <div className={`relative flex-1 transition-all duration-500 z-[210] ${isExpanded ? 'fixed inset-x-0 top-0 h-20 bg-white px-6 flex items-center lg:relative lg:inset-auto lg:h-auto lg:bg-transparent lg:px-0' : 'w-full max-w-md'}`} ref={dropdownRef}>
-            <div className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl ${isExpanded ? 'w-full px-4 py-3 border-brand-red bg-white' : 'w-full h-10 md:h-auto px-3 md:px-4 md:py-2 border-transparent hover:bg-gray-100'} ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}>
+            <div 
+                className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl cursor-text ${isExpanded ? 'w-full px-4 py-3 border-brand-red bg-white' : 'w-full h-10 md:h-auto px-3 md:px-4 md:py-2 border-transparent hover:bg-gray-100'} ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}
+                onClick={() => document.getElementById('header-search-input')?.focus()}
+            >
                 <div className={`flex-shrink-0 transition-colors ${isOpen || isExpanded ? 'text-brand-red' : 'text-gray-400'}`}>
                     <Search size={16} />
                 </div>
                 <input
+                    id="header-search-input"
                     type="text"
                     value={query}
                     onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}

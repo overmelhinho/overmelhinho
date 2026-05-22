@@ -130,7 +130,7 @@ export default function Header() {
 
                     {/* Hamburger Mobile */}
                     <button
-                        className="md:hidden p-2.5 rounded-xl bg-gray-50 text-gray-500 hover:bg-brand-red hover:text-white transition-all"
+                        className="md:hidden flex-shrink-0 p-2.5 rounded-xl bg-gray-50 text-gray-500 hover:bg-brand-red hover:text-white transition-all"
                         onClick={() => setMenuOpen(v => !v)}
                         aria-label="Menu"
                     >
