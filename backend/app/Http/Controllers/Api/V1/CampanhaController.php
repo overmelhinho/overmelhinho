@@ -127,7 +127,8 @@ class CampanhaController extends Controller
             $q->whereDate('c.data_fim', '<=', $request->query('data_fim'));
         }
 
-        $q->orderByDesc('c.created_at');
+        $q->orderByRaw("CASE WHEN c.status = 'ativa' THEN 1 ELSE 2 END ASC")
+          ->orderByDesc('c.created_at');
 
         $perPage = min(max((int) $request->query('per_page', 20), 1), 100);
 

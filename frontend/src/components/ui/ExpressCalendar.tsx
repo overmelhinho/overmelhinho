@@ -71,6 +71,35 @@ export function ExpressCalendar({ startDate, endDate, onChange }: ExpressCalenda
                 </button>
             </div>
 
+            <div className="flex gap-2 mb-4 px-2">
+                <div className="flex-1">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Início</label>
+                    <input 
+                        type="date" 
+                        value={startDate || ""}
+                        onChange={(e) => {
+                            const val = e.target.value || null;
+                            onChange(val, endDate);
+                            if (val) setCurrentMonth(dayjs(val).startOf("month"));
+                        }}
+                        className="w-full text-xs font-bold text-gray-700 bg-gray-50 border border-gray-100 rounded-xl px-2 py-1.5 outline-none focus:border-[#B70F0A] focus:bg-white transition-all"
+                    />
+                </div>
+                <div className="flex-1">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Fim</label>
+                    <input 
+                        type="date" 
+                        value={endDate || ""}
+                        onChange={(e) => {
+                            const val = e.target.value || null;
+                            onChange(startDate, val);
+                            if (!startDate && val) setCurrentMonth(dayjs(val).startOf("month"));
+                        }}
+                        className="w-full text-xs font-bold text-gray-700 bg-gray-50 border border-gray-100 rounded-xl px-2 py-1.5 outline-none focus:border-[#B70F0A] focus:bg-white transition-all"
+                    />
+                </div>
+            </div>
+
             <div className="grid grid-cols-7 gap-1 mb-2">
                 {["D", "S", "T", "Q", "Q", "S", "S"].map(d => (
                     <div key={d} className="text-[10px] font-black text-gray-300 text-center uppercase py-2">
