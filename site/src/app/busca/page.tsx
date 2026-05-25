@@ -521,8 +521,8 @@ function SearchContent() {
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                                             
                                             {matchPerfeito.logotipo_url && (
-                                                <div className="absolute bottom-4 md:bottom-6 left-4 md:left-6 w-20 h-20 md:w-24 md:h-24 rounded-[1.5rem] bg-white p-1.5 shadow-2xl border-2 border-white z-10 group-hover:scale-110 transition-transform duration-500">
-                                                    <img src={matchPerfeito.logotipo_url} className="w-full h-full object-cover rounded-[1.2rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                <div className="absolute bottom-4 md:bottom-6 left-4 md:left-6 w-24 h-24 md:w-32 md:h-32 rounded-[1.5rem] md:rounded-[2rem] bg-white p-1 shadow-2xl border-4 border-white z-10 group-hover:scale-110 transition-transform duration-500">
+                                                    <img src={matchPerfeito.logotipo_url} className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.6rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                                 </div>
                                             )}
                                         </div>
@@ -597,11 +597,11 @@ function SearchContent() {
                                             </div>
                                             <div className="px-4 pb-6 md:px-5 md:pb-6 pt-1 relative flex-1 flex flex-col">
                                                 {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
-                                                    <div className="absolute -top-8 md:-top-10 left-4 md:left-5 w-16 h-16 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.5rem] bg-white p-1.5 shadow-2xl border-2 border-white group-hover:-translate-y-2 transition-transform duration-500">
-                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1.2rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                    <div className="absolute -top-10 md:-top-12 left-4 md:left-5 w-20 h-20 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500">
+                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1.3rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                                     </div>
                                                 )}
-                                                <div className="pt-10 md:pt-12 space-y-2 flex-1 flex flex-col">
+                                                <div className="pt-12 md:pt-14 space-y-2 flex-1 flex flex-col">
                                                     <div className="flex justify-between items-start gap-2">
                                                         <h4 className="text-base md:text-lg font-black text-gray-900 tracking-tight font-serif italic leading-tight break-words flex-1">{item.nome_fantasia}</h4>
                                                         {isExpansionClient(item) && (
@@ -669,9 +669,9 @@ function SearchContent() {
                                                     >
                                                         <div className="flex items-center space-x-4 md:space-x-6">
                                                             {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && (
-                                                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 overflow-hidden shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                                                <div className="w-20 h-20 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[1.8rem] bg-white overflow-hidden shadow-md border-4 border-white flex-shrink-0 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center">
                                                                     {item.logotipo_url ? (
-                                                                        <img src={item.logotipo_url} className="w-full h-full object-cover" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-xl font-black text-gray-400 uppercase">${item.nome_fantasia.charAt(0)}</span>`; }} />
+                                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1.5rem]" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-2xl font-black text-gray-400 uppercase">${item.nome_fantasia.charAt(0)}</span>`; }} />
                                                                     ) : (
                                                                         <span className="text-2xl md:text-3xl font-black text-gray-400 uppercase">{item.nome_fantasia.charAt(0)}</span>
                                                                     )}
