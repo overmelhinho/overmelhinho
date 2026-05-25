@@ -142,7 +142,7 @@ function SearchContent() {
     // 2. Listing Ad (Meio) - Exige midia de segmento/listagem
     const listAd = useMemo(() => {
         const defaultInstitutional = {
-            id: 'inst',
+            id: 101,
             title: "Anuncie no O Vermelhinho",
             image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
             link: "https://overmelhinho.com.br/anuncie"
