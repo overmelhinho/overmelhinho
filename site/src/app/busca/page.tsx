@@ -212,7 +212,7 @@ function SearchContent() {
                 params: {
                     q: query,
                     page: pageParam,
-                    per_page: 10,
+                    per_page: 20,
                     city_id: cityId || searchParams.get('city_id')
                 }
             });
@@ -285,6 +285,20 @@ function SearchContent() {
         return () => observer.disconnect();
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+    // Auto-fetch until all pagantes are loaded
+    useEffect(() => {
+        if (!data || isFetchingNextPage || !hasNextPage) return;
+        const lastPage = data.pages[data.pages.length - 1];
+        if (!lastPage || !lastPage.data || lastPage.data.length === 0) return;
+        
+        const lastItem = lastPage.data[lastPage.data.length - 1];
+        const isLastItemPagante = lastItem.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(lastItem.status_assinatura);
+
+        if (isLastItemPagante) {
+            fetchNextPage();
+        }
+    }, [data, isFetchingNextPage, hasNextPage, fetchNextPage]);
+
     // Match Perfeito / Alta Certeza
     const matchPerfeito = useMemo(() => {
         if (!allResults.length || !query) return null;
@@ -293,10 +307,17 @@ function SearchContent() {
         const q = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         const n = first.nome_fantasia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         
-        // Match 100% (igualzinho ou um contendo o outro fortemente)
-        if (q.length >= 4 && (n.includes(q) || q.includes(n))) {
+        const qWords = q.split(' ').filter(Boolean);
+        
+        // Match exato
+        if (n === q) return first;
+
+        // Se a busca tem mais de uma palavra (busca mais específica) e o nome bate, consideramos match
+        // Isso evita que buscas genéricas de 1 palavra (ex: "desentupidora") deem match perfeito em "AG Desentupidora"
+        if (qWords.length > 1 && (n.includes(q) || q.includes(n))) {
             return first;
         }
+        
         return null;
     }, [allResults, query]);
 
