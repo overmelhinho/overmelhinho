@@ -469,7 +469,7 @@ function SearchContent() {
                                     if (activeHeroAd.id.toString().startsWith('mp-')) {
                                         if (activeHeroAd.link) router.push(activeHeroAd.link);
                                     } else if (activeHeroAd.link) {
-                                        trackAd(activeHeroAd.id, 'click', 'SEARCH_RESULT');
+                                        trackAd(activeHeroAd.id as number, 'click', 'SEARCH_RESULT');
                                         window.open(activeHeroAd.link, activeHeroAd.link.startsWith('http') ? '_blank' : '_self');
                                     }
                                 }}
