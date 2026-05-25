@@ -145,7 +145,8 @@ class Cliente extends Model
 
     public function galeriaImagens()
     {
-        return $this->hasMany(GaleriaImagem::class , 'cliente_id');
+        return $this->hasMany(GaleriaImagem::class , 'cliente_id')
+                    ->orderBy('ordem', 'asc');
     }
 
     public function interacoes()

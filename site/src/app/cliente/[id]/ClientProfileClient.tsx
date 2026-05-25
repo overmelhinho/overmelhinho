@@ -638,7 +638,7 @@ export default function ClientProfileClient() {
                                         </div>
                                     </section>
 
-                                    {client.beneficios?.length > 0 && (
+                                    {client.beneficios?.length > 0 && isPagante && (
                                         <section className="space-y-6">
                                             <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Benefícios e Pagamentos</h2>
                                             <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
