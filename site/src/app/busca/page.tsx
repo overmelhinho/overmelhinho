@@ -467,7 +467,7 @@ function SearchContent() {
                                 className={`relative group ${activeHeroAd.link ? 'cursor-pointer' : 'cursor-default'}`}
                                 onClick={() => {
                                     if (activeHeroAd.id.toString().startsWith('mp-')) {
-                                        router.push(activeHeroAd.link);
+                                        if (activeHeroAd.link) router.push(activeHeroAd.link);
                                     } else if (activeHeroAd.link) {
                                         trackAd(activeHeroAd.id, 'click', 'SEARCH_RESULT');
                                         window.open(activeHeroAd.link, activeHeroAd.link.startsWith('http') ? '_blank' : '_self');
