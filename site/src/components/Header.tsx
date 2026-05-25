@@ -42,20 +42,11 @@ export default function Header() {
                     currentScrollY = window.scrollY || document.documentElement.scrollTop;
                 }
                 
+                // A pedido do usuário, o header não vai mais se ocultar ao rolar para baixo.
+                // setIsVisible(false); mantido sempre visível.
                 if (currentScrollY <= 0) {
                     setIsVisible(true);
-                    lastScrollY.current = 0;
-                    return;
-                }
-
-                // Threshold anti-jitter: ignora micro-scrolls (ex: expansão da barra do Chrome/Safari)
-                if (Math.abs(currentScrollY - lastScrollY.current) < 10) {
-                    return;
-                }
-
-                if (currentScrollY > lastScrollY.current && currentScrollY > 80) { // Scrolling down
-                    setIsVisible(false);
-                } else if (currentScrollY < lastScrollY.current) { // Scrolling up
+                } else {
                     setIsVisible(true);
                 }
                 
