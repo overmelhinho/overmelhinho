@@ -409,6 +409,15 @@ function SearchContent() {
         }
     };
 
+    const activeHeroAd = (matchPerfeito && matchPerfeito.banner_url)
+        ? {
+            id: `mp-${matchPerfeito.id}`,
+            title: matchPerfeito.nome_fantasia,
+            image: matchPerfeito.banner_url,
+            link: getClientLink(matchPerfeito)
+        }
+        : heroAd;
+
     return (
         <div className="min-h-screen bg-cloud-dancer font-sans selection:bg-brand-red/10 overflow-x-hidden">
 
@@ -450,27 +459,29 @@ function SearchContent() {
 
                     <main className="px-5 py-6 space-y-12 pb-40">
 
-                        {/* HERO AD BANNER (PATROCINADO) */}
-                        {heroAd && heroAd.image && (
+                        {/* HERO AD BANNER / MATCH PERFEITO BANNER */}
+                        {activeHeroAd && activeHeroAd.image && (
                             <motion.section
                                 initial={{ opacity: 0, y: -20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className={`relative group ${heroAd.link ? 'cursor-pointer' : 'cursor-default'}`}
+                                className={`relative group ${activeHeroAd.link ? 'cursor-pointer' : 'cursor-default'}`}
                                 onClick={() => {
-                                    if (heroAd.link) {
-                                        trackAd(heroAd.id, 'click', 'SEARCH_RESULT');
-                                        window.open(heroAd.link, heroAd.link.startsWith('http') ? '_blank' : '_self');
+                                    if (activeHeroAd.id.toString().startsWith('mp-')) {
+                                        router.push(activeHeroAd.link);
+                                    } else if (activeHeroAd.link) {
+                                        trackAd(activeHeroAd.id, 'click', 'SEARCH_RESULT');
+                                        window.open(activeHeroAd.link, activeHeroAd.link.startsWith('http') ? '_blank' : '_self');
                                     }
                                 }}
                             >
-                                <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden transition-transform duration-700 ${heroAd.link ? 'group-hover:scale-[1.01]' : ''}`}>
+                                <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden transition-transform duration-700 ${activeHeroAd.link ? 'group-hover:scale-[1.01]' : ''}`}>
                                     <img 
-                                        src={heroAd.image} 
-                                        className="w-full h-auto max-h-[300px] object-contain" 
-                                        alt={heroAd.title} 
+                                        src={activeHeroAd.image} 
+                                        className="w-full h-auto max-h-[300px] object-cover" 
+                                        alt={activeHeroAd.title} 
                                     />
                                     {/* Link Indicator (Optional but subtle) */}
-                                    {heroAd.link && (
+                                    {activeHeroAd.link && (
                                         <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
                                             <ExternalLink size={14} className="text-white" />
                                         </div>
