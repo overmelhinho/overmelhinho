@@ -79,12 +79,16 @@ class ClienteController extends Controller
                     $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$effectiveQ}%"]);
                 }
 
+                // Busca exata nas Palavras Chave Geradas por IA
+                $sub->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$q}%"])
+                    ->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
                 if ($canUseSimilarity) {
-                    // Threshold seguro (0.3) para evitar falsos positivos como 'Deseju Pasteis' em 'desentupidora'
+                    // Threshold seguro (0.5) para evitar falsos positivos como 'Psicologia' e 'Odontologia' (que dividem o sufixo)
                     // Utilizamos word_similarity para buscar o termo "q" DENTRO de frases maiores
-                    $sub->orWhereRaw("word_similarity(?, nome_fantasia) > 0.3", [$normalizedQ])
-                        ->orWhereRaw("word_similarity(?, nome_alternativo) > 0.3", [$normalizedQ]);
+                    $sub->orWhereRaw("word_similarity(?, nome_fantasia) > 0.5", [$normalizedQ])
+                        ->orWhereRaw("word_similarity(?, nome_alternativo) > 0.5", [$normalizedQ]);
                 } else {
                     // Fallback agressivo por palavras
                     $words = explode(' ', $normalizedQ);
@@ -101,7 +105,7 @@ class ClienteController extends Controller
                            ->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"]);
                            
                         if ($canUseSimilarity) {
-                            $sq->orWhereRaw("word_similarity(?, segmentos.nome) > 0.3", [$normalizedQ]);
+                            $sq->orWhereRaw("word_similarity(?, segmentos.nome) > 0.5", [$normalizedQ]);
                         }
                     })
                     ->orWhereHas('enderecos', function ($eq) use ($q, $effectiveQ) {
@@ -160,6 +164,14 @@ class ClienteController extends Controller
 
         $query->orderByRaw("
             CASE 
+                -- 0. MATCH EXATO ABSOLUTO (Fura fila de assinaturas)
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
+                ELSE 1
+            END ASC
+        ", [$q]);
+
+        $query->orderByRaw("
+            CASE 
                 -- 1. Pagante Ativo na Cidade Buscada
                 WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') AND EXISTS (
                     SELECT 1 FROM enderecos 
@@ -178,25 +190,56 @@ class ClienteController extends Controller
             END ASC
         ", [$orderCityId, $orderCityId]);
 
-        $query->orderByRaw("
-            CASE 
-                -- A. Match Exato
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
-                
-                -- B. Começa com a palavra exata
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
-                
-                -- C. Contém a palavra em qualquer lugar
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
-                ELSE 3
-            END ASC
-        ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
+        $isSegmentSearch = false;
+        if (strlen($normalizedQ) >= 4) {
+            $isSegmentSearch = \App\Models\Segmento::whereRaw('unaccent(nome) ilike unaccent(?)', ["%{$normalizedQ}%"])->exists();
+        }
+
+        if ($isSegmentSearch) {
+            $query->orderByRaw("
+                CASE 
+                    -- Ignora match exato no nome para pagantes em busca de segmento (força ordem alfabética)
+                    WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 3
+                    
+                    -- Mantém ordenação por relevância para gratuitos
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
+                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
+                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
+                    ELSE 3
+                END ASC
+            ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
+        } else {
+            $query->orderByRaw("
+                CASE 
+                    -- A. Match Exato
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
+                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
+                    
+                    -- B. Começa com a palavra exata
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
+                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
+                    
+                    -- C. Contém a palavra em qualquer lugar
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
+                    ELSE 3
+                END ASC
+            ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
+        }
 
         // Desempate por similaridade fonética
         if ($canUseSimilarity) {
-            $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
+            if ($isSegmentSearch) {
+                $query->orderByRaw("
+                    CASE 
+                        WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 0
+                        ELSE similarity(nome_fantasia, ?)
+                    END DESC
+                ", [$normalizedQ]);
+            } else {
+                $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
+            }
         }
         
         $query->orderBy('nome_fantasia');

@@ -62,7 +62,10 @@ export default function Header() {
 
     return (
         <>
-            <header className={`sticky top-0 z-[200] border-b border-gray-100 shadow-sm transition-all duration-300 ${menuOpen ? 'bg-white' : 'bg-white/90 backdrop-blur-xl'} ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+            {/* Espaçador invisível para compensar o header fixed, já que o body tem overflow-x: hidden e quebra o sticky */}
+            <div className="h-20 w-full shrink-0"></div>
+
+            <header className={`fixed top-0 left-0 right-0 w-full z-[200] border-b border-gray-100 shadow-sm transition-all duration-300 ${menuOpen ? 'bg-white' : 'bg-white/90 backdrop-blur-xl'} ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4 md:gap-8">
 
                     {/* Logo */}
@@ -75,16 +78,7 @@ export default function Header() {
                         <HeaderSearch />
                     )}
 
-                    {/* ✅ Localização Global */}
-                    {pathname !== '/' && (
-                        <button 
-                            onClick={() => setIsCityModalOpen(true)}
-                            className="hidden lg:flex items-center space-x-2 px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl hover:border-brand-red transition-all group"
-                        >
-                            <MapPin size={14} className="text-brand-red" />
-                            <span className="text-[11px] font-black text-gray-900 uppercase tracking-widest truncate max-w-[150px]">{cityName || 'Qualquer Cidade'}</span>
-                        </button>
-                    )}
+                    {/* ✅ Localização Global - MOVIDO PARA A BARRA DE FILTROS NA PÁGINA DE BUSCA */}
 
                     {/* Nav Desktop */}
                     <nav className="hidden md:flex items-center gap-8">

@@ -28,7 +28,8 @@ import {
     Mic,
     Map as MapIcon,
     List as ListIcon,
-    ExternalLink
+    ExternalLink,
+    ChevronDown
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -68,7 +69,7 @@ function SearchContent() {
     const searchParams = useSearchParams();
     const [query, setQuery] = useState('');
     const observerTarget = useRef(null);
-    const { cityId, cityName, setCity } = useLocation();
+    const { cityId, cityName, setCity, setIsCityModalOpen } = useLocation();
 
     // Foco automático no input ao carregar a página (Abre o teclado no Mobile)
     useEffect(() => {
@@ -140,13 +141,20 @@ function SearchContent() {
 
     // 2. Listing Ad (Meio) - Exige midia de segmento/listagem
     const listAd = useMemo(() => {
-        if (!searchAds || searchAds.length === 0) return null;
+        const defaultInstitutional = {
+            id: 'inst',
+            title: "Anuncie no O Vermelhinho",
+            image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+            link: "https://overmelhinho.com.br/anuncie"
+        };
+
+        if (!searchAds || searchAds.length === 0) return defaultInstitutional;
 
         // Procura campanha que tenha mídia de segmento
-        const ad = searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING', 'IMAGEM'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING', 'IMAGEM'].includes(k)) && a.id !== heroAd?.id) 
-                 || searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING', 'IMAGEM'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING', 'IMAGEM'].includes(k)));
+        const ad = searchAds.find(a => Object.keys(a.midias || {}).some(k => ['banner_segmento', 'SEGMENT_LISTING'].includes(k.toUpperCase()) || ['banner_segmento', 'SEGMENT_LISTING'].includes(k)));
 
-        if (!ad) return null;
+        if (!ad) return defaultInstitutional;
+
         const midia = ad.midias['banner_segmento'] || ad.midias['SEGMENT_LISTING'] || Object.values(ad.midias)[0] || {};
 
         return {
@@ -277,15 +285,34 @@ function SearchContent() {
         return () => observer.disconnect();
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-    const matchPerfeito = allResults[0] ?? null;
-    const allRemaining = allResults.slice(1);
+    // Match Perfeito / Alta Certeza
+    const matchPerfeito = useMemo(() => {
+        if (!allResults.length || !query) return null;
+        
+        const first = allResults[0];
+        const q = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        const n = first.nome_fantasia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        
+        // Match 100% (igualzinho ou um contendo o outro fortemente)
+        if (q.length >= 4 && (n.includes(q) || q.includes(n))) {
+            return first;
+        }
+        return null;
+    }, [allResults, query]);
+
+    // Destaques: o primeiro resultado (se não houver matchPerfeito) + TODOS os pagantes ativos
+    const destaques = allResults.filter((item: any, idx: number) => {
+        if (matchPerfeito && item.id === matchPerfeito.id) return false;
+        
+        if (idx === 0 && !matchPerfeito) return true;
+        return item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura);
+    });
     
-    // Acesso Rápido: até 3 clientes que sejam pagantes ativos
-    const patrocinados = allRemaining.filter((item: any) => item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura)).slice(0, 3);
+    // Todos os Resultados: todos os que não entraram nos destaques E não são match perfeito
+    const destaquesIds = new Set(destaques.map((item: any) => item.id));
+    if (matchPerfeito) destaquesIds.add(matchPerfeito.id);
     
-    // Todos os Resultados: todos os que não entraram no acesso rápido
-    const patrocinadosIds = new Set(patrocinados.map((item: any) => item.id));
-    const outrosResultados = allRemaining.filter((item: any) => !patrocinadosIds.has(item.id));
+    const outrosResultados = allResults.filter((item: any) => !destaquesIds.has(item.id));
 
     const selectedMapItem = useMemo(() => allResults.find((r: any) => r.id === selectedMapResult), [allResults, selectedMapResult]);
 
@@ -371,6 +398,16 @@ function SearchContent() {
                     
                     <div className="p-4 bg-cloud-dancer flex justify-between items-center">
                         <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1 flex-1">
+                            {/* BOTÃO DE FILTRO DE CIDADE (Estilo iFood) */}
+                            <button
+                                onClick={() => setIsCityModalOpen(true)}
+                                className="whitespace-nowrap flex items-center px-5 py-2.5 bg-white/70 backdrop-blur-md border border-gray-100 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-900 active:scale-95 hover:bg-white hover:text-brand-red transition-all shadow-sm cursor-pointer"
+                            >
+                                <span className="mr-2">📍 {cityName || 'Qualquer Cidade'}</span>
+                                <ChevronDown size={14} className="opacity-70" />
+                            </button>
+
+                            {/* DEMAIS FILTROS DINÂMICOS */}
                             {activeFilters.map((filter) => (
                                 <button
                                     key={filter}
@@ -440,125 +477,88 @@ function SearchContent() {
                             </div>
                         )}
 
-                        {/* 1. MATCH PERFEITO */}
+                        {/* BLOCO HERO REMOVIDO A PEDIDO DO CLIENTE - RESTAURADO COM NOVA LÓGICA */}
+                        {/* 1. HERO RESULT (MATCH PERFEITO) */}
                         {!isLoading && matchPerfeito && (
-                            <section className="relative animate-in slide-in-from-bottom-10 duration-1000">
+                            <section className="animate-fade-in relative z-10 w-full mb-3 md:mb-5 mt-4">
+
                                 <div
+                                    onClick={() => router.push(getClientLink(matchPerfeito))}
                                     onMouseEnter={() => setHoveredResult(matchPerfeito.id)}
                                     onMouseLeave={() => setHoveredResult(null)}
-                                    className="relative bg-white rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-6 shadow-2xl border-4 border-white gummy-card overflow-hidden"
+                                    className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border-4 border-brand-red/10 cursor-pointer overflow-hidden flex flex-col md:flex-row group gummy-card"
                                 >
-                                    <div className="flex justify-between items-start mb-3 md:mb-5">
-                                        <div className="bg-brand-red/5 px-4 py-1.5 rounded-full flex items-center space-x-2 border border-brand-red/10 shadow-sm">
-                                            <Sparkles size={14} className="text-brand-red animate-pulse" />
-                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-red">Sugestão Inteligente</span>
-                                        </div>
-                                        <div className="flex flex-col items-end space-y-1">
-                                            <div className="text-right">
-                                                <p className="text-[8px] md:text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none">Afinidade</p>
-                                                <p className="text-2xl md:text-3xl font-black text-brand-red font-serif italic tracking-tighter">98%</p>
-                                            </div>
-                                            {isExpansionClient(matchPerfeito) && (
-                                                <span className="bg-amber-100/80 backdrop-blur-sm text-amber-700 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-amber-200">
-                                                    ✨ Regional
-                                                </span>
+                                    {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && (
+                                        <div className="w-full md:w-2/5 h-40 md:h-auto relative overflow-hidden flex-shrink-0">
+                                            {matchPerfeito.galeria?.[0]?.url ? (
+                                                <img src={matchPerfeito.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+                                            ) : (
+                                                <div className="w-full h-full bg-brand-red/5 group-hover:scale-110 transition-transform duration-1000 flex items-center justify-center">
+                                                    <span className="text-brand-red/20 font-black text-4xl uppercase">{matchPerfeito.nome_fantasia.charAt(0)}</span>
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                            
+                                            {matchPerfeito.logotipo_url && (
+                                                <div className="absolute bottom-4 left-4 w-16 h-16 rounded-[1rem] bg-white p-1 shadow-2xl border-2 border-white z-10 group-hover:scale-110 transition-transform duration-500">
+                                                    <img src={matchPerfeito.logotipo_url} className="w-full h-full object-cover rounded-[0.8rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                </div>
                                             )}
                                         </div>
-                                    </div>
-                                    <div className="flex items-center space-x-4 md:space-x-6 mb-3 md:mb-5 cursor-pointer group/item" onClick={() => router.push(getClientLink(matchPerfeito))}>
-                                        {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && (
-                                            <div className="w-14 h-14 md:w-20 md:h-20 rounded-[1.2rem] md:rounded-[1.8rem] bg-gray-50 flex-shrink-0 overflow-hidden shadow-2xl border-4 border-white group-hover/item:scale-105 transition-transform duration-500 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                                                {matchPerfeito.logotipo_url ? (
-                                                    <img src={matchPerfeito.logotipo_url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-2xl font-black text-gray-400 uppercase">${matchPerfeito.nome_fantasia.charAt(0)}</span>`; }} />
-                                                ) : (
-                                                    <span className="text-3xl font-black text-gray-400 uppercase">{matchPerfeito.nome_fantasia.charAt(0)}</span>
-                                                )}
+                                    )}
+                                    <div className="flex-1 p-5 md:p-8 flex flex-col justify-center relative bg-white">
+                                        <div className="space-y-4">
+                                            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h2 className="text-xl md:text-3xl font-black text-gray-900 tracking-tight font-serif italic leading-none">{matchPerfeito.nome_fantasia}</h2>
+
+                                                    </div>
+                                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">{matchPerfeito.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
+                                                </div>
                                             </div>
-                                        )}
-                                        <div className="space-y-1 md:space-y-2 flex-1">
-                                            <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tighter font-serif italic leading-tight">{matchPerfeito.nome_fantasia}</h2>
-                                            
-                                            <div className="flex flex-wrap gap-2 md:gap-4 text-[9px] md:text-[10px] font-bold text-gray-400 mt-1">
-                                                {matchPerfeito.enderecos?.[0] && (
-                                                    <span className="flex items-center space-x-1">
-                                                        <MapPin size={10} className="text-brand-red flex-shrink-0" />
-                                                        <span className="truncate max-w-[200px] md:max-w-none uppercase tracking-widest">{matchPerfeito.enderecos[0].logradouro}, {matchPerfeito.enderecos[0].numero} - {matchPerfeito.enderecos[0].bairro}</span>
-                                                    </span>
-                                                )}
-                                                
-                                                <span className="flex items-center text-green-500 font-black border-l border-gray-100 pl-2 md:pl-4 uppercase tracking-widest">
+
+                                            <div className="flex flex-wrap items-center gap-4">
+                                                <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+                                                    <MapPin size={12} className="mr-1.5 text-brand-red" /> 
+                                                    {matchPerfeito.enderecos?.[0]?.bairro || 'Local'}
+                                                </span>
+                                                <span className="text-green-500 font-black flex items-center text-[10px] uppercase tracking-widest bg-green-50 px-3 py-1.5 rounded-xl border border-green-100">
+                                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
                                                     Aberto Agora
                                                 </span>
-                                                <span className="flex items-center text-yellow-500 font-black border-l border-gray-100 pl-2 md:pl-4">
-                                                    <Star size={10} className="mr-1 fill-yellow-500" /> 4.9
-                                                </span>
                                             </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && (
-                                        <div className="flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-4 mt-2 border-t border-gray-50 pt-6">
-                                            <button
-                                                onClick={() => handleWhatsApp(matchPerfeito.id, matchPerfeito.contatos?.[0]?.celular || '')}
-                                                className="w-full md:w-auto px-8 py-3 md:py-4 bg-[#25D366] text-white rounded-[1.5rem] md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.1em] shadow-[0_15px_30px_-5px_rgba(37,211,102,0.3)] hover:shadow-green-500/40 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn border-b-4 border-green-700/40"
-                                            >
-                                                <WhatsAppIcon size={18} />
-                                                <span>Chamar no WhatsApp</span>
-                                            </button>
                                             
-                                            {matchPerfeito.enderecos?.[0]?.lat && (
-                                                <button
-                                                    onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${matchPerfeito.enderecos[0].lat},${matchPerfeito.enderecos[0].lng}`, '_blank')}
-                                                    className="w-full md:w-auto px-8 py-3 md:py-4 bg-gray-50 text-gray-600 rounded-[1.5rem] md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.1em] shadow-sm hover:bg-gray-100 active:scale-[0.97] transition-all flex items-center justify-center space-x-3 group/btn border border-gray-200"
-                                                >
-                                                    <MapPin size={16} className="text-gray-400" />
-                                                    <span>Traçar Rota</span>
-                                                </button>
+                                            {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && matchPerfeito.contatos?.[0]?.celular && (
+                                                <div className="pt-2">
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleWhatsApp(matchPerfeito.id, matchPerfeito.contatos[0].celular);
+                                                        }}
+                                                        className="w-full md:w-auto px-6 py-3 bg-green-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-green-500/30 hover:bg-green-600 active:scale-[0.98] transition-all flex items-center justify-center space-x-2 border border-green-400"
+                                                    >
+                                                        <MessageCircle size={16} />
+                                                        <span>Chamar no WhatsApp</span>
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             </section>
                         )}
 
-                        {/* AD BANNER (LISTAGEM) */}
-                        {listAd && (
-                            <section className="relative px-6 md:px-20">
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.98 }}
-                                    whileInView={{ opacity: 1, scale: 1 }}
-                                    viewport={{ once: true }}
-                                    className={`relative rounded-[2rem] md:rounded-[3rem] overflow-hidden transition-all transform ${listAd.link ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'} w-full flex`}
-                                    onClick={() => {
-                                        if (listAd.link) {
-                                            trackAd(listAd.id, 'click', 'SEGMENT_LISTING');
-                                            window.open(listAd.link, listAd.link.startsWith('http') ? '_blank' : '_self');
-                                        }
-                                    }}
-                                >
-                                    <img 
-                                        src={listAd.image} 
-                                        className="w-full h-auto max-h-[180px] md:max-h-[220px] object-contain" 
-                                        alt={listAd.title} 
-                                    />
-                                    {listAd.link && (
-                                        <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
-                                            <ExternalLink size={14} className="text-white" />
-                                        </div>
-                                    )}
-                                </motion.div>
-                            </section>
-                        )}
+
 
                         {/* 2. RECOMENDADOS */}
-                        {!isLoading && patrocinados.length > 0 && (
+                        {!isLoading && destaques.length > 0 && (
                             <section className="space-y-8">
                                 <div className="flex justify-between items-end px-2">
-                                    <h3 className="text-2xl font-black text-gray-900 tracking-tighter font-serif">Acesso Rápido</h3>
-                                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.4em] mb-1">Destaque</span>
+                                    <h3 className="text-lg md:text-xl font-black text-gray-900 tracking-tighter font-serif">Encontramos os melhores resultados para você</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {patrocinados.map((item: any) => (
+                                    {destaques.map((item: any) => (
                                         <div
                                             key={item.id}
                                             onClick={() => router.push(getClientLink(item))}
@@ -566,7 +566,7 @@ function SearchContent() {
                                             onMouseLeave={() => setHoveredResult(null)}
                                             className="bg-white rounded-[2rem] md:rounded-[2rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer flex flex-col"
                                         >
-                                            <div className="h-28 md:h-32 overflow-hidden relative flex-shrink-0">
+                                            <div className="h-20 md:h-24 overflow-hidden relative flex-shrink-0">
                                                 {item.galeria?.[0]?.url ? (
                                                     <img src={item.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                                                 ) : (
@@ -576,19 +576,17 @@ function SearchContent() {
                                             </div>
                                             <div className="px-4 pb-6 md:px-5 md:pb-6 pt-1 relative flex-1 flex flex-col">
                                                 {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
-                                                    <div className="absolute -top-8 left-4 w-16 h-16 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.2rem] bg-white p-1 shadow-2xl border-2 border-white group-hover:-translate-y-2 transition-transform duration-500">
-                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                    <div className="absolute -top-6 left-4 w-12 h-12 md:w-12 md:h-12 rounded-[1rem] md:rounded-[1rem] bg-white p-1 shadow-2xl border-2 border-white group-hover:-translate-y-2 transition-transform duration-500">
+                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[0.8rem] md:rounded-[0.8rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                                     </div>
                                                 )}
-                                                <div className="pt-10 md:pt-10 space-y-2 flex-1 flex flex-col">
+                                                <div className="pt-8 md:pt-8 space-y-2 flex-1 flex flex-col">
                                                     <div className="flex justify-between items-start gap-2">
-                                                        <h4 className="text-lg md:text-xl font-black text-gray-900 tracking-tight font-serif italic leading-tight break-words flex-1">{item.nome_fantasia}</h4>
-                                                        {isExpansionClient(item) ? (
+                                                        <h4 className="text-base md:text-lg font-black text-gray-900 tracking-tight font-serif italic leading-tight break-words flex-1">{item.nome_fantasia}</h4>
+                                                        {isExpansionClient(item) && (
                                                             <div className="flex flex-col items-end flex-shrink-0">
                                                                 <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">✨ ATENDE AQUI</span>
                                                             </div>
-                                                        ) : (
-                                                            <span className="text-[8px] font-black text-brand-red bg-brand-red/5 px-2 py-1 rounded-lg border border-brand-red/10 flex-shrink-0 mt-1">PREMIUM</span>
                                                         )}
                                                     </div>
                                                     <div className="flex flex-wrap items-center text-[9px] font-bold text-gray-400 gap-y-2 gap-x-3 uppercase tracking-[0.1em] mt-auto pt-2">
@@ -602,6 +600,35 @@ function SearchContent() {
                                 </div>
                             </section>
                         )}
+                        {/* AD BANNER (LISTAGEM) */}
+                        {listAd && (
+                            <section className="relative px-6 md:px-20 mb-8 mt-4">
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true }}
+                                    className={`relative rounded-[2rem] md:rounded-[3rem] overflow-hidden transition-all transform ${listAd.link ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'} w-full flex shadow-lg bg-gray-50`}
+                                    onClick={() => {
+                                        if (listAd.link) {
+                                            trackAd(listAd.id, 'click', 'SEGMENT_LISTING');
+                                            window.open(listAd.link, listAd.link.startsWith('http') ? '_blank' : '_self');
+                                        }
+                                    }}
+                                >
+                                    <img 
+                                        src={listAd.image} 
+                                        className="w-full h-auto max-h-[180px] md:max-h-[220px] object-cover" 
+                                        alt={listAd.title} 
+                                    />
+                                    {listAd.link && (
+                                        <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center transition-opacity border border-white/30">
+                                            <ExternalLink size={14} className="text-white" />
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </section>
+                        )}
+
                         {/* 4. TODOS OS RESULTADOS + SCROLL INFINITO */}
                         {!isLoading && outrosResultados.length > 0 && (
                             <section className="space-y-8">
@@ -632,9 +659,6 @@ function SearchContent() {
                                                             <div className="space-y-0.5">
                                                                 <div className="flex items-center space-x-2">
                                                                     <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-base md:text-lg leading-tight">{item.nome_fantasia}</h5>
-                                                                    {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && (
-                                                                        <span className="text-[8px] md:text-[9px] font-black text-brand-red bg-brand-red/5 px-2 py-0.5 rounded-lg border border-brand-red/10">PREMIUM</span>
-                                                                    )}
                                                                 </div>
                                                                 <p className="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
                                                             </div>
@@ -693,27 +717,31 @@ function SearchContent() {
                                             </React.Fragment>
                                         );
                                     })}
-                                    <div ref={observerTarget} className="py-12 flex justify-center">
-                                        {isFetchingNextPage ? (
-                                            <div className="flex items-center space-x-3 bg-gray-50 px-6 py-3 rounded-full border border-gray-100">
-                                                <div className="w-4 h-4 border-2 border-brand-red border-t-transparent rounded-full animate-spin"></div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Carregando mais...</span>
-                                            </div>
-                                        ) : hasNextPage ? (
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-200">↓ Role para ver mais</span>
-                                        ) : (
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-100">Fim dos resultados</span>
-                                        )}
-                                    </div>
                                 </div>
                             </section>
+                        )}
+                        
+                        {/* INFINITE SCROLL OBSERVER - DEVE FICAR FORA DO CONDICIONAL */}
+                        {!isLoading && (
+                            <div ref={observerTarget} className="py-12 flex justify-center">
+                                {isFetchingNextPage ? (
+                                    <div className="flex items-center space-x-3 bg-gray-50 px-6 py-3 rounded-full border border-gray-100">
+                                        <div className="w-4 h-4 border-2 border-brand-red border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Carregando mais...</span>
+                                    </div>
+                                ) : hasNextPage ? (
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-200">↓ Role para ver mais</span>
+                                ) : (
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-100">Fim dos resultados</span>
+                                )}
+                            </div>
                         )}
 
                     </main>
                 </div>
 
                 {/* ============ LADO DIREITO: MAPA LEAFLET REAL ============ */}
-                <div className={`w-full ${showMapDesktop ? 'lg:w-[35%] lg:opacity-100' : 'lg:w-0 lg:opacity-0'} relative overflow-hidden ${viewMode === 'list' ? 'hidden lg:block' : 'block h-screen lg:h-auto'} transition-all duration-700 ease-in-out`}>
+                <div className={`w-full ${showMapDesktop ? 'lg:w-[35%] lg:opacity-100' : 'lg:w-0 lg:opacity-0'} relative overflow-hidden ${viewMode === 'list' ? 'hidden lg:block' : 'block h-screen lg:h-screen'} transition-all duration-700 ease-in-out`}>
 
                     {/* Mapa real com OpenStreetMap */}
                     <SearchMap
