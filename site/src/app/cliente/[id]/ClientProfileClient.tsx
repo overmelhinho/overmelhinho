@@ -397,7 +397,7 @@ export default function ClientProfileClient() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24 md:pb-0">
+        <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24 md:pb-0 overflow-x-hidden w-full max-w-[100vw]">
             {/* 🤖 SEO Structured Data */}
             <script
                 type="application/ld+json"
