@@ -345,7 +345,7 @@ export default function AutorizacoesTab() {
                                     <td className="px-6 py-4" onClick={() => toggleSelect(a.id)}>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
-                                                #{a.numero.toString().padStart(5, '0')}
+                                                {a.numero.toString().padStart(5, '0')}
                                             </span>
                                             <span className="text-xs font-bold text-gray-500 uppercase tracking-tighter">
                                                 {a.cliente.nome_fantasia}

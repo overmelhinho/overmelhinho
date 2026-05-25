@@ -31,7 +31,7 @@ class Invoice extends Model
         'amount'          => 'decimal:2',
         'permuta_amount'  => 'decimal:2',
         'payable_amount'  => 'decimal:2',
-        'is_permuta'      => 'boolean',
+
         'due_date'        => 'date',
         'action_date'     => 'datetime',
     ];

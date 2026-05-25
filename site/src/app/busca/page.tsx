@@ -875,6 +875,10 @@ function SearchContent() {
                                     setViewMode(viewMode === 'list' ? 'map' : 'list');
                                 } else if (item.path === '/busca') {
                                     if (viewMode === 'map') setViewMode('list');
+                                    // Dispara o clique no container do header para expandir a busca lá em cima
+                                    document.getElementById('header-search-container')?.click();
+                                    
+                                    // Fallback para input local caso exista
                                     if (inputRef.current) inputRef.current.focus();
                                 } else if (item.path !== '#') {
                                     router.push(item.path);

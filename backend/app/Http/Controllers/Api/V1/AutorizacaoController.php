@@ -59,9 +59,25 @@ class AutorizacaoController extends Controller
         }
         if ($request->filled('q')) {
             $q = $request->q;
-            $query->where(function ($sq) use ($q) {
-                $sq->where('titulo_anuncio', 'ilike', "%{$q}%")
-                    ->orWhereHas('cliente', fn($c) => $c->where('nome_fantasia', 'ilike', "%{$q}%"));
+
+            static $unaccentExists = null;
+            if ($unaccentExists === null) {
+                try {
+                    \Illuminate\Support\Facades\DB::select("SELECT unaccent('a')");
+                    $unaccentExists = true;
+                } catch (\Exception $e) {
+                    $unaccentExists = false;
+                }
+            }
+
+            $query->where(function ($sq) use ($q, $unaccentExists) {
+                if ($unaccentExists) {
+                    $sq->whereRaw("unaccent(titulo_anuncio) ilike unaccent(?)", ["%{$q}%"])
+                        ->orWhereHas('cliente', fn($c) => $c->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$q}%"]));
+                } else {
+                    $sq->where('titulo_anuncio', 'ilike', "%{$q}%")
+                        ->orWhereHas('cliente', fn($c) => $c->where('nome_fantasia', 'ilike', "%{$q}%"));
+                }
 
                 // Busca por número do contrato (removendo # e zeros à esquerda para conferir com o integer no DB)
                 $numericQ = preg_replace('/\D/', '', $q);
@@ -543,7 +559,7 @@ class AutorizacaoController extends Controller
                     'plan_id'        => $autorizacao->plan_id,
                     'amount'         => $parcela->valor,
                     'payable_amount' => $parcela->payable_amount,
-                    'is_permuta'     => $autorizacao->is_permuta,
+                    'is_permuta'     => filter_var($autorizacao->is_permuta, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
                     'permuta_amount' => $parcela->permuta_amount,
                     'permuta_description' => $autorizacao->permuta_description,
                     'due_date'       => $parcela->vencimento,

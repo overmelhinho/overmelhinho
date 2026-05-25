@@ -103,8 +103,12 @@ export const HeaderSearch = () => {
     return (
         <div className={`relative flex-1 transition-all duration-500 z-[210] ${isExpanded ? '!fixed inset-x-0 top-0 h-20 bg-white px-6 flex items-center lg:!relative lg:inset-auto lg:h-auto lg:bg-transparent lg:px-0' : 'w-full max-w-md'}`} ref={dropdownRef}>
             <div 
-                className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl cursor-text ${isExpanded ? 'w-full px-4 py-3 border-brand-red bg-white' : 'w-full h-10 md:h-auto px-3 md:px-4 md:py-2 border-transparent hover:bg-gray-100'} ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}
-                onClick={() => document.getElementById('header-search-input')?.focus()}
+                id="header-search-container"
+                className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl cursor-text ${isExpanded ? 'w-full px-4 py-3 border-brand-red bg-white' : 'w-10 md:w-full h-10 md:h-auto justify-center md:justify-start px-0 md:px-4 md:py-2 border-transparent hover:bg-gray-100'} ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}
+                onClick={() => {
+                    setIsExpanded(true);
+                    setTimeout(() => document.getElementById('header-search-input')?.focus(), 50);
+                }}
             >
                 <div className={`flex-shrink-0 transition-colors ${isOpen || isExpanded ? 'text-brand-red' : 'text-gray-400'}`}>
                     <Search size={16} />
@@ -117,7 +121,7 @@ export const HeaderSearch = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     onFocus={() => { setIsOpen(query.length >= 2); setIsExpanded(true); }}
                     placeholder={isExpanded || isDesktop ? `Buscar em ${cityName || 'todas as cidades'}...` : 'Buscar...'}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-sm md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none block w-full truncate`}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-sm md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none w-full truncate ${isExpanded ? 'block' : 'hidden md:block'}`}
                 />
                 <div className={`flex items-center space-x-2 ${isExpanded || isDesktop ? 'flex' : 'hidden'}`}>
                     {query && (

@@ -27,6 +27,7 @@ import {
     Pencil,
     Landmark,
     Info,
+    Printer,
 } from "lucide-react";
 import { format, isBefore, startOfDay, subDays, isAfter, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -94,7 +95,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [syncFilter, setSyncFilter] = useState("all"); // all, synced, unsynced
-    const [dateRange, setDateRange] = useState("current_month"); // all, current_month, 7, 15, 30, custom
+    const [dateRange, setDateRange] = useState("all"); // all, current_month, 7, 15, 30, custom
     const [customStartDate, setCustomStartDate] = useState("");
     const [customEndDate, setCustomEndDate] = useState("");
 
@@ -117,6 +118,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     const [editDueDate, setEditDueDate] = useState("");
     const [editJustification, setEditJustification] = useState("");
     const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+    const [editPaymentMethod, setEditPaymentMethod] = useState("pix");
     const [editDifferenceAction, setEditDifferenceAction] = useState<"discount" | "redistribute" | "create_extra" | "next_installment">("discount");
     const [editExtraDueDate, setEditExtraDueDate] = useState("");
 
@@ -133,6 +135,71 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     const [settlePaymentMethod, setSettlePaymentMethod] = useState("pix");
     const [settleJustification, setSettleJustification] = useState("");
     const [isSettleSubmitting, setIsSettleSubmitting] = useState(false);
+
+    const [selectedInvoices, setSelectedInvoices] = useState<number[]>([]);
+
+    const toggleSelectInvoice = (id: number) => {
+        setSelectedInvoices(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkResendToTiny = async () => {
+        if (selectedInvoices.length === 0) return;
+        setIsResending(true);
+        try {
+            const response = await axios.post("/v1/financial/invoices/resend-to-tiny", { ids: selectedInvoices });
+            toast.success(response.data.message || "Sincronização iniciada em background!");
+            refetch();
+            setSelectedInvoices([]);
+        } catch (error) {
+            console.error("Erro ao reenviar:", error);
+            toast.error("Erro ao iniciar sincronização com o Tiny ERP.");
+        } finally {
+            setIsResending(false);
+        }
+    };
+
+    const handleBulkMarkAsPaid = async () => {
+        if (selectedInvoices.length === 0) return;
+        if (!window.confirm(`Tem certeza que deseja marcar ${selectedInvoices.length} fatura(s) como paga(s)?`)) return;
+        try {
+            const loadingToast = toast.loading("Processando baixa em lote...");
+            await axios.post(`/v1/financial/invoices/settle-batch`, {
+                ids: selectedInvoices,
+                payment_method: 'pix',
+                justification: "Baixa em lote realizada pelo administrativo."
+            });
+            toast.success("Baixa em lote concluída!", { id: loadingToast });
+            setSelectedInvoices([]);
+            refetch();
+        } catch (error) {
+            toast.error("Erro ao realizar baixa em lote.");
+        }
+    };
+
+    const handleBulkDownloadReceipts = async () => {
+        if (selectedInvoices.length === 0) return;
+        try {
+            const loadingToast = toast.loading("Gerando pacote de recibos...");
+            const response = await axios.post(`/v1/financial/invoices/batch-receipts`, {
+                ids: selectedInvoices
+            }, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Recibos_Lote_${format(new Date(), 'ddMMyyHHmm')}.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Download iniciado!", { id: loadingToast });
+            setSelectedInvoices([]);
+        } catch (error) {
+            toast.error("Erro ao gerar download em lote.");
+        }
+    };
 
     const handleSync = async () => {
         setIsSyncing(true);
@@ -164,6 +231,21 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
             toast.error("Erro ao reenviar faturas ao Tiny ERP.");
         } finally {
             setIsResending(false);
+        }
+    };
+
+    const handleDownloadReceipt = async (invoiceId: number) => {
+        try {
+            const loadingToast = toast.loading("Gerando recibo...");
+            const response = await axios.get(`/v1/financial/invoices/${invoiceId}/receipt`, {
+                responseType: 'blob'
+            });
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("Recibo gerado com sucesso!", { id: loadingToast });
+        } catch (error) {
+            toast.error("Erro ao gerar recibo.");
         }
     };
 
@@ -244,9 +326,14 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
         return baseUrl;
     };
 
+    const normalizeText = (text: string) => {
+        return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+    };
+
     const filteredInvoices = invoices?.filter((invoice) => {
+        const searchNorm = normalizeText(searchTerm);
         const matchesSearch =
-            invoice.client.nome_fantasia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            normalizeText(invoice.client.nome_fantasia).includes(searchNorm) ||
             invoice.client.cpf_cnpj?.includes(searchTerm) ||
             invoice.autorizacao_numero?.includes(searchTerm) ||
             (searchTerm && !isNaN(Number(searchTerm)) && invoice.autorizacao_numero?.includes(searchTerm.padStart(5, '0')));
@@ -438,10 +525,61 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                 </div>
             </div>
 
+            {selectedInvoices.length > 0 && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl mb-4 animate-in fade-in slide-in-from-top-2">
+                    <span className="text-xs font-black uppercase text-red-600 mr-2">
+                        {selectedInvoices.length} selecionada(s)
+                    </span>
+                    <button
+                        onClick={handleBulkDownloadReceipts}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors font-bold text-[10px] uppercase border border-emerald-100 shadow-sm"
+                    >
+                        <Printer size={14} />
+                        Recibos
+                    </button>
+                    <button
+                        onClick={handleBulkMarkAsPaid}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-bold text-[10px] uppercase border border-blue-100 shadow-sm"
+                    >
+                        <CheckCircle2 size={14} />
+                        Dar Baixa
+                    </button>
+                    <button
+                        onClick={handleBulkResendToTiny}
+                        disabled={isResending}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white text-orange-600 rounded-lg hover:bg-orange-50 transition-colors font-bold text-[10px] uppercase border border-orange-100 shadow-sm disabled:opacity-50"
+                    >
+                        <Send size={14} className={isResending ? "animate-pulse" : ""} />
+                        {isResending ? "Sincronizando..." : "Sincronizar Tiny"}
+                    </button>
+                    <button
+                        onClick={() => setSelectedInvoices([])}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors ml-auto"
+                        title="Limpar seleção"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
+                            <th className="px-4 py-3 w-10">
+                                <input
+                                    type="checkbox"
+                                    checked={paginatedInvoices?.length! > 0 && selectedInvoices.length === paginatedInvoices?.length}
+                                    onChange={() => {
+                                        if (selectedInvoices.length === paginatedInvoices?.length) {
+                                            setSelectedInvoices([]);
+                                        } else {
+                                            setSelectedInvoices(paginatedInvoices?.map(i => i.id) || []);
+                                        }
+                                    }}
+                                    className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
+                                />
+                            </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                 Autorização / Parcela
                             </th>
@@ -455,7 +593,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                 Vencimento
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                                Plano
+                                Pagamento
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                 Status
@@ -489,11 +627,19 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                 const isOverdue = invoice.status === "pending" && isBefore(new Date(invoice.due_date), startOfDay(new Date()));
 
                                 return (
-                                    <tr key={invoice.id} className="hover:bg-gray-50">
+                                    <tr key={invoice.id} className={cn("hover:bg-gray-50", selectedInvoices.includes(invoice.id) && "bg-red-50/30")}>
+                                        <td className="px-4 py-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedInvoices.includes(invoice.id)}
+                                                onChange={() => toggleSelectInvoice(invoice.id)}
+                                                className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
+                                            />
+                                        </td>
                                         <td className="whitespace-nowrap px-6 py-4">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-black text-gray-900">
-                                                    {invoice.autorizacao_numero ? `#${invoice.autorizacao_numero}` : "-"}
+                                                    {invoice.autorizacao_numero ? `${invoice.autorizacao_numero}` : "-"}
                                                 </span>
                                                 {invoice.parcel_number && invoice.total_parcels && (
                                                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
@@ -584,8 +730,19 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                 {format(new Date(invoice.due_date), "dd/MM/yyyy")}
                                             </div>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                                            {invoice.plan?.name || "-"}
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                            {invoice.status === 'paid' && invoice.action_date ? (
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-gray-700">
+                                                        {format(new Date(invoice.action_date), "dd/MM/yyyy")}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-400 uppercase tracking-tight">
+                                                        {format(new Date(invoice.action_date), "HH:mm")}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400 font-medium">-</span>
+                                            )}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4">
                                             {getStatusBadge(invoice)}
@@ -640,20 +797,15 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
 
                                                 {invoice.status === "pending" && (
                                                     <>
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedInvoice(invoice);
-                                                                setEditAmount(String(invoice.payable_amount ?? invoice.amount));
-                                                                setEditDueDate(invoice.due_date?.slice(0, 10) ?? "");
-                                                                setEditJustification("");
-                                                                setIsEditModalOpen(true);
-                                                            }}
+                                                        <a
+                                                            href={`/clientes/${invoice.client.id}/editar?step=12`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
                                                             className="p-2 text-blue-500 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                                                            title="Editar Valor / Vencimento"
+                                                            title="Abrir Cliente (Aba Financeiro)"
                                                         >
                                                             <Pencil size={15} />
-                                                        </button>
-
+                                                        </a>
                                                         {invoice.group_id && invoice.total_parcels && invoice.total_parcels > 1 && (
                                                             <button
                                                                 onClick={() => {
@@ -677,12 +829,14 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                         <button
                                                             onClick={() => {
                                                                 setSelectedInvoice(invoice);
-                                                                setActionType('paid');
-                                                                setJustification("");
-                                                                setIsActionModalOpen(true);
+                                                                setEditAmount(String(invoice.payable_amount ?? invoice.amount));
+                                                                setEditDueDate(invoice.due_date?.slice(0, 10) ?? "");
+                                                                setEditJustification("");
+                                                                setEditPaymentMethod(invoice.payment_method || "pix");
+                                                                setIsEditModalOpen(true);
                                                             }}
                                                             className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors"
-                                                            title="Dar Baixa (Marcar como Pago)"
+                                                            title="Dar Baixa (Confirmar Pagamento)"
                                                         >
                                                             <Check size={18} />
                                                         </button>
@@ -701,6 +855,14 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                         </button>
                                                     </>
                                                 )}
+
+                                                <button
+                                                    onClick={() => handleDownloadReceipt(invoice.id)}
+                                                    className="p-2 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                    title="Imprimir Recibo de Pagamento"
+                                                >
+                                                    <Printer size={16} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -873,6 +1035,22 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                             </div>
                         </div>
 
+                        {/* Forma de pagamento */}
+                        <div className="space-y-1 mt-4">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Forma de Pagamento (Caso vá concluir o pagamento)</label>
+                            <Select value={editPaymentMethod} onValueChange={setEditPaymentMethod}>
+                                <SelectTrigger className="w-full rounded-xl border-gray-200">
+                                    <SelectValue placeholder="Selecione..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pix">Pix</SelectItem>
+                                    <SelectItem value="boleto">Boleto</SelectItem>
+                                    <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
                         {/* Painel da diferença — aparece quando o valor muda */}
                         {(() => {
                             const originalAmount = selectedInvoice ? Number(selectedInvoice.payable_amount ?? selectedInvoice.amount) : 0;
@@ -980,7 +1158,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                         })()}
 
                         <div className="space-y-1">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Motivo da Alteração (Obrigatório)</label>
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Motivo / Observação (Opcional)</label>
                             <Textarea
                                 placeholder="Ex: Negociação comercial, correção de valor..."
                                 value={editJustification}
@@ -1012,43 +1190,53 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                         </div>
                     </div>
 
-                    <DialogFooter className="gap-2 sm:justify-end">
+                    <DialogFooter className="gap-2 sm:justify-end flex-wrap">
                         <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
                         <Button
-                            disabled={!editAmount || !editDueDate || editJustification.length < 5 ||
+                            disabled={!editAmount || !editDueDate ||
                                 (editDifferenceAction === 'create_extra' && !editExtraDueDate) ||
                                 isEditSubmitting
                             }
-                            className="rounded-xl font-black px-8 bg-blue-600 hover:bg-blue-700"
+                            className="rounded-xl font-black px-6 bg-green-600 hover:bg-green-700"
                             onClick={async () => {
                                 if (!selectedInvoice) return;
                                 setIsEditSubmitting(true);
                                 try {
-                                    const res = await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/edit`, {
+                                    // 1. Salvar edição (se mudou algo ou sempre pra garantir diff logic)
+                                    const resEdit = await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/edit`, {
                                         amount: Number(editAmount),
                                         due_date: editDueDate,
-                                        justification: editJustification,
+                                        justification: editJustification + " (Edição antes da baixa)",
                                         difference_action: editDifferenceAction,
                                         extra_due_date: editDifferenceAction === 'create_extra' ? editExtraDueDate : undefined,
                                     });
-                                    if (res.data.tiny_errors?.length > 0) {
-                                        toast.success(res.data.message);
-                                        setTinyErrorsList(res.data.tiny_errors);
+
+                                    // 2. Dar baixa (O ID continua o mesmo, a não ser que tenha sido recriado no tiny, mas o local ID é o mesmo)
+                                    await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/status`, {
+                                        status: 'paid',
+                                        payment_method: editPaymentMethod,
+                                        justification: editJustification || 'Baixa manual e edição confirmadas',
+                                    });
+
+                                    if (resEdit.data.tiny_errors?.length > 0) {
+                                        toast.success("Liquidado com ressalvas no Tiny ERP!");
+                                        setTinyErrorsList(resEdit.data.tiny_errors);
                                         setTinyErrorsOpen(true);
                                     } else {
-                                        toast.success(res.data.message);
+                                        toast.success("Fatura editada e liquidada com sucesso!");
                                     }
+                                    
                                     refetch();
                                     setIsEditModalOpen(false);
                                 } catch (error: any) {
-                                    const msg = error?.response?.data?.message ?? "Erro ao editar fatura.";
+                                    const msg = error?.response?.data?.message ?? "Erro ao concluir pagamento.";
                                     toast.error(msg);
                                 } finally {
                                     setIsEditSubmitting(false);
                                 }
                             }}
                         >
-                            {isEditSubmitting ? "Salvando..." : "Salvar Alterações"}
+                            {isEditSubmitting ? "Processando..." : "Concluir Pagamento"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

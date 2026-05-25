@@ -446,9 +446,25 @@ class FinancialController extends Controller
 
         if ($request->filled('q')) {
             $search = $request->q;
-            $query->whereHas('client', function($q) use ($search) {
-                $q->where('nome_fantasia', 'ilike', "%{$search}%")
-                  ->orWhere('cpf_cnpj', 'like', "%{$search}%");
+
+            static $unaccentExists = null;
+            if ($unaccentExists === null) {
+                try {
+                    \Illuminate\Support\Facades\DB::select("SELECT unaccent('a')");
+                    $unaccentExists = true;
+                } catch (\Exception $e) {
+                    $unaccentExists = false;
+                }
+            }
+
+            $query->whereHas('client', function($q) use ($search, $unaccentExists) {
+                if ($unaccentExists) {
+                    $q->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$search}%"])
+                      ->orWhere('cpf_cnpj', 'like', "%{$search}%");
+                } else {
+                    $q->where('nome_fantasia', 'ilike', "%{$search}%")
+                      ->orWhere('cpf_cnpj', 'like', "%{$search}%");
+                }
             });
             // Also search by autorizacao_numero via group_id
             if (is_numeric($search)) {
@@ -523,6 +539,7 @@ class FinancialController extends Controller
 
         // ── Permuta ──────────────────────────────────
         $isPermuta       = (bool) ($validated['is_permuta'] ?? false);
+        $isPermutaString = $isPermuta ? 'true' : 'false';
         $permutaAmount   = $isPermuta ? (float) ($validated['permuta_amount'] ?? 0) : 0;
         $payableAmount   = max(0, $finalTotal - $permutaAmount);
         $permutaDesc     = $validated['permuta_description'] ?? null;
@@ -549,7 +566,7 @@ class FinancialController extends Controller
                 'parcel_number'       => 1,
                 'total_parcels'       => 1,
                 'group_id'            => $groupId,
-                'is_permuta'          => true,
+                'is_permuta'          => 'true',
                 'permuta_amount'      => $permutaAmount,
                 'payable_amount'      => 0,
                 'permuta_description' => $permutaDesc,
@@ -586,7 +603,7 @@ class FinancialController extends Controller
                 'parcel_number'       => $i,
                 'total_parcels'       => $installments,
                 'group_id'            => $groupId,
-                'is_permuta'          => $isPermuta,
+                'is_permuta'          => $isPermutaString,
                 'permuta_amount'      => $isPermuta ? round($permutaAmount / $installments, 2) : null,
                 'payable_amount'      => $currentAmount,
                 'permuta_description' => $permutaDesc,
@@ -1190,62 +1207,34 @@ class FinancialController extends Controller
     /**
      * Reenvia ao Tiny todas as faturas pendentes que ainda não possuem tiny_account_id
      */
-    public function resendToTiny()
+    public function resendToTiny(Request $request)
     {
-        $invoices = Invoice::where('status', 'pending')
-            ->whereNull('tiny_account_id')
-            ->with(['client.enderecos', 'client.contatos', 'plan'])
-            ->get();
+        $query = Invoice::whereNull('tiny_account_id');
 
-        $sent = 0;
-        $failed = 0;
-        $details = [];
-
-        Log::info("[ResendToTiny] Faturas sem tiny_id encontradas: {$invoices->count()}");
-
-        foreach ($invoices as $invoice) {
-            try {
-                $valorCobrado = $invoice->payable_amount ?? $invoice->amount;
-
-                // Pula faturas de permuta total (valor 0)
-                if ($valorCobrado <= 0) {
-                    $details[] = ['invoice_id' => $invoice->id, 'status' => 'skipped', 'reason' => 'Valor zerado (permuta total)'];
-                    continue;
-                }
-
-                $tinyData = $this->tinyService->createReceivable($invoice, $valorCobrado);
-                $invoice->update([
-                    'tiny_account_id' => $tinyData['tiny_account_id'],
-                    'payment_url'     => $tinyData['payment_url'],
-                ]);
-
-                $sent++;
-                $details[] = [
-                    'invoice_id'      => $invoice->id,
-                    'status'          => 'success',
-                    'tiny_account_id' => $tinyData['tiny_account_id'],
-                    'client'          => $invoice->client->nome_fantasia,
-                ];
-                Log::info("[ResendToTiny] Fatura #{$invoice->id} enviada ao Tiny com sucesso. ID: {$tinyData['tiny_account_id']}");
-
-            } catch (\Exception $e) {
-                $failed++;
-                $details[] = [
-                    'invoice_id' => $invoice->id,
-                    'status'     => 'error',
-                    'reason'     => $e->getMessage(),
-                    'client'     => $invoice->client->nome_fantasia ?? 'N/A',
-                ];
-                Log::error("[ResendToTiny] Falha ao enviar fatura #{$invoice->id}: " . $e->getMessage());
-            }
+        if ($request->has('ids') && is_array($request->ids) && count($request->ids) > 0) {
+            $query->whereIn('id', $request->ids);
+        } else {
+            $query->where('status', 'pending');
         }
 
+        $invoiceIds = $query->pluck('id')->toArray();
+
+        if (empty($invoiceIds)) {
+            return response()->json([
+                'enviadas' => 0,
+                'erros' => 0,
+                'total' => 0,
+                'message' => 'Nenhuma fatura pendente de envio encontrada.'
+            ]);
+        }
+
+        \App\Jobs\SyncInvoicesToTinyJob::dispatch($invoiceIds);
+
         return response()->json([
-            'message'   => "Reenvio concluído. {$sent} enviadas com sucesso, {$failed} com erro.",
-            'total'     => $invoices->count(),
-            'enviadas'  => $sent,
-            'erros'     => $failed,
-            'detalhes'  => $details,
+            'enviadas' => 0,
+            'erros' => 0,
+            'total' => count($invoiceIds),
+            'message' => 'Sincronização iniciada em background com sucesso.'
         ]);
     }
 
