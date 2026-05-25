@@ -464,10 +464,10 @@ export default function ClientProfileClient() {
 
                     {/* Floating Profile Image */}
                     {isPagante && client.logotipo_url && (
-                        <div className="absolute -top-10 md:-top-20 left-8 md:left-10 w-20 h-20 md:w-40 md:h-40 rounded-3xl md:rounded-full bg-white p-1 shadow-2xl border-4 border-white overflow-hidden group">
+                        <div className="absolute -top-16 md:-top-24 left-6 md:left-10 w-32 h-32 md:w-48 md:h-48 rounded-[2rem] md:rounded-full bg-white p-1.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] border-[4px] md:border-[6px] border-white overflow-hidden group flex items-center justify-center">
                             <img
                                 src={client.logotipo_url}
-                                className="w-full h-full object-contain p-2 rounded-[1rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
+                                className="w-full h-full object-contain rounded-[1.6rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
                                 alt={`Logotipo de ${client.nome_fantasia}`}
                                 onError={(e) => {
                                     e.currentTarget.src = '/logo-overmelhinho.png';
@@ -477,7 +477,7 @@ export default function ClientProfileClient() {
                         </div>
                     )}
 
-                    <div className={`mt-8 md:mt-0 ${isPagante ? 'md:ml-48' : ''} space-y-4`}>
+                    <div className={`mt-16 md:mt-0 ${isPagante ? 'md:ml-56' : ''} space-y-4`}>
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-3">
