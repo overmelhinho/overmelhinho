@@ -256,7 +256,7 @@ export default function Home() {
                             <div key={idx} className="snap-center min-w-[85%] md:min-w-0 bg-white rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border-4 border-white flex flex-col gummy-card group">
                                 <Link href={clientLink} className="relative h-48 overflow-hidden block bg-gray-50 flex items-center justify-center">
                                     {item.img ? (
-                                        <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                                        <img src={item.img} alt={item.name} className="w-full h-full object-contain p-4 md:p-6 group-hover:scale-110 transition-transform duration-1000" />
                                     ) : (
                                         <div className="flex flex-col items-center justify-center text-gray-200">
                                             <Building2 size={48} className="opacity-20" />
@@ -337,7 +337,7 @@ export default function Home() {
                             />
                         </div>
 
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white space-y-6">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white space-y-6 z-10">
                             <div className="bg-brand-red/90 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.4em] shadow-xl font-sans">
                                 {scrollyAd ? 'Destaque Patrocinado' : 'Espaço Publicitário'}
                             </div>
@@ -354,7 +354,7 @@ export default function Home() {
                                         if (scrollyAd.cliente.whatsapp) window.open(`https://wa.me/55${scrollyAd.cliente.whatsapp.replace(/\D/g, '')}`, '_blank');
                                         else router.push(getClientSeoUrl(scrollyAd.cliente));
                                     } else {
-                                        router.push('/anuncie');
+                                        router.push('/anuncie?ref=home_banner');
                                     }
                                 }}
                                 className="mt-10 bg-white text-black px-12 py-6 rounded-[2.5rem] font-black text-xl active:scale-90 transition-transform shadow-2xl hover:bg-brand-red hover:text-white font-sans cursor-pointer"
@@ -363,7 +363,7 @@ export default function Home() {
                             </button>
                         </div>
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-60"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-60 pointer-events-none"></div>
                     </div>
                 </section>
 

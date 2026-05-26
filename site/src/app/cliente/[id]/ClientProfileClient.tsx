@@ -814,7 +814,10 @@ export default function ClientProfileClient() {
                                                                         href={`tel:${p.number.replace(/\D/g, '')}`}
                                                                         className={`col-span-full bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2`}
                                                                     >
-                                                                        <Phone size={14} /> {p.label}: {p.number}
+                                                                        <Phone size={14} className="flex-shrink-0" /> 
+                                                                        <span className="text-center">
+                                                                            {p.label}: <span className="whitespace-nowrap">{p.number}</span>
+                                                                        </span>
                                                                     </a>
                                                                 )
                                                             ))}
