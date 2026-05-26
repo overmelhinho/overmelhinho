@@ -34,13 +34,31 @@ class AuditAutomationService
             return ['status' => 'error', 'message' => 'Não foi possível encontrar dados na internet.'];
         }
 
+        // 🛡️ Verifica se pelo menos um campo verificável foi encontrado.
+        // Se o sistema não encontrou telefone nem website, não houve auditoria real.
+        // Neste caso, NÃO atualizamos last_audit_at para não "falsamente aprovar" o cliente.
+        $temDadosUteis = !empty(trim($novosDados['telefone'] ?? ''))
+                      || !empty(trim($novosDados['website'] ?? ''))
+                      || !empty(trim($novosDados['endereco'] ?? ''));
+
+        if (!$temDadosUteis) {
+            // Sem dados na web: marca para revisão manual da equipe.
+            // Define last_audit_at para não re-processar no próximo ciclo do cron.
+            $cliente->update([
+                'last_audit_at' => now(),
+                'audit_status'  => 'manual_review',
+            ]);
+            Log::warning("🙋 [Audit] Sem dados verificáveis para {$cliente->nome_fantasia}. Marcado para Revisão Manual.");
+            return ['status' => 'manual_review', 'message' => 'Nenhum dado verificável encontrado. Aguarda revisão humana.'];
+        }
+
         $divergencias = $this->compararDados($cliente, $novosDados);
 
         if (empty($divergencias)) {
-            // Tudo igual! Atualiza apenas a data de última auditoria
+            // Dados encontrados e batem! Auditoria real confirmada.
             $cliente->update([
                 'last_audit_at' => now(),
-                'audit_status' => 'ok',
+                'audit_status'  => 'ok',
                 'audit_differences' => null
             ]);
             Log::info("✅ [Audit] Nenhuma divergência para {$cliente->nome_fantasia}. Auditoria em dia.");
@@ -49,8 +67,8 @@ class AuditAutomationService
 
         // Encontrou mudanças! Marca para revisão humana
         $cliente->update([
-            'last_audit_at' => now(),
-            'audit_status' => 'pending',
+            'last_audit_at'     => now(),
+            'audit_status'      => 'pending',
             'audit_differences' => $divergencias
         ]);
 

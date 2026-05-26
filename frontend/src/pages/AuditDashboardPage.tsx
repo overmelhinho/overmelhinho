@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ClipboardCheck,
@@ -28,10 +28,12 @@ import {
     Info,
     Globe,
     Cpu,
-    Target
+    Target,
+    PlayCircle,
+    RefreshCw
 } from 'lucide-react';
 import api from '@/services/api';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,6 +53,10 @@ const AuditDashboardPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [segmentOpen, setSegmentOpen] = useState(false);
     const [showHowItWorks, setShowHowItWorks] = useState(false);
+    const [scanTriggered, setScanTriggered] = useState(false);
+    const [scanMessage, setScanMessage] = useState('');
+    const [forcingScanId, setForcingScanId] = useState<number | null>(null);
+    const [forceScanResult, setForceScanResult] = useState<Record<number, {status: string; message: string}>>({});
 
     // Filtros persistentes na URL
     const tab = (searchParams.get('tab') as 'queue' | 'history' | 'cities') || 'queue';
@@ -63,6 +69,7 @@ const AuditDashboardPage: React.FC = () => {
     const filterVisibilidade = searchParams.get('visibilidade') || '';
     const filterSegmento = searchParams.get('segmento_id') || '';
     const filterResult = searchParams.get('result') || ''; // 'all' | 'corrected' | 'kept'
+    const filterStatus = searchParams.get('status') || 'pending'; // pending | manual_review | all
     const searchTerm = searchParams.get('q') || '';
 
     const updateFilter = (params: Record<string, string | number | null>) => {
@@ -83,7 +90,7 @@ const AuditDashboardPage: React.FC = () => {
         setSearchParams({ tab });
     };
 
-    const hasFilters = filterCity || filterType || searchTerm || filterUser || filterDateStart || filterDateEnd || filterVisibilidade || filterSegmento || filterResult;
+    const hasFilters = filterCity || filterType || searchTerm || filterUser || filterDateStart || filterDateEnd || filterVisibilidade || filterSegmento || filterResult || (filterStatus && filterStatus !== 'pending');
 
     // 1. Busca Cidades para o Filtro
     const { data: cities } = useQuery({
@@ -122,9 +129,9 @@ const AuditDashboardPage: React.FC = () => {
         }
     });
 
-    // 2. Busca Fila de Auditoria (Pending)
+    // 2. Busca Fila de Auditoria
     const { data: queueData, isLoading: loadingQueue } = useQuery({
-        queryKey: ['audit-queue', page, filterCity, filterType, filterVisibilidade, filterSegmento, searchTerm],
+        queryKey: ['audit-queue', page, filterCity, filterType, filterVisibilidade, filterSegmento, searchTerm, filterStatus],
         queryFn: async () => {
             const response = await api.get('/v1/audit/queue', {
                 params: {
@@ -134,7 +141,7 @@ const AuditDashboardPage: React.FC = () => {
                     visibilidade: filterVisibilidade,
                     segmento_id: filterSegmento,
                     q: searchTerm,
-                    status: 'pending'
+                    status: filterStatus || 'pending'
                 }
             });
             return response.data;
@@ -144,7 +151,7 @@ const AuditDashboardPage: React.FC = () => {
 
     // 3. Busca Histórico (Audit Logs)
     const { data: historyData, isLoading: loadingHistory } = useQuery({
-        queryKey: ['audit-history', page, filterUser, filterSegmento, filterResult, searchTerm],
+        queryKey: ['audit-history', page, filterUser, filterSegmento, filterResult, searchTerm, filterDateStart, filterDateEnd],
         queryFn: async () => {
             const response = await api.get('/v1/audit/history', {
                 params: {
@@ -169,6 +176,32 @@ const AuditDashboardPage: React.FC = () => {
             const response = await api.get('/v1/audit/stats');
             return response.data;
         }
+    });
+
+    // 5. Mutation: Dispara scan manual em background
+    const { mutate: triggerScan, isPending: triggeringScan } = useMutation({
+        mutationFn: () => api.post('/v1/audit/trigger-scan', { limit: 50 }),
+        onSuccess: (res) => {
+            setScanTriggered(true);
+            setScanMessage(res.data.message);
+            setTimeout(() => setScanTriggered(false), 120000); // reset após 2 min
+        },
+        onError: () => setScanMessage('Erro ao iniciar varredura. Tente novamente.'),
+    });
+
+    // 6. Mutation: Força re-auditoria de um cliente específico (síncrono)
+    const { mutate: forceScan } = useMutation({
+        mutationFn: (clienteId: number) => api.post(`/v1/audit/${clienteId}/force-scan`),
+        onMutate: (clienteId) => setForcingScanId(clienteId),
+        onSuccess: (res, clienteId) => {
+            setForcingScanId(null);
+            setForceScanResult(prev => ({ ...prev, [clienteId]: { status: res.data.status, message: res.data.message } }));
+            setTimeout(() => setForceScanResult(prev => { const n = {...prev}; delete n[clienteId]; return n; }), 8000);
+        },
+        onError: (_err, clienteId) => {
+            setForcingScanId(null);
+            setForceScanResult(prev => ({ ...prev, [clienteId]: { status: 'error', message: 'Erro ao re-auditar. Tente novamente.' } }));
+        },
     });
 
     return (
@@ -227,30 +260,81 @@ const AuditDashboardPage: React.FC = () => {
                             </div>
                         </div>
                     </motion.div>
+
+                    {/* Botão: Gerar Novas Conferências */}
+                    <motion.div whileHover={{ y: -4 }} className="flex items-stretch">
+                        <button
+                            onClick={() => !scanTriggered && !triggeringScan && triggerScan()}
+                            disabled={triggeringScan || scanTriggered}
+                            title={scanTriggered ? scanMessage : 'Gerar 50 novas conferências para a equipe'}
+                            className={`flex items-center gap-3 px-5 py-4 rounded-3xl border font-bold text-sm transition-all shadow-sm
+                                ${ scanTriggered
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 cursor-default'
+                                    : triggeringScan
+                                    ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-wait'
+                                    : 'bg-white border-gray-100 text-slate-700 hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-red-200'
+                                }`
+                            }
+                        >
+                            {triggeringScan ? (
+                                <><RefreshCw className="w-5 h-5 animate-spin" /> Iniciando...</>
+                            ) : scanTriggered ? (
+                                <><CheckCircle2 className="w-5 h-5" /> Varredura em andamento...</>
+                            ) : (
+                                <><PlayCircle className="w-5 h-5" /> Gerar Conferências</>  
+                            )}
+                        </button>
+                    </motion.div>
                 </div>
             </header>
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {[
-                    { label: 'Conferidos Hoje', value: stats?.hoje, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                    { label: 'Conferidos Ontem', value: stats?.ontem, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: 'Últimos 7 dias', value: stats?.sete_dias, color: 'text-purple-600', bg: 'bg-purple-50' },
-                    { label: 'Últimos 30 dias', value: stats?.trinta_dias, color: 'text-slate-600', bg: 'bg-slate-50' },
+                    { 
+                        label: 'Conferidos Hoje', 
+                        value: stats?.hoje, 
+                        color: 'text-emerald-600', 
+                        bg: 'bg-emerald-50',
+                        onClick: () => updateFilter({ tab: 'history', date_start: format(new Date(), 'yyyy-MM-dd'), date_end: format(new Date(), 'yyyy-MM-dd') })
+                    },
+                    { 
+                        label: 'Conferidos Ontem', 
+                        value: stats?.ontem, 
+                        color: 'text-blue-600', 
+                        bg: 'bg-blue-50',
+                        onClick: () => updateFilter({ tab: 'history', date_start: format(subDays(new Date(), 1), 'yyyy-MM-dd'), date_end: format(subDays(new Date(), 1), 'yyyy-MM-dd') })
+                    },
+                    { 
+                        label: 'Últimos 7 dias', 
+                        value: stats?.sete_dias, 
+                        color: 'text-purple-600', 
+                        bg: 'bg-purple-50',
+                        onClick: () => updateFilter({ tab: 'history', date_start: format(subDays(new Date(), 7), 'yyyy-MM-dd'), date_end: format(new Date(), 'yyyy-MM-dd') })
+                    },
+                    { 
+                        label: 'Últimos 30 dias', 
+                        value: stats?.trinta_dias, 
+                        color: 'text-slate-600', 
+                        bg: 'bg-slate-50',
+                        onClick: () => updateFilter({ tab: 'history', date_start: format(subDays(new Date(), 30), 'yyyy-MM-dd'), date_end: format(new Date(), 'yyyy-MM-dd') })
+                    },
                     {
                         label: 'Cobertura Total',
                         value: stats?.porcentagem_concluida + '%',
                         color: 'text-red-600',
                         bg: 'bg-red-50',
-                        sub: `(${stats?.clientes_auditados}/${stats?.total_clientes})`
+                        sub: `(${stats?.clientes_auditados}/${stats?.total_clientes})`,
+                        onClick: () => updateFilter({ tab: 'queue', status: 'ok' })
                     },
                 ].map((s, i) => (
                     <motion.div
                         key={s.label}
+                        onClick={s.onClick}
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: i * 0.1 }}
-                        className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center group hover:shadow-md transition-all"
+                        className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center group hover:shadow-md transition-all cursor-pointer"
                     >
                         <div className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
                             <CheckCircle2 className={`w-5 h-5 ${s.color}`} />
@@ -455,6 +539,45 @@ const AuditDashboardPage: React.FC = () => {
                                         </Select>
                                     </div>
                                 </div>
+
+                                {/* Status da Auditoria */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Status</label>
+                                    <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-2xl h-[46px]">
+                                        <ClipboardCheck className="w-4 h-4 text-slate-400" />
+                                        <Select value={filterStatus || "pending"} onValueChange={(val) => updateFilter({ status: val })}>
+                                            <SelectTrigger className="w-[155px] h-auto border-0 p-0 bg-transparent shadow-none font-bold text-slate-700 outline-none focus:ring-0 [&>svg]:opacity-50">
+                                                <SelectValue placeholder="Status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="pending">
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                                                        Aguardando IA
+                                                    </span>
+                                                </SelectItem>
+                                                <SelectItem value="manual_review">
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
+                                                        Revisão Manual
+                                                    </span>
+                                                </SelectItem>
+                                                <SelectItem value="all">
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+                                                        Todos Pendentes
+                                                    </span>
+                                                </SelectItem>
+                                                <SelectItem value="ok">
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                                                        Conferidos
+                                                    </span>
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
                             </>
                         )}
 
@@ -610,7 +733,12 @@ const AuditDashboardPage: React.FC = () => {
                                                         {c.audit_status === 'ok' ? (
                                                             <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-tighter flex items-center gap-1">
                                                                 <CheckCircle2 className="w-2.5 h-2.5" />
-                                                                Conferido
+                                                                IA Ok
+                                                            </div>
+                                                        ) : c.audit_status === 'manual_review' ? (
+                                                            <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 uppercase tracking-tighter flex items-center gap-1">
+                                                                <Users className="w-2.5 h-2.5" />
+                                                                Revisão Manual
                                                             </div>
                                                         ) : (
                                                             <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 uppercase tracking-tighter flex items-center gap-1">
@@ -652,14 +780,45 @@ const AuditDashboardPage: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 text-right">
-                                                <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    className={`px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 ml-auto shadow-lg transition-all ${c.audit_status === 'ok' ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-slate-100' : 'bg-slate-900 text-white hover:bg-[#B70F0A] shadow-slate-200 hover:shadow-red-200'}`}
-                                                >
-                                                    {c.audit_status === 'ok' ? 'Revisar' : 'Analisar'}
-                                                    <ChevronRight className="w-4 h-4" />
-                                                </motion.button>
+                                                <div className="flex flex-col items-end gap-2">
+                                                    {/* Resultado do force scan */}
+                                                    {forceScanResult[c.id] && (
+                                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${
+                                                            forceScanResult[c.id].status === 'no_changes' ? 'bg-emerald-50 text-emerald-700' :
+                                                            forceScanResult[c.id].status === 'pending_review' ? 'bg-amber-50 text-amber-700' :
+                                                            'bg-purple-50 text-purple-700'
+                                                        }`}>
+                                                            {forceScanResult[c.id].message}
+                                                        </span>
+                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        {/* Botão Forçar Conferência */}
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            onClick={(e) => { e.stopPropagation(); forceScan(c.id); }}
+                                                            disabled={forcingScanId === c.id}
+                                                            title="Forçar nova conferência agora"
+                                                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait"
+                                                        >
+                                                            {forcingScanId === c.id
+                                                                ? <><RefreshCw className="w-3 h-3 animate-spin" /> Auditando...</>
+                                                                : <><RefreshCw className="w-3 h-3" /> Forçar</>
+                                                            }
+                                                        </motion.button>
+
+                                                        {/* Botão principal */}
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            onClick={() => navigate(`/auditoria/${c.id}`)}
+                                                            className={`px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 shadow-lg transition-all ${c.audit_status === 'ok' ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-slate-100' : 'bg-slate-900 text-white hover:bg-[#B70F0A] shadow-slate-200 hover:shadow-red-200'}`}
+                                                        >
+                                                            {c.audit_status === 'ok' ? 'Revisar' : 'Analisar'}
+                                                            <ChevronRight className="w-4 h-4" />
+                                                        </motion.button>
+                                                    </div>
+                                                </div>
                                             </td>
                                         </motion.tr>
                                     )) : (

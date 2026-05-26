@@ -1,6 +1,6 @@
 // src/hooks/useLeadIntel.ts
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '@/services/api';
 
 interface LeadIntelData {
   nome_fantasia: string;
@@ -24,12 +24,8 @@ export function useLeadIntel(query: string, enabled = true) {
   return useQuery<LeadIntelData>({
     queryKey: ['lead-intel', query],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/v1/lead-intel/fetch`, {
+      const response = await api.get(`/v1/lead-intel/fetch`, {
         params: { query },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
       return response.data.dados;
     },

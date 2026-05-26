@@ -2439,7 +2439,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
     }
     public function auditQueue(Request $request)
     {
-        $status = $request->input('status', 'pending');
+        $status = $request->input('status', 'pending'); // pending | manual_review | ok | all
         $cidade = $request->input('cidade');
         $tipo = $request->input('tipo');
         $visibilidade = $request->input('visibilidade');
@@ -2461,7 +2461,12 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
                     });
             });
         } else {
-            $query->where('audit_status', $status);
+            if ($status === 'all') {
+                // Todos os status que precisam de atenção (pending + manual_review)
+                $query->whereIn('audit_status', ['pending', 'manual_review']);
+            } else {
+                $query->where('audit_status', $status);
+            }
         }
 
         if ($cidade) {
@@ -2545,33 +2550,39 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
     public function auditStats()
     {
-        $today = now()->startOfDay();
-        $yesterday = now()->subDay()->startOfDay();
-        $sevenDays = now()->subDays(7)->startOfDay();
+        $today      = now()->startOfDay();
+        $yesterday  = now()->subDay()->startOfDay();
+        $sevenDays  = now()->subDays(7)->startOfDay();
         $thirtyDays = now()->subDays(30)->startOfDay();
 
+        // Contagens de revisões humanas no AuditLog
         $stats = [
-            'hoje' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
-                ->where('created_at', '>=', $today)
-                ->count(),
-            'ontem' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
-                ->where('created_at', '>=', $yesterday)
-                ->where('created_at', '<', $today)
-                ->count(),
-            'sete_dias' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
-                ->where('created_at', '>=', $sevenDays)
-                ->count(),
-            'trinta_dias' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')
-                ->where('created_at', '>=', $thirtyDays)
-                ->count(),
-                
-            // Indicadores de Cobertura Total
-            'total_clientes' => \App\Models\Cliente::count(),
-            'clientes_auditados' => \App\Models\Cliente::whereNotNull('last_audit_at')->count(),
+            'hoje'        => \App\Models\AuditLog::where('action', 'ilike', '%audit%')->where('created_at', '>=', $today)->count(),
+            'ontem'       => \App\Models\AuditLog::where('action', 'ilike', '%audit%')->where('created_at', '>=', $yesterday)->where('created_at', '<', $today)->count(),
+            'sete_dias'   => \App\Models\AuditLog::where('action', 'ilike', '%audit%')->where('created_at', '>=', $sevenDays)->count(),
+            'trinta_dias' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')->where('created_at', '>=', $thirtyDays)->count(),
         ];
 
-        $stats['porcentagem_concluida'] = $stats['total_clientes'] > 0 
-            ? round(($stats['clientes_auditados'] / $stats['total_clientes']) * 100, 1) 
+        // Cobertura Total: query atômica para evitar race condition entre dois COUNT separados
+        // Usa uma única query com GROUP BY para contar tudo de uma vez
+        $cobertura = \Illuminate\Support\Facades\DB::selectOne("
+            SELECT
+                COUNT(*) AS total,
+                COUNT(last_audit_at) AS auditados,
+                COUNT(CASE WHEN audit_status = 'ok' THEN 1 END) AS verificados,
+                COUNT(CASE WHEN audit_status = 'pending' THEN 1 END) AS pendentes,
+                COUNT(CASE WHEN audit_status = 'manual_review' THEN 1 END) AS revisao_manual
+            FROM clientes
+        ");
+
+        $stats['total_clientes']     = (int) $cobertura->total;
+        $stats['clientes_auditados'] = (int) $cobertura->auditados;
+        $stats['verificados_ia']     = (int) $cobertura->verificados;
+        $stats['pendentes_fila']     = (int) $cobertura->pendentes;
+        $stats['revisao_manual']     = (int) $cobertura->revisao_manual;
+
+        $stats['porcentagem_concluida'] = $cobertura->total > 0
+            ? round(($cobertura->auditados / $cobertura->total) * 100, 1)
             : 0;
 
         return response()->json($stats);
@@ -2627,6 +2638,89 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
         return response()->json($users);
     }
+
+    /**
+     * ✅ Dispara uma nova rodada de auditoria em background.
+     * Usado pelo botão "Gerar Novas Conferências" no dashboard.
+     * Roda o comando artisan em background para não travar o HTTP.
+     */
+    public function auditTriggerScan(Request $request)
+    {
+        $limit = (int) $request->input('limit', 50);
+        $limit = min(max($limit, 1), 100); // Garante entre 1 e 100
+
+        // Verifica quantos clientes ainda aguardam auditoria
+        $pendingCount = \App\Models\Cliente::whereNull('last_audit_at')
+            ->orWhere('last_audit_at', '<', now()->subMonths(6))
+            ->count();
+
+        if ($pendingCount === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Todos os clientes já foram auditados recentemente. Nada a fazer!',
+                'pending' => 0,
+            ]);
+        }
+
+        // Dispara o comando em background (não bloqueia o HTTP)
+        $artisan = base_path('artisan');
+        $php     = PHP_BINARY;
+        $cmd     = "{$php} {$artisan} audit:scan --limit={$limit}";
+
+        // Executa em background: o & no final desanexa o processo do HTTP
+        if (PHP_OS_FAMILY === 'Windows') {
+            pclose(popen("start /B {$cmd}", 'r'));
+        } else {
+            exec("{$cmd} > /dev/null 2>&1 &");
+        }
+
+        \Log::info("🚀 [AuditTrigger] Scan manual disparado por usuário. Limite: {$limit}. Pendentes na fila: {$pendingCount}.");
+
+        return response()->json([
+            'success'  => true,
+            'message'  => "Varredura iniciada! Auditando até {$limit} clientes em segundo plano. Aguarde ~2 minutos e recarregue a fila.",
+            'limit'    => $limit,
+            'pending_total' => $pendingCount,
+        ]);
+    }
+
+    /**
+     * ✅ Força re-auditoria imediata de um cliente específico (síncrono).
+     * Usado pelo botão "Forçar Conferência" na linha do cliente.
+     * Reseta o last_audit_at e roda o scan agora, retornando o resultado.
+     */
+    public function auditForceScan($clienteId)
+    {
+        $cliente = Cliente::with(['enderecos', 'contatos'])->findOrFail($clienteId);
+
+        // Reseta o last_audit_at para forçar o scan mesmo se foi recente
+        $cliente->update(['last_audit_at' => null]);
+
+        \Log::info("🔄 [AuditForce] Re-auditoria forçada para: {$cliente->nome_fantasia} (ID: {$clienteId})");
+
+        $auditService = app(\App\Services\AuditAutomationService::class);
+        $result = $auditService->scan($cliente->fresh(['enderecos', 'contatos']));
+
+        $statusLabels = [
+            'no_changes'     => 'Dados conferidos — nenhuma divergência encontrada.',
+            'pending_review' => 'Divergências encontradas! Cliente adicionado à fila de revisão.',
+            'manual_review'  => 'Sem dados na web — marcado para Revisão Manual.',
+            'error'          => 'Não foi possível obter dados da internet.',
+        ];
+
+        return response()->json([
+            'success'  => true,
+            'status'   => $result['status'],
+            'message'  => $statusLabels[$result['status']] ?? 'Auditoria concluída.',
+            'differences' => $result['differences'] ?? null,
+            'cliente'  => [
+                'id'           => $cliente->id,
+                'nome_fantasia' => $cliente->nome_fantasia,
+                'audit_status' => $cliente->fresh()->audit_status,
+            ],
+        ]);
+    }
+
     /**
      * ✅ Sugestões Inteligentes de Keywords para Campanhas
      * Pega keywords do SEO, nomes de segmentos e buscas populares relacionadas.

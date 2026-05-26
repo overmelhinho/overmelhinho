@@ -20,7 +20,9 @@ import {
     Instagram,
     MousePointer2,
     RefreshCw,
-    Sparkles
+    Sparkles,
+    Users,
+    Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
@@ -63,13 +65,15 @@ const AuditMatchPage: React.FC = () => {
     const queryClient = useQueryClient();
 
     // 1. Busca Dados do Cliente no Banco
-    const { data: client, isLoading: loadingClient, error: clientError } = useQuery({
+    const { data: client, isLoading: loadingClient, error: clientError, isFetching: fetchingClient } = useQuery({
         queryKey: ['cliente', id],
         queryFn: async () => {
             const response = await api.get(`/v1/clientes/${id}`);
             return response.data.data;
         },
-        enabled: !!id
+        enabled: !!id,
+        refetchOnWindowFocus: true,
+        staleTime: 0
     });
 
     // 2. Busca Dados na Internet via IA (Fallback ou Refresh)
@@ -93,8 +97,23 @@ const AuditMatchPage: React.FC = () => {
 
     // 4. Mapeamento de campos para comparação
     const [fields, setFields] = useState<AuditField[]>([]);
+    const [allFieldsForTable, setAllFieldsForTable] = useState<AuditField[]>([]);
     type Status = 'pending' | 'accepted' | 'rejected';
     const [auditStatus, setAuditStatus] = useState<Record<string, Status>>({});
+    const [showSyncBadge, setShowSyncBadge] = useState(false);
+
+    useEffect(() => {
+        if (fetchingClient && !loadingClient) {
+            setShowSyncBadge(true);
+        }
+    }, [fetchingClient, loadingClient]);
+
+    useEffect(() => {
+        if (showSyncBadge) {
+            const timer = setTimeout(() => setShowSyncBadge(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [showSyncBadge]);
 
     useEffect(() => {
         if (client) {
@@ -167,6 +186,7 @@ const AuditMatchPage: React.FC = () => {
             });
 
             setFields(inconsistentFields);
+            setAllFieldsForTable(allFields);
 
             // Mantém os status se já estiverem definidos, senão inicia como pending
             setAuditStatus(prev => {
@@ -200,7 +220,18 @@ const AuditMatchPage: React.FC = () => {
         setAuditStatus(prev => ({ ...prev, [fieldId]: action }));
     };
 
-    const handleSave = () => {
+    // Detecta se a IA encontrou o cliente na internet
+    const wasClientFound = (() => {
+        if (!client) return false;
+        const intel = intelData || {};
+        const diffs = client.audit_differences || {};
+        // Se veio do script noturno, o cliente foi encontrado se tem audit_differences com algum campo
+        if (hasExistingDiffs) return true;
+        // Se veio da busca ao vivo, verifica se algum campo retornou dado útil
+        return !!(intel.telefone || intel.endereco || intel.website || intel.instagram || intel.google_place_id);
+    })();
+
+    const handleSave = (overrideStatus?: string) => {
 
         const payload: any = {
             nome_fantasia: client?.nome_fantasia,
@@ -254,7 +285,7 @@ const AuditMatchPage: React.FC = () => {
             }
         });
 
-        payload.audit_status = 'ok';
+        payload.audit_status = overrideStatus || 'ok';
         payload.last_audit_at = new Date().toISOString();
         payload.audit_differences = null;
         payload.audit_action = 'audit_save';
@@ -332,6 +363,12 @@ const AuditMatchPage: React.FC = () => {
                             </span>
                         </div>
                     </div>
+                    {showSyncBadge && (
+                        <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-2xl flex items-center gap-2 border border-emerald-100 animate-pulse">
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Sincronizando aba...</span>
+                        </div>
+                    )}
                     <a
                         href={`/clientes/${id}/editar`}
                         target="_blank"
@@ -480,24 +517,134 @@ const AuditMatchPage: React.FC = () => {
                                     <div className={`h-full transition-all duration-500 ${auditStatus[field.id] === 'accepted' ? 'w-full bg-red-600' : auditStatus[field.id] === 'rejected' ? 'w-full bg-slate-900' : 'w-0'}`} />
                                 </div>
                             </motion.div>
-                        )) : (
-                            <div className="col-span-full py-20 bg-emerald-50/30 rounded-[3rem] border-2 border-dashed border-emerald-100 flex flex-col items-center gap-6 text-center">
-                                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-xl shadow-emerald-100">
-                                    <ShieldCheck className="w-10 h-10" />
+                        )) : !wasClientFound ? (
+                            <div className="col-span-full py-16 bg-purple-50/30 rounded-[3rem] border-2 border-dashed border-purple-200 flex flex-col items-center gap-6 text-center px-6">
+                                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-purple-600 shadow-xl shadow-purple-100">
+                                    <AlertCircle className="w-10 h-10" />
                                 </div>
-                                <div className="space-y-2">
-                                    <h3 className="text-2xl font-serif text-emerald-800 italic">Integridade Total</h3>
-                                    <p className="text-emerald-600/70 font-medium max-w-sm">
-                                        Nenhuma divergência foi encontrada pela IA. Todos os dados do sistema estão sincronizados com a Web.
+                                <div className="space-y-2 max-w-lg">
+                                    <h3 className="text-2xl font-serif text-purple-900 italic">Dados Não Encontrados</h3>
+                                    <p className="text-purple-700/70 font-medium text-sm leading-relaxed">
+                                        A IA realizou buscas em tempo real, mas não localizou registros ativos ou confiáveis no Google Places, redes sociais ou domínios da internet para a empresa <span className="font-bold text-purple-900">{client?.nome_fantasia || client?.razao_social}</span>.
+                                    </p>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest pt-2">
+                                        Este cliente necessita de conferência e preenchimento manual.
                                     </p>
                                 </div>
-                                <button
-                                    onClick={handleSave}
-                                    className="bg-emerald-600 text-white px-8 py-4 rounded-3xl font-bold text-sm shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center gap-3"
-                                >
-                                    Confirmar Validação 100%
-                                    <ArrowRight className="w-4 h-4" />
-                                </button>
+                                <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                                    <button
+                                        onClick={() => handleSave('manual_review')}
+                                        className="bg-purple-600 text-white px-8 py-4 rounded-3xl font-bold text-sm shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all flex items-center gap-3 active:scale-95"
+                                    >
+                                        <Users className="w-4 h-4" />
+                                        Marcar para Revisão Manual
+                                    </button>
+                                    <a
+                                        href={`/clientes/${id}/editar`}
+                                        target="_blank"
+                                        className="bg-slate-900 text-white px-8 py-4 rounded-3xl font-bold text-sm shadow-lg shadow-slate-100 hover:bg-slate-800 transition-all flex items-center gap-3 active:scale-95"
+                                    >
+                                        <ExternalLink className="w-4 h-4" />
+                                        Editar Cadastro Manualmente
+                                    </a>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="col-span-full space-y-8">
+                                <div className="py-12 bg-emerald-50/20 rounded-[3rem] border border-emerald-100 flex flex-col items-center gap-4 text-center px-6 shadow-sm">
+                                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-lg shadow-emerald-100">
+                                        <ShieldCheck className="w-8 h-8" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h3 className="text-2xl font-serif text-emerald-800 italic">Integridade Total</h3>
+                                        <p className="text-emerald-600/70 font-medium text-sm max-w-md">
+                                            Nenhuma divergência foi encontrada pela IA. Todos os dados do sistema estão 100% sincronizados com a Web.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Tabela comparativa */}
+                                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
+                                    <div className="p-6 md:p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                        <div>
+                                            <h4 className="text-lg font-serif text-slate-800">Tabela de Conferência da IA</h4>
+                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Comparação dos campos analisados ao vivo</p>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-black uppercase tracking-wider border border-emerald-100">
+                                            <Check className="w-3.5 h-3.5" />
+                                            100% Sincronizado
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/20">
+                                                    <th className="py-5 px-8">Campo</th>
+                                                    <th className="py-5 px-8">No Sistema</th>
+                                                    <th className="py-5 px-8">Encontrado na Web</th>
+                                                    <th className="py-5 px-8 text-center">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {allFieldsForTable.map((field) => (
+                                                    <tr key={field.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="py-6 px-8">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="p-2.5 bg-slate-50 text-slate-500 rounded-xl">
+                                                                    {field.icon}
+                                                                </div>
+                                                                <span className="text-sm font-bold text-slate-700">{field.label}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-6 px-8 text-sm text-slate-600 font-medium max-w-[280px]">
+                                                            {field.id === 'address' ? (
+                                                                <p className="leading-relaxed">{field.current}</p>
+                                                            ) : (
+                                                                <span className="font-mono text-xs">{field.current}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-6 px-8 text-sm text-slate-600 font-medium max-w-[280px]">
+                                                            <div className="flex items-center gap-2">
+                                                                {field.id === 'address' ? (
+                                                                    <p className="leading-relaxed italic font-black text-slate-800">{field.new}</p>
+                                                                ) : (
+                                                                    <span className="font-mono text-xs italic font-black text-slate-800">{field.new}</span>
+                                                                )}
+                                                                {field.url && field.new !== 'Não encontrado' && field.new !== 'Não informado' && (
+                                                                    <a
+                                                                        href={field.url.startsWith('http') ? field.url : `https://${field.url}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded transition-all shrink-0"
+                                                                    >
+                                                                        <ExternalLink className="w-3 h-3" />
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-6 px-8 text-center">
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                                <Check className="w-3 h-3" />
+                                                                Idêntico
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-center pt-4">
+                                    <button
+                                        onClick={() => handleSave('ok')}
+                                        className="bg-emerald-600 text-white px-10 py-5 rounded-[2rem] font-bold text-sm shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center gap-3 active:scale-95 hover:scale-[1.02]"
+                                    >
+                                        Confirmar Validação 100%
+                                        <ArrowRight className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -526,12 +673,16 @@ const AuditMatchPage: React.FC = () => {
                         </div>
 
                         <button
-                            onClick={handleSave}
+                            onClick={() => handleSave(wasClientFound ? 'ok' : 'manual_review')}
                             disabled={saveMutation.isPending}
-                            className="w-full bg-[#B70F0A] text-white py-5 rounded-3xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-red-200 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            className={`w-full py-5 rounded-3xl font-black text-sm uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 text-white ${
+                                !wasClientFound 
+                                    ? 'bg-purple-600 shadow-2xl shadow-purple-100 hover:bg-purple-700 hover:scale-[1.02]' 
+                                    : 'bg-[#B70F0A] shadow-2xl shadow-red-200 hover:scale-[1.02]'
+                            }`}
                         >
                             {saveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                            Publicar Alterações
+                            {!wasClientFound ? 'Marcar Revisão Manual' : 'Publicar Alterações'}
                         </button>
 
                         <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-tighter">Ao publicar, o status de conferência será renovado por 180 dias.</p>

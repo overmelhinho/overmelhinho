@@ -64,7 +64,7 @@ class LeadIntelService
                 $googleQuery .= " em {$cidadePreferida}";
             }
 
-            $places = $this->consultarGooglePlaces($googleQuery);
+            $places = $this->consultarGooglePlaces($googleQuery, $cidadePreferida);
             if (!empty($places)) {
                 // Campos “vitrine” que costumam estar mais vivos no Google
                 foreach (['nome_fantasia', 'telefone', 'endereco', 'website', 'horario_atendimento', 'google_place_id'] as $k) {
@@ -258,7 +258,7 @@ class LeadIntelService
     // =====================================================
     // Google Places
     // =====================================================
-    private function consultarGooglePlaces(string $query): array
+    private function consultarGooglePlaces(string $query, ?string $cidadeEsperada = null): array
     {
         $googleApiKey = config('services.google.places_key');
         if (!$googleApiKey) return [];
@@ -269,9 +269,84 @@ class LeadIntelService
                 ['query' => $query, 'key' => $googleApiKey]
             );
 
-            if (!$response->successful() || !isset($response['results'][0])) return [];
+            if (!$response->successful() || empty($response['results'])) return [];
 
-            $place = $response['results'][0];
+            // 🛡️ VALIDAÇÃO INTELIGENTE: não pegar cegamente o results[0].
+            // Extrai o nome limpo da empresa (remove "em Cidade" da query)
+            $nomeLimpo = mb_strtolower(preg_replace('/\s+em\s+.+$/ui', '', trim($query)));
+            $place = null;
+
+            foreach ($response['results'] as $candidate) {
+                $nomeCandidate    = mb_strtolower($candidate['name'] ?? '');
+                $enderecoCandidate = mb_strtolower($candidate['formatted_address'] ?? '');
+
+                // 1. VALIDAÇÃO POR PALAVRAS (Word Recall):
+                // Verifica quantas palavras do nome buscado existem no nome encontrado.
+                // Isso é mais preciso que similar_text para nomes de empresas porque:
+                //   - "MV Gessos" → "MV Gessos e Decorações" = 100% (mesma empresa, nome maior no Google) ✅
+                //   - "Farmácia São João" → "Farmácia São José" = 67% (empresa diferente) ❌
+                //   - "MV Gessos" → "Magnifica Gessos" = 50% (empresa diferente) ❌
+                $palavrasBuscadas  = preg_split('/\s+/', $nomeLimpo, -1, PREG_SPLIT_NO_EMPTY);
+                $totalPalavras     = count($palavrasBuscadas);
+                $palavrasEncontradas = 0;
+                foreach ($palavrasBuscadas as $palavra) {
+                    if (str_contains($nomeCandidate, $palavra)) {
+                        $palavrasEncontradas++;
+                    }
+                }
+                $recall = $totalPalavras > 0 ? ($palavrasEncontradas / $totalPalavras) * 100 : 0;
+
+                if ($recall < 70) {
+                    Log::info("⚠️ [LeadIntel][GooglePlaces] Resultado descartado: recall de palavras insuficiente", [
+                        'buscado'    => $nomeLimpo,
+                        'encontrado' => $nomeCandidate,
+                        'recall'     => round($recall, 1) . '%',
+                        'palavras_buscadas'    => implode(', ', $palavrasBuscadas),
+                        'palavras_encontradas' => $palavrasEncontradas . '/' . $totalPalavras,
+                    ]);
+                    continue;
+                }
+
+                // 2. Validação de sigla/iniciais: tokens curtos (≤3 chars) como "MV", "KNN"
+                // devem aparecer obrigatoriamente no resultado.
+                $siglaRejeitada = false;
+                foreach ($palavrasBuscadas as $token) {
+                    $token = trim($token);
+                    if (mb_strlen($token) >= 2 && mb_strlen($token) <= 3 && !is_numeric($token)) {
+                        if (!str_contains($nomeCandidate, $token)) {
+                            Log::info("⚠️ [LeadIntel][GooglePlaces] Resultado descartado: sigla/inicial '{$token}' ausente", [
+                                'buscado'    => $nomeLimpo,
+                                'encontrado' => $nomeCandidate,
+                            ]);
+                            $siglaRejeitada = true;
+                            break;
+                        }
+                    }
+                }
+                if ($siglaRejeitada) continue;
+
+                // 3. Se temos cidade esperada, verifica se o resultado é nessa cidade
+                if ($cidadeEsperada) {
+                    $cidadeNormalizada = mb_strtolower(trim($cidadeEsperada));
+                    if (!str_contains($enderecoCandidate, $cidadeNormalizada)) {
+                        Log::info("⚠️ [LeadIntel][GooglePlaces] Resultado descartado por cidade diferente", [
+                            'buscado'            => $cidadeNormalizada,
+                            'endereco_encontrado' => $enderecoCandidate,
+                        ]);
+                        continue;
+                    }
+                }
+
+                // Passou em todas as validações!
+                $place = $candidate;
+                break;
+            }
+
+            if (!$place) {
+                Log::info("🚫 [LeadIntel][GooglePlaces] Nenhum resultado confiável encontrado para: {$query}");
+                return [];
+            }
+
             $placeId = $place['place_id'] ?? null;
             if (!$placeId) return [];
 
@@ -303,7 +378,7 @@ class LeadIntelService
                 $dados['horario_atendimento'] = $googleService->mapOpeningHoursToSystem($r['opening_hours']);
             }
 
-            Log::info("🌍 [LeadIntel][GooglePlaces] OK", [
+            Log::info("🌍 [LeadIntel][GooglePlaces] Resultado aceito", [
                 'nome_fantasia' => $dados['nome_fantasia'],
                 'website' => $dados['website'],
             ]);

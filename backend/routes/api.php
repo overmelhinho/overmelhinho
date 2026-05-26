@@ -156,6 +156,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('audit/stats', [ClienteController::class, 'auditStats']);
     Route::get('audit/city-stats', [ClienteController::class, 'auditCityStats']);
     Route::get('audit/users', [ClienteController::class, 'auditUsers']);
+    Route::post('audit/trigger-scan', [ClienteController::class, 'auditTriggerScan']);
+    Route::post('audit/{clienteId}/force-scan', [ClienteController::class, 'auditForceScan']);
 
     // Logo
     Route::post('clientes/{cliente}/logo/commit-temp', [ClienteController::class , 'commitLogoTemp']);
