@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/services/api";
 import { cn } from "@/lib/utils";
@@ -92,12 +92,33 @@ interface Invoice {
 
 export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (filters: any) => void }) {
     const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
-    const [syncFilter, setSyncFilter] = useState("all"); // all, synced, unsynced
-    const [dateRange, setDateRange] = useState("all"); // all, current_month, 7, 15, 30, custom
-    const [customStartDate, setCustomStartDate] = useState("");
-    const [customEndDate, setCustomEndDate] = useState("");
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Filters synchronized with URL
+    const searchTerm = searchParams.get("q") || "";
+    const statusFilter = searchParams.get("status") || "all";
+    const syncFilter = searchParams.get("sync") || "all";
+    const dateRange = searchParams.get("dateRange") || "all";
+    const customStartDate = searchParams.get("start") || "";
+    const customEndDate = searchParams.get("end") || "";
+
+    const updateFilter = (key: string, value: string) => {
+        setSearchParams(prev => {
+            if (!value || value === "all") {
+                prev.delete(key);
+            } else {
+                prev.set(key, value);
+            }
+            return prev;
+        });
+    };
+
+    const setSearchTerm = (val: string) => updateFilter("q", val);
+    const setStatusFilter = (val: string) => updateFilter("status", val);
+    const setSyncFilter = (val: string) => updateFilter("sync", val);
+    const setDateRange = (val: string) => updateFilter("dateRange", val);
+    const setCustomStartDate = (val: string) => updateFilter("start", val);
+    const setCustomEndDate = (val: string) => updateFilter("end", val);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -332,11 +353,31 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
 
     const filteredInvoices = invoices?.filter((invoice) => {
         const searchNorm = normalizeText(searchTerm);
-        const matchesSearch =
-            normalizeText(invoice.client.nome_fantasia).includes(searchNorm) ||
-            invoice.client.cpf_cnpj?.includes(searchTerm) ||
-            invoice.autorizacao_numero?.includes(searchTerm) ||
-            (searchTerm && !isNaN(Number(searchTerm)) && invoice.autorizacao_numero?.includes(searchTerm.padStart(5, '0')));
+        
+        let matchesSearch = true;
+        if (searchTerm) {
+            const isNumeric = /^\d+$/.test(searchTerm.trim());
+            
+            if (isNumeric) {
+                // Busca numérica: prioriza AUTORIZAÇÃO (match exato ou com padding)
+                const padded = searchTerm.trim().padStart(5, '0');
+                const matchesAutorizacao = 
+                    invoice.autorizacao_numero === searchTerm.trim() ||
+                    invoice.autorizacao_numero === padded;
+                
+                if (matchesAutorizacao) {
+                    matchesSearch = true;
+                } else {
+                    // Só busca no CNPJ se o termo tiver 8+ dígitos (evita falso positivo de autorização curta)
+                    const matchesCnpj = searchTerm.trim().length >= 8 && invoice.client.cpf_cnpj?.includes(searchTerm.trim());
+                    matchesSearch = !!matchesCnpj;
+                }
+            } else {
+                // Busca textual: nome do cliente
+                matchesSearch = normalizeText(invoice.client.nome_fantasia).includes(searchNorm) ||
+                    normalizeText(invoice.client.razao_social || '').includes(searchNorm);
+            }
+        }
 
         const isOverdue = invoice.status === "pending" && isBefore(new Date(invoice.due_date), startOfDay(new Date()));
 
@@ -427,7 +468,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                     />
                     <input
                         type="text"
-                        placeholder="Buscar por cliente ou CNPJ..."
+                        placeholder="Buscar por autorização, cliente ou CNPJ..."
                         className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -797,15 +838,13 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
 
                                                 {invoice.status === "pending" && (
                                                     <>
-                                                        <a
-                                                            href={`/clientes/${invoice.client.id}/editar?step=12`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                        <Link
+                                                            to={`/clientes/${invoice.client.id}/editar?step=12`}
                                                             className="p-2 text-blue-500 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
                                                             title="Abrir Cliente (Aba Financeiro)"
                                                         >
                                                             <Pencil size={15} />
-                                                        </a>
+                                                        </Link>
                                                         {invoice.group_id && invoice.total_parcels && invoice.total_parcels > 1 && (
                                                             <button
                                                                 onClick={() => {
