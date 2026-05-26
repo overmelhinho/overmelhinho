@@ -244,9 +244,6 @@ export default function Home() {
                                 Nossa IA cruzou seu histórico com a proximidade para selecionar estas jóias.
                             </p>
                         </div>
-                        <button className="bg-white text-brand-red px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest border-4 border-white shadow-xl hover:shadow-brand-red/10 transition-all active:scale-95 font-sans cursor-pointer">
-                            Ver Favoritos
-                        </button>
                     </div>
 
                     <div className="flex space-x-4 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-4 md:space-x-0 md:gap-6">
