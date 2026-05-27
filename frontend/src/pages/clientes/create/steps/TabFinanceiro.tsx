@@ -886,7 +886,7 @@ export default function TabFinanceiro() {
                         <tbody className="divide-y divide-gray-100">
                             {invoices && invoices.length > 0 ? (
                                 [...invoices]
-                                    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+                                    .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
                                     .map((invoice) => (
                                         <tr key={invoice.id} className={cn(
                                             "bg-white hover:bg-gray-50/80 transition-colors group",
