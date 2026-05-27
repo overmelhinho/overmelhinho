@@ -372,6 +372,17 @@ class AutorizacaoController extends Controller
     {
         $autorizacao = Autorizacao::findOrFail($id);
         $autorizacao->update(['status' => 'cancelado']);
+
+        // Cancelar em cascata todas as faturas pendentes vinculadas
+        \App\Models\Invoice::where(function($q) use ($autorizacao) {
+            $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+              ->orWhere('group_id', (string)$autorizacao->id);
+        })->where('status', 'pending')->update([
+            'status' => 'canceled',
+            'justification' => 'Cancelada automaticamente devido ao cancelamento da autorização mãe.',
+            'action_date' => now(),
+        ]);
+
         return response()->json(['success' => true]);
     }
 
