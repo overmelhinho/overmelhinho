@@ -710,7 +710,7 @@ export default function TabFinanceiro() {
                                 }).map((auth) => (
                                     <tr key={auth.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-6 py-4 font-black text-gray-900">
-                                            #{auth.numero.toString().padStart(5, '0')}
+                                            {auth.numero.toString().padStart(5, '0')}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-xs font-bold text-gray-600">
