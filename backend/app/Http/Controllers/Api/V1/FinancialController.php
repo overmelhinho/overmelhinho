@@ -1164,7 +1164,7 @@ class FinancialController extends Controller
         if ($request->has('ids') && is_array($request->ids) && count($request->ids) > 0) {
             $query->whereIn('id', $request->ids);
         } else {
-            $query->where('status', 'pending');
+            $query->whereIn('status', ['pending', 'paid']);
         }
 
         $invoiceIds = $query->pluck('id')->toArray();

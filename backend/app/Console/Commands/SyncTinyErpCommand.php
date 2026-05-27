@@ -43,8 +43,8 @@ class SyncTinyErpCommand extends Command
             $this->info('Nenhuma fatura pendente com ID do Tiny encontrada para checagem.');
         }
 
-        // 2. Faturas que NÃO TEM tiny_account_id e estão pendentes (Reenviar)
-        $invoiceIdsToSend = Invoice::where('status', 'pending')
+        // 2. Faturas que NÃO TEM tiny_account_id e estão pendentes OU pagas (Reenviar/Sincronizar retroativo)
+        $invoiceIdsToSend = Invoice::whereIn('status', ['pending', 'paid'])
             ->whereNull('tiny_account_id')
             ->pluck('id')
             ->toArray();

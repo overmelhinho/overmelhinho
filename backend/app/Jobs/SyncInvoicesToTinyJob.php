@@ -60,6 +60,12 @@ class SyncInvoicesToTinyJob implements ShouldQueue
 
                 Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} enviada ao Tiny com sucesso. ID: {$tinyData['tiny_account_id']}");
 
+                // Se a fatura já estiver paga localmente, dar baixa imediatamente no Tiny
+                if ($invoice->status === 'paid') {
+                    $tinyService->payReceivable($tinyData['tiny_account_id'], $valorCobrado, 0);
+                    Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} já estava paga. Baixa retroativa realizada no Tiny com sucesso.");
+                }
+
             } catch (\Exception $e) {
                 Log::error("[SyncInvoicesToTinyJob] Falha ao enviar fatura #{$invoice->id}: " . $e->getMessage());
             }
