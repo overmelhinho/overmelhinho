@@ -1492,7 +1492,7 @@ export default function TabFinanceiro() {
                     setIsEditAuthOpen(false);
                     setAuthToEdit(null);
                 }}
-                auth={authToEdit}
+                autorizacao={authToEdit}
                 onSuccess={refetchAuths}
             />
 
