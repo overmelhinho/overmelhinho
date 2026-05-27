@@ -104,11 +104,35 @@ class TinyErpService
             ? $amountOverride 
             : ($invoice->payable_amount ?? $invoice->amount);
 
+        // Identifica número da autorização, se aplicável
+        $autorizacaoNumero = '';
+        if ($invoice->group_id && str_starts_with($invoice->group_id, 'autorizacao-')) {
+            $autId = str_replace('autorizacao-', '', $invoice->group_id);
+            $aut = \App\Models\Autorizacao::find($autId);
+            if ($aut) {
+                $autorizacaoNumero = $aut->numero;
+            }
+        }
+
+        $historicoBase = "Fatura #{$invoice->id}";
+        if ($autorizacaoNumero) {
+            $historicoBase .= " (Aut. #{$autorizacaoNumero})";
+        }
+        $historicoBase .= " - Plano " . ($invoice->plan ? $invoice->plan->name : 'Avulso');
+
+        $obsBase = "Parcela {$invoice->parcel_number}/{$invoice->total_parcels}.";
+        if ($autorizacaoNumero) {
+            $obsBase .= " Autorização: {$autorizacaoNumero}.";
+        }
+        if ($invoice->total_parcels > 1) {
+            $obsBase .= " Grupo: {$invoice->group_id}";
+        }
+
         $contaReceber = [
             'data_emissao' => now()->format('d/m/Y'),
             'vencimento' => $invoice->due_date instanceof \Carbon\Carbon ? $invoice->due_date->format('d/m/Y') : date('d/m/Y', strtotime($invoice->due_date)),
             'valor' => number_format($valorCobrado, 2, '.', ''),
-            'historico' => "Fatura #{$invoice->id} - Plano " . ($invoice->plan ? $invoice->plan->name : 'Avulso'),
+            'historico' => $historicoBase,
             'cliente' => [
                 'id' => (int)$invoice->client->tiny_id,
                 'nome' => $invoice->client->razao_social ?: $invoice->client->nome_fantasia,
@@ -121,7 +145,7 @@ class TinyErpService
                 'uf' => $invoice->client->enderecos()->first()->estado ?? '',
             ],
             'meio_pagamento' => $this->mapPaymentMethod($invoice->payment_method),
-            'observacoes' => "Parcela {$invoice->parcel_number}/{$invoice->total_parcels}. " . ($invoice->total_parcels > 1 ? "Grupo: {$invoice->group_id}" : ""),
+            'observacoes' => $obsBase,
         ];
 
         try {
