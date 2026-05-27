@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import HelpCenter from "../HelpCenter";
+import GlobalWarnings from "../GlobalWarnings";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -12,6 +13,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Sidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
+          <GlobalWarnings />
           <Header onToggleHelp={() => setIsHelpOpen(!isHelpOpen)} />
 
           <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
