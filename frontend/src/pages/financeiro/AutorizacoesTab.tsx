@@ -19,7 +19,8 @@ import {
     MoreHorizontal,
     Share2,
     DollarSign,
-    Link as LinkIcon
+    Link as LinkIcon,
+    PenTool
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

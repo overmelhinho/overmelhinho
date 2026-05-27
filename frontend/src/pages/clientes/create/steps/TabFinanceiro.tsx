@@ -35,7 +35,8 @@ import {
     Landmark,
     Info,
     Check,
-    Undo2
+    Undo2,
+    PenTool
 } from "lucide-react";
 import { useFormikContext } from "formik";
 import { cn } from "@/lib/utils";
@@ -1325,6 +1326,7 @@ export default function TabFinanceiro() {
                 onClose={() => setIsAssinaturaModalOpen(false)}
                 onSuccess={() => {
                     refetchAuths();
+                    queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
                     setIsAssinaturaModalOpen(false);
                 }}
                 autorizacaoId={selectedAuth?.id || null}

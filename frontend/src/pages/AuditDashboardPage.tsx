@@ -69,7 +69,7 @@ const AuditDashboardPage: React.FC = () => {
     const filterVisibilidade = searchParams.get('visibilidade') || '';
     const filterSegmento = searchParams.get('segmento_id') || '';
     const filterResult = searchParams.get('result') || ''; // 'all' | 'corrected' | 'kept'
-    const filterStatus = searchParams.get('status') || 'pending'; // pending | manual_review | all
+    const filterStatus = searchParams.get('status') || 'manual_review'; // pending | manual_review | all
     const searchTerm = searchParams.get('q') || '';
 
     const updateFilter = (params: Record<string, string | number | null>) => {
