@@ -541,7 +541,7 @@ class AutorizacaoController extends Controller
     /**
      * Lógica central de geração de invoices para evitar repetição
      */
-    private function processInvoiceGeneration(Autorizacao $autorizacao, TinyErpService $tinyService): array
+    public function processInvoiceGeneration(Autorizacao $autorizacao, TinyErpService $tinyService): array
     {
         $createdIds = [];
         $syncedIds = [];

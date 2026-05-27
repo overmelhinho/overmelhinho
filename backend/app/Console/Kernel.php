@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\CheckOverdueInvoicesAndCreateTickets::class,
         \App\Console\Commands\GenerateRenewals::class,
         \App\Console\Commands\UpdateClientStatuses::class,
+        \App\Console\Commands\SyncMissingInvoices::class,
     ];
 
     /**
@@ -37,6 +38,9 @@ class Kernel extends ConsoleKernel
 
         // 📅 Verifica a vigência de contratos e inativa clientes vencidos todos os dias às 00:30
         $schedule->command('app:update-client-statuses')->dailyAt('00:30');
+
+        // 🛡️ Verifica se existem autorizações assinadas sem faturas geradas e sincroniza automaticamente às 04:00
+        $schedule->command('invoices:sync-missing')->dailyAt('04:00');
     }
 
     /**
