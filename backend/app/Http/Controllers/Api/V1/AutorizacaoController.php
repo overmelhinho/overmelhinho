@@ -546,18 +546,20 @@ class AutorizacaoController extends Controller
     {
         $autorizacao = Autorizacao::findOrFail($id);
 
-        if ($autorizacao->status !== 'aguardando_assinatura') {
-            return response()->json(['message' => 'A autorização não está pendente de assinatura.'], 422);
+        if (!in_array($autorizacao->status, ['rascunho', 'aguardando_assinatura'])) {
+            return response()->json(['message' => 'A autorização não pode ser assinada neste status.'], 422);
         }
 
         $request->validate([
-            'justificativa' => 'required|string|min:5',
+            'justificativa' => 'nullable|string',
         ]);
+
+        $justificativaFinal = $request->justificativa ?: 'Assinado manualmente via painel administrativo.';
 
         $autorizacao->update([
             'status'                   => 'assinado',
             'assinado_em'              => now(),
-            'justificativa_assinatura' => $request->justificativa,
+            'justificativa_assinatura' => $justificativaFinal,
             'justificado_por'          => auth()->id(),
             'assinatura_ip'            => $request->ip(),
         ]);

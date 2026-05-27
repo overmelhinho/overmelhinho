@@ -33,6 +33,7 @@ import {
 import toast from "react-hot-toast";
 import CreateAutorizacaoModal from "./components/CreateAutorizacaoModal";
 import PreviewAutorizacaoModal from "./components/PreviewAutorizacaoModal";
+import AssinaturaModal from "./components/AssinaturaModal";
 import EditAutorizacaoModal from "./components/EditAutorizacaoModal";
 import { cn } from "@/lib/utils";
 import { User, Edit3, AlertTriangle } from "lucide-react";
@@ -77,6 +78,8 @@ export default function AutorizacoesTab() {
     const [dateEnd, setDateEnd] = useState("");
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [selectedPreview, setSelectedPreview] = useState<{ id: number, numero: number } | null>(null);
+    const [selectedAuth, setSelectedAuth] = useState<{ id: number, numero: number } | null>(null);
+    const [isAssinaturaModalOpen, setIsAssinaturaModalOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [selectedEditAutorizacao, setSelectedEditAutorizacao] = useState<Autorizacao | null>(null);
     const [isEditAutorizacaoOpen, setIsEditAutorizacaoOpen] = useState(false);
@@ -154,24 +157,7 @@ export default function AutorizacoesTab() {
         }
     };
 
-    const handleSendLink = async (id: number) => {
-        try {
-            const response = await axios.post(`/v1/autorizacoes/${id}/send-link`);
-            toast.success("Link gerado e pronto para envio!");
 
-            // Tenta copiar para o clipboard se o link vier na resposta
-            if (response.data.link) {
-                navigator.clipboard.writeText(response.data.link);
-                toast.success("Link copiado para o clipboard!", { icon: "📋" });
-
-                // Abre o zap se tiver contato (simplificando aqui, o ideal é ter o n do zap)
-                // window.open(`https://wa.me/?text=${encodeURIComponent("Olá, aqui está o seu contrato para assinatura: " + response.data.link)}`);
-            }
-            refetch();
-        } catch (error) {
-            toast.error("Erro ao gerar link de assinatura.");
-        }
-    };
 
     const handleGenerateInvoices = async (id: number) => {
         const loadingToast = toast.loading("Comunicando com Tiny ERP e gerando faturas...");
@@ -398,21 +384,15 @@ export default function AutorizacoesTab() {
                                                     <User size={16} /> Editar Dados de Contato
                                                 </DropdownMenuItem>
 
-                                                {a.status === "rascunho" && (
+                                                {['rascunho', 'aguardando_assinatura'].includes(a.status) && (
                                                     <DropdownMenuItem
-                                                        onClick={() => handleSendLink(a.id)}
-                                                        className="rounded-xl font-bold text-xs gap-2 py-2.5 text-blue-600 bg-blue-50/50 hover:bg-blue-50 cursor-pointer"
+                                                        onClick={() => {
+                                                            setSelectedAuth({ id: a.id, numero: a.numero });
+                                                            setIsAssinaturaModalOpen(true);
+                                                        }}
+                                                        className="rounded-xl font-bold text-xs gap-2 py-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 cursor-pointer"
                                                     >
-                                                        <Share2 size={16} /> Enviar p/ Assinatura Digital
-                                                    </DropdownMenuItem>
-                                                )}
-
-                                                {a.status === "aguardando_assinatura" && (
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleSendLink(a.id)}
-                                                        className="rounded-xl font-bold text-xs gap-2 py-2.5 text-yellow-600 bg-yellow-50 cursor-pointer"
-                                                    >
-                                                        <LinkIcon size={16} /> Copiar Link p/ Envio Manual
+                                                        <PenTool size={16} /> Assinar
                                                     </DropdownMenuItem>
                                                 )}
 
@@ -470,7 +450,16 @@ export default function AutorizacoesTab() {
                 numero={selectedPreview?.numero || null}
             />
 
-
+            <AssinaturaModal
+                isOpen={isAssinaturaModalOpen}
+                onClose={() => setIsAssinaturaModalOpen(false)}
+                onSuccess={() => {
+                    refetch();
+                    setIsAssinaturaModalOpen(false);
+                }}
+                autorizacaoId={selectedAuth?.id || null}
+                numero={selectedAuth?.numero || null}
+            />
 
             <EditAutorizacaoModal
                 isOpen={isEditAutorizacaoOpen}
