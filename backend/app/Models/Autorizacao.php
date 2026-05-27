@@ -134,8 +134,7 @@ class Autorizacao extends Model
      */
     public static function proximoNumero(): string
     {
-        $max = static::whereNull('parent_id')
-            ->whereRaw("numero ~ '^[0-9]+$'")
+        $max = static::whereRaw("numero ~ '^[0-9]+$'")
             ->selectRaw('MAX(CAST(numero AS INTEGER)) as max_num')
             ->value('max_num');
             
