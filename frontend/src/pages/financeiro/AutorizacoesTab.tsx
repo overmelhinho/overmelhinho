@@ -57,6 +57,7 @@ interface Autorizacao {
         id: number;
         name: string;
     } | null;
+    has_invoices: boolean;
     titulo_anuncio: string;
     valor_total: number;
     status: "rascunho" | "aguardando_assinatura" | "assinado" | "cancelado";
@@ -415,7 +416,7 @@ export default function AutorizacoesTab() {
                                                     </DropdownMenuItem>
                                                 )}
 
-                                                {a.status === "assinado" && (
+                                                {a.status === "assinado" && !a.has_invoices && (
                                                     <DropdownMenuItem
                                                         onClick={() => handleGenerateInvoices(a.id)}
                                                         className="rounded-xl font-bold text-xs gap-2 py-2.5 text-emerald-600 bg-emerald-50 cursor-pointer"
