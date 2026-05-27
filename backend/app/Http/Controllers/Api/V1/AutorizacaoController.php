@@ -246,8 +246,17 @@ class AutorizacaoController extends Controller
         $wasSigned = $autorizacao->status === 'assinado';
 
         if ($wasSigned) {
+            // Verifica se a autorização antiga possuía faturas no Tiny ERP
+            $hasTinyInvoices = \App\Models\Invoice::where(function($q) use ($autorizacao) {
+                $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+                  ->orWhere('group_id', (string)$autorizacao->id);
+            })->whereNotNull('tiny_account_id')->exists();
+
             // Regra: Contrato assinado que é editado é cancelado, criando um novo.
-            $autorizacao->update(['status' => 'cancelado']);
+            $autorizacao->update([
+                'status' => 'cancelado',
+                'tiny_needs_manual_cancellation' => $hasTinyInvoices
+            ]);
             
             // Cancela as faturas locais vinculadas
             \App\Models\Invoice::where(function($q) use ($autorizacao) {
@@ -774,5 +783,41 @@ class AutorizacaoController extends Controller
                 'status'         => 'pendente',
             ]);
         }
+    }
+
+    public function getPendingTinyCancellations()
+    {
+        $pendentes = Autorizacao::with('cliente:id,nome_fantasia,razao_social')
+            ->where('tiny_needs_manual_cancellation', true)
+            ->where('status', 'cancelado')
+            ->get(['id', 'numero', 'cliente_id', 'created_at', 'updated_at']);
+
+        return response()->json($pendentes);
+    }
+
+    public function resolveTinyCancellation(Request $request, $id, \App\Services\TinyErpService $tinyService)
+    {
+        $autorizacao = Autorizacao::findOrFail($id);
+
+        // Busca as faturas da autorização cancelada que foram enviadas pro Tiny
+        $invoices = \App\Models\Invoice::where(function($q) use ($autorizacao) {
+            $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+              ->orWhere('group_id', (string)$autorizacao->id);
+        })->whereNotNull('tiny_account_id')->get();
+
+        foreach ($invoices as $inv) {
+            $status = $tinyService->getReceivableStatus($inv->tiny_account_id);
+            
+            if ($status && isset($status['situacao']) && $status['situacao'] !== 'cancelado') {
+                return response()->json([
+                    'success' => false,
+                    'message' => "A fatura #{$inv->id} (Tiny: {$inv->tiny_account_id}) ainda consta como '{$status['situacao']}' no Tiny ERP. Exclua ou cancele-a lá primeiro."
+                ], 400);
+            }
+        }
+
+        $autorizacao->update(['tiny_needs_manual_cancellation' => false]);
+
+        return response()->json(['success' => true, 'message' => 'Pendência resolvida com sucesso.']);
     }
 }
