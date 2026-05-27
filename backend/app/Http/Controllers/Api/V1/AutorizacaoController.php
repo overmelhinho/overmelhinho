@@ -788,7 +788,7 @@ class AutorizacaoController extends Controller
     public function getPendingTinyCancellations()
     {
         $pendentes = Autorizacao::with('cliente:id,nome_fantasia,razao_social')
-            ->where('tiny_needs_manual_cancellation', true)
+            ->where('tiny_needs_manual_cancellation', 'true')
             ->where('status', 'cancelado')
             ->get(['id', 'numero', 'cliente_id', 'created_at', 'updated_at']);
 
