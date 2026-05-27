@@ -309,9 +309,7 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                                     {autorizacao?.status}
                                 </span>
                             </div>
-                            </div>
                         </div>
-
                         {autorizacao?.status === 'assinado' && (
                             <div className="mb-8 p-6 bg-red-50 border border-red-200 rounded-[24px]">
                                 <div className="flex items-start gap-4">
