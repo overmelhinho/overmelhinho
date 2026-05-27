@@ -1121,86 +1121,36 @@ class FinancialController extends Controller
     }
 
     /**
-     * Sincroniza todas as faturas pendentes com o Tiny ERP
+     * Sincroniza as faturas pendentes com o Tiny ERP (assíncrono)
      */
     public function syncInvoices()
     {
-        // Busca faturas pendentes com tiny_account_id
-        $pendingInvoices = Invoice::where('status', 'pending')
+        // Busca IDs das faturas pendentes com tiny_account_id
+        $invoiceIds = Invoice::where('status', 'pending')
             ->whereNotNull('tiny_account_id')
-            ->get();
+            ->pluck('id')
+            ->toArray();
 
-        // Contar faturas sem tiny_account_id para diagnóstico
-        $semTiny = Invoice::where('status', 'pending')
+        $semTinyCount = Invoice::where('status', 'pending')
             ->whereNull('tiny_account_id')
             ->count();
 
-        $updatedCount = 0;
-        $errors = [];
-        $details = [];
-
-        Log::info("[SyncInvoices] Total pendentes com tiny_id: {$pendingInvoices->count()}, sem tiny_id: {$semTiny}");
-
-        foreach ($pendingInvoices as $invoice) {
-            $tinyData = $this->tinyService->getReceivableStatus($invoice->tiny_account_id);
-
-            Log::info("[SyncInvoices] Fatura #{$invoice->id} (tiny_id: {$invoice->tiny_account_id})", [
-                'response' => $tinyData
+        if (empty($invoiceIds)) {
+            return response()->json([
+                'message' => 'Nenhuma fatura pendente com ID do Tiny foi encontrada.',
+                'updated_count' => 0,
+                'total_verificadas' => 0,
+                'sem_tiny_id' => $semTinyCount,
             ]);
-
-            if ($tinyData) {
-                // Tiny retorna situacao como string, ex: '1', '2', '3'
-                // 1 = Aberto, 2 = Recebido/Pago, 3 = Cancelado
-                $situacao = (string)($tinyData['situacao'] ?? '');
-                $isPaid = in_array($situacao, ['2'], true) 
-                    || in_array(strtolower($situacao), ['pago', 'recebido'], true);
-                $isCanceled = in_array($situacao, ['3'], true)
-                    || in_array(strtolower($situacao), ['cancelado'], true);
-
-                $details[] = [
-                    'invoice_id' => $invoice->id,
-                    'tiny_account_id' => $invoice->tiny_account_id,
-                    'situacao_tiny' => $situacao,
-                    'is_paid' => $isPaid,
-                    'is_canceled' => $isCanceled,
-                ];
-
-                if ($isPaid) {
-                    $invoice->update([
-                        'status' => 'paid',
-                        'justification' => 'Sincronização automática via Tiny ERP (Baixa detectada)',
-                        'action_date' => now()
-                    ]);
-
-                    if ($invoice->client) {
-                        $invoice->client->update(['status_assinatura' => 'ativo']);
-                    }
-                    $updatedCount++;
-                    Log::info("[SyncInvoices] Fatura #{$invoice->id} marcada como PAGA.");
-                } elseif ($isCanceled) {
-                    $invoice->update([
-                        'status' => 'canceled',
-                        'justification' => 'Sincronização automática via Tiny ERP (Cancelamento detectado)',
-                        'action_date' => now()
-                    ]);
-                    $updatedCount++;
-                    Log::info("[SyncInvoices] Fatura #{$invoice->id} marcada como CANCELADA.");
-                } else {
-                    Log::info("[SyncInvoices] Fatura #{$invoice->id} ainda em aberto no Tiny (situacao: {$situacao}).");
-                }
-            } else {
-                $errors[] = "Fatura #{$invoice->id}: sem resposta do Tiny para tiny_id {$invoice->tiny_account_id}";
-                Log::warning("[SyncInvoices] Sem resposta do Tiny para fatura #{$invoice->id}");
-            }
         }
 
+        // Despacha o Job para verificar o status no Tiny em background (com sleep)
+        \App\Jobs\CheckTinyInvoicesStatusJob::dispatch($invoiceIds);
+
         return response()->json([
-            'message' => "Sincronização concluída. {$updatedCount} faturas atualizadas.",
-            'updated_count' => $updatedCount,
-            'total_verificadas' => $pendingInvoices->count(),
-            'sem_tiny_id' => $semTiny,
-            'detalhes' => $details,
-            'erros' => $errors,
+            'message' => 'Verificação iniciada em background! Isso pode levar alguns minutos.',
+            'total_verificadas' => count($invoiceIds),
+            'sem_tiny_id' => $semTinyCount,
         ]);
     }
 

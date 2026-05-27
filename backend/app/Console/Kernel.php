@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\GenerateRenewals::class,
         \App\Console\Commands\UpdateClientStatuses::class,
         \App\Console\Commands\SyncMissingInvoices::class,
+        \App\Console\Commands\SyncTinyErpCommand::class,
     ];
 
     /**
@@ -41,6 +42,9 @@ class Kernel extends ConsoleKernel
 
         // 🛡️ Verifica se existem autorizações assinadas sem faturas geradas e sincroniza automaticamente às 04:00
         $schedule->command('invoices:sync-missing')->dailyAt('04:00');
+
+        // 🤖 Sincroniza faturas pendentes com o Tiny ERP automaticamente a cada 10 minutos
+        $schedule->command('tiny:sync-status')->everyTenMinutes();
     }
 
     /**

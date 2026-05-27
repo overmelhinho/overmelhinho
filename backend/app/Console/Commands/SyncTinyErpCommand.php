@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use App\Models\Invoice;
+
+class SyncTinyErpCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'tiny:sync-status';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Dispara os Jobs para verificar status e reenviar faturas pendentes ao Tiny ERP';
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle()
+    {
+        $this->info('Iniciando sincronização automática com Tiny ERP...');
+
+        // 1. Faturas que JÁ TEM tiny_account_id e estão pendentes (Checar status)
+        $invoiceIdsToCheck = Invoice::where('status', 'pending')
+            ->whereNotNull('tiny_account_id')
+            ->pluck('id')
+            ->toArray();
+
+        if (!empty($invoiceIdsToCheck)) {
+            \App\Jobs\CheckTinyInvoicesStatusJob::dispatch($invoiceIdsToCheck);
+            $this->info('Job CheckTinyInvoicesStatusJob disparado para ' . count($invoiceIdsToCheck) . ' faturas.');
+        } else {
+            $this->info('Nenhuma fatura pendente com ID do Tiny encontrada para checagem.');
+        }
+
+        // 2. Faturas que NÃO TEM tiny_account_id e estão pendentes (Reenviar)
+        $invoiceIdsToSend = Invoice::where('status', 'pending')
+            ->whereNull('tiny_account_id')
+            ->pluck('id')
+            ->toArray();
+
+        if (!empty($invoiceIdsToSend)) {
+            \App\Jobs\SyncInvoicesToTinyJob::dispatch($invoiceIdsToSend);
+            $this->info('Job SyncInvoicesToTinyJob disparado para ' . count($invoiceIdsToSend) . ' faturas.');
+        } else {
+            $this->info('Nenhuma fatura pendente sem ID do Tiny encontrada para reenvio.');
+        }
+
+        $this->info('Rotina concluída com sucesso!');
+        return 0;
+    }
+}
