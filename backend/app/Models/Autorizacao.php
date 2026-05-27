@@ -64,7 +64,6 @@ class Autorizacao extends Model
         'permuta_amount'       => 'decimal:2',
         'desconto_valor'       => 'decimal:2',
         'is_bonificacao'       => 'boolean',
-        'tiny_needs_manual_cancellation' => 'boolean',
     ];
 
     protected $appends = [
