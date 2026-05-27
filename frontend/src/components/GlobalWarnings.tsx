@@ -14,6 +14,8 @@ type PendingCancellation = {
   created_at: string;
 };
 
+import api from "@/services/api";
+
 export default function GlobalWarnings() {
   const [pendings, setPendings] = useState<PendingCancellation[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,16 +24,8 @@ export default function GlobalWarnings() {
 
   const fetchPendings = async () => {
     try {
-      const response = await fetch("/api/v1/autorizacoes/alertas/tiny-cancellations", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          Accept: "application/json"
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPendings(data);
-      }
+      const response = await api.get("/v1/autorizacoes/alertas/tiny-cancellations");
+      setPendings(response.data);
     } catch (error) {
       console.error("Failed to fetch pending cancellations", error);
     }
@@ -48,23 +42,16 @@ export default function GlobalWarnings() {
     setLoadingId(id);
     setErrorMsg(null);
     try {
-      const response = await fetch(`/api/v1/autorizacoes/alertas/tiny-cancellations/${id}/resolve`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          Accept: "application/json"
-        }
-      });
-      const data = await response.json();
+      const response = await api.post(`/v1/autorizacoes/alertas/tiny-cancellations/${id}/resolve`);
       
-      if (response.ok && data.success) {
+      if (response.data && response.data.success) {
         setPendings(prev => prev.filter(p => p.id !== id));
         if (pendings.length === 1) setIsModalOpen(false); // Closed the last one
       } else {
-        setErrorMsg(data.message || "Erro ao resolver a pendência.");
+        setErrorMsg(response.data?.message || "Erro ao resolver a pendência.");
       }
-    } catch (error) {
-      setErrorMsg("Erro de rede ao tentar resolver a pendência.");
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.message || "Erro de rede ao tentar resolver a pendência.");
     } finally {
       setLoadingId(null);
     }
