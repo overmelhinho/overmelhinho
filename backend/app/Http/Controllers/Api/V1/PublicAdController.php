@@ -101,7 +101,7 @@ class PublicAdController extends Controller
                 ->leftJoin('clientes as cli', 'c.cliente_id', '=', 'cli.id')
                 ->leftJoin('contatos as cont', 'cli.id', '=', 'cont.cliente_id')
                 ->where('c.status', 'ativa')
-                ->where('c.is_institucional', true)
+                ->whereRaw('c.is_institucional = true')
                 ->where(function ($query) use ($now) {
                     $query->where(function ($sub) use ($now) {
                         $sub->whereDate('c.data_inicio', '<=', $now)
