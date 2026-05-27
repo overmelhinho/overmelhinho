@@ -774,7 +774,7 @@ export default function TabFinanceiro() {
                                                         </>
                                                     )}
 
-                                                    {auth.status === "assinado" && (
+                                                    {auth.status === "assinado" && !auth.has_invoices && (
                                                         <DropdownMenuItem
                                                             onClick={() => handleGenerateInvoicesManual(auth.id)}
                                                             className="rounded-lg font-bold text-xs gap-2 py-2 text-emerald-600 bg-emerald-50 cursor-pointer"

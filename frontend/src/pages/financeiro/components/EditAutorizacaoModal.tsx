@@ -309,7 +309,25 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                                     {autorizacao?.status}
                                 </span>
                             </div>
+                            </div>
                         </div>
+
+                        {autorizacao?.status === 'assinado' && (
+                            <div className="mb-8 p-6 bg-red-50 border border-red-200 rounded-[24px]">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center shrink-0">
+                                        <AlertTriangle size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-lg font-black text-red-900 tracking-tight">Atenção: Contrato Assinado</h4>
+                                        <p className="text-sm font-medium text-red-700/90 mt-1 leading-relaxed">
+                                            Como este contrato já está assinado, ao salvar estas alterações a autorização atual será <strong className="font-black text-red-900 uppercase">cancelada</strong> e uma <strong className="font-black text-red-900 uppercase">nova</strong> será gerada (status: Aguardando Assinatura).<br/><br/>
+                                            <span className="font-bold underline decoration-red-300 underline-offset-2">Você precisará cancelar manualmente as faturas da autorização antiga no Tiny ERP.</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                             {/* COLUNA ESQUERDA: PUBLICIDADE E ASSINATURA */}

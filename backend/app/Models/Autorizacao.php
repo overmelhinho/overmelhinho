@@ -63,6 +63,10 @@ class Autorizacao extends Model
         'is_bonificacao'       => 'boolean',
     ];
 
+    protected $appends = [
+        'has_invoices',
+    ];
+
     // ─── Relacionamentos ─────────────────────────────────────────────────────
 
     public function cliente()
@@ -116,6 +120,11 @@ class Autorizacao extends Model
             'cancelado'             => 'Cancelado',
             default                 => $this->status,
         };
+    }
+
+    public function getHasInvoicesAttribute(): bool
+    {
+        return $this->parcelas()->whereNotNull('invoice_id')->exists();
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
