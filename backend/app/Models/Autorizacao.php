@@ -43,11 +43,13 @@ class Autorizacao extends Model
         'desconto_valor',
         'justificativa_assinatura',
         'justificado_por',
+        'justificado_em',
         'responsavel_nome',
         'responsavel_preferencia',
         'responsavel_turno',
         'parent_id',
         'is_bonificacao',
+        'tiny_needs_manual_cancellation',
     ];
 
     protected $casts = [

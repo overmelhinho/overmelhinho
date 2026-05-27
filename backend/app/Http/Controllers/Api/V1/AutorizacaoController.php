@@ -255,7 +255,7 @@ class AutorizacaoController extends Controller
             // Regra: Contrato assinado que é editado é cancelado, criando um novo.
             $autorizacao->update([
                 'status' => 'cancelado',
-                'tiny_needs_manual_cancellation' => $hasTinyInvoices
+                'tiny_needs_manual_cancellation' => $hasTinyInvoices ? 'true' : 'false'
             ]);
             
             // Cancela as faturas locais vinculadas
@@ -816,7 +816,7 @@ class AutorizacaoController extends Controller
             }
         }
 
-        $autorizacao->update(['tiny_needs_manual_cancellation' => false]);
+        $autorizacao->update(['tiny_needs_manual_cancellation' => 'false']);
 
         return response()->json(['success' => true, 'message' => 'Pendência resolvida com sucesso.']);
     }
