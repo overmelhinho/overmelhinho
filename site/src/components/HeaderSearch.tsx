@@ -138,7 +138,7 @@ export const HeaderSearch = () => {
         <div className={`relative flex-1 transition-all duration-500 z-[210] ${(isExpanded && !isBuscaPage) ? '!fixed inset-x-0 top-0 h-20 bg-white px-6 flex items-center lg:!relative lg:inset-auto lg:h-auto lg:bg-transparent lg:px-0' : 'w-full max-w-md'}`} ref={dropdownRef}>
             <div 
                 id="header-search-container"
-                className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl cursor-text ${
+                className={`relative z-[200] flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl cursor-text ${
                     (isExpanded && !isBuscaPage) 
                         ? 'w-full px-4 py-3 border-brand-red bg-white' 
                         : isBuscaPage
