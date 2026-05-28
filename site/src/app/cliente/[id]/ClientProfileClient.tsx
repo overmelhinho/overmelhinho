@@ -499,6 +499,15 @@ export default function ClientProfileClient() {
                                             <span className="text-gray-300 md:block hidden">•</span>
                                         </>
                                     )}
+                                    {client.registro_profissional && (
+                                        <>
+                                            <div className="flex items-center py-1 px-3 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                                                <FileText size={12} className="mr-1.5" />
+                                                {client.registro_profissional}
+                                            </div>
+                                            <span className="text-gray-300 md:block hidden">•</span>
+                                        </>
+                                    )}
                                     <p className="text-gray-400 flex items-center">
                                         <MapPin size={14} className="mr-1.5 text-brand-red" />
                                         {client.enderecos?.[0]
@@ -623,8 +632,14 @@ export default function ClientProfileClient() {
                                                     <p className="text-lg font-black text-gray-900 font-serif italic">{new Date(client.data_fundacao).getFullYear()}</p>
                                                 </div>
                                             )}
-                                            {client.segmentos?.length > 0 && isPagante && (
+                                            {client.registro_profissional && (
                                                 <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
+                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Registro Profissional</p>
+                                                    <p className="text-lg font-black text-gray-900 font-serif italic">{client.registro_profissional}</p>
+                                                </div>
+                                            )}
+                                            {client.segmentos?.length > 0 && isPagante && (
+                                                <div className={`bg-gray-50 p-6 rounded-[2rem] border border-gray-100 ${client.data_fundacao && client.registro_profissional ? 'col-span-1 md:col-span-2' : ''}`}>
                                                     <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
                                                     <div className="flex flex-wrap gap-2">
                                                         {client.segmentos.map((seg: any) => (

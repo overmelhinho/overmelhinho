@@ -537,7 +537,7 @@ const router = createBrowserRouter([
   {
     path: "/planos",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute perms={["view_financial"]}>
         <DashboardLayout>
           <PlansPage />
         </DashboardLayout>
@@ -548,7 +548,7 @@ const router = createBrowserRouter([
   {
     path: "/financeiro",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute perms={["view_financial"]}>
         <FinanceiroPage />
       </ProtectedRoute>
     ),
