@@ -39,6 +39,27 @@ export const HeaderSearch = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Fechar ao rolar a página (ignorando scroll dentro do próprio dropdown)
+    useEffect(() => {
+        const handleScroll = (event: Event) => {
+            if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+                return;
+            }
+            if (isOpen) {
+                setIsOpen(false);
+                setIsExpanded(false);
+                document.getElementById('header-search-input')?.blur();
+            }
+        };
+
+        if (isOpen) {
+            window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+        }
+        return () => {
+            window.removeEventListener('scroll', handleScroll, { capture: true });
+        };
+    }, [isOpen]);
+
     // Sync query from URL params
     useEffect(() => {
         const q = searchParams.get('q');
@@ -171,6 +192,19 @@ export const HeaderSearch = () => {
                     )}
                 </div>
             </div>
+
+            {/* Backdrop para fechar ao clicar fora (mobile) */}
+            {isOpen && query.length >= 2 && (
+                <div 
+                    className="fixed inset-0 bg-black/25 backdrop-blur-[2px] lg:hidden z-[190]"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsOpen(false);
+                        setIsExpanded(false);
+                        document.getElementById('header-search-input')?.blur();
+                    }}
+                />
+            )}
 
             {/* Dropdown Compacto */}
             {isOpen && query.length >= 2 && (
