@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Mic, X, ChevronRight, Star, Clock, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useLocation } from '@/contexts/LocationContext';
 import api from '@/services/api';
 
@@ -23,7 +23,10 @@ export const HeaderSearch = () => {
     const [isListening, setIsListening] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { cityId, cityName } = useLocation();
+    const isBuscaPage = pathname === '/busca';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -35,6 +38,16 @@ export const HeaderSearch = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Sync query from URL params
+    useEffect(() => {
+        const q = searchParams.get('q');
+        if (q !== null) {
+            setQuery(q);
+        } else {
+            setQuery('');
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         const fetchSuggestions = async () => {
@@ -101,16 +114,22 @@ export const HeaderSearch = () => {
     const isDesktop = mounted && typeof window !== 'undefined' && window.innerWidth > 1024;
 
     return (
-        <div className={`relative flex-1 transition-all duration-500 z-[210] ${isExpanded ? '!fixed inset-x-0 top-0 h-20 bg-white px-6 flex items-center lg:!relative lg:inset-auto lg:h-auto lg:bg-transparent lg:px-0' : 'w-full max-w-md'}`} ref={dropdownRef}>
+        <div className={`relative flex-1 transition-all duration-500 z-[210] ${(isExpanded && !isBuscaPage) ? '!fixed inset-x-0 top-0 h-20 bg-white px-6 flex items-center lg:!relative lg:inset-auto lg:h-auto lg:bg-transparent lg:px-0' : 'w-full max-w-md'}`} ref={dropdownRef}>
             <div 
                 id="header-search-container"
-                className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl cursor-text ${isExpanded ? 'w-full px-4 py-3 border-brand-red bg-white' : 'w-10 md:w-full h-10 md:h-auto justify-center md:justify-start px-0 md:px-4 md:py-2 border-transparent hover:bg-gray-100'} ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}
+                className={`relative flex items-center bg-gray-50 border-2 transition-all duration-300 rounded-2xl cursor-text ${
+                    (isExpanded && !isBuscaPage) 
+                        ? 'w-full px-4 py-3 border-brand-red bg-white' 
+                        : isBuscaPage
+                            ? 'w-full h-11 px-4 border-gray-200/80 bg-white shadow-sm hover:border-gray-300/80 focus-within:border-brand-red focus-within:ring-4 focus-within:ring-brand-red/5 focus-within:shadow-[0_4px_20px_rgba(239,68,68,0.05)]'
+                            : 'w-10 md:w-full h-10 md:h-auto justify-center md:justify-start px-0 md:px-4 md:py-2 border-transparent hover:bg-gray-100'
+                } ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}
                 onClick={() => {
                     setIsExpanded(true);
                     setTimeout(() => document.getElementById('header-search-input')?.focus(), 50);
                 }}
             >
-                <div className={`flex-shrink-0 transition-colors ${isOpen || isExpanded ? 'text-brand-red' : 'text-gray-400'}`}>
+                <div className={`flex-shrink-0 transition-colors ${isOpen || isExpanded || (isBuscaPage && query) ? 'text-brand-red' : 'text-gray-400'}`}>
                     <Search size={16} />
                 </div>
                 <input
@@ -120,12 +139,13 @@ export const HeaderSearch = () => {
                     onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     onFocus={() => { setIsOpen(query.length >= 2); setIsExpanded(true); }}
-                    placeholder={isExpanded || isDesktop ? `Buscar em ${cityName || 'todas as cidades'}...` : 'Buscar...'}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-sm md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none w-full truncate ${isExpanded ? 'block' : 'hidden md:block'}`}
+                    placeholder={isExpanded || isDesktop || isBuscaPage ? `Buscar em ${cityName || 'todas as cidades'}...` : 'Buscar...'}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-sm md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none w-full truncate ${isExpanded || isBuscaPage ? 'block' : 'hidden md:block'}`}
                 />
-                <div className={`flex items-center space-x-2 ${isExpanded || isDesktop ? 'flex' : 'hidden'}`}>
+                <div className={`flex items-center space-x-2 ${isExpanded || isDesktop || isBuscaPage ? 'flex' : 'hidden'}`}>
                     {query && (
-                        <button onClick={() => {
+                        <button onClick={(e) => {
+                            e.stopPropagation();
                             setQuery('');
                             document.getElementById('header-search-input')?.focus();
                         }} className="text-gray-300 hover:text-gray-600">
@@ -133,13 +153,19 @@ export const HeaderSearch = () => {
                         </button>
                     )}
                     <button 
-                        onClick={startVoiceSearch}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            startVoiceSearch();
+                        }}
                         className={`transition-colors ${isListening ? 'text-brand-red animate-pulse' : 'text-gray-400 hover:text-brand-red'}`}
                     >
                         <Mic size={16} />
                     </button>
-                    {isExpanded && (
-                        <button onClick={() => setIsExpanded(false)} className="lg:hidden text-gray-400 p-1">
+                    {isExpanded && !isBuscaPage && (
+                        <button onClick={(e) => {
+                            e.stopPropagation();
+                            setIsExpanded(false);
+                        }} className="lg:hidden text-gray-400 p-1">
                             <X size={18} />
                         </button>
                     )}

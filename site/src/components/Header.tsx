@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, Menu, X, Search, MapPin } from 'lucide-react';
 import Logo from '@/components/Logo';
@@ -18,6 +18,8 @@ export default function Header() {
     const pathname = usePathname();
     const [menuOpen, setMenuOpen] = useState(false);
     const { cityName, setIsCityModalOpen } = useLocation();
+    
+    const isActive = (path: string) => pathname === path;
 
     // Scroll Control
     const [isVisible, setIsVisible] = useState(true);
@@ -58,24 +60,44 @@ export default function Header() {
         return () => window.removeEventListener('scroll', controlNavbar, true);
     }, []);
 
-    const isActive = (href: string) => pathname === href;
+    const isMobileBusca = pathname === '/busca';
 
     return (
         <>
             {/* Espaçador invisível para compensar o header fixed, já que o body tem overflow-x: hidden e quebra o sticky */}
-            <div className="h-20 w-full shrink-0"></div>
+            <div className={`w-full shrink-0 transition-all duration-300 ${isMobileBusca ? 'h-[120px] md:h-20' : 'h-20'}`}></div>
 
             <header className={`fixed top-0 left-0 right-0 w-full z-[200] border-b border-gray-100 shadow-sm transition-all duration-300 ${menuOpen ? 'bg-white' : 'bg-white/90 backdrop-blur-xl'} ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4 md:gap-8">
+                <div className={`max-w-7xl mx-auto px-6 flex transition-all duration-300 ${
+                    isMobileBusca 
+                        ? 'flex-col justify-center py-3 gap-2.5 md:flex-row md:items-center md:justify-between md:gap-8 md:h-20 md:py-0' 
+                        : 'flex-row items-center justify-between gap-4 md:gap-8 h-20'
+                }`}>
 
-                    {/* Logo */}
-                    <div className="cursor-pointer flex-shrink-0" onClick={() => { router.push('/'); setMenuOpen(false); }}>
-                        <Logo />
+                    {/* Logo & Hamburger row on mobile (when on busca page) */}
+                    <div className={`flex items-center justify-between ${isMobileBusca ? 'w-full md:w-auto' : 'flex-shrink-0'}`}>
+                        {/* Logo */}
+                        <div className="cursor-pointer flex-shrink-0" onClick={() => { router.push('/'); setMenuOpen(false); }}>
+                            <Logo />
+                        </div>
+
+                        {/* Hamburger Mobile (Only shown here if busca page to align nicely on row 1) */}
+                        {isMobileBusca && (
+                            <button
+                                className="md:hidden flex-shrink-0 p-2.5 rounded-xl bg-gray-50 text-gray-500 hover:bg-brand-red hover:text-white transition-all"
+                                onClick={() => setMenuOpen(v => !v)}
+                                aria-label="Menu"
+                            >
+                                {menuOpen ? <X size={22} /> : <Menu size={22} />}
+                            </button>
+                        )}
                     </div>
 
                     {/* ✅ Search Bar Global (Hidden on Home) */}
                     {pathname !== '/' && (
-                        <HeaderSearch />
+                        <Suspense fallback={<div className="w-10 md:w-full max-w-md h-10 bg-gray-50 rounded-2xl"></div>}>
+                            <HeaderSearch />
+                        </Suspense>
                     )}
 
                     {/* ✅ Localização Global - MOVIDO PARA A BARRA DE FILTROS NA PÁGINA DE BUSCA */}
@@ -113,14 +135,16 @@ export default function Header() {
                         </button>
                     </div>
 
-                    {/* Hamburger Mobile */}
-                    <button
-                        className="md:hidden flex-shrink-0 p-2.5 rounded-xl bg-gray-50 text-gray-500 hover:bg-brand-red hover:text-white transition-all"
-                        onClick={() => setMenuOpen(v => !v)}
-                        aria-label="Menu"
-                    >
-                        {menuOpen ? <X size={22} /> : <Menu size={22} />}
-                    </button>
+                    {/* Hamburger Mobile (Shown here when NOT on busca page, original place) */}
+                    {!isMobileBusca && (
+                        <button
+                            className="md:hidden flex-shrink-0 p-2.5 rounded-xl bg-gray-50 text-gray-500 hover:bg-brand-red hover:text-white transition-all"
+                            onClick={() => setMenuOpen(v => !v)}
+                            aria-label="Menu"
+                        >
+                            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -132,7 +156,7 @@ export default function Header() {
 
                     {/* Drawer */}
                     <div
-                        className="absolute top-20 left-0 right-0 bg-white border-b border-gray-100 shadow-xl rounded-b-[3rem] overflow-hidden z-[160]"
+                        className={`absolute left-0 right-0 bg-white border-b border-gray-100 shadow-xl rounded-b-[3rem] overflow-hidden z-[160] transition-all duration-300 ${isMobileBusca ? 'top-[120px]' : 'top-20'}`}
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="px-6 py-8 space-y-2">
