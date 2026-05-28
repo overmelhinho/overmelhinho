@@ -146,7 +146,7 @@ export const SearchAutocomplete = () => {
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         onFocus={() => setIsOpen(true)}
                         placeholder={isListening ? "Processando sua voz..." : `O que você precisa em ${cityName || 'sua região'}?`}
-                        className="flex-1 min-w-0 bg-transparent border-none focus:ring-0 px-6 py-3 md:py-4 text-gray-900 font-black placeholder:text-gray-400 text-sm md:text-xl font-sans outline-none"
+                        className="flex-1 min-w-0 bg-transparent border-none focus:ring-0 px-6 py-3 md:py-4 text-gray-900 font-black placeholder:text-gray-400 text-base md:text-xl font-sans outline-none"
                     />
                     <div className="flex items-center space-x-1 md:space-x-3 pr-1 md:pr-2 flex-shrink-0">
                         {query && (

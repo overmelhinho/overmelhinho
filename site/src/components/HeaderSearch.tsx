@@ -185,7 +185,7 @@ export const HeaderSearch = () => {
                         setIsExpanded(true); 
                     }}
                     placeholder={isExpanded || isDesktop || isBuscaPage ? `Buscar em ${cityName || 'todas as cidades'}...` : 'Buscar...'}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-sm md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none w-full truncate ${isExpanded || isBuscaPage ? 'block' : 'hidden md:block'}`}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-base md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none w-full truncate ${isExpanded || isBuscaPage ? 'block' : 'hidden md:block'}`}
                 />
                 <div className={`flex items-center space-x-2 ${isExpanded || isDesktop || isBuscaPage ? 'flex' : 'hidden'}`}>
                     {query && (
