@@ -26,11 +26,15 @@ export const HeaderSearch = () => {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { cityId, cityName } = useLocation();
-    const isBuscaPage = pathname === '/busca';
+    const isClientPage = pathname.startsWith('/cliente/') || pathname.split('/').filter(Boolean).length === 3;
+    const isBuscaPage = pathname === '/busca' || isClientPage;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            console.log('Search click outside check. Target:', target, 'inside ref:', dropdownRef.current?.contains(target));
+            if (dropdownRef.current && !dropdownRef.current.contains(target)) {
+                console.log('Closing search from click outside');
                 setIsOpen(false);
                 setIsExpanded(false);
             }
@@ -42,10 +46,14 @@ export const HeaderSearch = () => {
     // Fechar ao rolar a página (ignorando scroll dentro do próprio dropdown)
     useEffect(() => {
         const handleScroll = (event: Event) => {
-            if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            console.log('Search scroll check. Target:', target);
+            if (dropdownRef.current && dropdownRef.current.contains(target)) {
+                console.log('Scroll inside dropdown - ignoring');
                 return;
             }
             if (isOpen) {
+                console.log('Closing search from scroll');
                 setIsOpen(false);
                 setIsExpanded(false);
                 document.getElementById('header-search-input')?.blur();
@@ -53,9 +61,13 @@ export const HeaderSearch = () => {
         };
 
         if (isOpen) {
+            console.log('Scroll listener activated (isOpen = true)');
             window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
         }
         return () => {
+            if (isOpen) {
+                console.log('Scroll listener deactivated');
+            }
             window.removeEventListener('scroll', handleScroll, { capture: true });
         };
     }, [isOpen]);
@@ -63,6 +75,7 @@ export const HeaderSearch = () => {
     // Sync query from URL params
     useEffect(() => {
         const q = searchParams.get('q');
+        console.log('Sync query from URL:', q);
         if (q !== null) {
             setQuery(q);
         } else {
@@ -146,8 +159,12 @@ export const HeaderSearch = () => {
                             : 'w-10 md:w-full h-10 md:h-auto justify-center md:justify-start px-0 md:px-4 md:py-2 border-transparent hover:bg-gray-100'
                 } ${isOpen ? 'border-brand-red bg-white shadow-lg' : ''}`}
                 onClick={() => {
+                    console.log('Search container onClick. Setting isExpanded = true');
                     setIsExpanded(true);
-                    setTimeout(() => document.getElementById('header-search-input')?.focus(), 50);
+                    setTimeout(() => {
+                        console.log('Focusing header-search-input');
+                        document.getElementById('header-search-input')?.focus();
+                    }, 50);
                 }}
             >
                 <div className={`flex-shrink-0 transition-colors ${isOpen || isExpanded || (isBuscaPage && query) ? 'text-brand-red' : 'text-gray-400'}`}>
@@ -159,7 +176,11 @@ export const HeaderSearch = () => {
                     value={query}
                     onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    onFocus={() => { setIsOpen(query.length >= 2); setIsExpanded(true); }}
+                    onFocus={() => { 
+                        console.log('Search input onFocus. query length:', query.length);
+                        setIsOpen(query.length >= 2); 
+                        setIsExpanded(true); 
+                    }}
                     placeholder={isExpanded || isDesktop || isBuscaPage ? `Buscar em ${cityName || 'todas as cidades'}...` : 'Buscar...'}
                     className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-sm md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none w-full truncate ${isExpanded || isBuscaPage ? 'block' : 'hidden md:block'}`}
                 />
@@ -194,10 +215,11 @@ export const HeaderSearch = () => {
             </div>
 
             {/* Backdrop para fechar ao clicar fora (mobile) */}
-            {isOpen && query.length >= 2 && (
+            {((isBuscaPage && isOpen && query.length >= 2) || (!isBuscaPage && isExpanded)) && (
                 <div 
-                    className="fixed inset-0 bg-black/25 backdrop-blur-[2px] lg:hidden z-[190]"
+                    className={`fixed inset-x-0 bottom-0 ${isBuscaPage ? 'top-[120px]' : 'top-20'} bg-black/25 backdrop-blur-[2px] lg:hidden z-[190]`}
                     onClick={(e) => {
+                        console.log('Backdrop clicked! Closing search');
                         e.stopPropagation();
                         setIsOpen(false);
                         setIsExpanded(false);

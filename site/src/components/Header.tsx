@@ -60,7 +60,8 @@ export default function Header() {
         return () => window.removeEventListener('scroll', controlNavbar, true);
     }, []);
 
-    const isMobileBusca = pathname === '/busca';
+    const isClientPage = pathname.startsWith('/cliente/') || pathname.split('/').filter(Boolean).length === 3;
+    const isMobileBusca = pathname === '/busca' || isClientPage;
 
     return (
         <>
