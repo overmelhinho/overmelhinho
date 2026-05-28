@@ -13,7 +13,7 @@ export interface Cliente {
   contatos: { whatsapp_selected: string; celular: string }[];
 }
 
-export function useClients(params: { city_id?: number | null; q?: string; per_page?: number }) {
+export function useClients(params: { city_id?: number | null; q?: string; per_page?: number; preferred_segments?: string }) {
   return useQuery({
     queryKey: ['clients', params],
     queryFn: async () => {

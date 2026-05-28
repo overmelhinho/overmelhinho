@@ -8,6 +8,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAds } from '@/hooks/useAds';
 import { useClients } from '@/hooks/useClients';
 import { useLocation } from '@/contexts/LocationContext';
+import { useInterests } from '@/hooks/useInterests';
 import Logo from '@/components/Logo';
 import { SearchAutocomplete } from '@/components/SearchAutocomplete';
 import { getClientSeoUrl } from '@/utils/seo';
@@ -28,8 +29,18 @@ export default function Home() {
   const scrollyRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const { cityId } = useLocation();
+  const { getTopSegments } = useInterests();
+  
+  // We need to call getTopSegments inside a useEffect or just let it render safely, 
+  // but since it uses localStorage it's safe to call if we check for window.
+  const [preferredSegments, setPreferredSegments] = useState<string>('');
+  
+  useEffect(() => {
+    setPreferredSegments(getTopSegments().join(','));
+  }, [getTopSegments]);
+
   const { data: homeAds } = useAds({ city_id: cityId, tipo: 'BANNER' });
-  const { data: realClients } = useClients({ city_id: cityId, per_page: 4 });
+  const { data: realClients } = useClients({ city_id: cityId, per_page: 4, preferred_segments: preferredSegments });
 
   // Animação de escrita do título
   const [textIndex, setTextIndex] = useState(0);

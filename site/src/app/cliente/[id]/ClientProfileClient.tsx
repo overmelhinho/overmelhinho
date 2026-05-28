@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useInterests } from '@/hooks/useInterests';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -65,6 +66,7 @@ export default function ClientProfileClient() {
     const id = (params.id || params.clientSlug) as string;
     const router = useRouter();
     const { trackInteraction } = useAnalytics();
+    const { trackSegment } = useInterests();
     const [isFavorite, setIsFavorite] = useState(false);
     const [activeTab, setActiveTab] = useState('Sobre');
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
@@ -103,8 +105,11 @@ export default function ClientProfileClient() {
     useEffect(() => {
         if (client) {
             trackInteraction(client.id, 'page_view', cityNameContext || undefined);
+            if (client.segmentos && client.segmentos.length > 0) {
+                trackSegment(client.segmentos[0].id);
+            }
         }
-    }, [client, trackInteraction, cityNameContext]);
+    }, [client, trackInteraction, trackSegment, cityNameContext]);
 
     const isPagante = client?.tipo_cliente === 'pagante';
 

@@ -41,6 +41,7 @@ class ClienteController extends Controller
         $perPage = (int) ($request->input('per_page') ?? 15);
         $cityId = $request->input('city_id');
         $cityName = $request->input('city_name');
+        $preferredSegments = $request->input('preferred_segments');
         
         $query = Cliente::query()
             ->where('exibir_no_site', 'true')
@@ -162,9 +163,27 @@ class ClienteController extends Controller
 
         $unaccentFunc = $unaccentExistsGlobal ? 'unaccent' : '';
 
+        // ✅ 0. Smart Match Perfeito (Navegação do Usuário)
+        if ($q === '' && !empty($preferredSegments)) {
+            $segIds = array_filter(explode(',', $preferredSegments), 'is_numeric');
+            if (count($segIds) > 0) {
+                $segIdsStr = implode(',', $segIds);
+                $query->orderByRaw("
+                    CASE 
+                        WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') AND EXISTS (
+                            SELECT 1 FROM cliente_segmento cs 
+                            WHERE cs.cliente_id = clientes.id 
+                            AND cs.segmento_id IN ({$segIdsStr})
+                        ) THEN 0
+                        ELSE 1
+                    END ASC
+                ");
+            }
+        }
+
         $query->orderByRaw("
             CASE 
-                -- 0. MATCH EXATO ABSOLUTO (Fura fila de assinaturas)
+                -- 0.5. MATCH EXATO ABSOLUTO (Fura fila de assinaturas)
                 WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
                 ELSE 1
             END ASC
