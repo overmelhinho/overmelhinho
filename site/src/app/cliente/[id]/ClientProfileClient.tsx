@@ -464,10 +464,10 @@ export default function ClientProfileClient() {
 
                     {/* Floating Profile Image */}
                     {isPagante && client.logotipo_url && (
-                        <div className="absolute -top-16 md:-top-24 left-6 md:left-10 w-32 h-32 md:w-48 md:h-48 rounded-[2rem] md:rounded-full bg-white p-1.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] border-[4px] md:border-[6px] border-white overflow-hidden group flex items-center justify-center">
+                        <div className="absolute -top-16 md:-top-24 left-6 md:left-10 w-32 h-32 md:w-48 md:h-48 rounded-[2rem] bg-white p-1.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] border-[4px] md:border-[6px] border-white overflow-hidden group flex items-center justify-center">
                             <img
                                 src={client.logotipo_url}
-                                className="w-full h-full object-contain rounded-[1.6rem] md:rounded-full group-hover:scale-110 transition-transform duration-700"
+                                className="w-full h-full object-contain rounded-[1.6rem] group-hover:scale-110 transition-transform duration-700"
                                 alt={`Logotipo de ${client.nome_fantasia}`}
                                 onError={(e) => {
                                     e.currentTarget.src = '/logo-overmelhinho.png';

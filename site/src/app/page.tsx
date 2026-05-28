@@ -219,6 +219,8 @@ export default function Home() {
                                                 e.stopPropagation();
                                                 if (cat.name === 'Vagas') {
                                                     router.push('/vagas');
+                                                } else if (cat.name === 'Saúde') {
+                                                    handleQuickSearch('clinicas');
                                                 } else {
                                                     handleQuickSearch(cat.name);
                                                 }

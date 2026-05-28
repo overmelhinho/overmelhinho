@@ -6,7 +6,7 @@ import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { Save, RotateCcw, AlertTriangle } from "lucide-react";
+import { Save, RotateCcw, AlertTriangle, ExternalLink } from "lucide-react";
 
 import axios from "@/services/api";
 import Skeleton from "@/components/ui/skeleton";
@@ -640,13 +640,27 @@ export default function ClienteEdit() {
               }
             }}
           >
-            <div className="mb-4">
-              <div className="text-lg font-semibold text-gray-900">
-                {values.nome_fantasia || "Editar cliente"}
+            <div className="mb-4 flex justify-between items-start">
+              <div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {values.nome_fantasia || "Editar cliente"}
+                </div>
+                <div className="text-sm text-gray-500">
+                  Editar cadastro do cliente
+                </div>
               </div>
-              <div className="text-sm text-gray-500">
-                Editar cadastro do cliente
-              </div>
+
+              {data?.slug && (
+                <a
+                  href={`${typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:3000" : typeof window !== "undefined" && window.location.hostname.includes("novo") ? "https://novo.overmelhinho.com.br" : "https://overmelhinho.com.br"}/cliente/${data.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                >
+                  <ExternalLink size={14} />
+                  Ver no site
+                </a>
+              )}
             </div>
 
             {/* Tipo do cliente */}
