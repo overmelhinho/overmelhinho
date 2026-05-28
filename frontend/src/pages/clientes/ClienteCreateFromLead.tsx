@@ -423,9 +423,13 @@ export default function ClienteCreateFromLead() {
 
               email: lead?.email || "",
               telefone_principal: lead?.telefone || "",
+              obs_telefone_principal: "",
               telefone_secundario: "",
+              obs_telefone_secundario: "",
               celular: "",
+              obs_celular: "",
               telefone_outro: "",
+              obs_telefone_outro: "",
               whatsapp_selected: "",
               has_whatsapp_principal: false,
               has_whatsapp_secundario: false,
@@ -529,9 +533,13 @@ export default function ClienteCreateFromLead() {
                   contatos: [
                     {
                       telefone_principal: values.telefone_principal,
+                      obs_telefone_principal: values.obs_telefone_principal || null,
                       telefone_secundario: values.telefone_secundario || null,
+                      obs_telefone_secundario: values.obs_telefone_secundario || null,
                       celular: values.celular || null,
+                      obs_celular: values.obs_celular || null,
                       telefone_outro: values.telefone_outro || null,
+                      obs_telefone_outro: values.obs_telefone_outro || null,
                       whatsapp_selected: values.whatsapp_selected || null,
                       has_whatsapp_principal: (values.has_whatsapp_principal || values.whatsapp_selected === 'telefone_principal') ? true : false,
                       has_whatsapp_secundario: (values.has_whatsapp_secundario || values.whatsapp_selected === 'telefone_secundario') ? true : false,

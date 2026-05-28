@@ -356,7 +356,7 @@ const CompanyLogo = ({ company, logo, className = '' }: { company: string, logo?
             <img 
                 src={logo} 
                 alt={company} 
-                className="w-full h-full object-contain p-2"
+                className="w-full h-full object-contain p-1.5"
                 onError={() => setError(true)}
             />
         </div>
@@ -697,7 +697,7 @@ export default function VagasPage() {
                                                 <CompanyLogo 
                                                     company={job.company} 
                                                     logo={job.logo} 
-                                                    className="w-14 h-14 bg-gray-50 rounded-2xl text-2xl text-gray-300 group-hover:bg-brand-red/5 group-hover:text-brand-red transition-colors" 
+                                                    className="w-[70px] h-[70px] bg-gray-50 rounded-2xl text-3xl text-gray-300 group-hover:bg-brand-red/5 group-hover:text-brand-red transition-colors" 
                                                 />
                                                 <div className="space-y-2 min-w-0">
                                                     <div className="flex items-center gap-3 flex-wrap">

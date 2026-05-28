@@ -264,10 +264,10 @@ export default function ClientProfileClient() {
     };
 
     const allPhones = contactInfo ? [
-        { label: 'Telefone Principal', number: formatPhone(contactInfo.telefone_principal), flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal },
-        { label: 'Telefone Secundário', number: formatPhone(contactInfo.telefone_secundario), flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario },
-        { label: 'Celular', number: formatPhone(contactInfo.celular), flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular },
-        { label: 'Outro Telefone / 0800', number: formatPhone(contactInfo.telefone_outro), flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro },
+        { label: 'Tel. Principal', number: formatPhone(contactInfo.telefone_principal), flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal, obs: contactInfo.obs_telefone_principal },
+        { label: 'Tel. Secundário', number: formatPhone(contactInfo.telefone_secundario), flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario, obs: contactInfo.obs_telefone_secundario },
+        { label: 'Celular', number: formatPhone(contactInfo.celular), flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular, obs: contactInfo.obs_celular },
+        { label: 'Tel. Gratuito', number: formatPhone(contactInfo.telefone_outro), flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro, obs: contactInfo.obs_telefone_outro },
     ].filter(p => p.number && p.flag && !p.hidden) : [];
 
     const primaryPhone = allPhones[0]?.number;
@@ -482,11 +482,6 @@ export default function ClientProfileClient() {
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-3">
                                     <h1 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif italic uppercase leading-tight">{client.nome_fantasia}</h1>
-                                    {isPagante && (
-                                        <div className="w-5 h-5 bg-blue-500 rounded-full flex-shrink-0 flex items-center justify-center shadow-lg" title="Verificado">
-                                            <CheckCircle2 size={12} className="text-white" fill="white" />
-                                        </div>
-                                    )}
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-4 text-[11px] md:text-xs font-black uppercase tracking-widest font-sans">
@@ -815,8 +810,8 @@ export default function ClientProfileClient() {
                                                                         className={`col-span-full bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2`}
                                                                     >
                                                                         <Phone size={14} className="flex-shrink-0" /> 
-                                                                        <span className="text-center">
-                                                                            {p.label}: <span className="whitespace-nowrap">{p.number}</span>
+                                                                        <span className="text-center whitespace-nowrap">
+                                                                            {p.label}: <span>{p.number}</span>
                                                                         </span>
                                                                     </a>
                                                                 )
@@ -978,12 +973,17 @@ export default function ClientProfileClient() {
                                             <div className="flex flex-col">
                                                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{p.label}</span>
                                                 <div className="flex items-center justify-between">
-                                                    <a 
-                                                        href={`tel:${p.number.replace(/\D/g, '')}`} 
-                                                        className="text-lg font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic"
-                                                    >
-                                                        {p.number}
-                                                    </a>
+                                                    <div className="flex flex-col">
+                                                        <a 
+                                                            href={`tel:${p.number.replace(/\D/g, '')}`} 
+                                                            className="text-lg font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic leading-none"
+                                                        >
+                                                            {p.number}
+                                                        </a>
+                                                        {p.obs && (
+                                                            <span className="text-[11px] text-gray-400 font-medium italic mt-1.5 leading-tight">{p.obs}</span>
+                                                        )}
+                                                    </div>
                                                     <div className="flex gap-2">
                                                         <a 
                                                             href={`tel:${p.number.replace(/\D/g, '')}`}

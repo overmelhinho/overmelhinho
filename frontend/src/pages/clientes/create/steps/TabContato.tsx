@@ -24,10 +24,10 @@ export default function TabContato() {
   const { values, setFieldValue, handleChange } = useFormikContext<any>();
 
   const phoneFields = [
-    { id: 'telefone_principal', label: 'Telefone Principal', showExibir: 'exibir_tel_principal', hasWhatsApp: 'has_whatsapp_principal', hasPrincipalHide: true },
-    { id: 'telefone_secundario', label: 'Telefone Secundário', showExibir: 'exibir_tel_secundario', hasWhatsApp: 'has_whatsapp_secundario', hasPrincipalHide: false },
-    { id: 'celular', label: 'Celular', showExibir: 'exibir_celular', hasWhatsApp: 'has_whatsapp_celular', hasPrincipalHide: false },
-    { id: 'telefone_outro', label: 'Outro Telefone / 0800', showExibir: 'exibir_tel_outro', hasWhatsApp: 'has_whatsapp_outro', hasPrincipalHide: false, freeText: true },
+    { id: 'telefone_principal', obsId: 'obs_telefone_principal', label: 'Telefone Principal', showExibir: 'exibir_tel_principal', hasWhatsApp: 'has_whatsapp_principal', hasPrincipalHide: true },
+    { id: 'telefone_secundario', obsId: 'obs_telefone_secundario', label: 'Telefone Secundário', showExibir: 'exibir_tel_secundario', hasWhatsApp: 'has_whatsapp_secundario', hasPrincipalHide: false },
+    { id: 'celular', obsId: 'obs_celular', label: 'Celular', showExibir: 'exibir_celular', hasWhatsApp: 'has_whatsapp_celular', hasPrincipalHide: false },
+    { id: 'telefone_outro', obsId: 'obs_telefone_outro', label: 'Outro Telefone / 0800', showExibir: 'exibir_tel_outro', hasWhatsApp: 'has_whatsapp_outro', hasPrincipalHide: false, freeText: true },
   ];
 
   const handlePhoneChange = (name: string, value: string) => {
@@ -128,6 +128,17 @@ export default function TabContato() {
                 className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] bg-white transition-all shadow-sm"
               />
             )}
+
+            <div className="pt-0.5">
+              <input
+                type="text"
+                name={field.obsId}
+                value={values[field.obsId] || ""}
+                onChange={handleChange}
+                placeholder="Nota / Obs (Ex: Central de Atendimento)"
+                className="w-full text-xs bg-transparent border-b border-dashed border-gray-300 focus:border-[#B70F0A] focus:outline-none focus:ring-0 py-1 transition-colors text-gray-600 placeholder:text-gray-400"
+              />
+            </div>
 
             <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
               <input

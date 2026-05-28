@@ -218,9 +218,13 @@ export default function ClienteEdit() {
 
       email: contato?.email_principal || c?.email || "",
       telefone_principal: contato?.telefone_principal || "",
+      obs_telefone_principal: contato?.obs_telefone_principal || "",
       telefone_secundario: contato?.telefone_secundario || "",
+      obs_telefone_secundario: contato?.obs_telefone_secundario || "",
       celular: contato?.celular || "",
+      obs_celular: contato?.obs_celular || "",
       telefone_outro: contato?.telefone_outro || "",
+      obs_telefone_outro: contato?.obs_telefone_outro || "",
       whatsapp_selected: contato?.whatsapp_selected || "",
       has_whatsapp_principal: !!contato?.has_whatsapp_principal,
       has_whatsapp_secundario: !!contato?.has_whatsapp_secundario,
@@ -425,9 +429,13 @@ export default function ClienteEdit() {
               contatos: [
                 {
                   telefone_principal: values.telefone_principal,
+                  obs_telefone_principal: values.obs_telefone_principal || null,
                   telefone_secundario: values.telefone_secundario || null,
+                  obs_telefone_secundario: values.obs_telefone_secundario || null,
                   celular: values.celular || null,
+                  obs_celular: values.obs_celular || null,
                   telefone_outro: values.telefone_outro || null,
+                  obs_telefone_outro: values.obs_telefone_outro || null,
                   whatsapp_selected: values.whatsapp_selected || null,
                   has_whatsapp_principal: (values.has_whatsapp_principal || values.whatsapp_selected === 'telefone_principal') ? true : false,
                   has_whatsapp_secundario: (values.has_whatsapp_secundario || values.whatsapp_selected === 'telefone_secundario') ? true : false,

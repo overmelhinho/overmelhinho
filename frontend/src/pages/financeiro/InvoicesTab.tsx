@@ -668,8 +668,12 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                 const isOverdue = invoice.status === "pending" && isBefore(new Date(invoice.due_date), startOfDay(new Date()));
 
                                 return (
-                                    <tr key={invoice.id} className={cn("hover:bg-gray-50", selectedInvoices.includes(invoice.id) && "bg-red-50/30")}>
-                                        <td className="px-4 py-4">
+                                    <tr 
+                                        key={invoice.id} 
+                                        onClick={() => navigate(`/clientes/${invoice.client.id}/editar?step=12`)}
+                                        className={cn("hover:bg-red-50/40 hover:shadow-sm cursor-pointer transition-all duration-200 group", selectedInvoices.includes(invoice.id) && "bg-red-50/30")}
+                                    >
+                                        <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="checkbox"
                                                 checked={selectedInvoices.includes(invoice.id)}
@@ -689,7 +693,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                     <button className="text-left group">
@@ -799,7 +803,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right">
+                                        <td className="whitespace-nowrap px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex justify-end gap-2">
                                                 {invoice.payment_url && (
                                                     <>

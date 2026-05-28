@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/services/api";
 import { format } from "date-fns";
@@ -73,7 +74,25 @@ interface Autorizacao {
 }
 
 export default function AutorizacoesTab() {
-    const [searchTerm, setSearchTerm] = useState("");
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            setSearchParams(prev => {
+                if (searchTerm) {
+                    prev.set("q", searchTerm);
+                } else {
+                    prev.delete("q");
+                }
+                prev.set("tab", "autorizacoes");
+                return prev;
+            }, { replace: true });
+        }, 500);
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, setSearchParams]);
+
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [dateStart, setDateStart] = useState("");
     const [dateEnd, setDateEnd] = useState("");
@@ -317,8 +336,12 @@ export default function AutorizacoesTab() {
                             </tr>
                         ) : (
                             filtered?.map((a) => (
-                                <tr key={a.id} className={cn("hover:bg-gray-50/50 transition-colors group", selectedIds.includes(a.id) && "bg-red-50/30")}>
-                                    <td className="px-6 py-4">
+                                <tr 
+                                    key={a.id} 
+                                    onClick={() => navigate(`/clientes/${a.cliente.id}/editar?step=12`)}
+                                    className={cn("hover:bg-red-50/40 hover:shadow-sm cursor-pointer transition-all duration-200 group", selectedIds.includes(a.id) && "bg-red-50/30")}
+                                >
+                                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                         <input
                                             type="checkbox"
                                             className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
@@ -330,7 +353,7 @@ export default function AutorizacoesTab() {
                                             onClick={(e) => e.stopPropagation()}
                                         />
                                     </td>
-                                    <td className="px-6 py-4" onClick={() => toggleSelect(a.id)}>
+                                    <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
                                                 {a.numero.toString().padStart(5, '0')}
@@ -359,7 +382,7 @@ export default function AutorizacoesTab() {
                                     <td className="px-6 py-4">
                                         {getStatusBadge(a.status)}
                                     </td>
-                                    <td className="px-6 py-4 text-right">
+                                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-900 rounded-xl">
@@ -379,7 +402,7 @@ export default function AutorizacoesTab() {
                                                 </DropdownMenuItem>
 
                                                 <DropdownMenuItem
-                                                    onClick={() => window.open(`/clientes/${a.cliente.id}/editar`, '_blank')}
+                                                    onClick={() => navigate(`/clientes/${a.cliente.id}/editar?step=12`)}
                                                     className="rounded-xl font-bold text-xs gap-2 py-2.5 cursor-pointer"
                                                 >
                                                     <User size={16} /> Editar Dados de Contato

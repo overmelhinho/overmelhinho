@@ -280,7 +280,7 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                                 <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-600/30">
                                     <FileText className="text-white" size={24} />
                                 </div>
-                                <DialogTitle className="text-3xl font-black tracking-tight">Editar Contrato #{autorizacao?.numero}</DialogTitle>
+                                <DialogTitle className="text-3xl font-black tracking-tight">Editar Contrato {autorizacao?.numero}</DialogTitle>
                             </div>
                             <DialogDescription className="text-gray-400 font-medium">
                                 Edição administrativa do contrato. Alterações refletirão no Tiny ERP se sincronizado.

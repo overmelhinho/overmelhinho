@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/services/api";
 import { isBefore, startOfDay } from "date-fns";
@@ -30,6 +31,8 @@ interface Invoice {
 }
 
 export default function FinanceiroPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const currentTab = searchParams.get("tab") || "invoices";
     const [statsFilters, setStatsFilters] = useState<any>({});
 
     const { data: stats, isLoading } = useQuery({
@@ -138,7 +141,16 @@ export default function FinanceiroPage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="invoices" className="w-full space-y-6">
+            <Tabs 
+                value={currentTab} 
+                onValueChange={(val) => {
+                    setSearchParams(prev => { 
+                        prev.set("tab", val); 
+                        return prev; 
+                    });
+                }} 
+                className="w-full space-y-6"
+            >
                 <TabsList className="bg-white p-1 border rounded-lg">
                     <TabsTrigger value="invoices" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700">
                         <DollarSign size={16} /> Faturas
