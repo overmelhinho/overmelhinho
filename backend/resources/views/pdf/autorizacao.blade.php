@@ -75,7 +75,7 @@
                 <strong>O VERMELHINHO INFORMAÇÕES</strong>
                 Rua Cel. Pena de Moraes, 513, Sala 1004 • Centro<br>
                 Farroupilha/RS • (54) 3268.0002<br>
-                CNPJ: 09.951.787/0001-28 • angelica@overmelhinho.com.br
+                CNPJ: 09.951.787/0001-28 • atendimento@overmelhinho.com.br
             </td>
         </tr>
     </table>

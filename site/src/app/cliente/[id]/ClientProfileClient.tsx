@@ -423,7 +423,7 @@ export default function ClientProfileClient() {
 
 
             {/* 📸 HERO / COVER */}
-            <section className="relative h-[32vh] md:h-[46vh] overflow-hidden">
+            <section className={`relative overflow-hidden ${client.banner_url && isPagante ? 'h-[32vh] md:h-[46vh]' : 'h-[20vh] md:h-[30vh]'}`}>
                 {/* 📱 MOBILE ACTIONS (Absolute instead of Fixed to avoid logo overlap) */}
                 <div className="md:hidden absolute top-4 left-0 right-0 z-[100] px-6 flex justify-between pointer-events-none">
                     <button onClick={() => router.back()} className="w-10 h-10 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/30 text-white flex items-center justify-center shadow-2xl active:scale-75 transition-all pointer-events-auto cursor-pointer">
@@ -868,7 +868,7 @@ export default function ClientProfileClient() {
                                         >
                                             <img
                                                 src={img.url}
-                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                                className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110"
                                                 alt={`Foto de ${client.nome_fantasia} - ${i + 1}`}
                                             />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
@@ -1134,7 +1134,7 @@ export default function ClientProfileClient() {
                 {recommendations?.length > 0 && (
                     <section className="mt-20 space-y-8">
                         <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Poderá gostar também</h2>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                             {recommendations.map((rec: any) => (
                                 <div
                                     key={rec.id}
@@ -1142,25 +1142,25 @@ export default function ClientProfileClient() {
                                         window.scrollTo(0, 0);
                                         router.push(`/cliente/${rec.slug || rec.id}`);
                                     }}
-                                    className="bg-white rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white gummy-card group cursor-pointer hover:-translate-y-2 transition-all"
+                                    className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-lg md:shadow-xl border-2 md:border-4 border-white gummy-card group cursor-pointer hover:-translate-y-2 transition-all flex flex-col"
                                 >
-                                    <div className="h-48 overflow-hidden relative bg-gray-100 flex items-center justify-center">
+                                    <div className="aspect-square md:h-48 md:aspect-auto overflow-hidden relative bg-gray-50 flex items-center justify-center p-4">
                                         {(rec.galeria?.[0]?.url || rec.logotipo_url) ? (
                                             <img
                                                 src={rec.galeria?.[0]?.url || rec.logotipo_url}
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
+                                                className={`w-full h-full group-hover:scale-110 transition-all duration-700 ${rec.galeria?.[0]?.url ? 'object-cover rounded-xl' : 'object-contain'}`}
                                                 alt={rec.nome_fantasia}
                                             />
                                         ) : (
-                                            <Briefcase size={40} className="text-gray-300 group-hover:scale-110 transition-all duration-700" />
+                                            <Briefcase size={32} className="text-gray-300 group-hover:scale-110 transition-all duration-700" />
                                         )}
-                                        <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[8px] font-black text-white uppercase tracking-widest">
+                                        <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-gray-900/70 backdrop-blur-md px-2 py-1 md:px-3 rounded-full text-[8px] font-black text-white uppercase tracking-widest max-w-[80%] truncate">
                                             {rec.segmentos?.[0]?.nome || 'Negócio Local'}
                                         </div>
                                     </div>
-                                    <div className="p-6 space-y-4">
-                                        <h4 className="font-black font-serif italic text-lg leading-tight truncate text-gray-900">{rec.nome_fantasia}</h4>
-                                        <button className="w-full bg-gray-50 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:bg-brand-red group-hover:text-white transition-all">Ver Perfil</button>
+                                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                                        <h4 className="font-black font-serif italic text-sm md:text-lg leading-tight line-clamp-2 text-gray-900">{rec.nome_fantasia}</h4>
+                                        <button className="w-full bg-gray-50 py-2.5 md:py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:bg-brand-red group-hover:text-white transition-all">Ver Empresa</button>
                                     </div>
                                 </div>
                             ))}
@@ -1231,24 +1231,24 @@ export default function ClientProfileClient() {
             </footer>
 
             {/* 📱 MOBILE STICKY CONVERSION BAR */}
-            <footer className="md:hidden fixed bottom-0 left-0 right-0 p-6 z-[100] pointer-events-none">
-                <div className="flex space-x-3 pointer-events-auto">
+            <footer className="md:hidden fixed bottom-0 left-0 right-0 p-4 pb-6 z-[100] pointer-events-none bg-gradient-to-t from-gray-50 via-gray-50/80 to-transparent">
+                <div className="flex space-x-3 pointer-events-auto max-w-sm mx-auto">
                     {hasPhone && isPagante && (
                         <button
                             onClick={handleCallClick}
-                            className="flex-[0.4] bg-white text-gray-900 py-6 rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border-2 border-white font-black text-xs uppercase tracking-widest flex items-center justify-center space-x-2 active:scale-95 transition-all font-sans"
+                            className="flex-[0.4] bg-white text-gray-900 py-4 rounded-full shadow-[0_8px_20px_-6px_rgba(0,0,0,0.15)] border border-gray-100 font-bold text-[11px] uppercase tracking-widest flex items-center justify-center space-x-2 active:scale-95 transition-all font-sans"
                         >
-                            <Phone size={20} />
+                            <Phone size={16} />
                             <span>Ligar</span>
                         </button>
                     )}
                     {hasWhatsApp && isPagante && (
                         <button
                             onClick={handleWhatsAppClick}
-                            className="flex-1 bg-[#25D366] text-white py-6 rounded-[2rem] shadow-[0_25px_50px_-10px_rgba(37,211,102,0.5)] font-black text-lg flex items-center justify-center space-x-3 active:scale-95 transition-all overflow-hidden relative font-sans border-b-4 border-green-700"
+                            className="flex-1 bg-[#25D366] text-white py-4 rounded-full shadow-[0_8px_20px_-6px_rgba(37,211,102,0.4)] font-black text-sm flex items-center justify-center space-x-2 active:scale-95 transition-all overflow-hidden relative font-sans border border-[#20B054]"
                         >
                             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] active:translate-x-[100%] transition-transform duration-500"></div>
-                            <WhatsAppIcon size={24} />
+                            <WhatsAppIcon size={20} />
                             <span>WhatsApp</span>
                         </button>
                     )}
@@ -1257,9 +1257,9 @@ export default function ClientProfileClient() {
                             href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 py-6 rounded-[2.5rem] shadow-2xl font-black text-lg flex items-center justify-center space-x-3 active:scale-95 transition-all overflow-hidden relative font-sans"
+                            className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 py-4 rounded-full shadow-[0_8px_20px_-6px_rgba(37,136,211,0.2)] font-black text-sm flex items-center justify-center space-x-2 active:scale-95 transition-all overflow-hidden relative font-sans"
                         >
-                            <MapPin size={24} fill="currentColor" />
+                            <MapPin size={20} fill="currentColor" />
                             <span>Waze</span>
                         </a>
                     )}

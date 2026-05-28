@@ -669,6 +669,8 @@ class ClienteController extends Controller
         $baseQuery = Cliente::with(['enderecos', 'segmentos'])
             ->where('id', '!=', $cliente->id)
             ->where('exibir_no_site', 'true')
+            ->where('tipo_cliente', 'pagante')
+            ->whereIn('status_assinatura', ['ativa', 'ativo'])
             ->whereDoesntHave('segmentos', function($q) use ($segmentIds) {
                 $q->whereIn('segmentos.id', $segmentIds);
             });
