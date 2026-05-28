@@ -625,25 +625,25 @@ export default function ClientProfileClient() {
                                         </div>
 
                                         {/* Info Boxes */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-2 gap-3">
                                             {client.data_fundacao && client.exibir_data_fundacao !== false && (
-                                                <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Fundada em</p>
-                                                    <p className="text-lg font-black text-gray-900 font-serif italic">{new Date(client.data_fundacao).getFullYear()}</p>
+                                                <div className={`bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col justify-center ${!client.registro_profissional ? 'col-span-2' : 'col-span-1'}`}>
+                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Fundada em</p>
+                                                    <p className="text-xs font-bold text-gray-800">{new Date(client.data_fundacao).getFullYear()}</p>
                                                 </div>
                                             )}
                                             {client.registro_profissional && (
-                                                <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Registro Profissional</p>
-                                                    <p className="text-lg font-black text-gray-900 font-serif italic">{client.registro_profissional}</p>
+                                                <div className={`bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col justify-center ${(!client.data_fundacao || client.exibir_data_fundacao === false) ? 'col-span-2' : 'col-span-1'}`}>
+                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Registro Profissional</p>
+                                                    <p className="text-xs font-bold text-gray-800">{client.registro_profissional}</p>
                                                 </div>
                                             )}
                                             {client.segmentos?.length > 0 && isPagante && (
-                                                <div className={`bg-gray-50 p-6 rounded-[2rem] border border-gray-100 ${client.data_fundacao && client.registro_profissional ? 'col-span-1 md:col-span-2' : ''}`}>
-                                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
-                                                    <div className="flex flex-wrap gap-2">
+                                                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 col-span-2">
+                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
+                                                    <div className="flex flex-wrap gap-1.5">
                                                         {client.segmentos.map((seg: any) => (
-                                                            <span key={seg.id} className="text-sm text-gray-900 font-serif italic bg-white px-3 py-1 rounded-xl border border-gray-100 shadow-sm">
+                                                            <span key={seg.id} className="text-xs text-gray-800 bg-white px-2.5 py-1 rounded-xl border border-gray-100 shadow-sm font-medium">
                                                                 {seg.nome}
                                                             </span>
                                                         ))}

@@ -63,7 +63,8 @@ class PublicAdController extends Controller
                                 $subInner->orWhere(function ($qAnd) use ($phrase) {
                                     $words = array_filter(explode(' ', $phrase));
                                     foreach ($words as $word) {
-                                        $qAnd->where('keyword_normalizada', 'LIKE', '%' . $word . '%');
+                                        $normalizedWord = $this->normalizeKeyword($word);
+                                        $qAnd->where('keyword_normalizada', 'LIKE', '%' . $normalizedWord . '%');
                                     }
                                 });
                             }
@@ -191,5 +192,22 @@ class PublicAdController extends Controller
             'data' => $res,
             'count' => count($res)
         ]);
+    }
+
+    private function normalizeKeyword(string $original): string
+    {
+        $v = trim($original);
+        $v = mb_strtolower($v);
+
+        // remover acentos sem depender de ext intl
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $v);
+        if (is_string($ascii) && $ascii !== '') {
+            $v = $ascii;
+        }
+
+        // colapsa espaços
+        $v = preg_replace('/\s+/', ' ', $v) ?? $v;
+
+        return trim($v);
     }
 }

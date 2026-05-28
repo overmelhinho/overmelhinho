@@ -100,7 +100,8 @@ export const HeaderSearch = () => {
                     ...res.data,
                     results: cleanedResults
                 });
-                setIsOpen(true);
+                const isInputFocused = typeof document !== 'undefined' && document.activeElement?.id === 'header-search-input';
+                setIsOpen(isInputFocused);
             } catch (error) {
                 console.error("Erro ao buscar sugestões", error);
             }
@@ -113,6 +114,8 @@ export const HeaderSearch = () => {
     const handleSearch = (term: string = query) => {
         if (!term.trim()) return;
         setIsOpen(false);
+        setIsExpanded(false);
+        document.getElementById('header-search-input')?.blur();
         router.push(`/busca?q=${encodeURIComponent(term)}${cityId ? `&city_id=${cityId}` : ''}`);
     };
 
