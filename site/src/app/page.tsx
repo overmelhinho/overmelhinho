@@ -31,16 +31,19 @@ export default function Home() {
   const { cityId } = useLocation();
   const { getTopSegments } = useInterests();
   
-  // We need to call getTopSegments inside a useEffect or just let it render safely, 
-  // but since it uses localStorage it's safe to call if we check for window.
+  const [isMounted, setIsMounted] = useState(false);
   const [preferredSegments, setPreferredSegments] = useState<string>('');
   
   useEffect(() => {
+    setIsMounted(true);
     setPreferredSegments(getTopSegments().join(','));
   }, [getTopSegments]);
 
   const { data: homeAds } = useAds({ city_id: cityId, tipo: 'BANNER' });
-  const { data: realClients } = useClients({ city_id: cityId, per_page: 4, preferred_segments: preferredSegments });
+  const { data: realClients, isLoading } = useClients(
+    { city_id: cityId, per_page: 4, preferred_segments: preferredSegments },
+    { enabled: isMounted }
+  );
 
   // Animação de escrita do título
   const [textIndex, setTextIndex] = useState(0);
@@ -108,48 +111,7 @@ export default function Home() {
 
   const featured = useMemo(() => {
     if (!realClients || realClients.length === 0) {
-      return [
-        {
-          name: "Giardino Restaurante",
-          category: "Gastronomia",
-          rating: 4.9,
-          img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80",
-          location: "Centro, Farroupilha - RS",
-          whatsapp: "5554999999001",
-          desc: "Culinária italiana autêntica no coração da Serra Gaúcha.",
-          slug: "giardino-restaurante"
-        },
-        {
-          name: "Clínica Serra Saúde",
-          category: "Saúde",
-          rating: 4.8,
-          img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
-          location: "Bairro Centro, Garibaldi - RS",
-          whatsapp: "5554999999002",
-          desc: "Atendimento médico completo com especialistas da região.",
-          slug: "clinica-serra-saude"
-        },
-        {
-          name: "Serra Fit Academia",
-          category: "Fitness",
-          rating: 5.0,
-          img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&auto=format&fit=crop&q=80",
-          location: "Av. Principal, Bento Gonçalves - RS",
-          whatsapp: "5554999999003",
-          desc: "Musculação, cardio e aulas coletivas 6 dias por semana.",
-          slug: "serra-fit-academia"
-        },
-        {
-          name: "Oficina do João",
-          category: "Automotivo",
-          rating: 4.7,
-          img: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80",
-          location: "São José, Caxias do Sul - RS",
-          whatsapp: "5554999999004",
-          desc: "Serviços mecânicos completos com garantia.",
-          slug: "oficina-do-joao"
-        },
-      ];
+      return [];
     }
 
     return realClients.map(client => ({
@@ -260,49 +222,75 @@ export default function Home() {
                     </div>
 
                     <div className="flex space-x-4 overflow-x-auto pb-4 pt-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-4 md:space-x-0 md:gap-6">
-                        {featured.map((item, idx) => {
-                            const clientLink = (item as any)._raw ? getClientSeoUrl((item as any)._raw) : `/cliente/${item.slug}`;
-                            return (
-                            <div key={idx} className="snap-center min-w-[85%] md:min-w-0 bg-white rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border-4 border-white flex flex-col gummy-card group">
-                                <Link href={clientLink} className="relative h-48 overflow-hidden block bg-gray-50 flex items-center justify-center">
-                                    {item.img ? (
-                                        <img src={item.img} alt={item.name} className="w-full h-full object-contain p-4 md:p-6 group-hover:scale-110 transition-transform duration-1000" />
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center text-gray-200">
-                                            <Building2 size={48} className="opacity-20" />
+                        {!isMounted || isLoading ? (
+                            Array.from({ length: 4 }).map((_, idx) => (
+                                <div key={idx} className="snap-center min-w-[85%] md:min-w-0 bg-white rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border-4 border-white flex flex-col gummy-card animate-pulse">
+                                    <div className="relative h-48 bg-gray-100 flex items-center justify-center">
+                                        <div className="w-12 h-12 bg-gray-200/80 rounded-full"></div>
+                                    </div>
+                                    <div className="p-5 md:p-6 flex-1 flex flex-col justify-between space-y-4">
+                                        <div className="space-y-2">
+                                            <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                                            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                                            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                                            <div className="space-y-1 pt-2">
+                                                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                                                <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-2 rounded-full flex items-center space-x-1 shadow-lg">
-                                        <span className="text-yellow-500 text-base font-black">★</span>
-                                        <span className="text-sm font-black text-gray-900">{item.rating}</span>
+                                        <div className="h-10 bg-gray-200 rounded-xl w-full"></div>
                                     </div>
-                                    <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/20 font-sans">
-                                        Destaque
-                                    </div>
-                                </Link>
-                                <div className="p-5 md:p-6 flex-1 flex flex-col justify-between space-y-4">
-                                    <div className="space-y-1.5">
-                                        <span className="text-[9px] md:text-[10px] font-black text-brand-red uppercase tracking-[0.3em] font-sans">{item.category}</span>
-                                        <Link href={clientLink}>
-                                            <h4 className="text-lg md:text-xl font-black text-gray-900 tracking-tighter leading-none font-serif hover:text-brand-red transition-colors cursor-pointer">{item.name}</h4>
-                                        </Link>
-                                        <p className="text-gray-400 text-[10px] md:text-xs font-bold tracking-tight font-sans truncate">{item.location}</p>
-                                        <p className="text-gray-400 font-medium text-xs mt-2 line-clamp-2 leading-relaxed">{item.desc}</p>
-                                    </div>
-
-                                    <a
-                                        href={`https://wa.me/${item.whatsapp}?text=Olá! Vi sua empresa no portal O Vermelhinho e gostaria de saber mais.`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-full bg-[#25D366] text-white py-3 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs active:scale-95 transition-all shadow-[0_10px_20px_-5px_rgba(37,211,102,0.3)] flex items-center justify-center space-x-2 border-b-[3px] border-[#128C7E]/40 hover:brightness-105 active:border-b-0 active:translate-y-1 font-sans"
-                                    >
-                                        <WhatsAppIcon size={16} />
-                                        <span>WhatsApp</span>
-                                    </a>
                                 </div>
+                            ))
+                        ) : realClients && realClients.length > 0 ? (
+                            featured.map((item, idx) => {
+                                const clientLink = (item as any)._raw ? getClientSeoUrl((item as any)._raw) : `/cliente/${item.slug}`;
+                                return (
+                                <div key={idx} className="snap-center min-w-[85%] md:min-w-0 bg-white rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border-4 border-white flex flex-col gummy-card group">
+                                    <Link href={clientLink} className="relative h-48 overflow-hidden block bg-gray-50 flex items-center justify-center">
+                                        {item.img ? (
+                                            <img src={item.img} alt={item.name} className="w-full h-full object-contain p-4 md:p-6 group-hover:scale-110 transition-transform duration-1000" />
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center text-gray-200">
+                                                <Building2 size={48} className="opacity-20" />
+                                            </div>
+                                        )}
+                                        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-2 rounded-full flex items-center space-x-1 shadow-lg">
+                                            <span className="text-yellow-500 text-base font-black">★</span>
+                                            <span className="text-sm font-black text-gray-900">{item.rating}</span>
+                                        </div>
+                                        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/20 font-sans">
+                                            Destaque
+                                        </div>
+                                    </Link>
+                                    <div className="p-5 md:p-6 flex-1 flex flex-col justify-between space-y-4">
+                                        <div className="space-y-1.5">
+                                            <span className="text-[9px] md:text-[10px] font-black text-brand-red uppercase tracking-[0.3em] font-sans">{item.category}</span>
+                                            <Link href={clientLink}>
+                                                <h4 className="text-lg md:text-xl font-black text-gray-900 tracking-tighter leading-none font-serif hover:text-brand-red transition-colors cursor-pointer">{item.name}</h4>
+                                            </Link>
+                                            <p className="text-gray-400 text-[10px] md:text-xs font-bold tracking-tight font-sans truncate">{item.location}</p>
+                                            <p className="text-gray-400 font-medium text-xs mt-2 line-clamp-2 leading-relaxed">{item.desc}</p>
+                                        </div>
+
+                                        <a
+                                            href={`https://wa.me/${item.whatsapp}?text=Olá! Vi sua empresa no portal O Vermelhinho e gostaria de saber mais.`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full bg-[#25D366] text-white py-3 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs active:scale-95 transition-all shadow-[0_10px_20px_-5px_rgba(37,211,102,0.3)] flex items-center justify-center space-x-2 border-b-[3px] border-[#128C7E]/40 hover:brightness-105 active:border-b-0 active:translate-y-1 font-sans"
+                                        >
+                                            <WhatsAppIcon size={16} />
+                                            <span>WhatsApp</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            );
+                            })
+                        ) : (
+                            <div className="col-span-4 text-center py-10 text-gray-400 font-medium w-full">
+                                Nenhum match perfeito encontrado para o seu perfil no momento.
                             </div>
-                        );
-                        })}
+                        )}
                     </div>
                 </section>
 

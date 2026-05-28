@@ -13,12 +13,16 @@ export interface Cliente {
   contatos: { whatsapp_selected: string; celular: string }[];
 }
 
-export function useClients(params: { city_id?: number | null; q?: string; per_page?: number; preferred_segments?: string }) {
+export function useClients(
+  params: { city_id?: number | null; q?: string; per_page?: number; preferred_segments?: string },
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ['clients', params],
     queryFn: async () => {
       const res = await api.get('/public/search', { params });
       return res.data.data as Cliente[];
     },
+    ...options
   });
 }
