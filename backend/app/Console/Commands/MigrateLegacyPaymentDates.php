@@ -44,36 +44,30 @@ class MigrateLegacyPaymentDates extends Command
             $updatedCount = 0;
             $bar = $this->output->createProgressBar(count($pagamentos));
 
+            // Para evitar lentidão, vamos pré-carregar os mapeamentos de autorizacao_parcelas -> invoices
+            $parcelasMap = DB::table('autorizacao_parcelas')
+                ->whereNotNull('invoice_id')
+                ->pluck('invoice_id', 'id')
+                ->toArray();
+
+            $updates = [];
+
             foreach ($pagamentos as $pag) {
                 $pagArr = (array) $pag;
                 $dataPagamento = $pagArr[$dateColumn];
 
-                if (!$dataPagamento) {
+                if (!$dataPagamento || str_starts_with($dataPagamento, '0000') || str_starts_with($dataPagamento, '-')) {
                     $bar->advance();
                     continue;
                 }
 
-                // Achar a parcela local correspondente (invoice)
-                // A parcela legada foi migrada para autorizacao_parcelas, e as autorizacao_parcelas viraram invoices.
-                // Mas pera, os ids do legado bateram com os ids locais?
-                // O SyncRecentLegacyPayments faz: DB::table('autorizacao_parcelas')->where('id', $pag->id_parcela)
-                // Então o ID da autorizacao_parcela = id_parcela do legado
-                
-                $parcelaLocal = DB::table('autorizacao_parcelas')
-                    ->where('id', $pagArr['id_parcela'])
-                    ->first();
-
-                if ($parcelaLocal && $parcelaLocal->invoice_id) {
-                    // Tem uma invoice vinculada!
-                    // Só atualiza se a data for válida (ano > 2000) e não estiver preenchida ou a gente quiser forçar.
-                    // Para o caso do usuário: "neste mês de maio as faturas que foram pagas"
+                $idParcela = $pagArr['id_parcela'];
+                if (isset($parcelasMap[$idParcela])) {
+                    $invoiceId = $parcelasMap[$idParcela];
                     
                     DB::table('invoices')
-                        ->where('id', $parcelaLocal->invoice_id)
-                        // ->whereNull('action_date') // Opcional, mas vamos sobreescrever para garantir
-                        ->update([
-                            'action_date' => $dataPagamento
-                        ]);
+                        ->where('id', $invoiceId)
+                        ->update(['action_date' => $dataPagamento]);
 
                     $updatedCount++;
                 }

@@ -676,11 +676,11 @@ const AuditDashboardPage: React.FC = () => {
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
                                                     <div className="relative">
-                                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden border border-white shadow-inner group-hover:shadow-md transition-all">
+                                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden border border-white shadow-inner group-hover:shadow-md transition-all">
                                                             {c.logo_url ? (
                                                                 <img src={c.logo_url} className="w-full h-full object-cover" />
                                                             ) : (
-                                                                <Building2 className="text-slate-400 w-6 h-6" />
+                                                                <Building2 className="text-slate-400 w-5 h-5" />
                                                             )}
                                                         </div>
                                                         {c.tipo_cliente === 'pagante' && (
@@ -690,7 +690,7 @@ const AuditDashboardPage: React.FC = () => {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <span className="font-bold text-slate-800 text-lg group-hover:text-[#B70F0A] transition-colors flex items-center gap-2">
+                                                        <span className="text-sm font-bold text-slate-800 group-hover:text-[#B70F0A] transition-colors flex items-center gap-2 line-clamp-1">
                                                             {c.nome_fantasia}
                                                             {(c.exibir_no_site === false || c.exibir_no_site === "false") && (
                                                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase tracking-tighter">
@@ -698,7 +698,7 @@ const AuditDashboardPage: React.FC = () => {
                                                                 </span>
                                                             )}
                                                         </span>
-                                                        <span className="text-[10px] font-bold text-slate-400">
+                                                        <span className="text-[11px] font-medium text-slate-500 line-clamp-1">
                                                             {c.razao_social && c.razao_social !== c.nome_fantasia ? c.razao_social : (c.cpf_cnpj || 'Sem documento')}
                                                         </span>
                                                     </div>
@@ -710,7 +710,7 @@ const AuditDashboardPage: React.FC = () => {
                                                         c.enderecos.map((end: any, eIdx: number) => (
                                                             <div key={eIdx} className="flex items-center gap-1.5 text-slate-600">
                                                                 <MapPin className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                                                                <span className="text-sm font-semibold">
+                                                                <span className="text-xs font-semibold">
                                                                     {end.cidade}
                                                                     {end.nome_unidade && (
                                                                         <span className="ml-1 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
@@ -723,7 +723,7 @@ const AuditDashboardPage: React.FC = () => {
                                                     ) : (
                                                         <div className="flex items-center gap-1.5 text-slate-400 italic">
                                                             <MapPin className="w-3.5 h-3.5" />
-                                                            <span className="text-sm">S/ Cidade</span>
+                                                            <span className="text-xs">S/ Cidade</span>
                                                         </div>
                                                     )}
                                                     <div className="flex items-center gap-2">
@@ -751,7 +751,7 @@ const AuditDashboardPage: React.FC = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-sm font-bold text-slate-700">
+                                                    <span className="text-xs font-bold text-slate-700">
                                                         {c.contatos?.[0]?.telefone_principal || '---'}
                                                     </span>
                                                     {c.contatos?.[0]?.celular && (
@@ -764,7 +764,7 @@ const AuditDashboardPage: React.FC = () => {
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-2 text-slate-500">
                                                     <CalendarDays className="w-4 h-4" />
-                                                    <span className="text-sm font-medium">
+                                                    <span className="text-xs font-medium">
                                                         {c.last_audit_at ? format(new Date(c.last_audit_at), 'dd/MM/yyyy • HH:mm') : 'Pendente'}
                                                     </span>
                                                 </div>
