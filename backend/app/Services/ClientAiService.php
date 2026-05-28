@@ -229,4 +229,58 @@ class ClientAiService
             return [];
         }
     }
+
+    /**
+     * Gera uma frase motivacional/foco diária via IA baseada na role do usuário.
+     */
+    public function generateDailyQuote(string $role): ?array
+    {
+        if (!$this->openaiKey) {
+            Log::warning('[ClientAiService] OpenAI Key não configurada para Daily Quote.');
+            return null;
+        }
+
+        $prompt = "Gere uma frase de motivação, foco, produtividade ou bem-estar para o dia de hoje.\n" .
+                  "O público-alvo são mulheres profissionais que trabalham em um sistema de gestão.\n" .
+                  "O cargo/função da usuária atual é: '{$role}'.\n" .
+                  "Instruções:\n" .
+                  "- Personalize levemente a frase para fazer sentido a esse papel (ex: para administradoras fale sobre liderança, visão geral, gestão estratégica; para operadoras gerais, fale sobre foco, organização, constância, execução brilhante; para comercial, fale sobre persistência, conexão, superação).\n" .
+                  "- A frase deve ser curta (1 ou 2 sentenças, máximo 150 caracteres), motivadora, acolhedora e inspiradora. Evite clichês excessivos.\n" .
+                  "- Responda APENAS com um objeto JSON plano contendo as chaves: 'text' (string, a frase em português) e 'category' (string, escolha entre: 'empoderamento', 'equilibrio', 'bem-estar', 'autoestima', 'foco', 'resiliencia').";
+
+        try {
+            $response = Http::withToken($this->openaiKey)
+                ->timeout(20)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'Você é uma inteligência artificial inspiradora especializada em desenvolvimento pessoal, produtividade e empoderamento feminino.'],
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature' => 0.8
+                ]);
+
+            if (!$response->successful()) {
+                Log::error('[ClientAiService] OpenAI Daily Quote Falhou', ['status' => $response->status(), 'body' => $response->body()]);
+                return null;
+            }
+
+            $json = $response->json('choices.0.message.content');
+            $data = is_string($json) ? json_decode($json, true) : $json;
+
+            if (is_array($data) && isset($data['text'])) {
+                return [
+                    'text' => trim($data['text']),
+                    'category' => $data['category'] ?? 'autoestima'
+                ];
+            }
+
+            return null;
+
+        } catch (\Throwable $e) {
+            Log::error('[ClientAiService] Erro na geração da frase diária', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
 }

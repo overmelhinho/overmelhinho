@@ -210,6 +210,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('users', UserController::class);
     Route::get('/dashboard/kpis', [DashboardController::class , 'kpis']);
+    Route::get('/dashboard/daily-quote', [DashboardController::class , 'dailyQuote']);
 
 
     Route::get('/dashboard/test', [DashboardController::class , 'test']);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sparkles, X, Heart, Sun, Coffee } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import axios from "@/services/api";
 
 type User = {
   name: string;
@@ -61,10 +62,31 @@ export default function DailyQuote({ user: propUser }: DailyQuoteProps) {
       setIsVisible(true);
     }
 
-    // Seleciona a frase baseada no dia do mês (1 a 31)
-    const day = new Date().getDate();
-    const quoteIndex = (day - 1) % quotes.length;
-    setCurrentQuote(quotes[quoteIndex]);
+    // Busca a frase do backend
+    const fetchDailyQuote = async () => {
+      try {
+        const { data } = await axios.get("/v1/dashboard/daily-quote");
+        if (data && data.text) {
+          setCurrentQuote({
+            text: data.text,
+            category: data.category || "autoestima"
+          });
+        } else {
+          useLocalFallback();
+        }
+      } catch (err) {
+        console.error("Erro ao buscar frase diária da API:", err);
+        useLocalFallback();
+      }
+    };
+
+    const useLocalFallback = () => {
+      const day = new Date().getDate();
+      const quoteIndex = (day - 1) % quotes.length;
+      setCurrentQuote(quotes[quoteIndex]);
+    };
+
+    fetchDailyQuote();
   }, [storageKey]);
 
   const handleDismiss = () => {
