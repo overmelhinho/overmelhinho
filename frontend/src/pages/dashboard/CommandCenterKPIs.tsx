@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/services/api";
+import DailyQuote from "@/components/dashboard/DailyQuote";
 
 export default function CommandCenterKPIs() {
     const { data, isLoading } = useQuery({
@@ -50,6 +51,8 @@ export default function CommandCenterKPIs() {
                     <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Sincronizado agora</span>
                 </div>
             </div>
+
+            <DailyQuote />
 
             {/* Top KPIs - Bento Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

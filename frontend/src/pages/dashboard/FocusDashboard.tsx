@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useFocusQueue } from "@/hooks/useFocusQueue";
 import { useUpdateTicket, TicketStatus } from "@/hooks/useTickets";
 import { Loader, ChevronRight, CheckCircle2, AlertCircle, Clock, Star } from "lucide-react";
+import DailyQuote from "@/components/dashboard/DailyQuote";
 
 /** ---------------------------
  * Utils
@@ -79,6 +80,8 @@ export default function FocusDashboard() {
                 <h1 className="text-sm font-bold uppercase tracking-widest text-[#B70F0A]">Meu Dia</h1>
                 <p className="text-xl font-bold text-gray-900">Fila de Foco</p>
             </header>
+
+            <DailyQuote />
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {/* Card Principal (Bento Grid Main) */}
