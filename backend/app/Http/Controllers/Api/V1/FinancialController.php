@@ -1159,12 +1159,10 @@ class FinancialController extends Controller
      */
     public function resendToTiny(Request $request)
     {
-        $query = Invoice::whereNull('tiny_account_id');
-
         if ($request->has('ids') && is_array($request->ids) && count($request->ids) > 0) {
-            $query->whereIn('id', $request->ids);
+            $query = Invoice::whereIn('id', $request->ids);
         } else {
-            $query->whereIn('status', ['pending', 'paid']);
+            $query = Invoice::whereNull('tiny_account_id')->whereIn('status', ['pending', 'paid']);
         }
 
         $invoiceIds = $query->pluck('id')->toArray();

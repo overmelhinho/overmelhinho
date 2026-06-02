@@ -18,6 +18,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\UpdateClientStatuses::class,
         \App\Console\Commands\SyncMissingInvoices::class,
         \App\Console\Commands\SyncTinyErpCommand::class,
+        \App\Console\Commands\ReconcileTinyInvoicesCommand::class,
     ];
 
     /**

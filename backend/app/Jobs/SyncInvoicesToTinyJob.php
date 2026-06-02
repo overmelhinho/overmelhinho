@@ -36,7 +36,6 @@ class SyncInvoicesToTinyJob implements ShouldQueue
     public function handle(TinyErpService $tinyService)
     {
         $invoices = Invoice::whereIn('id', $this->invoiceIds)
-            ->whereNull('tiny_account_id')
             ->with(['client.enderecos', 'client.contatos', 'plan'])
             ->get();
 
@@ -49,6 +48,27 @@ class SyncInvoicesToTinyJob implements ShouldQueue
                 // Pula faturas de permuta total (valor 0)
                 if ($valorCobrado <= 0) {
                     continue;
+                }
+
+                // Se a fatura já possui um ID do Tiny, verifica se ele realmente existe
+                if ($invoice->tiny_account_id) {
+                    $status = $tinyService->getReceivableStatus($invoice->tiny_account_id);
+                    if ($status && !isset($status['not_found'])) {
+                        Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} já existe no Tiny ERP com o ID {$invoice->tiny_account_id}. Pulando criação.");
+                        
+                        // Garante que o status do pagamento seja sincronizado caso já tenha sido paga localmente
+                        if ($invoice->status === 'paid') {
+                            $tinyService->payReceivable($invoice->tiny_account_id, $valorCobrado, 0);
+                        }
+                        continue;
+                    }
+                    
+                    // Se não foi localizada, limpa localmente para que possa ser recriada
+                    Log::warning("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} possui Tiny ID {$invoice->tiny_account_id} inválido/inexistente no Tiny. Limpando e recriando.");
+                    $invoice->update([
+                        'tiny_account_id' => null,
+                        'payment_url'     => null,
+                    ]);
                 }
 
                 $tinyData = $tinyService->createReceivable($invoice, $valorCobrado);

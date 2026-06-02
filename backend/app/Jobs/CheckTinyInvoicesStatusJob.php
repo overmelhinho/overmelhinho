@@ -48,6 +48,15 @@ class CheckTinyInvoicesStatusJob implements ShouldQueue
                 $tinyData = $tinyService->getReceivableStatus($invoice->tiny_account_id);
 
                 if ($tinyData) {
+                    if (isset($tinyData['not_found']) && $tinyData['not_found'] === true) {
+                        Log::warning("[CheckTinyInvoicesStatusJob] Fatura #{$invoice->id} (Tiny ID: {$invoice->tiny_account_id}) não foi localizada no Tiny ERP. Status limpo localmente.");
+                        $invoice->update([
+                            'tiny_account_id' => null,
+                            'payment_url' => null
+                        ]);
+                        continue;
+                    }
+
                     $situacao = (string)($tinyData['situacao'] ?? '');
                     $isPaid = in_array($situacao, ['2'], true) 
                         || in_array(strtolower($situacao), ['pago', 'recebido'], true);

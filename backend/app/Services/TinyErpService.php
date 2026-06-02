@@ -254,7 +254,19 @@ class TinyErpService
 
             $json = $response->json();
 
+            if (!is_array($json)) {
+                return null;
+            }
+
             if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
+                $erros = $json['retorno']['erros'] ?? [];
+                foreach ($erros as $erro) {
+                    $msg = $erro['erro'] ?? '';
+                    $code = $json['retorno']['codigo_erro'] ?? '';
+                    if ($code == '32' || str_contains(mb_strtolower($msg), 'não localizada') || str_contains(mb_strtolower($msg), 'nao localizada')) {
+                        return ['not_found' => true];
+                    }
+                }
                 return null;
             }
 
