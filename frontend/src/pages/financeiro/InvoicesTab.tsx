@@ -701,6 +701,11 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                             {invoice.client.nome_fantasia || invoice.client.razao_social}
                                                             <ChevronDown size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                                                         </div>
+                                                        {invoice.client.razao_social && invoice.client.nome_fantasia && invoice.client.razao_social !== invoice.client.nome_fantasia && (
+                                                            <div className="text-[11px] text-gray-400 font-medium truncate max-w-[250px]" title={invoice.client.razao_social}>
+                                                                {invoice.client.razao_social}
+                                                            </div>
+                                                        )}
                                                         <div className="text-xs text-gray-500">
                                                             {invoice.client.cpf_cnpj}
                                                         </div>
