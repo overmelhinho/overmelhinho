@@ -96,6 +96,7 @@ class ClienteResource extends JsonResource
             'audit_differences' => is_string($this->audit_differences) ? json_decode($this->audit_differences, true) : $this->audit_differences,
             'contact_preference' => $this->contact_preference,
             'best_contact_shift' => $this->best_contact_shift,
+            'responsavel' => $this->responsavel,
         ];
     }
 }

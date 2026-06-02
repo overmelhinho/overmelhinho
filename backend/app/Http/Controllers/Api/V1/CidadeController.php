@@ -20,9 +20,13 @@ class CidadeController extends Controller
 
         // Query base: buscar cidades sem duplicar os nomes
         $query = Cidade::query()
-            ->select([\Illuminate\Support\Facades\DB::raw('MAX(id) as id'), 'nome', 'uf'])
-            ->groupBy('nome', 'uf')
-            ->orderBy('nome');
+            ->select([
+                \Illuminate\Support\Facades\DB::raw('MAX(id) as id'),
+                \Illuminate\Support\Facades\DB::raw('TRIM(nome) as nome'),
+                'uf'
+            ])
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('TRIM(nome)'), 'uf')
+            ->orderBy(\Illuminate\Support\Facades\DB::raw('TRIM(nome)'));
 
         // 1. Caso venha ids=1,2,3 (hidratar labels das selecionadas) - Sem filtro restrito para não bugar exibição
         if ($ids->isNotEmpty()) {

@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ClipboardCheck,
     Filter,
     Search,
     ChevronRight,
+    ChevronDown,
+    ChevronUp,
     MapPin,
     AlertCircle,
     History,
@@ -30,9 +32,16 @@ import {
     Cpu,
     Target,
     PlayCircle,
-    RefreshCw
+    RefreshCw,
+    Mail,
+    FileText,
+    Phone,
+    Instagram,
+    Save,
+    ExternalLink
 } from 'lucide-react';
 import api from '@/services/api';
+import toast from 'react-hot-toast';
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,8 +57,21 @@ import {
 } from "@/components/ui/command";
 import { ExpressCalendar } from '@/components/ui/ExpressCalendar';
 
+const formatPhone = (phoneStr: string) => {
+    if (!phoneStr) return '---';
+    const digits = phoneStr.replace(/\D/g, '');
+    if (digits.length === 11) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return phoneStr;
+};
+
 const AuditDashboardPage: React.FC = () => {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
     const [segmentOpen, setSegmentOpen] = useState(false);
     const [showHowItWorks, setShowHowItWorks] = useState(false);
@@ -57,6 +79,9 @@ const AuditDashboardPage: React.FC = () => {
     const [scanMessage, setScanMessage] = useState('');
     const [forcingScanId, setForcingScanId] = useState<number | null>(null);
     const [forceScanResult, setForceScanResult] = useState<Record<number, {status: string; message: string}>>({});
+    const [expandedClientId, setExpandedClientId] = useState<number | null>(null);
+    const [inlineStatus, setInlineStatus] = useState<Record<string, 'accepted' | 'rejected'>>({});
+    const [showCitiesPanel, setShowCitiesPanel] = useState(false);
 
     // Filtros persistentes na URL
     const tab = (searchParams.get('tab') as 'queue' | 'history' | 'cities') || 'queue';
@@ -108,7 +133,7 @@ const AuditDashboardPage: React.FC = () => {
             const response = await api.get('/v1/audit/city-stats');
             return response.data;
         },
-        enabled: tab === 'cities'
+        enabled: tab === 'cities' || tab === 'queue'
     });
 
     // 1.5. Busca Segmentos para o Filtro
@@ -203,6 +228,120 @@ const AuditDashboardPage: React.FC = () => {
             setForceScanResult(prev => ({ ...prev, [clienteId]: { status: 'error', message: 'Erro ao re-auditar. Tente novamente.' } }));
         },
     });
+
+    // 7. Mutation: Salva as alterações do cliente e registra a auditoria
+    const updateClientMutation = useMutation({
+        mutationFn: async ({ id, payload }: { id: number; payload: any }) => {
+            return api.put(`/v1/clientes/${id}`, payload);
+        },
+        onSuccess: () => {
+            toast.success('Auditoria salva e cadastro atualizado!');
+            setExpandedClientId(null);
+            setInlineStatus({});
+            queryClient.invalidateQueries({ queryKey: ['audit-queue'] });
+            queryClient.invalidateQueries({ queryKey: ['audit-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['audit-city-stats'] });
+        },
+        onError: () => {
+            toast.error('Erro ao salvar alterações.');
+        }
+    });
+
+    const handleInlineSave = (client: any, overrideStatus?: string) => {
+        const payload: any = {
+            nome_fantasia: client.nome_fantasia,
+            cpf_cnpj: client.cpf_cnpj,
+            contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
+            enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
+            redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
+            exibir_no_site: client.exibir_no_site,
+            exibir_data_fundacao: client.exibir_data_fundacao,
+        };
+
+        const diffs = client.audit_differences || {};
+
+        Object.keys(diffs).forEach(fieldId => {
+            const status = inlineStatus[fieldId];
+            if (status === 'accepted') {
+                if (fieldId === 'telefone') {
+                    if (!payload.contatos[0]) payload.contatos[0] = {};
+                    payload.contatos[0].telefone_principal = diffs.telefone.new;
+                }
+                if (fieldId === 'website') {
+                    if (!payload.contatos[0]) payload.contatos[0] = {};
+                    payload.contatos[0].site = diffs.website.new;
+                }
+                if (fieldId === 'endereco') {
+                    const parts = diffs.endereco?.parts;
+                    if (!payload.enderecos[0]) payload.enderecos[0] = {};
+                    if (parts) {
+                        payload.enderecos[0] = {
+                            ...payload.enderecos[0],
+                            rua: parts.rua || payload.enderecos[0].rua,
+                            numero: parts.numero || payload.enderecos[0].numero,
+                            bairro: parts.bairro || payload.enderecos[0].bairro,
+                            cidade: parts.cidade || payload.enderecos[0].cidade,
+                            estado: parts.estado || payload.enderecos[0].estado,
+                            cep: parts.cep || payload.enderecos[0].cep,
+                            complemento: parts.complemento || payload.enderecos[0].complemento,
+                        };
+                    } else {
+                        payload.enderecos[0].rua = diffs.endereco.new;
+                    }
+                }
+                if (fieldId === 'instagram') {
+                    const idx = payload.redes_sociais.findIndex((r: any) => r.tipo === 'instagram');
+                    if (idx >= 0) payload.redes_sociais[idx].url = diffs.instagram.new;
+                    else payload.redes_sociais.push({ tipo: 'instagram', url: diffs.instagram.new });
+                }
+            }
+        });
+
+        payload.audit_status = overrideStatus || 'ok';
+        payload.last_audit_at = new Date().toISOString();
+        payload.audit_differences = null;
+        payload.audit_action = 'audit_save';
+
+        updateClientMutation.mutate({ id: client.id, payload });
+    };
+
+    const confirmAllCurrent = (client: any) => {
+        const payload: any = {
+            nome_fantasia: client.nome_fantasia,
+            cpf_cnpj: client.cpf_cnpj,
+            contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
+            enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
+            redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
+            exibir_no_site: client.exibir_no_site,
+            exibir_data_fundacao: client.exibir_data_fundacao,
+        };
+
+        payload.audit_status = 'ok';
+        payload.last_audit_at = new Date().toISOString();
+        payload.audit_differences = null;
+        payload.audit_action = 'audit_save';
+
+        updateClientMutation.mutate({ id: client.id, payload });
+    };
+
+    const markManualReview = (client: any) => {
+        const payload: any = {
+            nome_fantasia: client.nome_fantasia,
+            cpf_cnpj: client.cpf_cnpj,
+            contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
+            enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
+            redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
+            exibir_no_site: client.exibir_no_site,
+            exibir_data_fundacao: client.exibir_data_fundacao,
+        };
+
+        payload.audit_status = 'manual_review';
+        payload.last_audit_at = new Date().toISOString();
+        payload.audit_differences = null;
+        payload.audit_action = 'audit_save';
+
+        updateClientMutation.mutate({ id: client.id, payload });
+    };
 
     return (
         <div className="p-6 md:p-10 max-w-[1600px] mx-auto space-y-8 font-sans">
@@ -651,6 +790,54 @@ const AuditDashboardPage: React.FC = () => {
                         animate={{ opacity: 1 }}
                         className="overflow-x-auto"
                     >
+                        {tab === 'queue' && cityStats && cityStats.length > 0 && (
+                            <div className="bg-slate-50/50 border-b border-slate-100 p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <button
+                                        onClick={() => setShowCitiesPanel(!showCitiesPanel)}
+                                        className="text-xs font-black uppercase text-slate-650 hover:text-[#B70F0A] hover:bg-red-50 bg-slate-100 hover:border-red-200 border border-slate-200 px-3.5 py-2 rounded-2xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                                    >
+                                        <MapPin className="w-4 h-4 text-[#B70F0A]" />
+                                        Painel de Cidades (Concluídos / Pendentes)
+                                        {showCitiesPanel ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                                    </button>
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase">Clique em uma cidade para filtrar a fila</span>
+                                </div>
+                                
+                                <AnimatePresence>
+                                    {showCitiesPanel && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-2"
+                                        >
+                                            {cityStats.map((city: any) => (
+                                                <div
+                                                    key={city.id}
+                                                    onClick={() => updateFilter({ cidade: filterCity === city.nome ? '' : city.nome })}
+                                                    className={`p-3 rounded-2xl border bg-white shadow-sm flex flex-col justify-between hover:shadow-md hover:border-red-200 transition-all cursor-pointer ${filterCity === city.nome ? 'border-[#B70F0A] ring-2 ring-red-50' : 'border-slate-100'}`}
+                                                >
+                                                    <span className="text-[10px] font-black text-slate-700 truncate block uppercase tracking-tight">{city.nome}</span>
+                                                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                                                        {/* Concluídos (verde) */}
+                                                        <span className="text-[10px] font-black text-emerald-600 flex items-center gap-0.5" title="Concluídos">
+                                                            ✓ {city.auditados}
+                                                        </span>
+                                                        <span className="text-slate-300 font-light text-xs">|</span>
+                                                        {/* Pendentes (vermelho) */}
+                                                        <span className="text-[10px] font-black text-red-600 flex items-center gap-0.5" title="Pendentes">
+                                                            ⚠️ {city.pendentes}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        )}
+
                         {tab === 'queue' && (
                             <table className="w-full text-left border-collapse">
                                 <thead>
@@ -664,164 +851,419 @@ const AuditDashboardPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {queueData?.data?.length > 0 ? queueData.data.map((c: any, idx: number) => (
-                                        <motion.tr
-                                            key={c.id}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: idx * 0.05 }}
-                                            className="group hover:bg-red-50/20 transition-all cursor-pointer"
-                                            onClick={() => navigate(`/auditoria/${c.id}`)}
-                                        >
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="relative">
-                                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden border border-white shadow-inner group-hover:shadow-md transition-all">
-                                                            {c.logo_url ? (
-                                                                <img src={c.logo_url} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <Building2 className="text-slate-400 w-5 h-5" />
-                                                            )}
-                                                        </div>
-                                                        {c.tipo_cliente === 'pagante' && (
-                                                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full border-2 border-white shadow-sm flex items-center justify-center">
-                                                                <Zap className="w-2 h-2 text-white fill-current" />
+                                    {queueData?.data?.length > 0 ? queueData.data.map((c: any, idx: number) => {
+                                        const isExpanded = expandedClientId === c.id;
+                                        return (
+                                            <React.Fragment key={c.id}>
+                                                <motion.tr
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: idx * 0.05 }}
+                                                    className={`group hover:bg-red-50/20 transition-all cursor-pointer ${isExpanded ? 'bg-red-50/10' : ''}`}
+                                                    onClick={() => {
+                                                        if (isExpanded) {
+                                                            setExpandedClientId(null);
+                                                            setInlineStatus({});
+                                                        } else {
+                                                            setExpandedClientId(c.id);
+                                                            const diffs = c.audit_differences || {};
+                                                            const initialStatus: Record<string, 'accepted' | 'rejected'> = {};
+                                                            Object.keys(diffs).forEach(k => {
+                                                                initialStatus[k] = 'pending';
+                                                            });
+                                                            setInlineStatus(initialStatus);
+                                                        }
+                                                    }}
+                                                >
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="text-slate-400 group-hover:text-[#B70F0A] transition-colors shrink-0">
+                                                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-sm font-bold text-slate-800 group-hover:text-[#B70F0A] transition-colors flex items-center gap-2 line-clamp-1">
-                                                            {c.nome_fantasia}
-                                                            {(c.exibir_no_site === false || c.exibir_no_site === "false") && (
-                                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase tracking-tighter">
-                                                                    <EyeOff className="w-3 h-3" /> Oculto
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                        <span className="text-[11px] font-medium text-slate-500 line-clamp-1">
-                                                            {c.razao_social && c.razao_social !== c.nome_fantasia ? c.razao_social : (c.cpf_cnpj || 'Sem documento')}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="space-y-2">
-                                                    {c.enderecos && c.enderecos.length > 0 ? (
-                                                        c.enderecos.map((end: any, eIdx: number) => (
-                                                            <div key={eIdx} className="flex items-center gap-1.5 text-slate-600">
-                                                                <MapPin className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                                                                <span className="text-xs font-semibold">
-                                                                    {end.cidade}
-                                                                    {end.nome_unidade && (
-                                                                        <span className="ml-1 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                                                                            ({end.nome_unidade})
+                                                            <div className="relative shrink-0">
+                                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden border border-white shadow-inner group-hover:shadow-md transition-all">
+                                                                    {c.logo_url ? (
+                                                                        <img src={c.logo_url} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <Building2 className="text-slate-400 w-5 h-5" />
+                                                                    )}
+                                                                </div>
+                                                                {c.tipo_cliente === 'pagante' && (
+                                                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full border-2 border-white shadow-sm flex items-center justify-center">
+                                                                        <Zap className="w-2 h-2 text-white fill-current" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-sm font-bold text-slate-800 group-hover:text-[#B70F0A] transition-colors flex items-center gap-2 line-clamp-1">
+                                                                    {c.nome_fantasia}
+                                                                    {(c.exibir_no_site === false || c.exibir_no_site === "false") && (
+                                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase tracking-tighter">
+                                                                            <EyeOff className="w-3 h-3" /> Oculto
                                                                         </span>
                                                                     )}
                                                                 </span>
+                                                                <span className="text-[11px] font-medium text-slate-500 line-clamp-1">
+                                                                    {c.razao_social && c.razao_social !== c.nome_fantasia ? c.razao_social : (c.cpf_cnpj || 'Sem documento')}
+                                                                </span>
                                                             </div>
-                                                        ))
-                                                    ) : (
-                                                        <div className="flex items-center gap-1.5 text-slate-400 italic">
-                                                            <MapPin className="w-3.5 h-3.5" />
-                                                            <span className="text-xs">S/ Cidade</span>
                                                         </div>
-                                                    )}
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`text-[10px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-tighter ${c.tipo_cliente === 'pagante' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                            {c.tipo_cliente}
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="space-y-2">
+                                                            {c.enderecos && c.enderecos.length > 0 ? (
+                                                                c.enderecos.map((end: any, eIdx: number) => (
+                                                                    <div key={eIdx} className="flex items-center gap-1.5 text-slate-600">
+                                                                        <MapPin className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                                                        <span className="text-xs font-semibold">
+                                                                            {end.cidade}
+                                                                            {end.nome_unidade && (
+                                                                                <span className="ml-1 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                                                                                    ({end.nome_unidade})
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <div className="flex items-center gap-1.5 text-slate-400 italic">
+                                                                    <MapPin className="w-3.5 h-3.5" />
+                                                                    <span className="text-xs">S/ Cidade</span>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`text-[10px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-tighter ${c.tipo_cliente === 'pagante' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                                    {c.tipo_cliente}
+                                                                </div>
+                                                                {c.audit_status === 'ok' ? (
+                                                                    <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-tighter flex items-center gap-1">
+                                                                        <CheckCircle2 className="w-2.5 h-2.5" />
+                                                                        IA Ok
+                                                                    </div>
+                                                                ) : c.audit_status === 'manual_review' ? (
+                                                                    <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 uppercase tracking-tighter flex items-center gap-1">
+                                                                        <Users className="w-2.5 h-2.5" />
+                                                                        Revisão Manual
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 uppercase tracking-tighter flex items-center gap-1">
+                                                                        <AlertCircle className="w-2.5 h-2.5" />
+                                                                        Aguardando
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        {c.audit_status === 'ok' ? (
-                                                            <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-tighter flex items-center gap-1">
-                                                                <CheckCircle2 className="w-2.5 h-2.5" />
-                                                                IA Ok
-                                                            </div>
-                                                        ) : c.audit_status === 'manual_review' ? (
-                                                            <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 uppercase tracking-tighter flex items-center gap-1">
-                                                                <Users className="w-2.5 h-2.5" />
-                                                                Revisão Manual
-                                                            </div>
-                                                        ) : (
-                                                            <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 uppercase tracking-tighter flex items-center gap-1">
-                                                                <AlertCircle className="w-2.5 h-2.5" />
-                                                                Aguardando
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-xs font-bold text-slate-700">
-                                                        {c.contatos?.[0]?.telefone_principal || '---'}
-                                                    </span>
-                                                    {c.contatos?.[0]?.celular && (
-                                                        <span className="text-[10px] text-slate-400 font-medium">
-                                                            {c.contatos[0].celular}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-2 text-slate-500">
-                                                    <CalendarDays className="w-4 h-4" />
-                                                    <span className="text-xs font-medium">
-                                                        {c.last_audit_at ? format(new Date(c.last_audit_at), 'dd/MM/yyyy • HH:mm') : 'Pendente'}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex gap-2 flex-wrap">
-                                                    {Object.keys(c.audit_differences || {}).map((key) => (
-                                                        <span key={key} className="bg-white text-[#B70F0A] text-[9px] font-black px-2 py-1 rounded-lg uppercase border border-red-100 shadow-sm flex items-center gap-1">
-                                                            <AlertCircle className="w-2.5 h-2.5" />
-                                                            {key === 'telefone' ? 'Telefone' : key === 'endereco' ? 'Endereço' : key === 'website' ? 'Site' : key}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <div className="flex flex-col items-end gap-2">
-                                                    {/* Resultado do force scan */}
-                                                    {forceScanResult[c.id] && (
-                                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${
-                                                            forceScanResult[c.id].status === 'no_changes' ? 'bg-emerald-50 text-emerald-700' :
-                                                            forceScanResult[c.id].status === 'pending_review' ? 'bg-amber-50 text-amber-700' :
-                                                            'bg-purple-50 text-purple-700'
-                                                        }`}>
-                                                            {forceScanResult[c.id].message}
-                                                        </span>
-                                                    )}
-                                                    <div className="flex items-center gap-2">
-                                                        {/* Botão Forçar Conferência */}
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            onClick={(e) => { e.stopPropagation(); forceScan(c.id); }}
-                                                            disabled={forcingScanId === c.id}
-                                                            title="Forçar nova conferência agora"
-                                                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait"
-                                                        >
-                                                            {forcingScanId === c.id
-                                                                ? <><RefreshCw className="w-3 h-3 animate-spin" /> Auditando...</>
-                                                                : <><RefreshCw className="w-3 h-3" /> Forçar</>
-                                                            }
-                                                        </motion.button>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-xs font-bold text-slate-700">
+                                                                {formatPhone(c.contatos?.[0]?.telefone_principal)}
+                                                            </span>
+                                                            {c.contatos?.[0]?.celular && (
+                                                                <span className="text-[10px] text-slate-400 font-medium">
+                                                                    {formatPhone(c.contatos[0].celular)}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex items-center gap-2 text-slate-500">
+                                                            <CalendarDays className="w-4 h-4" />
+                                                            <span className="text-xs font-medium">
+                                                                {c.last_audit_at ? format(new Date(c.last_audit_at), 'dd/MM/yyyy • HH:mm') : 'Pendente'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex gap-2 flex-wrap">
+                                                            {Object.keys(c.audit_differences || {}).length > 0 ? (
+                                                                Object.keys(c.audit_differences || {}).map((key) => (
+                                                                    <span key={key} className="bg-red-50 text-[#B70F0A] text-[9px] font-black px-2 py-1 rounded-lg uppercase border border-red-100 shadow-sm flex items-center gap-1">
+                                                                        <AlertCircle className="w-2.5 h-2.5" />
+                                                                        {key === 'telefone' ? 'Telefone' : key === 'endereco' ? 'Endereço' : key === 'website' ? 'Site' : key === 'instagram' ? 'Instagram' : key}
+                                                                    </span>
+                                                                ))
+                                                            ) : c.audit_status === 'manual_review' ? (
+                                                                <span className="bg-purple-50 text-purple-700 text-[9px] font-black px-2 py-1 rounded-lg uppercase border border-purple-100 shadow-sm flex items-center gap-1">
+                                                                    <Users className="w-2.5 h-2.5" />
+                                                                    Sem dados na Web
+                                                                </span>
+                                                            ) : (
+                                                                <span className="bg-emerald-50 text-emerald-700 text-[9px] font-black px-2 py-1 rounded-lg uppercase border border-emerald-100 shadow-sm flex items-center gap-1">
+                                                                    <Check className="w-2.5 h-2.5" />
+                                                                    Nenhuma
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex flex-col items-end gap-2">
+                                                            {/* Resultado do force scan */}
+                                                            {forceScanResult[c.id] && (
+                                                                <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${
+                                                                    forceScanResult[c.id].status === 'no_changes' ? 'bg-emerald-50 text-emerald-700' :
+                                                                    forceScanResult[c.id].status === 'pending_review' ? 'bg-amber-50 text-amber-700' :
+                                                                    'bg-purple-50 text-purple-700'
+                                                                }`}>
+                                                                    {forceScanResult[c.id].message}
+                                                                </span>
+                                                            )}
+                                                            <div className="flex items-center gap-2">
+                                                                {/* Botão Forçar Conferência */}
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    onClick={(e) => { e.stopPropagation(); forceScan(c.id); }}
+                                                                    disabled={forcingScanId === c.id}
+                                                                    title="Forçar nova conferência agora"
+                                                                    className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait"
+                                                                >
+                                                                    {forcingScanId === c.id
+                                                                        ? <><RefreshCw className="w-3 h-3 animate-spin" /> Auditando...</>
+                                                                        : <><RefreshCw className="w-3 h-3" /> Forçar</>
+                                                                    }
+                                                                </motion.button>
 
-                                                        {/* Botão principal */}
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            onClick={() => navigate(`/auditoria/${c.id}`)}
-                                                            className={`px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 shadow-lg transition-all ${c.audit_status === 'ok' ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-slate-100' : 'bg-slate-900 text-white hover:bg-[#B70F0A] shadow-slate-200 hover:shadow-red-200'}`}
-                                                        >
-                                                            {c.audit_status === 'ok' ? 'Revisar' : 'Analisar'}
-                                                            <ChevronRight className="w-4 h-4" />
-                                                        </motion.button>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </motion.tr>
-                                    )) : (
+                                                                {/* Botão principal */}
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    onClick={() => navigate(`/auditoria/${c.id}`)}
+                                                                    className={`px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 shadow-lg transition-all ${c.audit_status === 'ok' ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-slate-100' : 'bg-slate-900 text-white hover:bg-[#B70F0A] shadow-slate-200 hover:shadow-red-200'}`}
+                                                                >
+                                                                    {c.audit_status === 'ok' ? 'Revisar' : 'Analisar'}
+                                                                    <ChevronRight className="w-4 h-4" />
+                                                                </motion.button>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
+
+                                                {/* Painel Expansível Inline */}
+                                                <AnimatePresence>
+                                                    {isExpanded && (
+                                                        <tr>
+                                                            <td colSpan={6} className="bg-slate-50/50 p-6 border-b border-slate-100">
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                                    exit={{ opacity: 0, height: 0 }}
+                                                                    className="space-y-6 text-slate-700 bg-white p-6 rounded-3xl border border-slate-150 shadow-sm"
+                                                                >
+                                                                    {/* Seção 1: Ficha do Cliente (Informações Completas) */}
+                                                                    {(() => {
+                                                                        const mainAddress = c.enderecos?.[0] || {};
+                                                                        const addressDisplay = mainAddress.rua 
+                                                                            ? `${mainAddress.rua}, ${mainAddress.numero || 'S/N'}${mainAddress.complemento ? `, ${mainAddress.complemento}` : ''}${mainAddress.bairro ? `, ${mainAddress.bairro}` : ''}${mainAddress.cidade ? `, ${mainAddress.cidade}` : ''}${mainAddress.estado ? ` - ${mainAddress.estado}` : ''}`
+                                                                            : 'Não informado';
+
+                                                                        const telPrincipal = c.contatos?.[0]?.telefone_principal ? formatPhone(c.contatos[0].telefone_principal) : '';
+                                                                        const celular = c.contatos?.[0]?.celular ? formatPhone(c.contatos[0].celular) : '';
+                                                                        const telefoneDisplay = telPrincipal ? (celular ? `${telPrincipal} / ${celular}` : telPrincipal) : (celular || 'Não informado');
+
+                                                                        const lastAuditDate = c.last_audit_at ? format(new Date(c.last_audit_at), 'dd/MM/yyyy') : null;
+                                                                        const responsavel = c.responsavel || 'Sistema';
+                                                                        const ultimaCorrecaoDisplay = lastAuditDate ? `${lastAuditDate} - Usuário: ${responsavel}` : 'Nenhuma correção anterior registrada';
+
+                                                                        return (
+                                                                            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100/80 space-y-3.5 pb-6">
+                                                                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                                                                                    <FileText className="w-4 h-4 text-[#B70F0A]" /> Ficha Cadastral do Cliente
+                                                                                </h4>
+                                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                                                                                    <div className="flex items-start gap-2">
+                                                                                        <span className="font-extrabold text-slate-500 whitespace-nowrap">Nome Fantasia:</span>
+                                                                                        <span className="font-bold text-slate-800">{c.nome_fantasia || 'Não informado'}</span>
+                                                                                    </div>
+                                                                                    <div className="flex items-start gap-2">
+                                                                                        <span className="font-extrabold text-slate-500 whitespace-nowrap">Razão Social:</span>
+                                                                                        <span className="font-bold text-slate-800">{c.razao_social || 'Não informado'}</span>
+                                                                                    </div>
+                                                                                    {c.nome_alternativo && (
+                                                                                        <div className="flex items-start gap-2 col-span-1 md:col-span-2">
+                                                                                            <span className="font-extrabold text-slate-500 whitespace-nowrap">Nome Alternativo:</span>
+                                                                                            <span className="font-bold text-slate-800">{c.nome_alternativo}</span>
+                                                                                        </div>
+                                                                                    )}
+                                                                                    <div className="flex items-start gap-2">
+                                                                                        <span className="font-extrabold text-slate-500 whitespace-nowrap">Telefone Principal:</span>
+                                                                                        <span className="font-bold text-slate-800">{telefoneDisplay}</span>
+                                                                                    </div>
+                                                                                    <div className="flex items-start gap-2">
+                                                                                        <span className="font-extrabold text-slate-500 whitespace-nowrap">E-mail:</span>
+                                                                                        <span className="font-bold text-slate-800 truncate" title={c.contatos?.[0]?.email}>{c.contatos?.[0]?.email || 'Não informado'}</span>
+                                                                                    </div>
+                                                                                    <div className="flex items-start gap-2 col-span-1 md:col-span-2">
+                                                                                        <span className="font-extrabold text-slate-500 whitespace-nowrap">Endereço:</span>
+                                                                                        <span className="font-bold text-slate-800">{addressDisplay}</span>
+                                                                                    </div>
+                                                                                    <div className="flex items-start gap-2 col-span-1 md:col-span-2">
+                                                                                        <span className="font-extrabold text-slate-500 whitespace-nowrap">Observações:</span>
+                                                                                        <span className="font-medium text-slate-650 bg-white px-3 py-1.5 rounded-xl border border-slate-100 max-h-24 overflow-y-auto block w-full leading-relaxed whitespace-pre-line text-xs font-semibold">
+                                                                                            {c.observacoes || 'Sem observações registradas.'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="flex items-start gap-2 col-span-1 md:col-span-2 pt-2 border-t border-slate-100/50">
+                                                                                        <span className="font-extrabold text-slate-500 whitespace-nowrap">Última correção:</span>
+                                                                                        <span className="font-bold text-slate-800">{ultimaCorrecaoDisplay}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
+
+                                                                    {/* Seção 2: Comparação de Divergências */}
+                                                                    {Object.keys(c.audit_differences || {}).length > 0 ? (
+                                                                        <div className="space-y-4">
+                                                                            <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5"><Cpu className="w-4 h-4 text-[#B70F0A]" /> Divergências detectadas pela IA</h4>
+                                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                                {Object.entries(c.audit_differences || {}).map(([key, diff]: [string, any]) => {
+                                                                                    const label = key === 'telefone' ? 'Telefone' : key === 'endereco' ? 'Endereço' : key === 'website' ? 'Site' : key === 'instagram' ? 'Instagram' : key;
+                                                                                    const currentVal = diff.current || 'Não informado';
+                                                                                    const newVal = diff.new || 'Não encontrado';
+                                                                                    const isFieldAccepted = inlineStatus[key] === 'accepted';
+                                                                                    const isFieldRejected = inlineStatus[key] === 'rejected';
+
+                                                                                    let diffUrl = '#';
+                                                                                    if (newVal && newVal !== 'Não encontrado') {
+                                                                                        if (diff.source === 'Receita Federal (CNPJ)') {
+                                                                                            const cleanCnpj = c.cpf_cnpj ? c.cpf_cnpj.replace(/\D/g, '') : '';
+                                                                                            diffUrl = cleanCnpj ? `https://cnpj.biz/${cleanCnpj}` : `https://www.google.com/search?q=${encodeURIComponent(c.nome_fantasia + ' CNPJ')}`;
+                                                                                        } else if (key === 'telefone' || key === 'endereco') {
+                                                                                            if (c.google_place_id) {
+                                                                                                diffUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.nome_fantasia)}&query_place_id=${c.google_place_id}`;
+                                                                                            } else {
+                                                                                                const mainAddress = c.enderecos?.[0] || {};
+                                                                                                const searchTerms = `${c.nome_fantasia} ${mainAddress.cidade || ''}`;
+                                                                                                diffUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchTerms)}`;
+                                                                                            }
+                                                                                        } else if (key === 'instagram') {
+                                                                                            const handle = newVal.replace('@', '').trim();
+                                                                                            diffUrl = handle.startsWith('http') ? handle : `https://instagram.com/${handle}`;
+                                                                                        } else {
+                                                                                            diffUrl = newVal.startsWith('http') ? newVal : `https://${newVal}`;
+                                                                                        }
+                                                                                    }
+
+                                                                                    return (
+                                                                                        <div key={key} className="border border-slate-100 rounded-3xl p-5 bg-slate-50/50 space-y-4">
+                                                                                            <div className="flex justify-between items-center">
+                                                                                                <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{label}</span>
+                                                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{diff.source || 'Google Places / Web'}</span>
+                                                                                            </div>
+                                                                                            <div className="grid grid-cols-2 gap-4">
+                                                                                                {/* Sistema */}
+                                                                                                <div className={`p-3.5 rounded-2xl border transition-all ${isFieldRejected ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-100 text-slate-700'}`}>
+                                                                                                    <span className="text-[8px] font-black uppercase block text-slate-400 mb-1">No Sistema</span>
+                                                                                                    <p className="text-xs font-bold truncate">{key === 'telefone' ? formatPhone(currentVal) : currentVal}</p>
+                                                                                                </div>
+                                                                                                {/* Encontrado na Web */}
+                                                                                                <div className={`p-3.5 rounded-2xl border transition-all ${isFieldAccepted ? 'bg-[#B70F0A] border-[#B70F0A] text-white' : 'bg-white border-red-50 text-slate-800'}`}>
+                                                                                                    <div className="flex items-center justify-between gap-2">
+                                                                                                        <span className={`text-[8px] font-black uppercase block ${isFieldAccepted ? 'text-red-200' : 'text-[#B70F0A]'} mb-1`}>Na Web</span>
+                                                                                                        {diff.new && diff.new !== 'Não encontrado' && (
+                                                                                                            <a
+                                                                                                                href={diffUrl}
+                                                                                                                target="_blank"
+                                                                                                                rel="noopener noreferrer"
+                                                                                                                className={`p-1 rounded text-[9px] font-bold shrink-0 transition-all ${
+                                                                                                                    isFieldAccepted 
+                                                                                                                        ? 'bg-white/20 hover:bg-white/30 text-white' 
+                                                                                                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-500'
+                                                                                                                }`}
+                                                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                                            >
+                                                                                                                <ExternalLink className="w-3 h-3" />
+                                                                                                            </a>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                    <p className="text-xs font-bold truncate">{key === 'telefone' ? formatPhone(newVal) : newVal}</p>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            {/* Decisão */}
+                                                                                            <div className="flex gap-2">
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={(e) => { e.stopPropagation(); setInlineStatus(prev => ({ ...prev, [key]: 'accepted' })); }}
+                                                                                                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isFieldAccepted ? 'bg-[#B70F0A] text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+                                                                                                >
+                                                                                                    Usar dado da Web
+                                                                                                </button>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={(e) => { e.stopPropagation(); setInlineStatus(prev => ({ ...prev, [key]: 'rejected' })); }}
+                                                                                                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isFieldRejected ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+                                                                                                >
+                                                                                                    Manter Atual
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="py-4 px-6 bg-emerald-50 rounded-2xl border border-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                                                                            <Check className="w-4 h-4" /> Nenhuma divergência detectada pela varredura da IA.
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Seção 3: Barra de Ações Rápidas */}
+                                                                    <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                                                                        <div className="flex gap-3">
+                                                                            {/* Se tiver divergências, habilita o salvar alterações com base na escolha */}
+                                                                            {Object.keys(c.audit_differences || {}).length > 0 ? (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    disabled={updateClientMutation.isPending || Object.values(inlineStatus).includes('pending')}
+                                                                                    onClick={(e) => { e.stopPropagation(); handleInlineSave(c); }}
+                                                                                    className="bg-[#B70F0A] text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-red-100 hover:bg-red-700 transition-all disabled:opacity-40 flex items-center gap-1.5"
+                                                                                >
+                                                                                    <Save className="w-4 h-4" /> Publicar Alterações
+                                                                                </button>
+                                                                            ) : null}
+
+                                                                            {/* Confirmar todos os dados atuais (botão azul legado) */}
+                                                                            <button
+                                                                                type="button"
+                                                                                disabled={updateClientMutation.isPending}
+                                                                                onClick={(e) => { e.stopPropagation(); confirmAllCurrent(c); }}
+                                                                                className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-1.5"
+                                                                            >
+                                                                                <Check className="w-4 h-4" /> Confirmar dados atuais
+                                                                            </button>
+
+                                                                            {/* Marcar para Revisão Manual (botão roxo) */}
+                                                                            <button
+                                                                                type="button"
+                                                                                disabled={updateClientMutation.isPending}
+                                                                                onClick={(e) => { e.stopPropagation(); markManualReview(c); }}
+                                                                                className="bg-purple-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all flex items-center gap-1.5"
+                                                                            >
+                                                                                <Users className="w-4 h-4" /> Revisão Manual
+                                                                            </button>
+                                                                        </div>
+
+                                                                        <div className="flex gap-2">
+                                                                            <a
+                                                                                href={`/clientes/${c.id}/editar`}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                className="bg-slate-900 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-1.5"
+                                                                            >
+                                                                                <ExternalLink className="w-4 h-4" /> Editar Cadastro
+                                                                            </a>
+                                                                        </div>
+                                                                    </div>
+                                                                </motion.div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </AnimatePresence>
+                                            </React.Fragment>
+                                        );
+                                    }) : (
                                         <tr>
                                             <td colSpan={6} className="py-32 text-center">
                                                 <div className="flex flex-col items-center gap-4 text-slate-300">

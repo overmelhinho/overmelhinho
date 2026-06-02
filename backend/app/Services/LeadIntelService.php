@@ -33,6 +33,7 @@ class LeadIntelService
             'website' => '',
             'google_place_id' => '',
             'data_fundacao' => '',
+            'sources' => [],
         ];
 
         try {
@@ -46,6 +47,13 @@ class LeadIntelService
                     // Fiscal entra, mas NÃO deve “congelar” fantasia/site/redes
                     $dados = array_merge($dados, $fiscal);
                     $dados['origem_dado'] = $fiscal['origem_dado'] ?? 'Fiscal';
+
+                    // Definir origem padrão para todos os campos vindos do fiscal
+                    foreach ($fiscal as $k => $v) {
+                        if (!empty($v) && $k !== 'origem_dado' && $k !== 'sources') {
+                            $dados['sources'][$k] = 'Receita Federal (CNPJ)';
+                        }
+                    }
                 }
             }
 
@@ -70,6 +78,7 @@ class LeadIntelService
                 foreach (['nome_fantasia', 'telefone', 'endereco', 'website', 'horario_atendimento', 'google_place_id'] as $k) {
                     if (!empty($places[$k])) {
                         $dados[$k] = $places[$k];
+                        $dados['sources'][$k] = 'Google Maps';
                     }
                 }
 
@@ -83,7 +92,10 @@ class LeadIntelService
                 if (!empty($dados['website'])) {
                     $redes = $this->extrairRedesSociais($dados['website']);
                     foreach ($redes as $rk => $rv) {
-                        if (!empty($rv)) $dados[$rk] = $rv;
+                        if (!empty($rv)) {
+                            $dados[$rk] = $rv;
+                            $dados['sources'][$rk] = 'Site da Empresa';
+                        }
                     }
                 }
 
@@ -116,6 +128,7 @@ class LeadIntelService
                 $descIA = $this->gerarDescricaoComIA($dados, $cidadePreferida);
                 if ($descIA !== '') {
                     $dados['descricao'] = $descIA;
+                    $dados['sources']['descricao'] = 'Previsão por IA';
                 }
             }
 
@@ -128,6 +141,9 @@ class LeadIntelService
                      $dados['nome_fantasia'] ?: $query,
                      $cidadePreferida ?: ''
                  );
+                 if (!empty($dados['data_fundacao'])) {
+                     $dados['sources']['data_fundacao'] = 'Previsão por IA';
+                 }
             }
 
             $dados['origem_dado'] = ($dados['origem_dado'] ?? 'Merged') . '+IA_Foundation';
@@ -146,6 +162,7 @@ class LeadIntelService
                 foreach ($redesIA as $rk => $rv) {
                     if (!empty($rv) && empty($dados[$rk])) {
                         $dados[$rk] = $rv;
+                        $dados['sources'][$rk] = 'Previsão por IA';
                     }
                 }
             }

@@ -91,7 +91,11 @@ class AuditAutomationService
         $telAtual = $this->limparTelefone($contato?->telefone_principal);
         $telNovo = $this->limparTelefone($novos['telefone'] ?? '');
         if ($telNovo && $telAtual !== $telNovo) {
-            $dif['telefone'] = ['current' => $telAtual, 'new' => $telNovo];
+            $dif['telefone'] = [
+                'current' => $telAtual, 
+                'new' => $telNovo,
+                'source' => $novos['sources']['telefone'] ?? 'Google Places / Web'
+            ];
         }
 
         // Campos abaixo: apenas clientes pagantes
@@ -103,14 +107,22 @@ class AuditAutomationService
         $webAtual = $this->limparUrl($contato?->site);
         $webNovo = $this->limparUrl($novos['website'] ?? '');
         if ($webNovo && $webAtual !== $webNovo) {
-            $dif['website'] = ['current' => $webAtual, 'new' => $webNovo];
+            $dif['website'] = [
+                'current' => $webAtual, 
+                'new' => $webNovo,
+                'source' => $novos['sources']['website'] ?? 'Google Places / Web'
+            ];
         }
 
         // 3. Instagram
         $instaAtual = $this->limparUrl($cliente->redesSociais->where('tipo', 'instagram')->first()?->url);
         $instaNovo = $this->limparUrl($novos['instagram'] ?? '');
         if ($instaNovo && $instaAtual !== $instaNovo) {
-            $dif['instagram'] = ['current' => $instaAtual, 'new' => $instaNovo];
+            $dif['instagram'] = [
+                'current' => $instaAtual, 
+                'new' => $instaNovo,
+                'source' => $novos['sources']['instagram'] ?? 'Google Places / Web'
+            ];
         }
 
         // 4. Endereço estruturado (usa address_components do Google)
@@ -131,6 +143,7 @@ class AuditAutomationService
                 'current' => $endAtual,
                 'new'     => $endNovo,
                 'parts'   => $parts,    // campos estruturados para salvar no banco
+                'source'  => $novos['sources']['endereco'] ?? 'Google Places / Web'
             ];
         }
 

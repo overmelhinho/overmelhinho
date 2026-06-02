@@ -1491,7 +1491,7 @@ public function historico(Request $request, int $id)
                 'reviews'               => 'nullable|array',
                 'beneficios'            => 'nullable|array',
                 'beneficios.*'          => 'string|max:100',
-                'audit_status'          => 'nullable|string|in:ok,pending,scanning',
+                'audit_status'          => 'nullable|string|in:ok,pending,scanning,manual_review',
                 'last_audit_at'         => 'nullable|date',
                 'audit_differences'     => 'nullable',
                 'audit_action'          => 'nullable|string',
@@ -1532,6 +1532,10 @@ public function historico(Request $request, int $id)
 
             if (isset($validated['last_audit_at'])) {
                 $clienteData['last_audit_at'] = $validated['last_audit_at'];
+            }
+
+            if ($request->filled('audit_action') && $request->user()) {
+                $clienteData['responsavel'] = $request->user()->name;
             }
 
             if (Schema::hasColumn('clientes', 'horario_atendimento')) {
@@ -2474,8 +2478,24 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         $visibilidade = $request->input('visibilidade');
         $segmentoId = $request->input('segmento_id');
 
+        $cidadesPermitidas = [
+            'Alto Feliz', 'Arroio do Sal', 'Barão', 'Bento Gonçalves', 'Boa Vista do Sul',
+            'Bom Princípio', 'Campo Bom', 'Canela', 'Carlos Barbosa', 'Caxias do Sul',
+            'Coronel Pilar', 'Farroupilha', 'Feliz', 'Flores da Cunha', 'Garibaldi',
+            'Gramado', 'Lajeado', 'Monte Belo do Sul', 'Nova Prata', 'Nova Roma do Sul',
+            'Novo Hamburgo', 'Pinto Bandeira', 'Salvador do Sul', 'São Marcos',
+            'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
+        ];
+
         $query = Cliente::query()
-            ->with(['enderecos', 'contatos']);
+            ->with(['enderecos', 'contatos'])
+            ->where(function($q) use ($cidadesPermitidas) {
+                $q->whereHas('enderecos', function($sub) use ($cidadesPermitidas) {
+                    $sub->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidade)'), $cidadesPermitidas);
+                })->orWhereHas('cidadesAtendidas', function($sub) use ($cidadesPermitidas) {
+                    $sub->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidades.nome)'), $cidadesPermitidas);
+                });
+            });
 
         // Se houver busca (q), traz todas independente do status. Senão, filtra pelo status (pending/ok).
         if ($request->filled('q')) {
@@ -2530,7 +2550,25 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
     public function auditHistory(Request $request)
     {
+        $cidadesPermitidas = [
+            'Alto Feliz', 'Arroio do Sal', 'Barão', 'Bento Gonçalves', 'Boa Vista do Sul',
+            'Bom Princípio', 'Campo Bom', 'Canela', 'Carlos Barbosa', 'Caxias do Sul',
+            'Coronel Pilar', 'Farroupilha', 'Feliz', 'Flores da Cunha', 'Garibaldi',
+            'Gramado', 'Lajeado', 'Monte Belo do Sul', 'Nova Prata', 'Nova Roma do Sul',
+            'Novo Hamburgo', 'Pinto Bandeira', 'Salvador do Sul', 'São Marcos',
+            'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
+        ];
+
         $query = \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+            ->whereHas('cliente', function($q) use ($cidadesPermitidas) {
+                $q->where(function($sub) use ($cidadesPermitidas) {
+                    $sub->whereHas('enderecos', function($end) use ($cidadesPermitidas) {
+                        $end->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidade)'), $cidadesPermitidas);
+                    })->orWhereHas('cidadesAtendidas', function($ca) use ($cidadesPermitidas) {
+                        $ca->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidades.nome)'), $cidadesPermitidas);
+                    });
+                });
+            })
             ->with(['actor', 'cliente'])
             ->when($request->input('user_id'), function($q, $uid) {
                 return $q->where('actor_user_id', $uid);
@@ -2584,34 +2622,56 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         $sevenDays  = now()->subDays(7)->startOfDay();
         $thirtyDays = now()->subDays(30)->startOfDay();
 
-        // Contagens de revisões humanas no AuditLog
-        $stats = [
-            'hoje'        => \App\Models\AuditLog::where('action', 'ilike', '%audit%')->where('created_at', '>=', $today)->count(),
-            'ontem'       => \App\Models\AuditLog::where('action', 'ilike', '%audit%')->where('created_at', '>=', $yesterday)->where('created_at', '<', $today)->count(),
-            'sete_dias'   => \App\Models\AuditLog::where('action', 'ilike', '%audit%')->where('created_at', '>=', $sevenDays)->count(),
-            'trinta_dias' => \App\Models\AuditLog::where('action', 'ilike', '%audit%')->where('created_at', '>=', $thirtyDays)->count(),
+        $cidadesPermitidas = [
+            'Alto Feliz', 'Arroio do Sal', 'Barão', 'Bento Gonçalves', 'Boa Vista do Sul',
+            'Bom Princípio', 'Campo Bom', 'Canela', 'Carlos Barbosa', 'Caxias do Sul',
+            'Coronel Pilar', 'Farroupilha', 'Feliz', 'Flores da Cunha', 'Garibaldi',
+            'Gramado', 'Lajeado', 'Monte Belo do Sul', 'Nova Prata', 'Nova Roma do Sul',
+            'Novo Hamburgo', 'Pinto Bandeira', 'Salvador do Sul', 'São Marcos',
+            'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
         ];
 
-        // Cobertura Total: query atômica para evitar race condition entre dois COUNT separados
-        // Usa uma única query com GROUP BY para contar tudo de uma vez
-        $cobertura = \Illuminate\Support\Facades\DB::selectOne("
-            SELECT
-                COUNT(*) AS total,
-                COUNT(last_audit_at) AS auditados,
-                COUNT(CASE WHEN audit_status = 'ok' THEN 1 END) AS verificados,
-                COUNT(CASE WHEN audit_status = 'pending' THEN 1 END) AS pendentes,
-                COUNT(CASE WHEN audit_status = 'manual_review' THEN 1 END) AS revisao_manual
-            FROM clientes
-        ");
+        $baseQuery = \App\Models\Cliente::where(function($q) use ($cidadesPermitidas) {
+            $q->whereHas('enderecos', function($sub) use ($cidadesPermitidas) {
+                $sub->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidade)'), $cidadesPermitidas);
+            })->orWhereHas('cidadesAtendidas', function($sub) use ($cidadesPermitidas) {
+                $sub->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidades.nome)'), $cidadesPermitidas);
+            });
+        });
 
-        $stats['total_clientes']     = (int) $cobertura->total;
-        $stats['clientes_auditados'] = (int) $cobertura->auditados;
-        $stats['verificados_ia']     = (int) $cobertura->verificados;
-        $stats['pendentes_fila']     = (int) $cobertura->pendentes;
-        $stats['revisao_manual']     = (int) $cobertura->revisao_manual;
+        // Contagens de revisões humanas no AuditLog restrict to standard cities
+        $logQuery = \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+            ->whereHas('cliente', function($q) use ($cidadesPermitidas) {
+                $q->where(function($sub) use ($cidadesPermitidas) {
+                    $sub->whereHas('enderecos', function($end) use ($cidadesPermitidas) {
+                        $end->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidade)'), $cidadesPermitidas);
+                    })->orWhereHas('cidadesAtendidas', function($ca) use ($cidadesPermitidas) {
+                        $ca->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidades.nome)'), $cidadesPermitidas);
+                    });
+                });
+            });
 
-        $stats['porcentagem_concluida'] = $cobertura->total > 0
-            ? round(($cobertura->auditados / $cobertura->total) * 100, 1)
+        $stats = [
+            'hoje'        => $logQuery->clone()->where('created_at', '>=', $today)->count(),
+            'ontem'       => $logQuery->clone()->where('created_at', '>=', $yesterday)->where('created_at', '<', $today)->count(),
+            'sete_dias'   => $logQuery->clone()->where('created_at', '>=', $sevenDays)->count(),
+            'trinta_dias' => $logQuery->clone()->where('created_at', '>=', $thirtyDays)->count(),
+        ];
+
+        $total = $baseQuery->clone()->count();
+        $auditados = $baseQuery->clone()->whereNotNull('last_audit_at')->count();
+        $verificados = $baseQuery->clone()->where('audit_status', 'ok')->count();
+        $pendentes = $baseQuery->clone()->where('audit_status', 'pending')->count();
+        $revisao_manual = $baseQuery->clone()->where('audit_status', 'manual_review')->count();
+
+        $stats['total_clientes']     = $total;
+        $stats['clientes_auditados'] = $auditados;
+        $stats['verificados_ia']     = $verificados;
+        $stats['pendentes_fila']     = $pendentes;
+        $stats['revisao_manual']     = $revisao_manual;
+
+        $stats['porcentagem_concluida'] = $total > 0
+            ? round(($auditados / $total) * 100, 1)
             : 0;
 
         return response()->json($stats);
@@ -2622,38 +2682,56 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
      */
     public function auditCityStats()
     {
-        // Pega todas as cidades que possuem clientes vinculados (via enderecos ou cliente_cidade)
-        $cities = \App\Models\Cidade::select('id', 'nome')->get();
+        $cidadesPermitidas = [
+            'Alto Feliz', 'Arroio do Sal', 'Barão', 'Bento Gonçalves', 'Boa Vista do Sul',
+            'Bom Princípio', 'Campo Bom', 'Canela', 'Carlos Barbosa', 'Caxias do Sul',
+            'Coronel Pilar', 'Farroupilha', 'Feliz', 'Flores da Cunha', 'Garibaldi',
+            'Gramado', 'Lajeado', 'Monte Belo do Sul', 'Nova Prata', 'Nova Roma do Sul',
+            'Novo Hamburgo', 'Pinto Bandeira', 'Salvador do Sul', 'São Marcos',
+            'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
+        ];
+
+        // Busca apenas as 28 cidades permitidas do RS, agrupando para remover duplicados
+        $cities = \App\Models\Cidade::select([
+                \Illuminate\Support\Facades\DB::raw('MAX(id) as id'),
+                \Illuminate\Support\Facades\DB::raw('TRIM(nome) as nome')
+            ])
+            ->where('uf', 'RS')
+            ->whereIn(\Illuminate\Support\Facades\DB::raw('trim(nome)'), $cidadesPermitidas)
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('trim(nome)'))
+            ->orderBy(\Illuminate\Support\Facades\DB::raw('trim(nome)'))
+            ->get();
 
         $data = $cities->map(function($city) {
-            $total = \App\Models\Cliente::whereHas('enderecos', function($q) use ($city) {
-                $q->where('cidade', 'ilike', "%{$city->nome}%");
-            })->orWhereHas('cidadesAtendidas', function($q) use ($city) {
-                $q->where('cidades.id', $city->id);
+            // Conta os clientes cuja cidade de endereço ou cidades atendidas bate com o nome desta cidade
+            $total = \App\Models\Cliente::where(function($query) use ($city) {
+                $query->whereHas('enderecos', function($q) use ($city) {
+                    $q->where('cidade', 'ilike', "%{$city->nome}%");
+                })->orWhereHas('cidadesAtendidas', function($q) use ($city) {
+                    $q->where('cidades.nome', 'ilike', "%{$city->nome}%");
+                });
             })->count();
 
-            if ($total === 0) return null;
-
             $auditados = \App\Models\Cliente::whereNotNull('last_audit_at')
-                ->where(function($sub) use ($city) {
-                    $sub->whereHas('enderecos', function($q) use ($city) {
+                ->where(function($query) use ($city) {
+                    $query->whereHas('enderecos', function($q) use ($city) {
                         $q->where('cidade', 'ilike', "%{$city->nome}%");
                     })->orWhereHas('cidadesAtendidas', function($q) use ($city) {
-                        $q->where('cidades.id', $city->id);
+                        $q->where('cidades.nome', 'ilike', "%{$city->nome}%");
                     });
                 })->count();
 
             return [
                 'id' => $city->id,
-                'nome' => $city->nome,
+                'nome' => trim($city->nome),
                 'total' => $total,
                 'auditados' => $auditados,
-                'pendentes' => $total - $auditados,
-                'percentual' => round(($auditados / $total) * 100, 1)
+                'pendentes' => max(0, $total - $auditados),
+                'percentual' => $total > 0 ? round(($auditados / $total) * 100, 1) : 0
             ];
-        })->filter()->values();
+        });
 
-        return response()->json($data);
+        return response()->json($data->values());
     }
 
     public function auditUsers()
