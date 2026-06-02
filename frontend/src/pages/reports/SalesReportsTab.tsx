@@ -41,6 +41,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DateRangePicker } from "@/components/reports/DateRangePicker";
@@ -57,7 +58,7 @@ export default function SalesReportsTab() {
     const [endDate, setEndDate] = useState("");
     const [planId, setPlanId] = useState("all");
     const [vendedorId, setVendedorId] = useState("all");
-    const [collectionType, setCollectionType] = useState("all");
+    const [collectionTypes, setCollectionTypes] = useState<string[]>([]);
     const [status, setStatus] = useState("all");
 
     // Advanced Filters
@@ -67,6 +68,8 @@ export default function SalesReportsTab() {
     const [bairro, setBairro] = useState("");
     const [telefone, setTelefone] = useState("");
     const [numeroAutorizacao, setNumeroAutorizacao] = useState("");
+    const [numeroAutorizacaoDe, setNumeroAutorizacaoDe] = useState("");
+    const [numeroAutorizacaoAte, setNumeroAutorizacaoAte] = useState("");
     const [dataCadInicial, setDataCadInicial] = useState("");
     const [dataCadFinal, setDataCadFinal] = useState("");
     const [tipoPublicidade, setTipoPublicidade] = useState("all");
@@ -88,7 +91,9 @@ export default function SalesReportsTab() {
         }
         if (planId !== "all") params.append("plan_id", planId);
         if (vendedorId !== "all") params.append("vendedor_id", vendedorId);
-        if (collectionType !== "all") params.append("collection_type", collectionType);
+        if (collectionTypes.length > 0) {
+            params.append("collection_type", collectionTypes.join(","));
+        }
         if (status !== "all") params.append("status", status);
 
         if (termo) params.append("termo", termo);
@@ -97,6 +102,8 @@ export default function SalesReportsTab() {
         if (bairro) params.append("bairro", bairro);
         if (telefone) params.append("telefone", telefone);
         if (numeroAutorizacao) params.append("numero_autorizacao", numeroAutorizacao);
+        if (numeroAutorizacaoDe) params.append("numero_autorizacao_de", numeroAutorizacaoDe);
+        if (numeroAutorizacaoAte) params.append("numero_autorizacao_ate", numeroAutorizacaoAte);
         if (dataCadInicial && dataCadFinal) {
             params.append("data_cad_inicial", dataCadInicial);
             params.append("data_cad_final", dataCadFinal);
@@ -109,7 +116,7 @@ export default function SalesReportsTab() {
     const { data: cidadesList } = useCidades();
 
     const { data: salesData, isLoading, refetch } = useQuery({
-        queryKey: ["sales-report-v2", startDate, endDate, planId, vendedorId, collectionType, status, termo, numeroAutorizacao, cidade, bairro, searchTrigger],
+        queryKey: ["sales-report-v2", startDate, endDate, planId, vendedorId, collectionTypes, status, termo, numeroAutorizacao, numeroAutorizacaoDe, numeroAutorizacaoAte, cidade, bairro, searchTrigger],
         queryFn: async () => {
             const params = getFilterParams();
             const resp = await axios.get(`/v1/admin/reports/sales?${params.toString()}`);
@@ -290,13 +297,22 @@ export default function SalesReportsTab() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Nº Autorização</label>
-                        <Input 
-                            placeholder="Ex: 1045" 
-                            className="rounded-xl border-gray-100 bg-gray-50/50 h-10"
-                            value={numeroAutorizacao}
-                            onChange={e => setNumeroAutorizacao(e.target.value)}
-                        />
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Nº Autorização (Faixa)</label>
+                        <div className="flex items-center gap-1.5">
+                            <Input 
+                                placeholder="De" 
+                                className="rounded-xl border-gray-100 bg-gray-50/50 h-10 text-xs text-center font-semibold"
+                                value={numeroAutorizacaoDe}
+                                onChange={e => setNumeroAutorizacaoDe(e.target.value)}
+                            />
+                            <span className="text-gray-300 text-[10px] font-black uppercase">a</span>
+                            <Input 
+                                placeholder="Até" 
+                                className="rounded-xl border-gray-100 bg-gray-50/50 h-10 text-xs text-center font-semibold"
+                                value={numeroAutorizacaoAte}
+                                onChange={e => setNumeroAutorizacaoAte(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2 lg:col-span-2">
@@ -343,19 +359,66 @@ export default function SalesReportsTab() {
 
                     <div className="space-y-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cobrança / Pagamento</label>
-                        <Select value={collectionType} onValueChange={setCollectionType}>
-                            <SelectTrigger className="rounded-xl border-gray-100 bg-gray-50/50">
-                                <SelectValue placeholder="Todos os tipos" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos os tipos</SelectItem>
-                                <SelectItem value="bank">Boleto Bancário</SelectItem>
-                                <SelectItem value="card">Cartão de Crédito/Débito</SelectItem>
-                                <SelectItem value="pix">Pix / Transferência</SelectItem>
-                                <SelectItem value="cash">Cheque / Dinheiro</SelectItem>
-                                <SelectItem value="permuta">Permuta</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="w-full justify-between rounded-xl border-gray-100 bg-gray-50/50 h-10 px-3 text-left font-normal text-xs hover:bg-gray-50/50 hover:border-gray-200 transition-all shadow-none"
+                                >
+                                    <span className="truncate text-gray-750 font-bold">
+                                        {collectionTypes.length === 0
+                                            ? "Todos os tipos"
+                                            : collectionTypes.length === 1
+                                            ? [
+                                                { value: "bank", label: "Boleto Bancário" },
+                                                { value: "card", label: "Cartão de Crédito/Débito" },
+                                                { value: "pix", label: "Pix / Transferência" },
+                                                { value: "cash", label: "Cheque / Dinheiro" },
+                                                { value: "permuta", label: "Permuta" }
+                                              ].find(o => o.value === collectionTypes[0])?.label
+                                            : `${collectionTypes.length} selecionados`}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[220px] p-2 bg-white rounded-xl shadow-md border border-gray-100 z-50" align="start">
+                                <div className="space-y-1">
+                                    {[
+                                        { value: "bank", label: "Boleto Bancário" },
+                                        { value: "card", label: "Cartão de Crédito/Débito" },
+                                        { value: "pix", label: "Pix / Transferência" },
+                                        { value: "cash", label: "Cheque / Dinheiro" },
+                                        { value: "permuta", label: "Permuta" }
+                                    ].map((option) => {
+                                        const isSelected = collectionTypes.includes(option.value);
+                                        return (
+                                            <div
+                                                key={option.value}
+                                                onClick={() => {
+                                                    setCollectionTypes(prev =>
+                                                        prev.includes(option.value)
+                                                            ? prev.filter(v => v !== option.value)
+                                                            : [...prev, option.value]
+                                                    );
+                                                }}
+                                                className={cn(
+                                                    "flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-xs font-semibold hover:bg-red-50/50 hover:text-[#B70F0A] transition-all",
+                                                    isSelected && "bg-red-50 text-[#B70F0A]"
+                                                )}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => {}} // handled by click
+                                                    className="rounded border-gray-300 text-red-600 focus:ring-red-500 h-4 w-4 cursor-pointer"
+                                                />
+                                                <span>{option.label}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     <div className="space-y-2">

@@ -283,13 +283,24 @@ class ReportController extends Controller
 
         // Filtro Autorizacao / Vendedor / Tipo Publicidade
         $hasAuthFilter = $request->filled('numero_autorizacao') || 
+                        $request->filled('numero_autorizacao_de') ||
+                        $request->filled('numero_autorizacao_ate') ||
                         ($request->filled('tipo_publicidade') && $request->tipo_publicidade !== 'all') ||
                         ($request->filled('vendedor_id') && $request->vendedor_id !== 'all');
 
         if ($hasAuthFilter) {
             $authQuery = Autorizacao::query();
             
-            if ($request->filled('numero_autorizacao')) {
+            if ($request->filled('numero_autorizacao_de') || $request->filled('numero_autorizacao_ate')) {
+                if ($request->filled('numero_autorizacao_de')) {
+                    $de = (int)$request->numero_autorizacao_de;
+                    $authQuery->whereRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END >= ?", [$de]);
+                }
+                if ($request->filled('numero_autorizacao_ate')) {
+                    $ate = (int)$request->numero_autorizacao_ate;
+                    $authQuery->whereRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END <= ?", [$ate]);
+                }
+            } elseif ($request->filled('numero_autorizacao')) {
                 $num = $request->numero_autorizacao;
                 // Remove zeros à esquerda se for numérico para busca mais flexível
                 $numClean = ltrim($num, '0');
@@ -328,18 +339,40 @@ class ReportController extends Controller
         }
 
         if ($request->filled('collection_type') && $request->collection_type !== 'all') {
-            if ($request->collection_type === 'bank') {
-                $query->where('payment_method', 'boleto');
-            } elseif ($request->collection_type === 'card') {
-                $query->where('payment_method', 'cartao');
-            } elseif ($request->collection_type === 'pix') {
-                $query->where('payment_method', 'pix');
-            } elseif ($request->collection_type === 'cash') {
-                $query->where('payment_method', 'dinheiro');
-            } elseif ($request->collection_type === 'permuta') {
-                $query->where('payment_method', 'permuta');
-            } elseif ($request->collection_type === 'direct') {
-                $query->whereNotIn('payment_method', ['boleto', 'cartao', 'pix', 'permuta']);
+            $types = is_array($request->collection_type) 
+                ? $request->collection_type 
+                : explode(',', $request->collection_type);
+            
+            $methods = [];
+            $hasDirect = false;
+            
+            foreach ($types as $type) {
+                if ($type === 'bank') {
+                    $methods[] = 'boleto';
+                } elseif ($type === 'card') {
+                    $methods[] = 'cartao';
+                } elseif ($type === 'pix') {
+                    $methods[] = 'pix';
+                } elseif ($type === 'cash') {
+                    $methods[] = 'dinheiro';
+                } elseif ($type === 'permuta') {
+                    $methods[] = 'permuta';
+                } elseif ($type === 'direct') {
+                    $hasDirect = true;
+                }
+            }
+            
+            if ($hasDirect) {
+                $query->where(function($q) use ($methods) {
+                    $q->whereNotIn('payment_method', ['boleto', 'cartao', 'pix', 'permuta']);
+                    if (!empty($methods)) {
+                        $q->orWhereIn('payment_method', $methods);
+                    }
+                });
+            } else {
+                if (!empty($methods)) {
+                    $query->whereIn('payment_method', $methods);
+                }
             }
         }
 
