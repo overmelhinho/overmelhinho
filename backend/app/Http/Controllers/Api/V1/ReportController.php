@@ -291,15 +291,22 @@ class ReportController extends Controller
         if ($hasAuthFilter) {
             $authQuery = Autorizacao::query();
             
-            if ($request->filled('numero_autorizacao_de') || $request->filled('numero_autorizacao_ate')) {
-                if ($request->filled('numero_autorizacao_de')) {
-                    $de = (int)$request->numero_autorizacao_de;
-                    $authQuery->whereRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END >= ?", [$de]);
-                }
-                if ($request->filled('numero_autorizacao_ate')) {
-                    $ate = (int)$request->numero_autorizacao_ate;
-                    $authQuery->whereRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END <= ?", [$ate]);
-                }
+            if ($request->filled('numero_autorizacao_de') && $request->filled('numero_autorizacao_ate')) {
+                $de = (int)$request->numero_autorizacao_de;
+                $ate = (int)$request->numero_autorizacao_ate;
+                $authQuery->whereRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END BETWEEN ? AND ?", [$de, $ate]);
+            } elseif ($request->filled('numero_autorizacao_de')) {
+                $de = $request->numero_autorizacao_de;
+                $deClean = ltrim($de, '0');
+                $authQuery->where(function($q) use ($de, $deClean) {
+                    $q->where('numero', $de);
+                    if ($deClean !== "") {
+                        $q->orWhere('numero', $deClean);
+                    }
+                });
+            } elseif ($request->filled('numero_autorizacao_ate')) {
+                $ate = (int)$request->numero_autorizacao_ate;
+                $authQuery->whereRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END <= ?", [$ate]);
             } elseif ($request->filled('numero_autorizacao')) {
                 $num = $request->numero_autorizacao;
                 // Remove zeros à esquerda se for numérico para busca mais flexível
