@@ -208,8 +208,15 @@ class ReconcileTinyInvoicesCommand extends Command
                 }
                 $successCount++;
             } catch (\Exception $e) {
-                $this->error("-> Falha no processamento: " . $e->getMessage());
+                $msg = $e->getMessage();
+                $this->error("-> Falha no processamento: " . $msg);
                 $errorCount++;
+
+                // Se a API do Tiny bloqueou por excesso de acessos, pausa por 60 segundos antes de tentar a próxima
+                if (str_contains(mb_strtolower($msg), 'api bloqueada') || str_contains(mb_strtolower($msg), 'acessos a api') || str_contains(mb_strtolower($msg), 'acessos à api')) {
+                    $this->warn("-> Tiny API Rate Limit atingido! Pausando execução por 60 segundos para liberação do bloqueio...");
+                    sleep(60);
+                }
             }
 
             // Evitar erro 429 de Rate Limit no Tiny ERP

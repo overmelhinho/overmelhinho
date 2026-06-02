@@ -89,9 +89,13 @@ class TinyErpService
      */
     public function createReceivable(Invoice $invoice, float $amountOverride = null): array
     {
-        // Sempre tenta sincronizar/atualizar o cliente antes de criar a conta
+        // Tenta sincronizar o cliente apenas se ele ainda não tiver um tiny_id
         try {
-            $tinyId = $this->syncClient($invoice->client);
+            if (empty($invoice->client->tiny_id)) {
+                $tinyId = $this->syncClient($invoice->client);
+            } else {
+                $tinyId = $invoice->client->tiny_id;
+            }
         } catch (\Exception $e) {
             throw new \Exception("Erro ao sincronizar cliente no Tiny: " . $e->getMessage());
         }
