@@ -52,7 +52,8 @@ class CheckTinyInvoicesStatusJob implements ShouldQueue
                         Log::warning("[CheckTinyInvoicesStatusJob] Fatura #{$invoice->id} (Tiny ID: {$invoice->tiny_account_id}) não foi localizada no Tiny ERP. Status limpo localmente.");
                         $invoice->update([
                             'tiny_account_id' => null,
-                            'payment_url' => null
+                            'payment_url' => null,
+                            'sync_status' => null
                         ]);
                         continue;
                     }
@@ -67,7 +68,8 @@ class CheckTinyInvoicesStatusJob implements ShouldQueue
                         $invoice->update([
                             'status' => 'paid',
                             'justification' => 'Sincronização automática em background (Tiny ERP)',
-                            'action_date' => now()
+                            'action_date' => now(),
+                            'sync_status' => null
                         ]);
 
                         if ($invoice->client) {
@@ -78,15 +80,25 @@ class CheckTinyInvoicesStatusJob implements ShouldQueue
                         $invoice->update([
                             'status' => 'canceled',
                             'justification' => 'Sincronização automática em background (Cancelada no Tiny)',
-                            'action_date' => now()
+                            'action_date' => now(),
+                            'sync_status' => null
                         ]);
                         Log::info("[CheckTinyInvoicesStatusJob] Fatura #{$invoice->id} marcada como CANCELADA.");
+                    } else {
+                        // Permanece pendente, mas limpa o sync_status
+                        $invoice->update(['sync_status' => null]);
                     }
                 } else {
                     Log::warning("[CheckTinyInvoicesStatusJob] Sem resposta do Tiny para fatura #{$invoice->id}");
+                    $invoice->update(['sync_status' => null]);
                 }
             } catch (\Exception $e) {
                 Log::error("[CheckTinyInvoicesStatusJob] Falha ao verificar fatura #{$invoice->id}: " . $e->getMessage());
+                try {
+                    $invoice->update(['sync_status' => null]);
+                } catch (\Exception $updateEx) {
+                    Log::error("[CheckTinyInvoicesStatusJob] Erro ao limpar sync_status da fatura #{$invoice->id}: " . $updateEx->getMessage());
+                }
             }
 
             // Pausa de 1 segundo para evitar Rate Limit (429) do Tiny ERP

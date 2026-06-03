@@ -1125,9 +1125,13 @@ class FinancialController extends Controller
      */
     public function syncInvoices()
     {
-        // Busca IDs das faturas pendentes com tiny_account_id
+        // Busca IDs das faturas pendentes com tiny_account_id (e que não estejam já sincronizando)
         $invoiceIds = Invoice::where('status', 'pending')
             ->whereNotNull('tiny_account_id')
+            ->where(function($q) {
+                $q->whereNull('sync_status')
+                  ->orWhere('sync_status', '!=', 'syncing');
+            })
             ->pluck('id')
             ->toArray();
 
@@ -1143,6 +1147,9 @@ class FinancialController extends Controller
                 'sem_tiny_id' => $semTinyCount,
             ]);
         }
+
+        // Marca como sincronizando no banco
+        Invoice::whereIn('id', $invoiceIds)->update(['sync_status' => 'syncing']);
 
         // Despacha o Job em lotes de 25 para verificar o status no Tiny em background (com sleep)
         $chunks = array_chunk($invoiceIds, 25);
@@ -1168,6 +1175,12 @@ class FinancialController extends Controller
             $query = Invoice::whereNull('tiny_account_id')->whereIn('status', ['pending', 'paid']);
         }
 
+        // Evita faturas que já estejam sincronizando
+        $query->where(function($q) {
+            $q->whereNull('sync_status')
+              ->orWhere('sync_status', '!=', 'syncing');
+        });
+
         $invoiceIds = $query->pluck('id')->toArray();
 
         if (empty($invoiceIds)) {
@@ -1178,6 +1191,9 @@ class FinancialController extends Controller
                 'message' => 'Nenhuma fatura pendente de envio encontrada.'
             ]);
         }
+
+        // Marca como sincronizando no banco
+        Invoice::whereIn('id', $invoiceIds)->update(['sync_status' => 'syncing']);
 
         $chunks = array_chunk($invoiceIds, 25);
         foreach ($chunks as $chunk) {

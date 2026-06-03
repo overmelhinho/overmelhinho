@@ -33,10 +33,15 @@ class SyncTinyErpCommand extends Command
         // 1. Faturas que JÁ TEM tiny_account_id e estão pendentes (Checar status)
         $invoiceIdsToCheck = Invoice::where('status', 'pending')
             ->whereNotNull('tiny_account_id')
+            ->where(function($q) {
+                $q->whereNull('sync_status')
+                  ->orWhere('sync_status', '!=', 'syncing');
+            })
             ->pluck('id')
             ->toArray();
 
         if (!empty($invoiceIdsToCheck)) {
+            Invoice::whereIn('id', $invoiceIdsToCheck)->update(['sync_status' => 'syncing']);
             $chunks = array_chunk($invoiceIdsToCheck, 25);
             foreach ($chunks as $chunk) {
                 \App\Jobs\CheckTinyInvoicesStatusJob::dispatch($chunk);
@@ -49,10 +54,15 @@ class SyncTinyErpCommand extends Command
         // 2. Faturas que NÃO TEM tiny_account_id e estão pendentes OU pagas (Reenviar/Sincronizar retroativo)
         $invoiceIdsToSend = Invoice::whereIn('status', ['pending', 'paid'])
             ->whereNull('tiny_account_id')
+            ->where(function($q) {
+                $q->whereNull('sync_status')
+                  ->orWhere('sync_status', '!=', 'syncing');
+            })
             ->pluck('id')
             ->toArray();
 
         if (!empty($invoiceIdsToSend)) {
+            Invoice::whereIn('id', $invoiceIdsToSend)->update(['sync_status' => 'syncing']);
             $chunks = array_chunk($invoiceIdsToSend, 25);
             foreach ($chunks as $chunk) {
                 \App\Jobs\SyncInvoicesToTinyJob::dispatch($chunk);

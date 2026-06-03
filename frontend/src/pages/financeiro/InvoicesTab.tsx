@@ -88,6 +88,7 @@ interface Invoice {
     autorizacao_numero?: string | null;
     parcel_number?: number;
     total_parcels?: number;
+    sync_status?: string | null;
 }
 
 export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (filters: any) => void }) {
@@ -670,15 +671,24 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                 return (
                                     <tr 
                                         key={invoice.id} 
-                                        onClick={() => navigate(`/clientes/${invoice.client.id}/editar?step=12`)}
-                                        className={cn("hover:bg-red-50/40 hover:shadow-sm cursor-pointer transition-all duration-200 group", selectedInvoices.includes(invoice.id) && "bg-red-50/30")}
+                                        onClick={() => {
+                                            if (invoice.sync_status !== 'syncing') {
+                                                navigate(`/clientes/${invoice.client.id}/editar?step=12`);
+                                            }
+                                        }}
+                                        className={cn(
+                                            "hover:bg-red-50/40 hover:shadow-sm cursor-pointer transition-all duration-200 group", 
+                                            selectedInvoices.includes(invoice.id) && "bg-red-50/30",
+                                            invoice.sync_status === 'syncing' && "opacity-75 cursor-not-allowed"
+                                        )}
                                     >
                                         <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="checkbox"
                                                 checked={selectedInvoices.includes(invoice.id)}
                                                 onChange={() => toggleSelectInvoice(invoice.id)}
-                                                className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
+                                                disabled={invoice.sync_status === 'syncing'}
+                                                className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4 disabled:opacity-50 disabled:cursor-not-allowed"
                                             />
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4">
@@ -696,7 +706,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <button className="text-left group">
+                                                    <button className="text-left group" disabled={invoice.sync_status === 'syncing'}>
                                                         <div className="text-sm font-bold text-gray-900 group-hover:text-red-700 transition-colors flex items-center gap-1">
                                                             {invoice.client.nome_fantasia || invoice.client.razao_social}
                                                             <ChevronDown size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -798,7 +808,11 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                             {getStatusBadge(invoice)}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4">
-                                            {invoice.tiny_account_id ? (
+                                            {invoice.sync_status === 'syncing' ? (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600 border border-blue-100 animate-pulse">
+                                                    <RefreshCw size={10} className="animate-spin" /> Sincronizando...
+                                                </span>
+                                            ) : invoice.tiny_account_id ? (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
                                                     <Check size={10} /> Sincronizada
                                                 </span>
@@ -810,107 +824,113 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex justify-end gap-2">
-                                                {invoice.payment_url && (
+                                                {invoice.sync_status === 'syncing' ? (
+                                                    <span className="text-xs font-semibold text-gray-400 italic">Processando...</span>
+                                                ) : (
                                                     <>
-                                                        <button
-                                                            onClick={() => {
-                                                                navigator.clipboard.writeText(invoice.payment_url!);
-                                                                toast.success("Link copiado!");
-                                                            }}
-                                                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                                            title="Copiar Link de Pagamento"
-                                                        >
-                                                            <Copy size={16} />
-                                                        </button>
+                                                        {invoice.payment_url && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        navigator.clipboard.writeText(invoice.payment_url!);
+                                                                        toast.success("Link copiado!");
+                                                                    }}
+                                                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                                    title="Copiar Link de Pagamento"
+                                                                >
+                                                                    <Copy size={16} />
+                                                                </button>
 
-                                                        <a
-                                                            href={getWhatsAppLink(invoice, true)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-                                                            title="Enviar via WhatsApp"
-                                                        >
-                                                            <MessageCircle size={16} />
-                                                        </a>
+                                                                <a
+                                                                    href={getWhatsAppLink(invoice, true)}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                                                                    title="Enviar via WhatsApp"
+                                                                >
+                                                                    <MessageCircle size={16} />
+                                                                </a>
 
-                                                        <a
-                                                            href={invoice.payment_url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
-                                                            title="Ver Boleto Original"
-                                                        >
-                                                            <ExternalLink size={16} />
-                                                        </a>
-                                                    </>
-                                                )}
+                                                                <a
+                                                                    href={invoice.payment_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                    title="Ver Boleto Original"
+                                                                >
+                                                                    <ExternalLink size={16} />
+                                                                </a>
+                                                            </>
+                                                        )}
 
-                                                {invoice.status === "pending" && (
-                                                    <>
-                                                        <Link
-                                                            to={`/clientes/${invoice.client.id}/editar?step=12`}
-                                                            className="p-2 text-blue-500 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                                                            title="Abrir Cliente (Aba Financeiro)"
-                                                        >
-                                                            <Pencil size={15} />
-                                                        </Link>
-                                                        {invoice.group_id && invoice.total_parcels && invoice.total_parcels > 1 && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    const groupParcels = (invoices ?? []).filter(
-                                                                        i => i.group_id === invoice.group_id && i.status === 'pending'
-                                                                    );
-                                                                    setSettleGroupId(invoice.group_id!);
-                                                                    setSettleGroupParcels(groupParcels);
-                                                                    setSettleDiscount("");
-                                                                    setSettleJustification("");
-                                                                    setSettlePaymentMethod("pix");
-                                                                    setIsSettleModalOpen(true);
-                                                                }}
-                                                                className="p-2 text-purple-500 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors"
-                                                                title="Quitar Parcelas Restantes"
-                                                            >
-                                                                <Landmark size={15} />
-                                                            </button>
+                                                        {invoice.status === "pending" && (
+                                                            <>
+                                                                <Link
+                                                                    to={`/clientes/${invoice.client.id}/editar?step=12`}
+                                                                    className="p-2 text-blue-500 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                    title="Abrir Cliente (Aba Financeiro)"
+                                                                >
+                                                                    <Pencil size={15} />
+                                                                </Link>
+                                                                {invoice.group_id && invoice.total_parcels && invoice.total_parcels > 1 && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const groupParcels = (invoices ?? []).filter(
+                                                                                i => i.group_id === invoice.group_id && i.status === 'pending'
+                                                                            );
+                                                                            setSettleGroupId(invoice.group_id!);
+                                                                            setSettleGroupParcels(groupParcels);
+                                                                            setSettleDiscount("");
+                                                                            setSettleJustification("");
+                                                                            setSettlePaymentMethod("pix");
+                                                                            setIsSettleModalOpen(true);
+                                                                        }}
+                                                                        className="p-2 text-purple-500 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors"
+                                                                        title="Quitar Parcelas Restantes"
+                                                                    >
+                                                                        <Landmark size={15} />
+                                                                    </button>
+                                                                )}
+
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedInvoice(invoice);
+                                                                        setEditAmount(String(invoice.payable_amount ?? invoice.amount));
+                                                                        setEditDueDate(invoice.due_date?.slice(0, 10) ?? "");
+                                                                        setEditJustification("");
+                                                                        setEditPaymentMethod(invoice.payment_method || "pix");
+                                                                        setIsEditModalOpen(true);
+                                                                    }}
+                                                                    className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors"
+                                                                    title="Dar Baixa (Confirmar Pagamento)"
+                                                                >
+                                                                    <Check size={18} />
+                                                                </button>
+
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedInvoice(invoice);
+                                                                        setActionType('canceled');
+                                                                        setJustification("");
+                                                                        setIsActionModalOpen(true);
+                                                                    }}
+                                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                    title="Cancelar Fatura"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </>
                                                         )}
 
                                                         <button
-                                                            onClick={() => {
-                                                                setSelectedInvoice(invoice);
-                                                                setEditAmount(String(invoice.payable_amount ?? invoice.amount));
-                                                                setEditDueDate(invoice.due_date?.slice(0, 10) ?? "");
-                                                                setEditJustification("");
-                                                                setEditPaymentMethod(invoice.payment_method || "pix");
-                                                                setIsEditModalOpen(true);
-                                                            }}
-                                                            className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors"
-                                                            title="Dar Baixa (Confirmar Pagamento)"
+                                                            onClick={() => handleDownloadReceipt(invoice.id)}
+                                                            className="p-2 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                            title="Imprimir Recibo de Pagamento"
                                                         >
-                                                            <Check size={18} />
-                                                        </button>
-
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedInvoice(invoice);
-                                                                setActionType('canceled');
-                                                                setJustification("");
-                                                                setIsActionModalOpen(true);
-                                                            }}
-                                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Cancelar Fatura"
-                                                        >
-                                                            <Trash2 size={16} />
+                                                            <Printer size={16} />
                                                         </button>
                                                     </>
                                                 )}
-
-                                                <button
-                                                    onClick={() => handleDownloadReceipt(invoice.id)}
-                                                    className="p-2 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                                                    title="Imprimir Recibo de Pagamento"
-                                                >
-                                                    <Printer size={16} />
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>

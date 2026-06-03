@@ -25,6 +25,7 @@ class Invoice extends Model
         'permuta_amount',
         'payable_amount',
         'permuta_description',
+        'sync_status',
     ];
 
     protected $casts = [
