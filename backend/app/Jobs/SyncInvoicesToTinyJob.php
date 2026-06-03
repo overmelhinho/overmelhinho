@@ -93,9 +93,9 @@ class SyncInvoicesToTinyJob implements ShouldQueue
             } catch (\Exception $e) {
                 Log::error("[SyncInvoicesToTinyJob] Falha ao enviar fatura #{$invoice->id}: " . $e->getMessage());
                 try {
-                    $invoice->update(['sync_status' => null]);
+                    $invoice->update(['sync_status' => $e->getMessage()]);
                 } catch (\Exception $updateEx) {
-                    Log::error("[SyncInvoicesToTinyJob] Erro ao limpar sync_status da fatura #{$invoice->id}: " . $updateEx->getMessage());
+                    Log::error("[SyncInvoicesToTinyJob] Erro ao salvar erro no sync_status da fatura #{$invoice->id}: " . $updateEx->getMessage());
                 }
             }
 

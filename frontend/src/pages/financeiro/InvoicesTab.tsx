@@ -812,6 +812,24 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600 border border-blue-100 animate-pulse">
                                                     <RefreshCw size={10} className="animate-spin" /> Sincronizando...
                                                 </span>
+                                            ) : invoice.sync_status ? (
+                                                <div className="relative group/erp-error inline-block" onClick={(e) => e.stopPropagation()}>
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 border border-red-100 cursor-help shadow-sm">
+                                                        <AlertCircle size={10} /> Falha no Envio
+                                                    </span>
+                                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 p-3 bg-slate-900 text-white text-[11px] rounded-2xl opacity-0 invisible group-hover/erp-error:opacity-100 group-hover/erp-error:visible transition-all shadow-2xl z-50 leading-relaxed font-semibold flex flex-col gap-1">
+                                                        <span className="font-extrabold text-[10px] text-red-400 uppercase tracking-widest flex items-center gap-1">
+                                                            <AlertCircle size={12} /> Falha no Envio ERP
+                                                        </span>
+                                                        <span className="text-slate-200 font-medium whitespace-normal">
+                                                            {invoice.sync_status}
+                                                        </span>
+                                                        <span className="text-[9px] text-slate-400 mt-1 border-t border-slate-800 pt-1">
+                                                            Dica: Clique na linha para abrir o cadastro e corrigir.
+                                                        </span>
+                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                                                    </div>
+                                                </div>
                                             ) : invoice.tiny_account_id ? (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
                                                     <Check size={10} /> Sincronizada

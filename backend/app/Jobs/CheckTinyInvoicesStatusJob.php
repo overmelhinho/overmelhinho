@@ -95,9 +95,9 @@ class CheckTinyInvoicesStatusJob implements ShouldQueue
             } catch (\Exception $e) {
                 Log::error("[CheckTinyInvoicesStatusJob] Falha ao verificar fatura #{$invoice->id}: " . $e->getMessage());
                 try {
-                    $invoice->update(['sync_status' => null]);
+                    $invoice->update(['sync_status' => $e->getMessage()]);
                 } catch (\Exception $updateEx) {
-                    Log::error("[CheckTinyInvoicesStatusJob] Erro ao limpar sync_status da fatura #{$invoice->id}: " . $updateEx->getMessage());
+                    Log::error("[CheckTinyInvoicesStatusJob] Erro ao salvar erro no sync_status da fatura #{$invoice->id}: " . $updateEx->getMessage());
                 }
             }
 
