@@ -43,10 +43,15 @@ class TinyErpService
             $response = Http::asForm()->post("{$this->baseUrl}/contatos.pesquisa.php", [
                 'token' => $this->token,
                 'formato' => 'json',
-                'pesquisa' => $cleaned,
+                'pesquisa' => '',
+                'cpf_cnpj' => $cleaned,
             ]);
 
             $json = $response->json();
+            Log::info("Resposta da busca por CPF/CNPJ no Tiny:", [
+                'cpf_cnpj' => $cleaned,
+                'response' => $json
+            ]);
 
             if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
                 return null;
