@@ -366,9 +366,9 @@ export default function AdminReportDashboard({ hideHeader = false }: { hideHeade
                                             </div>
                                         </div>
                                     ))}
-                                    {(!realtimeData?.topPages && !report?.trafego?.realtime?.topPages) && (
-                                        <p className="text-[10px] text-gray-600 font-bold italic">Sem atividade significativa no momento...</p>
-                                    )}
+                                    {((!realtimeData?.topPages || realtimeData.topPages.length === 0) && (!report?.trafego?.realtime?.topPages || report.trafego.realtime.topPages.length === 0)) && (
+                                         <p className="text-[10px] text-gray-600 font-bold italic">Sem atividade significativa no momento...</p>
+                                     )}
                                 </div>
                             </div>
                         </div>

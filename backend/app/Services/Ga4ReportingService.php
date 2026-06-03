@@ -340,8 +340,8 @@ class Ga4ReportingService
             try {
                 $requestPages = new RunRealtimeReportRequest();
                 $requestPages->setProperty('properties/' . $this->propertyId);
-                // No Realtime, se usa "unifiedPageScreen" para o caminho/título da página
-                $requestPages->setDimensions([new Dimension(['name' => 'unifiedPageScreen'])]);
+                // No Realtime, se usa "unifiedScreenName" para o caminho/título da página
+                $requestPages->setDimensions([new Dimension(['name' => 'unifiedScreenName'])]);
                 $requestPages->setMetrics([new Metric(['name' => 'activeUsers'])]);
                 $requestPages->setLimit(5);
 
