@@ -106,7 +106,7 @@ class CampanhaWizardService
                 'data_inicio' => $payload['data_inicio'] ?? null,
                 'data_fim'    => $payload['data_fim'] ?? null,
                 'url'         => $payload['url'] ?? null,
-                'is_institucional' => $isInstitucional,
+                'is_institucional' => $isInstitucional ? DB::raw('true') : DB::raw('false'),
                 'created_at'  => $now,
                 'updated_at'  => $now,
             ];
@@ -231,7 +231,7 @@ class CampanhaWizardService
                 'data_inicio' => $payload['data_inicio'] ?? null,
                 'data_fim'    => $payload['data_fim'] ?? null,
                 'url'         => $payload['url'] ?? null,
-                'is_institucional' => $isInstitucional,
+                'is_institucional' => $isInstitucional ? DB::raw('true') : DB::raw('false'),
                 'updated_at'  => $now,
             ];
 

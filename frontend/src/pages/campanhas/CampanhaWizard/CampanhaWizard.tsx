@@ -186,8 +186,11 @@ export default function CampanhaWizard({
         try {
             const result = await w.onSubmit();
             if (result?.id) {
-                // Sucesso: redireciona para a listagem
-                navigate("/campanhas");
+                if (mode === "edit") {
+                    navigate(`/campanhas/${result.id}`);
+                } else {
+                    navigate("/campanhas");
+                }
             }
         } catch (e: any) {
             console.error("Erro ao salvar:", e);

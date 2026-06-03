@@ -32,7 +32,7 @@ class JobOpportunity extends Model
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'is_active' => \App\Casts\PostgresBoolean::class,
         'published_at' => 'datetime',
         'expires_at' => 'datetime',
     ];

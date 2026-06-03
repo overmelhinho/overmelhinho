@@ -74,6 +74,7 @@ class LeadController extends Controller
 
     public function update(LeadRequest $request, $id)
     {
+        \Log::info('[LEAD][UPDATE] called for id: ' . $id);
         $lead = Lead::findOrFail($id);
         $data = $request->only([
             'nome',
@@ -102,8 +103,10 @@ class LeadController extends Controller
 
     public function destroy($id)
     {
+        \Log::info('[LEAD][DESTROY] called for id: ' . $id);
         $lead = Lead::findOrFail($id);
         $lead->delete();
+        \Log::info('[LEAD][DESTROY] success for id: ' . $id);
         return response()->json(['success' => true]);
     }
 

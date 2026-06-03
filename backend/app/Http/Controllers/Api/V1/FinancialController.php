@@ -689,7 +689,7 @@ class FinancialController extends Controller
             }
         }
 
-        Log::info("Fatura #{$invoice->id} atualizada manualmente para {$validated['status']} por usuário autenticado. Justificativa: {$validated['justification']}");
+        Log::info("Fatura #{$invoice->id} atualizada manualmente para {$validated['status']} por usuário autenticado. Justificativa: " . ($validated['justification'] ?? 'Nenhuma'));
 
         return response()->json([
             'message' => 'Fatura atualizada com sucesso e sincronizada com o Tiny.',

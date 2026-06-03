@@ -330,6 +330,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
       .filter((n: any) => Number.isFinite(n));
 
     const placements = resolvePlacementsFromDetalhe(d);
+    const finalPlacements = placements.length > 0 ? placements : ["HOME_TOP" as PlacementType];
 
     const planoRaw =
       (camp as any)?.plano ?? (camp as any)?.plano_nome ?? (camp as any)?.planoNome;
@@ -344,7 +345,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
       return m.public_url || m.url || m.file_url || m.desktop_url || m.mobile_url || "";
     };
 
-    const firstPlacement = placements[0];
+    const firstPlacement = finalPlacements[0];
     const tiposMap: Record<string, string> = {
       HOME_TOP: "banner_topo",
       POPUP_GLOBAL: "popup",
@@ -431,7 +432,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
 
       cidades_ids,
 
-      placements,
+      placements: finalPlacements,
       plano,
 
       keywords_text: toKeywordsTextFromDetalhe(d?.keywords),
@@ -666,7 +667,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
     (form.is_institucional || (!!form.data_inicio && !!form.data_fim)) &&
     form.placements.length > 0 &&
     !!form.plano &&
-    !!String(form.financeiro_status || "").trim() &&
+    (form.is_institucional || !!String(form.financeiro_status || "").trim()) &&
     !(mode === "create" ? create.isPending : update.isPending);
 
   const busy = mode === "create" ? create.isPending : update.isPending;
@@ -762,6 +763,7 @@ export function useCampanhaWizard(params: { mode: CampanhaWizardMode; campanhaId
       return null;
     } catch (e: any) {
       toast.dismiss(t);
+      console.error("Erro ao atualizar campanha detalhado:", e?.response?.data || e);
 
       const status = e?.response?.status;
       if (status === 501) {

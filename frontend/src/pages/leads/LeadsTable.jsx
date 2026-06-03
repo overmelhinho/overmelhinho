@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { useDebounce } from "use-debounce";
 import { Pencil, Trash2, UserPlus, Loader2, Search, ArrowRight, User, MessageCircle, Send, ClipboardList } from "lucide-react";
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useSendFollowup } from "@/hooks/useLeads";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
 import LeadModal from "./LeadModal";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 
 // Badge visual para status
 function StatusBadge({ status }) {
@@ -62,6 +63,7 @@ const statusOptions = [
 
 export default function LeadsTable({ user }) {
   const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
   const [status, setStatus] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const statusParam = params.get("status");
@@ -70,7 +72,8 @@ export default function LeadsTable({ user }) {
   const [page, setPage] = useState(1);
   const perPage = 10;
 
-  const { data, isLoading } = useLeads({ search, status, page, perPage });
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useLeads({ search: debouncedSearch, status, page, perPage });
   const leads = data?.data || [];
   const meta = data?.meta || { total: 0, page: 1, per_page: 10 };
   const totalPages = Math.ceil(meta.total / meta.per_page);
@@ -130,19 +133,29 @@ export default function LeadsTable({ user }) {
           setOpen(false);
           toast.success("Lead salvo com sucesso!");
         },
-        onError: () => toast.error("Erro ao salvar lead."),
+        onError: (err) => {
+          console.error("Erro ao salvar lead detalhado:", err?.response?.data || err);
+          toast.error("Erro ao salvar lead.");
+        },
       }
     );
   }
 
-  function handleDelete(lead) {
+  const handleDelete = async (lead) => {
+    console.log("handleDelete called for lead:", lead);
     if (window.confirm("Deseja remover este lead?")) {
-      deleteLead.mutate(lead.id, {
-        onSuccess: () => toast.success("Lead removido."),
-        onError: () => toast.error("Erro ao remover."),
-      });
+      try {
+        console.log("Calling api.delete for id:", lead.id);
+        const res = await api.delete(`/v1/leads/${lead.id}`);
+        console.log("api.delete success:", res.data);
+        toast.success("Lead removido.");
+        queryClient.invalidateQueries(["leads"]);
+      } catch (err) {
+        console.error("api.delete error:", err);
+        toast.error("Erro ao remover.");
+      }
     }
-  }
+  };
 
   function handleConvert(lead) {
     if (window.confirm("Converter este lead em oportunidade?")) {
@@ -304,14 +317,16 @@ export default function LeadsTable({ user }) {
         )}
       </div>
 
-      <LeadModal
-        open={open}
-        onClose={() => setOpen(false)}
-        onSubmit={handleSubmit}
-        initialValues={editingLead}
-        user={user}
-        comercialUsers={comercialUsers}
-      />
+      {open && (
+        <LeadModal
+          open={open}
+          onClose={() => setOpen(false)}
+          onSubmit={handleSubmit}
+          initialValues={editingLead}
+          user={user}
+          comercialUsers={comercialUsers}
+        />
+      )}
     </>
   );
 }

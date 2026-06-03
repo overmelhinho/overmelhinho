@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,12 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
   const isComercial = user?.roles?.includes("Comercial");
   const [step, setStep] = useState(0);
 
+  useEffect(() => {
+    if (open) {
+      setStep(0);
+    }
+  }, [open]);
+
   const formik = useFormik({
     initialValues: initialValues || {
       nome: "",
@@ -80,9 +86,10 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
     enableReinitialize: true
   });
 
+  console.log("LeadModal Render. Errors:", formik.errors, "Values:", formik.values);
+
   const nextStep = () => {
     if (step < steps.length - 1) setStep(step + 1);
-    else formik.handleSubmit();
   };
 
   const prevStep = () => {
@@ -243,9 +250,19 @@ export default function LeadModal({ open, onClose, onSubmit, user, comercialUser
         <form onSubmit={formik.handleSubmit} className="space-y-4">
           <Stepper />
           {renderStep()}
+          {Object.keys(formik.errors).length > 0 && (
+            <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200" id="formik-errors-debug">
+              Form Errors: {JSON.stringify(formik.errors)}
+            </div>
+          )}
           <DialogFooter className="flex justify-between mt-4">
             <Button type="button" onClick={prevStep} disabled={step === 0}>Voltar</Button>
-            <Button type="button" onClick={nextStep}>{step < steps.length - 1 ? "Avançar" : "Salvar"}</Button>
+            <Button
+              type="button"
+              onClick={step < steps.length - 1 ? nextStep : () => formik.submitForm()}
+            >
+              {step < steps.length - 1 ? "Avançar" : "Salvar"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

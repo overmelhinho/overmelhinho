@@ -41,8 +41,17 @@ export function useUpdateLead() {
 export function useDeleteLead() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id) => axios.delete(`/v1/leads/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(["leads"]),
+    mutationFn: (id) => {
+      console.log("useDeleteLead mutationFn called with id:", id);
+      return axios.delete(`/v1/leads/${id}`);
+    },
+    onSuccess: () => {
+      console.log("useDeleteLead onSuccess invalidating queries");
+      queryClient.invalidateQueries(["leads"]);
+    },
+    onError: (err) => {
+      console.error("useDeleteLead onError:", err);
+    }
   });
 }
 

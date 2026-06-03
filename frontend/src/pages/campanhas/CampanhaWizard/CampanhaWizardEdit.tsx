@@ -65,6 +65,7 @@ function formatDateBR(v?: string | null) {
 type WizardKey = "basico" | "alcance" | "keywords" | "financeiro" | "midias";
 
 type FormState = {
+  is_institucional: boolean;
   cliente_id: string;
   nome: string;
   tipo: CampanhaTipo;
@@ -182,6 +183,7 @@ export default function CampanhaWizardEdit() {
   const [activeKey, setActiveKey] = useState<WizardKey>("basico");
 
   const [form, setForm] = useState<FormState>({
+    is_institucional: false,
     cliente_id: "",
     nome: "",
     tipo: "banner",
@@ -254,6 +256,7 @@ export default function CampanhaWizardEdit() {
 
     setForm((f) => ({
       ...f,
+      is_institucional: !!campanha?.is_institucional,
       cliente_id: String(campanha?.cliente_id ?? ""),
       nome: String(campanha?.nome ?? ""),
       tipo: (campanha?.tipo ?? "banner") as CampanhaTipo,
@@ -383,25 +386,24 @@ export default function CampanhaWizardEdit() {
   }, [form, hasGlobalPlacement]);
 
   const canSubmit =
-    !!form.cliente_id &&
+    (form.is_institucional || !!form.cliente_id) &&
     !!form.nome.trim() &&
     !!form.tipo &&
-    !!form.data_inicio &&
-    !!form.data_fim &&
+    (form.is_institucional || !!form.data_inicio) &&
+    (form.is_institucional || !!form.data_fim) &&
     (form.placements || []).length > 0 &&
-    (hasGlobalPlacement || form.cidades_ids.length > 0) &&
-    !!String(form.financeiro_status || "").trim() &&
+    (form.is_institucional || hasGlobalPlacement || form.cidades_ids.length > 0) &&
+    (form.is_institucional || !!String(form.financeiro_status || "").trim()) &&
     !update.isPending;
 
   const stepValid = useMemo(() => {
-    const s1 = !!form.cliente_id && !!form.nome.trim() && !!form.tipo && !!form.plano;
+    const s1 = (form.is_institucional || !!form.cliente_id) && !!form.nome.trim() && !!form.tipo && !!form.plano;
     const s2 =
-      !!form.data_inicio &&
-      !!form.data_fim &&
+      (form.is_institucional || (!!form.data_inicio && !!form.data_fim)) &&
       (form.placements || []).length > 0 &&
-      (hasGlobalPlacement || form.cidades_ids.length > 0);
+      (form.is_institucional || hasGlobalPlacement || form.cidades_ids.length > 0);
     const s3 = true;
-    const s4 = !!String(form.financeiro_status || "").trim();
+    const s4 = form.is_institucional || !!String(form.financeiro_status || "").trim();
     const s5 = true;
     return { s1, s2, s3, s4, s5 };
   }, [form, hasGlobalPlacement]);
@@ -503,12 +505,13 @@ export default function CampanhaWizardEdit() {
     }
 
     const payload: any = {
-      cliente_id: Number(form.cliente_id),
+      is_institucional: form.is_institucional,
+      cliente_id: form.is_institucional ? null : Number(form.cliente_id),
       nome: form.nome.trim(),
       tipo: form.tipo,
       origem: form.origem ? (form.origem as CampanhaOrigem) : null,
-      data_inicio: toISODate(form.data_inicio),
-      data_fim: toISODate(form.data_fim),
+      data_inicio: form.is_institucional ? null : toISODate(form.data_inicio),
+      data_fim: form.is_institucional ? null : toISODate(form.data_fim),
 
       placements: form.placements,
       plano: form.plano,
@@ -516,7 +519,7 @@ export default function CampanhaWizardEdit() {
       cidades_ids: hasGlobalPlacement ? undefined : form.cidades_ids,
       keywords: keywordsParsed,
 
-      financeiro: {
+      financeiro: form.is_institucional ? null : {
         status: String(form.financeiro_status || "").trim() || undefined,
         forma: form.financeiro_forma || undefined,
         valor: form.financeiro_valor ? Number(form.financeiro_valor) : undefined,
@@ -688,10 +691,10 @@ export default function CampanhaWizardEdit() {
             resumo={{
               cliente: clienteLabel || (form.cliente_id ? `Cliente #${form.cliente_id}` : "—"),
               plano: form.plano,
-	     periodo:
-  w.form.data_inicio && w.form.data_fim
-    ? `${formatDateBR(w.form.data_inicio)} → ${formatDateBR(w.form.data_fim)}`
-    : "—",
+              periodo:
+                form.data_inicio && form.data_fim
+                  ? `${formatDateBR(form.data_inicio)} → ${formatDateBR(form.data_fim)}`
+                  : "—",
 
               placements: String((form.placements || []).length),
               cidades: hasGlobalPlacement ? "N/A (global)" : String(form.cidades_ids.length),

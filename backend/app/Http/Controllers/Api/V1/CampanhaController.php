@@ -369,14 +369,14 @@ class CampanhaController extends Controller
 
         // payload base
         $campUpdate = [
-            'cliente_id' => empty($validated['cliente_id']) ? null : (int) $validated['cliente_id'],
+            'cliente_id' => empty($validated['cliente_id'] ?? null) ? null : (int) $validated['cliente_id'],
             'nome' => (string) $validated['nome'],
             'tipo' => (string) $validated['tipo'],
             'origem' => $validated['origem'] ?? null,
             'data_inicio' => $validated['data_inicio'] ?? null,
             'data_fim' => $validated['data_fim'] ?? null,
             'url' => $validated['url'] ?? null,
-            'is_institucional' => (bool) ($validated['is_institucional'] ?? false),
+            'is_institucional' => ($validated['is_institucional'] ?? false) ? DB::raw('true') : DB::raw('false'),
             'updated_at' => $now,
         ];
 
@@ -528,7 +528,7 @@ if (Schema::hasTable('audit_logs') && $actorId > 0) {
             'action' => 'campanha.updated',
             'entity_type' => 'campanha',
             'entity_id' => $campanha,
-            'cliente_id' => (int) $validated['cliente_id'],
+            'cliente_id' => empty($validated['cliente_id'] ?? null) ? null : (int) $validated['cliente_id'],
             'lead_id' => null,
             'field_changes' => json_encode(['updated' => true], JSON_UNESCAPED_UNICODE),
             'metadata' => json_encode(['source' => 'wizard'], JSON_UNESCAPED_UNICODE),

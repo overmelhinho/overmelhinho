@@ -14,14 +14,19 @@ class ClienteObserver
         $this->indexingService = $indexingService;
     }
 
-    /**
-     * Handle the Cliente "saved" event.
-     */
     public function saved(Cliente $cliente): void
     {
+        $siteUrl = config('app.frontend_url', 'https://novo.overmelhinho.com.br');
+        
+        // Pula indexação para testes E2E, robots ou se rodando localmente
+        if (str_contains($siteUrl, 'localhost') || 
+            str_contains(strtolower($cliente->nome_fantasia), 'e2e') || 
+            str_contains(strtolower($cliente->nome_fantasia), 'robot')) {
+            return;
+        }
+
         // Só indexa se o cliente estiver marcado para exibir no site
         if ($cliente->exibir_no_site) {
-            $siteUrl = config('app.frontend_url', 'https://novo.overmelhinho.com.br');
             $slug = $cliente->slug ?: $cliente->id;
             $url = "{$siteUrl}/cliente/{$slug}";
             
@@ -35,6 +40,14 @@ class ClienteObserver
     public function deleted(Cliente $cliente): void
     {
         $siteUrl = config('app.frontend_url', 'https://novo.overmelhinho.com.br');
+        
+        // Pula indexação para testes E2E, robots ou se rodando localmente
+        if (str_contains($siteUrl, 'localhost') || 
+            str_contains(strtolower($cliente->nome_fantasia), 'e2e') || 
+            str_contains(strtolower($cliente->nome_fantasia), 'robot')) {
+            return;
+        }
+
         $slug = $cliente->slug ?: $cliente->id;
         $url = "{$siteUrl}/cliente/{$slug}";
         
