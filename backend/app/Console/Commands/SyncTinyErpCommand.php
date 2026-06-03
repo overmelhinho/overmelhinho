@@ -37,8 +37,11 @@ class SyncTinyErpCommand extends Command
             ->toArray();
 
         if (!empty($invoiceIdsToCheck)) {
-            \App\Jobs\CheckTinyInvoicesStatusJob::dispatch($invoiceIdsToCheck);
-            $this->info('Job CheckTinyInvoicesStatusJob disparado para ' . count($invoiceIdsToCheck) . ' faturas.');
+            $chunks = array_chunk($invoiceIdsToCheck, 25);
+            foreach ($chunks as $chunk) {
+                \App\Jobs\CheckTinyInvoicesStatusJob::dispatch($chunk);
+            }
+            $this->info('Job CheckTinyInvoicesStatusJob disparado em lotes de 25 para ' . count($invoiceIdsToCheck) . ' faturas.');
         } else {
             $this->info('Nenhuma fatura pendente com ID do Tiny encontrada para checagem.');
         }
@@ -50,8 +53,11 @@ class SyncTinyErpCommand extends Command
             ->toArray();
 
         if (!empty($invoiceIdsToSend)) {
-            \App\Jobs\SyncInvoicesToTinyJob::dispatch($invoiceIdsToSend);
-            $this->info('Job SyncInvoicesToTinyJob disparado para ' . count($invoiceIdsToSend) . ' faturas.');
+            $chunks = array_chunk($invoiceIdsToSend, 25);
+            foreach ($chunks as $chunk) {
+                \App\Jobs\SyncInvoicesToTinyJob::dispatch($chunk);
+            }
+            $this->info('Job SyncInvoicesToTinyJob disparado em lotes de 25 para ' . count($invoiceIdsToSend) . ' faturas.');
         } else {
             $this->info('Nenhuma fatura pendente sem ID do Tiny encontrada para reenvio.');
         }

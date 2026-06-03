@@ -1144,8 +1144,11 @@ class FinancialController extends Controller
             ]);
         }
 
-        // Despacha o Job para verificar o status no Tiny em background (com sleep)
-        \App\Jobs\CheckTinyInvoicesStatusJob::dispatch($invoiceIds);
+        // Despacha o Job em lotes de 25 para verificar o status no Tiny em background (com sleep)
+        $chunks = array_chunk($invoiceIds, 25);
+        foreach ($chunks as $chunk) {
+            \App\Jobs\CheckTinyInvoicesStatusJob::dispatch($chunk);
+        }
 
         return response()->json([
             'message' => 'Verificação iniciada em background! Isso pode levar alguns minutos.',
@@ -1176,13 +1179,16 @@ class FinancialController extends Controller
             ]);
         }
 
-        \App\Jobs\SyncInvoicesToTinyJob::dispatch($invoiceIds);
+        $chunks = array_chunk($invoiceIds, 25);
+        foreach ($chunks as $chunk) {
+            \App\Jobs\SyncInvoicesToTinyJob::dispatch($chunk);
+        }
 
         return response()->json([
             'enviadas' => 0,
             'erros' => 0,
             'total' => count($invoiceIds),
-            'message' => 'Sincronização iniciada em background com sucesso.'
+            'message' => 'Sincronização iniciada em background com sucesso em lotes de 25.'
         ]);
     }
 
