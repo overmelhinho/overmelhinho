@@ -26,9 +26,60 @@ class TinyErpService
      * Se não tiver ID Tiny, cria (contato.incluir).
      * Se tiver, atualiza (contato.alterar) - opcional para este escopo, vamos focar no incluir/verificar.
      */
+    /**
+     * Procura o contato no Tiny pelo CPF ou CNPJ.
+     * Retorna o ID do contato no Tiny se localizado, ou null caso contrário.
+     */
+    public function findClientByCpfCnpj(string $cpfCnpj): ?string
+    {
+        try {
+            $cleaned = preg_replace('/\D/', '', $cpfCnpj);
+            if (empty($cleaned)) {
+                return null;
+            }
+
+            Log::info("[TinyErpService] Buscando contato no Tiny por CPF/CNPJ: {$cleaned}");
+
+            $response = Http::asForm()->post("{$this->baseUrl}/contatos.pesquisa.php", [
+                'token' => $this->token,
+                'formato' => 'json',
+                'pesquisa' => $cleaned,
+            ]);
+
+            $json = $response->json();
+
+            if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
+                return null;
+            }
+
+            $contacts = $json['retorno']['contatos'] ?? [];
+            foreach ($contacts as $c) {
+                $tinyCpfCnpj = preg_replace('/\D/', '', $c['contato']['cpf_cnpj'] ?? '');
+                if ($tinyCpfCnpj === $cleaned) {
+                    return (string)($c['contato']['id'] ?? '');
+                }
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Erro ao buscar cliente por CPF/CNPJ no Tiny: ' . $e->getMessage());
+            return null;
+        }
+    }
+
     public function syncClient(Cliente $client): ?string
     {
         try {
+            // Se o local não tem tiny_id, tenta localizar por CPF/CNPJ no Tiny antes de tentar cadastrar
+            if (empty($client->tiny_id) && !empty($client->cpf_cnpj)) {
+                $foundId = $this->findClientByCpfCnpj($client->cpf_cnpj);
+                if ($foundId) {
+                    Log::info("[TinyErpService] Cliente #{$client->id} já existe no Tiny com ID {$foundId}. Vinculando localmente.");
+                    $client->update(['tiny_id' => $foundId]);
+                    return $foundId;
+                }
+            }
+
             $contatoData = $this->mapClientToTiny($client);
             $method = $client->tiny_id ? 'contato.alterar.php' : 'contato.incluir.php';
 
@@ -61,7 +112,13 @@ class TinyErpService
             ]);
 
             if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
-                $erroMsg = $json['retorno']['erros'][0]['erro'] ?? 'Erro desconhecido';
+                $erroMsg = 'Erro desconhecido';
+                if (isset($json['retorno']['erros'][0]['erro'])) {
+                    $erroMsg = $json['retorno']['erros'][0]['erro'];
+                } elseif (isset($json['retorno']['registros'][0]['registro']['erros'][0]['erro'])) {
+                    $erroMsg = $json['retorno']['registros'][0]['registro']['erros'][0]['erro'];
+                }
+                
                 Log::error("Erro ao sincronizar contato no Tiny", [
                     'client_id' => $client->id,
                     'erro' => $erroMsg
