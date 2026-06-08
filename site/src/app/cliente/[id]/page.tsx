@@ -123,7 +123,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             "description": client.descricao,
             "address": {
                 "@type": "PostalAddress",
-                "streetAddress": end.exibir_apenas_cidade ? undefined : `${end.rua || ''}, ${end.numero || ''}`,
+                "streetAddress": end.exibir_apenas_cidade ? undefined : `${end.rua || ''}, ${end.numero || ''}${end.complemento ? `, ${end.complemento}` : ''}`,
                 "addressLocality": end.cidade || '',
                 "addressRegion": end.estado || '',
                 "postalCode": end.exibir_apenas_cidade ? undefined : (end.cep || ''),

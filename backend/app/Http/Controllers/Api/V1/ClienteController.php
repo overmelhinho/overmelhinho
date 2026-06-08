@@ -42,6 +42,18 @@ class ClienteController extends Controller
         $cityId = $request->input('city_id');
         $cityName = $request->input('city_name');
         $preferredSegments = $request->input('preferred_segments');
+
+        // ✅ Detecta se o termo de busca contém o nome de alguma cidade
+        if ($q !== '') {
+            $cityInQuery = $this->detectCityInQuery($q);
+            if ($cityInQuery) {
+                $cityId = $cityInQuery->id;
+                $cityName = $cityInQuery->nome;
+                $q = trim(preg_replace('/\b' . preg_quote($cityInQuery->nome, '/') . '\b/i', '', $q));
+                $q = trim(preg_replace('/\b(em|de|do|da)\b/i', '', $q));
+                $q = preg_replace('/\s+/', ' ', $q);
+            }
+        }
         
         $query = Cliente::query()
             ->where('exibir_no_site', 'true')
@@ -63,6 +75,8 @@ class ClienteController extends Controller
 
         // ✅ Busca Inteligente (Fuzzy + Aprendizado de Typos)
         if ($q !== '') {
+            $asciiQ = strtolower(Str::ascii($q));
+            $hasMovelWord = (bool) preg_match('/\b(movel|moveis)\b/', $asciiQ);
             
             // 1. Verifica se existe uma correção aprendida pelo sistema (Learning Logic)
             $learned = \App\Models\SearchCorrection::where('typo', mb_strtolower($normalizedQ, 'UTF-8'))
@@ -71,42 +85,89 @@ class ClienteController extends Controller
             
             $effectiveQ = $learned ? $learned->correction : $normalizedQ;
 
-            $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSimilarity) {
-                // Match Exato ou Parcial (Alta Prioridade)
-                $sub->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$q}%"])
-                    ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$q}%"]);
+            $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSimilarity, $hasMovelWord) {
+                if ($hasMovelWord) {
+                    // Custom logic for móvel/móveis to prevent matching automóvel/automóveis
+                    $sub->where(function ($w) use ($q) {
+                        $w->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$q}%"])
+                          ->whereRaw('unaccent(nome_fantasia) !~* \'automovel|automoveis\'');
+                    })->orWhereRaw('unaccent(nome_fantasia) ~* \'\\y(movel|moveis)\\y\'');
+                    
+                    $sub->orWhere(function ($w) use ($q) {
+                        $w->whereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$q}%"])
+                          ->whereRaw('unaccent(nome_alternativo) !~* \'automovel|automoveis\'');
+                    })->orWhereRaw('unaccent(nome_alternativo) ~* \'\\y(movel|moveis)\\y\'');
+                } else {
+                    $sub->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$q}%"])
+                        ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$q}%"]);
+                }
 
                 if ($effectiveQ !== $normalizedQ) {
-                    $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+                    if ($hasMovelWord) {
+                        $sub->orWhere(function ($w) use ($effectiveQ) {
+                            $w->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$effectiveQ}%"])
+                              ->whereRaw('unaccent(nome_fantasia) !~* \'automovel|automoveis\'');
+                        })->orWhereRaw('unaccent(nome_fantasia) ~* \'\\y(movel|moveis)\\y\'');
+                    } else {
+                        $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+                    }
                 }
 
                 // Busca exata nas Palavras Chave Geradas por IA
-                $sub->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$q}%"])
-                    ->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+                if ($hasMovelWord) {
+                    $sub->orWhere(function ($w) use ($q) {
+                        $w->whereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$q}%"])
+                          ->whereRaw('unaccent(seo_keywords::text) !~* \'automovel|automoveis\'');
+                    })->orWhereRaw('unaccent(seo_keywords::text) ~* \'\\y(movel|moveis)\\y\'');
+                    
+                    $sub->orWhere(function ($w) use ($effectiveQ) {
+                        $w->whereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$effectiveQ}%"])
+                          ->whereRaw('unaccent(seo_keywords::text) !~* \'automovel|automoveis\'');
+                    })->orWhereRaw('unaccent(seo_keywords::text) ~* \'\\y(movel|moveis)\\y\'');
+                } else {
+                    $sub->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$q}%"])
+                        ->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+                }
 
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
-                if ($canUseSimilarity) {
+                if ($canUseSimilarity && !$hasMovelWord) {
                     // Threshold seguro (0.5) para evitar falsos positivos como 'Psicologia' e 'Odontologia' (que dividem o sufixo)
                     // Utilizamos word_similarity para buscar o termo "q" DENTRO de frases maiores
                     $sub->orWhereRaw("word_similarity(?, nome_fantasia) > 0.5", [$normalizedQ])
                         ->orWhereRaw("word_similarity(?, nome_alternativo) > 0.5", [$normalizedQ]);
-                } else {
+                } elseif (!$canUseSimilarity) {
                     // Fallback agressivo por palavras
                     $words = explode(' ', $normalizedQ);
                     foreach ($words as $word) {
                         if (strlen($word) > 2) {
-                            $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$word}%"]);
+                            if ($hasMovelWord && in_array(strtolower(Str::ascii($word)), ['movel', 'moveis'])) {
+                                $sub->orWhereRaw('unaccent(nome_fantasia) ~* \'\\y(movel|moveis)\\y\'');
+                            } else {
+                                $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$word}%"]);
+                            }
                         }
                     }
                 }
 
                 // 3. Busca em Segmentos e Endereços
-                $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ, $canUseSimilarity, $normalizedQ) {
-                        $sq->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
-                           ->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"]);
-                           
-                        if ($canUseSimilarity) {
-                            $sq->orWhereRaw("word_similarity(?, segmentos.nome) > 0.5", [$normalizedQ]);
+                $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ, $canUseSimilarity, $normalizedQ, $hasMovelWord) {
+                        if ($hasMovelWord) {
+                            $sq->where(function ($w) use ($q) {
+                                $w->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
+                                  ->whereRaw('unaccent(segmentos.nome) !~* \'automovel|automoveis\'');
+                            })->orWhereRaw('unaccent(segmentos.nome) ~* \'\\y(movel|moveis)\\y\'');
+                            
+                            $sq->orWhere(function ($w) use ($effectiveQ) {
+                                $w->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"])
+                                  ->whereRaw('unaccent(segmentos.nome) !~* \'automovel|automoveis\'');
+                            })->orWhereRaw('unaccent(segmentos.nome) ~* \'\\y(movel|moveis)\\y\'');
+                        } else {
+                            $sq->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
+                               ->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+                               
+                            if ($canUseSimilarity) {
+                                $sq->orWhereRaw("word_similarity(?, segmentos.nome) > 0.5", [$normalizedQ]);
+                            }
                         }
                     })
                     ->orWhereHas('enderecos', function ($eq) use ($q, $effectiveQ) {
@@ -285,11 +346,23 @@ class ClienteController extends Controller
     public function suggestions(Request $request)
     {
         $q = trim((string) ($request->input('q') ?? ''));
+        $cityId = $request->input('city_id');
+
+        // ✅ Detecta se o termo de busca contém o nome de alguma cidade
+        if ($q !== '') {
+            $cityInQuery = $this->detectCityInQuery($q);
+            if ($cityInQuery) {
+                $cityId = $cityInQuery->id;
+                $q = trim(preg_replace('/\b' . preg_quote($cityInQuery->nome, '/') . '\b/i', '', $q));
+                $q = trim(preg_replace('/\b(em|de|do|da)\b/i', '', $q));
+                $q = preg_replace('/\s+/', ' ', $q);
+            }
+        }
+
         if (strlen($q) < 2) return response()->json([]);
 
         // Busca Clientes (Lógica Inteligente: Aprendizado + Fuzzy)
         $normalizedQ = mb_strtolower(trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q)), 'UTF-8');
-        $cityId = $request->input('city_id');
         
         // Tenta ver se temos uma correção aprendida no histórico
         $learned = \App\Models\SearchCorrection::where('typo', $normalizedQ)
@@ -307,21 +380,43 @@ class ClienteController extends Controller
             } catch (\Exception $e) { $canUseSim = false; }
         }
 
+        $asciiQ = strtolower(Str::ascii($q));
+        $hasMovelWord = (bool) preg_match('/\b(movel|moveis)\b/', $asciiQ);
+
         $clientes = Cliente::query()
             ->select(['id', 'slug', 'nome_fantasia', 'logo_url', 'tipo_cliente', 'status_assinatura'])
-            ->where(function($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSim) {
+            ->where(function($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSim, $hasMovelWord) {
                 // Match direto ou corrigido
-                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
-                    ->orWhere('nome_fantasia', 'ilike', "%{$normalizedQ}%");
+                if ($hasMovelWord) {
+                    $sub->where(function($w) use ($q) {
+                        $w->where('nome_fantasia', 'ilike', "%{$q}%")
+                          ->whereRaw('nome_fantasia !~* \'automovel|automoveis\'');
+                    })->orWhereRaw('nome_fantasia ~* \'\\y(movel|moveis)\\y\'');
+
+                    $sub->orWhere(function($w) use ($normalizedQ) {
+                        $w->where('nome_fantasia', 'ilike', "%{$normalizedQ}%")
+                          ->whereRaw('nome_fantasia !~* \'automovel|automoveis\'');
+                    })->orWhereRaw('nome_fantasia ~* \'\\y(movel|moveis)\\y\'');
+                } else {
+                    $sub->where('nome_fantasia', 'ilike', "%{$q}%")
+                        ->orWhere('nome_fantasia', 'ilike', "%{$normalizedQ}%");
+                }
                 
                 if ($effectiveQ !== $normalizedQ) {
-                    $sub->orWhere('nome_fantasia', 'ilike', "%{$effectiveQ}%");
+                    if ($hasMovelWord) {
+                        $sub->orWhere(function($w) use ($effectiveQ) {
+                            $w->where('nome_fantasia', 'ilike', "%{$effectiveQ}%")
+                              ->whereRaw('nome_fantasia !~* \'automovel|automoveis\'');
+                        })->orWhereRaw('nome_fantasia ~* \'\\y(movel|moveis)\\y\'');
+                    } else {
+                        $sub->orWhere('nome_fantasia', 'ilike', "%{$effectiveQ}%");
+                    }
                 }
                 
                 // Similarity (pg_trgm) - Threshold baixo 0.1
-                if ($canUseSim) {
+                if ($canUseSim && !$hasMovelWord) {
                     $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.1", [$normalizedQ]);
-                } else {
+                } elseif (!$hasMovelWord) {
                     $sub->orWhere('nome_fantasia', 'ilike', substr($normalizedQ, 0, 3) . "%");
                 }
             })
@@ -345,7 +440,7 @@ class ClienteController extends Controller
                     ELSE 2
                 END ASC
             ", [$q])
-            ->when($canUseSim, function($os) use ($normalizedQ) {
+            ->when($canUseSim && !$hasMovelWord, function($os) use ($normalizedQ) {
                 $os->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
             })
             ->limit(5)
@@ -353,7 +448,14 @@ class ClienteController extends Controller
 
         // Busca Segmentos (Categorias)
         $segmentos = Segmento::query()
-            ->where('nome', 'ilike', "%{$q}%")
+            ->when($hasMovelWord, function($sq) use ($q) {
+                $sq->where(function($w) use ($q) {
+                    $w->where('nome', 'ilike', "%{$q}%")
+                      ->whereRaw('nome !~* \'automovel|automoveis\'');
+                })->orWhereRaw('nome ~* \'\\y(movel|moveis)\\y\'');
+            }, function($sq) use ($q) {
+                $sq->where('nome', 'ilike', "%{$q}%");
+            })
             ->limit(3)
             ->get();
 
@@ -2964,4 +3066,55 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             'message' => "Slugs de {$count} clientes foram atualizados com sucesso."
         ]);
     }
+
+    /**
+     * ✅ Detecta se o termo de busca contém o nome de alguma cidade cadastrada
+     */
+    private function detectCityInQuery(string $q)
+    {
+        if (empty($q)) return null;
+
+        $normalizedQuery = ' ' . strtolower(Str::ascii($q)) . ' ';
+        $words = array_filter(explode(' ', $q));
+        if (empty($words)) return null;
+
+        static $unaccentExists = null;
+        if ($unaccentExists === null) {
+            try {
+                DB::select("SELECT unaccent('a')");
+                $unaccentExists = true;
+            } catch (\Exception $e) {
+                $unaccentExists = false;
+            }
+        }
+
+        $cidades = Cidade::where(function($query) use ($words, $unaccentExists) {
+            foreach ($words as $word) {
+                if (strlen($word) > 3) {
+                    if ($unaccentExists) {
+                        $query->orWhereRaw('unaccent(nome) ilike unaccent(?)', ["%{$word}%"]);
+                    } else {
+                        $query->orWhere('nome', 'ilike', "%{$word}%");
+                    }
+                }
+            }
+        })->get();
+
+        $bestCity = null;
+        $longestMatchLength = 0;
+
+        foreach ($cidades as $cidade) {
+            $cidadeNome = strtolower(Str::ascii($cidade->nome));
+            if (preg_match('/\b' . preg_quote($cidadeNome, '/') . '\b/i', $normalizedQuery)) {
+                $matchLength = strlen($cidadeNome);
+                if ($matchLength > $longestMatchLength) {
+                    $longestMatchLength = $matchLength;
+                    $bestCity = $cidade;
+                }
+            }
+        }
+
+        return $bestCity;
+    }
 }
+

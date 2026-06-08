@@ -99,11 +99,11 @@ export default function Footer() {
                     </div>
 
                     <div className="lg:col-span-4 space-y-8">
-                        <div className="bg-gray-50 rounded-[2.5rem] p-8 space-y-6 border border-gray-100/50">
+                        <div className="bg-gray-50 rounded-[2.5rem] px-5 py-6 sm:p-8 space-y-6 border border-gray-100/50">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Suporte Premium</h4>
                             <div className="space-y-4">
                                 {/* WhatsApp */}
-                                <div className="flex items-start space-x-4">
+                                <div className="flex items-start space-x-3 sm:space-x-4">
                                     <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-brand-red flex-shrink-0">
                                         <Phone size={18} />
                                     </div>
@@ -120,7 +120,7 @@ export default function Footer() {
                                     </div>
                                 </div>
                                 {/* E-mail */}
-                                <div className="flex items-start space-x-4">
+                                <div className="flex items-start space-x-3 sm:space-x-4">
                                     <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-brand-red flex-shrink-0">
                                         <Mail size={18} />
                                     </div>
@@ -128,7 +128,7 @@ export default function Footer() {
                                         <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">E-mail</p>
                                         <a
                                             href="mailto:atendimento@overmelhinho.com.br"
-                                            className="text-[13px] sm:text-sm font-black text-gray-900 hover:text-brand-red transition-colors whitespace-nowrap"
+                                            className="text-xs sm:text-sm font-black text-gray-900 hover:text-brand-red transition-colors whitespace-nowrap"
                                         >
                                             atendimento@overmelhinho.com.br
                                         </a>

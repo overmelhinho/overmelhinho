@@ -272,7 +272,7 @@ export default function ClientProfileClient() {
         { label: 'Tel. Principal', number: formatPhone(contactInfo.telefone_principal), flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal, obs: contactInfo.obs_telefone_principal },
         { label: 'Tel. Secundário', number: formatPhone(contactInfo.telefone_secundario), flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario, obs: contactInfo.obs_telefone_secundario },
         { label: 'Celular', number: formatPhone(contactInfo.celular), flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular, obs: contactInfo.obs_celular },
-        { label: 'Tel. Gratuito', number: formatPhone(contactInfo.telefone_outro), flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro, obs: contactInfo.obs_telefone_outro },
+        { label: 'Outro Telefone', number: formatPhone(contactInfo.telefone_outro), flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro, obs: contactInfo.obs_telefone_outro },
     ].filter(p => p.number && p.flag && !p.hidden) : [];
 
     const primaryPhone = allPhones[0]?.number;
@@ -342,7 +342,7 @@ export default function ClientProfileClient() {
         "telephone": contactInfo?.telefone_principal || contactInfo?.celular,
         "address": client.enderecos?.[0] ? {
             "@type": "PostalAddress",
-            "streetAddress": client.enderecos[0].exibir_apenas_cidade ? undefined : `${client.enderecos[0].rua}, ${client.enderecos[0].numero}`,
+            "streetAddress": client.enderecos[0].exibir_apenas_cidade ? undefined : `${client.enderecos[0].rua}, ${client.enderecos[0].numero}${client.enderecos[0].complemento ? `, ${client.enderecos[0].complemento}` : ''}`,
             "addressLocality": client.enderecos[0].cidade,
             "addressRegion": client.enderecos[0].estado,
             "postalCode": client.enderecos[0].exibir_apenas_cidade ? undefined : client.enderecos[0].cep,
@@ -513,7 +513,7 @@ export default function ClientProfileClient() {
                                         {client.enderecos?.[0]
                                             ? (client.enderecos[0].exibir_apenas_cidade
                                                 ? `Atendimento em ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`
-                                                : `${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].cidade}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`)
+                                                : `${client.enderecos[0].rua}, ${client.enderecos[0].numero}${client.enderecos[0].complemento ? `, ${client.enderecos[0].complemento}` : ''} - ${client.enderecos[0].cidade}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`)
                                             : 'Endereço não informado'}
                                     </p>
                                 </div>
@@ -521,7 +521,7 @@ export default function ClientProfileClient() {
 
                             {/* CTAs DESKTOP */}
                             <div className="hidden md:flex mt-4 md:mt-0 flex-wrap items-center gap-3">
-                                {hasWhatsApp && isPagante && (
+                                {hasWhatsApp && (
                                     <button
                                         onClick={handleWhatsAppClick}
                                         className="bg-[#25D366] text-white px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl shadow-green-100 flex items-center active:scale-95 transition-all hover:brightness-110 border-b-4 border-green-700"
@@ -529,7 +529,7 @@ export default function ClientProfileClient() {
                                         <MessageCircle size={20} className="mr-2" fill="currentColor" /> WhatsApp
                                     </button>
                                 )}
-                                {hasPhone && isPagante && (
+                                {hasPhone && (
                                     <button
                                         onClick={handleCallClick}
                                         className="bg-gray-100 text-gray-900 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-gray-200"
@@ -984,7 +984,7 @@ export default function ClientProfileClient() {
                     <aside className="w-full lg:w-96 space-y-8">
 
                         {/* Telefones Section */}
-                        {(allPhones.length > 0 || (client.contatos?.[0]?.email_principal && client.contatos?.[0]?.exibir_email !== false)) && isPagante && (
+                        {(allPhones.length > 0 || (client.contatos?.[0]?.email_principal && client.contatos?.[0]?.exibir_email !== false)) && (
                             <div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                                 <h3 className="text-xl font-black font-serif italic text-gray-900">Contatos</h3>
                                 <div className="space-y-4">
@@ -1096,7 +1096,7 @@ export default function ClientProfileClient() {
                         </div>)}
 
                         {/* WhatsApp CTA */}
-                        {hasWhatsApp && isPagante && (
+                        {hasWhatsApp && (
                             <div className="relative group overflow-hidden bg-[#25D366] rounded-[2rem] p-5 md:p-6 text-white shadow-xl shadow-green-100 gummy-card cursor-pointer border-b-[3px] border-green-700 active:border-b-0 active:translate-y-1 transition-all" onClick={handleWhatsAppClick}>
                                 <div className="relative space-y-3">
                                     <div className="bg-white/20 w-10 h-10 rounded-lg flex items-center justify-center">
@@ -1253,7 +1253,7 @@ export default function ClientProfileClient() {
             {/* 📱 MOBILE STICKY CONVERSION BAR */}
             <footer className="md:hidden fixed bottom-0 left-0 right-0 p-4 pb-6 z-[100] pointer-events-none bg-gradient-to-t from-gray-50 via-gray-50/80 to-transparent">
                 <div className="flex space-x-3 pointer-events-auto max-w-sm mx-auto">
-                    {hasPhone && isPagante && (
+                    {hasPhone && (
                         <button
                             onClick={handleCallClick}
                             className="flex-[0.4] bg-white text-gray-900 py-4 rounded-full shadow-[0_8px_20px_-6px_rgba(0,0,0,0.15)] border border-gray-100 font-bold text-[11px] uppercase tracking-widest flex items-center justify-center space-x-2 active:scale-95 transition-all font-sans"
@@ -1262,7 +1262,7 @@ export default function ClientProfileClient() {
                             <span>Ligar</span>
                         </button>
                     )}
-                    {hasWhatsApp && isPagante && (
+                    {hasWhatsApp && (
                         <button
                             onClick={handleWhatsAppClick}
                             className="flex-1 bg-[#25D366] text-white py-4 rounded-full shadow-[0_8px_20px_-6px_rgba(37,211,102,0.4)] font-black text-sm flex items-center justify-center space-x-2 active:scale-95 transition-all overflow-hidden relative font-sans border border-[#20B054]"
