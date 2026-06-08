@@ -252,6 +252,10 @@ class AutorizacaoController extends Controller
                   ->orWhere('group_id', (string)$autorizacao->id);
             })->whereNotNull('tiny_account_id')->exists();
 
+            if ($hasTinyInvoices) {
+                $this->registerPendingCancellation($autorizacao);
+            }
+
             // Regra: Contrato assinado que é editado é cancelado, criando um novo.
             $autorizacao->update([
                 'status' => 'cancelado',
@@ -361,10 +365,8 @@ class AutorizacaoController extends Controller
               ->orWhere('group_id', (string)$autorizacao->id);
         })->whereNotNull('tiny_account_id')->exists();
 
-        if ($hasTinyInvoices && ($autorizacao->status !== 'cancelado' || filter_var($autorizacao->tiny_needs_manual_cancellation, FILTER_VALIDATE_BOOLEAN))) {
-            return response()->json([
-                'message' => 'Não é possível excluir esta autorização pois ela possui faturas enviadas ao Tiny ERP. Por favor, cancele a autorização primeiro e confirme a exclusão das faturas no Tiny.'
-            ], 422);
+        if ($hasTinyInvoices) {
+            $this->registerPendingCancellation($autorizacao);
         }
 
         // Remove todas as faturas geradas por esta autorização
@@ -384,7 +386,20 @@ class AutorizacaoController extends Controller
     public function cancel($id)
     {
         $autorizacao = Autorizacao::findOrFail($id);
-        $autorizacao->update(['status' => 'cancelado']);
+
+        $hasTinyInvoices = \App\Models\Invoice::where(function($q) use ($autorizacao) {
+            $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+              ->orWhere('group_id', (string)$autorizacao->id);
+        })->whereNotNull('tiny_account_id')->exists();
+
+        $autorizacao->update([
+            'status' => 'cancelado',
+            'tiny_needs_manual_cancellation' => $hasTinyInvoices ? 'true' : 'false'
+        ]);
+
+        if ($hasTinyInvoices) {
+            $this->registerPendingCancellation($autorizacao);
+        }
 
         // Cancelar em cascata todas as faturas pendentes vinculadas
         \App\Models\Invoice::where(function($q) use ($autorizacao) {
@@ -813,37 +828,151 @@ class AutorizacaoController extends Controller
 
     public function getPendingTinyCancellations()
     {
-        $pendentes = Autorizacao::with('cliente:id,nome_fantasia,razao_social')
+        $list = $this->getPendingCancellationsList();
+
+        // Also fetch from DB if there's any not in the list yet (for backward compatibility)
+        $dbPendings = Autorizacao::with('cliente:id,nome_fantasia,razao_social')
             ->where('tiny_needs_manual_cancellation', 'true')
             ->where('status', 'cancelado')
-            ->get(['id', 'numero', 'cliente_id', 'created_at', 'updated_at']);
+            ->get();
 
-        return response()->json($pendentes);
+        foreach ($dbPendings as $auth) {
+            $exists = false;
+            foreach ($list as $item) {
+                if ($item['id'] === $auth->id) {
+                    $exists = true;
+                    break;
+                }
+            }
+
+            if (!$exists) {
+                $this->registerPendingCancellation($auth);
+                $list = $this->getPendingCancellationsList();
+            }
+        }
+
+        return response()->json($list);
     }
 
     public function resolveTinyCancellation(Request $request, $id, \App\Services\TinyErpService $tinyService)
     {
-        $autorizacao = Autorizacao::findOrFail($id);
+        $id = (int)$id;
+        $list = $this->getPendingCancellationsList();
 
-        // Busca as faturas da autorização cancelada que foram enviadas pro Tiny
+        $foundIndex = null;
+        foreach ($list as $index => $item) {
+            if ($item['id'] === $id) {
+                $foundIndex = $index;
+                break;
+            }
+        }
+
+        if ($foundIndex === null) {
+            // Fallback for DB-only if it was deleted / not in list
+            $autorizacao = Autorizacao::find($id);
+            if ($autorizacao) {
+                $autorizacao->update(['tiny_needs_manual_cancellation' => 'false']);
+                return response()->json(['success' => true, 'message' => 'Pendência resolvida com sucesso.']);
+            }
+            return response()->json(['success' => false, 'message' => 'Pendência não localizada.'], 404);
+        }
+
+        $item = $list[$foundIndex];
+
+        // Check status of each synced invoice in Tiny ERP
+        foreach ($item['invoices'] as $invData) {
+            $status = $tinyService->getReceivableStatus($invData['tiny_account_id']);
+            
+            if ($status && isset($status['situacao']) && $status['situacao'] !== 'cancelado') {
+                $invoiceId = isset($invData['id']) ? "#{$invData['id']}" : "Tiny ID: {$invData['tiny_account_id']}";
+                return response()->json([
+                    'success' => false,
+                    'message' => "A fatura {$invoiceId} ainda consta como '{$status['situacao']}' no Tiny ERP. Exclua ou cancele-a lá primeiro."
+                ], 400);
+            }
+        }
+
+        // Remove from list
+        array_splice($list, $foundIndex, 1);
+        $this->savePendingCancellationsList($list);
+
+        // Also update DB if the authorization still exists locally
+        $autorizacao = Autorizacao::find($id);
+        if ($autorizacao) {
+            $autorizacao->update(['tiny_needs_manual_cancellation' => 'false']);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Pendência resolvida com sucesso.']);
+    }
+
+    // ─── Helpers para gerenciamento de pendências Tiny em arquivo JSON ───────
+
+    private function getPendingCancellationsFile(): string
+    {
+        return storage_path('app/tiny_pending_cancellations.json');
+    }
+
+    private function getPendingCancellationsList(): array
+    {
+        $path = $this->getPendingCancellationsFile();
+        if (!file_exists($path)) {
+            return [];
+        }
+        $content = file_get_contents($path);
+        return json_decode($content, true) ?: [];
+    }
+
+    private function savePendingCancellationsList(array $list): void
+    {
+        $path = $this->getPendingCancellationsFile();
+        $dir = dirname($path);
+        if (!file_exists($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        file_put_contents($path, json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    private function registerPendingCancellation(Autorizacao $autorizacao): void
+    {
         $invoices = \App\Models\Invoice::where(function($q) use ($autorizacao) {
             $q->where('group_id', 'autorizacao-' . $autorizacao->id)
               ->orWhere('group_id', (string)$autorizacao->id);
         })->whereNotNull('tiny_account_id')->get();
 
-        foreach ($invoices as $inv) {
-            $status = $tinyService->getReceivableStatus($inv->tiny_account_id);
-            
-            if ($status && isset($status['situacao']) && $status['situacao'] !== 'cancelado') {
-                return response()->json([
-                    'success' => false,
-                    'message' => "A fatura #{$inv->id} (Tiny: {$inv->tiny_account_id}) ainda consta como '{$status['situacao']}' no Tiny ERP. Exclua ou cancele-a lá primeiro."
-                ], 400);
+        if ($invoices->isEmpty()) {
+            return;
+        }
+
+        $list = $this->getPendingCancellationsList();
+
+        // Check if already registered
+        foreach ($list as $item) {
+            if ($item['id'] === $autorizacao->id) {
+                return;
             }
         }
 
-        $autorizacao->update(['tiny_needs_manual_cancellation' => 'false']);
+        $invoiceData = [];
+        foreach ($invoices as $inv) {
+            $invoiceData[] = [
+                'id' => $inv->id,
+                'tiny_account_id' => $inv->tiny_account_id,
+            ];
+        }
 
-        return response()->json(['success' => true, 'message' => 'Pendência resolvida com sucesso.']);
+        $list[] = [
+            'id' => $autorizacao->id,
+            'numero' => $autorizacao->numero,
+            'cliente' => [
+                'id' => $autorizacao->cliente_id,
+                'nome_fantasia' => $autorizacao->cliente?->nome_fantasia ?: '',
+                'razao_social' => $autorizacao->cliente?->razao_social ?: '',
+            ],
+            'invoices' => $invoiceData,
+            'created_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
+        ];
+
+        $this->savePendingCancellationsList($list);
     }
 }
