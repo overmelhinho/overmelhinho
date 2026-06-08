@@ -803,6 +803,24 @@ class ClienteController extends Controller
             ->where('exibir_no_site', 'true')
             ->where('tipo_cliente', 'pagante')
             ->whereIn('status_assinatura', ['ativa', 'ativo'])
+            ->whereDoesntHave('segmentos', function($q) {
+                $q->whereIn('segmentos.slug', [
+                    'acompanhantes',
+                    'bordel',
+                    'garotas-de-programa',
+                    'sexo',
+                    'agencia-de-acompanhantes',
+                    'casas-de-massagem',
+                ]);
+            })
+            ->where(function($q) {
+                $q->whereNull('nome_fantasia')
+                  ->orWhere(function($sub) {
+                      $sub->where('nome_fantasia', 'not ilike', '%night club%')
+                          ->where('nome_fantasia', 'not ilike', '%gatas club%')
+                          ->where('nome_fantasia', 'not ilike', '%acompanhante%');
+                  });
+            })
             ->whereDoesntHave('segmentos', function($q) use ($segmentIds) {
                 $q->whereIn('segmentos.id', $segmentIds);
             });
