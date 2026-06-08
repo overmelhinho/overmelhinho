@@ -827,12 +827,19 @@ export default function ClientProfileClient() {
                                                                     <a 
                                                                         key={idx}
                                                                         href={`tel:${p.number.replace(/\D/g, '')}`}
-                                                                        className={`col-span-full bg-green-50 hover:bg-green-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex items-center justify-center gap-2`}
+                                                                        className={`col-span-full bg-green-50 hover:bg-green-100 py-2.5 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex flex-col items-center justify-center`}
                                                                     >
-                                                                        <Phone size={14} className="flex-shrink-0" /> 
-                                                                        <span className="text-center whitespace-nowrap">
-                                                                            {p.label}: <span>{p.number}</span>
-                                                                        </span>
+                                                                        <div className="flex items-center justify-center gap-2">
+                                                                            <Phone size={14} className="flex-shrink-0" /> 
+                                                                            <span className="text-center whitespace-nowrap">
+                                                                                {p.label}: <span>{p.number}</span>
+                                                                            </span>
+                                                                        </div>
+                                                                        {p.obs && (
+                                                                            <span className="text-[9px] text-green-600/70 font-semibold normal-case tracking-normal italic mt-0.5 leading-none">
+                                                                                ({p.obs})
+                                                                            </span>
+                                                                        )}
                                                                     </a>
                                                                 )
                                                             ))}

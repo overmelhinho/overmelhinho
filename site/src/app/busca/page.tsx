@@ -200,6 +200,22 @@ function SearchContent() {
         };
     }, [searchAds, heroAd]);
 
+    const topBanner = useMemo(() => {
+        if (heroAd && heroAd.image) {
+            return {
+                ...heroAd,
+                isInstitutional: false
+            };
+        }
+        return {
+            id: 101,
+            title: "Anuncie no O Vermelhinho",
+            image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+            link: "https://overmelhinho.com.br/anuncie",
+            isInstitutional: true
+        };
+    }, [heroAd]);
+
     const interstitialAds = useMemo(() => {
         if (!searchAds || searchAds.length < 2) {
             // Fallback para ads internos se não houver campanhas suficientes
@@ -293,13 +309,13 @@ function SearchContent() {
     }, [isLoading, query, cityName, allResults.length]);
  
     useEffect(() => {
-        if (heroAd) {
-            trackAd(heroAd.id, 'view', 'SEARCH_RESULT');
+        if (topBanner) {
+            trackAd(topBanner.id, 'view', topBanner.isInstitutional ? 'INSTITUTIONAL_TOP' : 'SEARCH_RESULT');
         }
-    }, [heroAd?.id]);
+    }, [topBanner?.id]);
  
     useEffect(() => {
-        if (listAd) {
+        if (listAd && listAd.id !== 101) {
             trackAd(listAd.id, 'view', 'SEGMENT_LISTING');
         }
     }, [listAd?.id]);
@@ -483,27 +499,27 @@ function SearchContent() {
 
                     <main className="px-5 py-6 space-y-12 pb-40">
 
-                        {/* HERO AD BANNER (PATROCINADO) */}
-                        {heroAd && heroAd.image && (
+                        {/* HERO AD BANNER (PATROCINADO / INSTITUCIONAL) */}
+                        {topBanner && topBanner.image && (
                             <motion.section
                                 initial={{ opacity: 0, y: -20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className={`relative group ${heroAd.link ? 'cursor-pointer' : 'cursor-default'}`}
+                                className={`relative group ${topBanner.link ? 'cursor-pointer' : 'cursor-default'}`}
                                 onClick={() => {
-                                    if (heroAd.link) {
-                                        trackAd(heroAd.id, 'click', 'SEARCH_RESULT');
-                                        window.open(heroAd.link, heroAd.link.startsWith('http') ? '_blank' : '_self');
+                                    if (topBanner.link) {
+                                        trackAd(topBanner.id, 'click', topBanner.isInstitutional ? 'INSTITUTIONAL_TOP' : 'SEARCH_RESULT');
+                                        window.open(topBanner.link, topBanner.link.startsWith('http') ? '_blank' : '_self');
                                     }
                                 }}
                             >
-                                <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden transition-transform duration-700 ${heroAd.link ? 'group-hover:scale-[1.01]' : ''}`}>
+                                <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden transition-transform duration-700 ${topBanner.link ? 'group-hover:scale-[1.01]' : ''}`}>
                                     <img 
-                                        src={heroAd.image} 
+                                        src={topBanner.image} 
                                         className="w-full h-auto max-h-[300px] object-cover" 
-                                        alt={heroAd.title} 
+                                        alt={topBanner.title} 
                                     />
                                     {/* Link Indicator (Optional but subtle) */}
-                                    {heroAd.link && (
+                                    {topBanner.link && (
                                         <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
                                             <ExternalLink size={14} className="text-white" />
                                         </div>
@@ -662,7 +678,7 @@ function SearchContent() {
                             </section>
                         )}
                         {/* AD BANNER (LISTAGEM) */}
-                        {listAd && (
+                        {listAd && listAd.id !== 101 && (
                             <section className="relative px-6 md:px-20 mb-8 mt-4">
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.98 }}
@@ -696,8 +712,9 @@ function SearchContent() {
                                 <h3 className="text-xl font-black text-gray-900 tracking-tight font-serif px-2">Todos os Resultados</h3>
                                 <div className="bg-white rounded-[4rem] shadow-2xl border border-white overflow-hidden p-2">
                                     {outrosResultados.map((item: any, idx: number) => {
-                                        const showAd = (idx + 1) % 5 === 0;
-                                        const ad = interstitialAds[Math.floor(idx / 5) % interstitialAds.length];
+                                        const showAd = idx >= 4 && (idx - 4) % 30 === 0;
+                                        const adIndex = idx >= 4 ? Math.floor((idx - 4) / 30) : 0;
+                                        const ad = interstitialAds[adIndex % interstitialAds.length];
 
                                         return (
                                             <React.Fragment key={item.id}>
