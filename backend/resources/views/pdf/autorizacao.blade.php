@@ -271,13 +271,16 @@
     @endif
 
     {{-- OBSERVAÇÕES --}}
-    @if($autorizacao->observacoes_anuncio || $autorizacao->observacoes_financeiro)
+    @if($autorizacao->observacoes_anuncio || $autorizacao->observacoes_financeiro || $autorizacao->justificativa_assinatura)
     <div class="obs-box">
         @if($autorizacao->observacoes_anuncio)
             <p><strong>Observações de Arte/Produção:</strong> {{ $autorizacao->observacoes_anuncio }}</p>
         @endif
         @if($autorizacao->observacoes_financeiro)
             <p><strong>Observações Faturamento:</strong> {{ $autorizacao->observacoes_financeiro }}</p>
+        @endif
+        @if($autorizacao->justificativa_assinatura)
+            <p><strong>Justificativa de Assinatura:</strong> {{ $autorizacao->justificativa_assinatura }}</p>
         @endif
     </div>
     @endif
