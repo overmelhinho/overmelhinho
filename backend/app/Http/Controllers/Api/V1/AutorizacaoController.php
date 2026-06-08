@@ -361,9 +361,9 @@ class AutorizacaoController extends Controller
               ->orWhere('group_id', (string)$autorizacao->id);
         })->whereNotNull('tiny_account_id')->exists();
 
-        if ($hasTinyInvoices) {
+        if ($hasTinyInvoices && ($autorizacao->status !== 'cancelado' || filter_var($autorizacao->tiny_needs_manual_cancellation, FILTER_VALIDATE_BOOLEAN))) {
             return response()->json([
-                'message' => 'Não é possível excluir esta autorização pois ela possui faturas enviadas ao Tiny ERP. Por favor, cancele a autorização para gerenciar a exclusão manual no Tiny.'
+                'message' => 'Não é possível excluir esta autorização pois ela possui faturas enviadas ao Tiny ERP. Por favor, cancele a autorização primeiro e confirme a exclusão das faturas no Tiny.'
             ], 422);
         }
 
