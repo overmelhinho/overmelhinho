@@ -356,9 +356,22 @@ class AutorizacaoController extends Controller
     {
         $autorizacao = Autorizacao::findOrFail($id);
 
+        $hasTinyInvoices = \App\Models\Invoice::where(function($q) use ($autorizacao) {
+            $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+              ->orWhere('group_id', (string)$autorizacao->id);
+        })->whereNotNull('tiny_account_id')->exists();
+
+        if ($hasTinyInvoices) {
+            return response()->json([
+                'message' => 'Não é possível excluir esta autorização pois ela possui faturas enviadas ao Tiny ERP. Por favor, cancele a autorização para gerenciar a exclusão manual no Tiny.'
+            ], 422);
+        }
 
         // Remove todas as faturas geradas por esta autorização
-        Invoice::where('group_id', 'autorizacao-' . $autorizacao->id)->delete();
+        \App\Models\Invoice::where(function($q) use ($autorizacao) {
+            $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+              ->orWhere('group_id', (string)$autorizacao->id);
+        })->delete();
 
         $autorizacao->parcelas()->delete();
         $autorizacao->delete();

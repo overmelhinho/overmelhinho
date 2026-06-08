@@ -210,6 +210,7 @@ class TinyErpService
                 'cidade' => $invoice->client->enderecos()->first()->cidade ?? '',
                 'uf' => $invoice->client->enderecos()->first()->estado ?? '',
             ],
+            'forma_pagamento' => $this->mapFormaPagamento($invoice->payment_method),
             'meio_pagamento' => $this->mapPaymentMethod($invoice->payment_method),
             'observacoes' => $obsBase,
         ];
@@ -518,6 +519,18 @@ class TinyErpService
             $invoice->amount = $originalAmount;
             $invoice->due_date = $originalDate;
         }
+    }
+
+    protected function mapFormaPagamento(?string $method): string
+    {
+        $map = [
+            'boleto'   => 'boleto',
+            'pix'      => 'pix',
+            'cartao'   => 'credito',
+            'dinheiro' => 'dinheiro',
+        ];
+
+        return $map[$method] ?? 'boleto';
     }
 
     protected function mapPaymentMethod(?string $method): string
