@@ -18,7 +18,7 @@ class CampanhaRequest extends FormRequest
             'cliente_id' => ['required_unless:is_institucional,true', 'nullable', 'integer', 'exists:clientes,id'],
             'nome' => ['required', 'string', 'max:191'],
             'tipo' => ['required', 'string', 'in:banner,popup,destaque,combo'],
-            'origem' => ['nullable', 'string', 'in:venda_nova,renovacao,upgrade'],
+            'origem' => ['nullable', 'string', 'in:venda_nova,renovacao,upgrade,migracao_legado'],
 
             'data_inicio' => ['required_unless:is_institucional,true', 'nullable', 'date'],
             'data_fim' => ['required_unless:is_institucional,true', 'nullable', 'date', 'after_or_equal:data_inicio'],

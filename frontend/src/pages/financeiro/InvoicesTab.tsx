@@ -93,6 +93,29 @@ interface Invoice {
     sync_status?: string | null;
 }
 
+const formatInvoiceDate = (dateStr?: string | null) => {
+    if (!dateStr) return '---';
+    try {
+        const cleanDate = dateStr.slice(0, 10);
+        const date = new Date(`${cleanDate}T12:00:00`);
+        if (isNaN(date.getTime())) return '---';
+        return format(date, 'dd/MM/yyyy');
+    } catch {
+        return '---';
+    }
+};
+
+const formatInvoiceTime = (dateStr?: string | null) => {
+    if (!dateStr) return '---';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '---';
+        return format(date, 'HH:mm');
+    } catch {
+        return '---';
+    }
+};
+
 export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (filters: any) => void }) {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -837,17 +860,17 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                 isOverdue ? "text-red-600 font-bold" : "text-gray-500"
                                             )}>
                                                 <Calendar size={14} />
-                                                {format(new Date(invoice.due_date), "dd/MM/yyyy")}
+                                                {formatInvoiceDate(invoice.due_date)}
                                             </div>
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                             {invoice.status === 'paid' && invoice.action_date ? (
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-gray-700">
-                                                        {format(new Date(invoice.action_date), "dd/MM/yyyy")}
+                                                        {formatInvoiceDate(invoice.action_date)}
                                                     </span>
                                                     <span className="text-[10px] text-gray-400 uppercase tracking-tight">
-                                                        {format(new Date(invoice.action_date), "HH:mm")}
+                                                        {formatInvoiceTime(invoice.action_date)}
                                                     </span>
                                                 </div>
                                             ) : (
@@ -1396,7 +1419,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                             <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Parcelas Pendentes a Quitar</p>
                             {settleGroupParcels.map(p => (
                                 <div key={p.id} className="flex justify-between text-sm">
-                                    <span className="text-gray-600 font-medium">Parcela {p.parcel_number}/{p.total_parcels} — Venc. {format(new Date(p.due_date + 'T12:00:00'), 'dd/MM/yyyy')}</span>
+                                    <span className="text-gray-600 font-medium">Parcela {p.parcel_number}/{p.total_parcels} — Venc. {formatInvoiceDate(p.due_date)}</span>
                                     <span className="font-bold text-gray-900">R$ {Number(p.payable_amount ?? p.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             ))}
