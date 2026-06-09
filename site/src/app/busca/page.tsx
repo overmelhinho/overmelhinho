@@ -512,10 +512,10 @@ function SearchContent() {
                                     }
                                 }}
                             >
-                                <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden transition-transform duration-700 ${topBanner.link ? 'group-hover:scale-[1.01]' : ''}`}>
+                                <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden bg-gray-50/50 transition-transform duration-700 ${topBanner.link ? 'group-hover:scale-[1.01]' : ''}`}>
                                     <img 
                                         src={topBanner.image} 
-                                        className="w-full h-auto max-h-[300px] lg:max-h-[240px] object-cover" 
+                                        className="w-full h-auto max-h-[350px] lg:max-h-[280px] object-contain mx-auto" 
                                         alt={topBanner.title} 
                                     />
                                     {/* Link Indicator (Optional but subtle) */}
@@ -694,7 +694,7 @@ function SearchContent() {
                                 >
                                     <img 
                                         src={listAd.image} 
-                                        className="w-full h-auto max-h-[180px] md:max-h-[220px] object-cover" 
+                                        className="w-full h-auto max-h-[220px] md:max-h-[260px] object-contain mx-auto" 
                                         alt={listAd.title} 
                                     />
                                     {listAd.link && (

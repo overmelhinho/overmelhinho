@@ -186,11 +186,7 @@ export default function CampanhaWizard({
         try {
             const result = await w.onSubmit();
             if (result?.id) {
-                if (mode === "edit") {
-                    navigate(`/campanhas/${result.id}`);
-                } else {
-                    navigate("/campanhas");
-                }
+                navigate("/campanhas");
             }
         } catch (e: any) {
             console.error("Erro ao salvar:", e);
@@ -328,7 +324,7 @@ export default function CampanhaWizard({
                         }}
                         options={(w.filteredClientes || []).map((c: any) => ({
                             value: String(c.id),
-                            label: c.nome_fantasia || c.razao_social,
+                            label: c.nome_fantasia || c.razao_social || `Cliente #${c.id}`,
                         }))}
                         value={
                             w.form.cliente_id
@@ -880,7 +876,7 @@ export default function CampanhaWizard({
                                     }}
                                     options={(w.filteredClientes || []).map((c: any) => ({
                                         value: String(c.id),
-                                        label: c.nome_fantasia || c.razao_social,
+                                        label: c.nome_fantasia || c.razao_social || `Cliente #${c.id}`,
                                     }))}
                                     value={
                                         w.form.cliente_id
