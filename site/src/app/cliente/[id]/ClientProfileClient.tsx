@@ -788,7 +788,7 @@ export default function ClientProfileClient() {
                                         </section>
                                     )}
 
-                                    {isPagante && (<section className="space-y-8 hidden lg:block">
+                                    {isPagante && client.enderecos?.length > 1 && (<section className="space-y-8 hidden lg:block">
                                         <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Onde nos Encontrar</h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {client.enderecos?.length > 0 ? client.enderecos.map((end: any, i: number) => (
@@ -1156,7 +1156,7 @@ export default function ClientProfileClient() {
                         )}
 
                         {/* Onde nos Encontrar (Mobile Only) */}
-                        {isPagante && (
+                        {isPagante && client.enderecos?.length > 1 && (
                             <section className="space-y-6 lg:hidden mt-8">
                                 <h3 className="text-xl font-black font-serif italic text-gray-900">Onde nos Encontrar</h3>
                                 <div className="space-y-4">

@@ -11,6 +11,8 @@ class EnderecoResource extends JsonResource
             'id'           => $this->id,
             'cliente_id'   => $this->cliente_id,
             'cep'          => $this->cep,
+            'nome_unidade' => $this->nome_unidade,
+            'telefone'     => $this->telefone,
             'estado'       => $this->estado,
             'cidade'       => $this->cidade,
             'bairro'       => $this->bairro,
