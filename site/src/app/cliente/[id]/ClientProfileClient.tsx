@@ -269,10 +269,10 @@ export default function ClientProfileClient() {
     };
 
     const allPhones = contactInfo ? [
-        { label: 'Tel. Principal', number: formatPhone(contactInfo.telefone_principal), flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal, obs: contactInfo.obs_telefone_principal },
-        { label: 'Tel. Secundário', number: formatPhone(contactInfo.telefone_secundario), flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario, obs: contactInfo.obs_telefone_secundario },
-        { label: 'Celular', number: formatPhone(contactInfo.celular), flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular, obs: contactInfo.obs_celular },
-        { label: 'Outro Telefone', number: formatPhone(contactInfo.telefone_outro), flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro, obs: contactInfo.obs_telefone_outro },
+        { label: 'Tel. Principal', number: formatPhone(contactInfo.telefone_principal), flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal && isPagante, obs: contactInfo.obs_telefone_principal },
+        { label: 'Tel. Secundário', number: formatPhone(contactInfo.telefone_secundario), flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario && isPagante, obs: contactInfo.obs_telefone_secundario },
+        { label: 'Celular', number: formatPhone(contactInfo.celular), flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular && isPagante, obs: contactInfo.obs_celular },
+        { label: 'Outro Telefone', number: formatPhone(contactInfo.telefone_outro), flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro && isPagante, obs: contactInfo.obs_telefone_outro },
     ].filter(p => p.number && p.flag && !p.hidden) : [];
 
     const primaryPhone = allPhones[0]?.number;
@@ -286,7 +286,7 @@ export default function ClientProfileClient() {
     if (!primaryWhatsApp) {
         primaryWhatsApp = allPhones.find(p => p.isWhatsApp)?.number || allPhones[0]?.number;
     }
-    const hasWhatsApp = !!primaryWhatsApp;
+    const hasWhatsApp = !!primaryWhatsApp && isPagante;
 
     const tabs = isPagante ? ['Sobre', 'Fotos'] : ['Sobre'];
     if (client.reviews?.length > 0 && isPagante) tabs.push('Avaliações');
@@ -712,7 +712,7 @@ export default function ClientProfileClient() {
                                         </section>
                                     )}
 
-                                    {client.redes_sociais?.length > 0 && (
+                                    {client.redes_sociais?.length > 0 && isPagante && (
                                         <section className="lg:hidden space-y-6">
                                             <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Redes Sociais</h2>
                                             <div className="flex flex-wrap gap-4">
@@ -788,7 +788,7 @@ export default function ClientProfileClient() {
                                         </section>
                                     )}
 
-                                    {isPagante && (<section className="space-y-8">
+                                    {isPagante && (<section className="space-y-8 hidden lg:block">
                                         <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Onde nos Encontrar</h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {client.enderecos?.length > 0 ? client.enderecos.map((end: any, i: number) => (
@@ -1153,6 +1153,99 @@ export default function ClientProfileClient() {
                                     })}
                                 </div>
                             </div>
+                        )}
+
+                        {/* Onde nos Encontrar (Mobile Only) */}
+                        {isPagante && (
+                            <section className="space-y-6 lg:hidden mt-8">
+                                <h3 className="text-xl font-black font-serif italic text-gray-900">Onde nos Encontrar</h3>
+                                <div className="space-y-4">
+                                    {client.enderecos?.length > 0 ? client.enderecos.map((end: any, i: number) => (
+                                        <div key={i} className="bg-white p-6 rounded-[2.5rem] border-2 border-gray-50 shadow-xl gummy-card group hover:border-brand-red/30 transition-all flex flex-col justify-between">
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-red-50 text-brand-red rounded-2xl flex items-center justify-center font-black">
+                                                            {i + 1}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-black text-gray-900 uppercase tracking-widest text-xs leading-tight">
+                                                                {end.nome_unidade || (i === 0 ? 'Matriz' : `Unidade ${i + 1}`)}
+                                                            </h4>
+                                                            <p className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{end.cidade} - {end.estado}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {!end.exibir_apenas_cidade ? (
+                                                    <p className="text-base text-gray-500 font-medium leading-relaxed">
+                                                        {end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
+                                                        {end.bairro} • {end.cep}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-base text-gray-400 font-medium italic mt-2">
+                                                        Endereço completo não exibido. Atendimento em {end.cidade} - {end.estado}.
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {isPagante && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                                                    {(i === 0 ? allPhones : [{ label: 'Telefone', number: end.telefone, isWhatsApp: false }]).map((p: any, idx: number) => (
+                                                        p.number && (
+                                                            <a 
+                                                                key={idx}
+                                                                href={`tel:${p.number.replace(/\D/g, '')}`}
+                                                                className={`col-span-full bg-green-50 hover:bg-green-100 py-2.5 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex flex-col items-center justify-center`}
+                                                            >
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    <Phone size={14} className="flex-shrink-0" /> 
+                                                                    <span className="text-center whitespace-nowrap">
+                                                                        {p.label}: <span>{p.number}</span>
+                                                                    </span>
+                                                                </div>
+                                                                {p.obs && (
+                                                                    <span className="text-[9px] text-green-600/70 font-semibold normal-case tracking-normal italic mt-0.5 leading-none">
+                                                                        ({p.obs})
+                                                                    </span>
+                                                                )}
+                                                            </a>
+                                                        )
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                                                {!end.exibir_apenas_cidade && (
+                                                    <a 
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
+                                                    >
+                                                        Google Maps
+                                                    </a>
+                                                )}
+                                                {(!end.exibir_apenas_cidade && isPagante) && (
+                                                    <a 
+                                                        href={`https://waze.com/ul?q=${encodeURIComponent(`${end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="md:hidden bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
+                                                    >
+                                                        Waze
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-100 rounded-[3rem]">
+                                            <MapPin size={32} className="mb-3 opacity-20" />
+                                            <p className="font-bold italic">Nenhum endereço cadastrado</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
                         )}
                     </aside>
                 </div>

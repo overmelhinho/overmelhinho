@@ -188,7 +188,8 @@ function formatContato(c: ClienteLite) {
   return parts.join(" • ") || "—";
 }
 
-function statusLabel(s?: StatusAssinatura | null) {
+function statusLabel(s?: StatusAssinatura | null, tipo?: string | null) {
+  if (tipo === "gratuito") return "Ativa";
   const v = (s || "").toString().toLowerCase();
   if (!v) return "—";
   const map: Record<string, string> = {
@@ -201,7 +202,8 @@ function statusLabel(s?: StatusAssinatura | null) {
   return map[v] || v;
 }
 
-function statusChipClass(s?: StatusAssinatura | null) {
+function statusChipClass(s?: StatusAssinatura | null, tipo?: string | null) {
+  if (tipo === "gratuito") return "bg-green-50 text-green-700 border-green-200";
   const v = (s || "").toString().toLowerCase();
   if (v === "ativa") return "bg-green-50 text-green-700 border-green-200";
   if (v === "pendente") return "bg-yellow-50 text-yellow-800 border-yellow-200";
@@ -343,7 +345,8 @@ export default function ClientesList() {
       cancelada: 0,
     };
     for (const c of clientesRaw) {
-      const v = (c.status_assinatura || "").toString().toLowerCase();
+      const isGratuito = c.tipo_cliente === "gratuito";
+      const v = isGratuito ? "ativa" : (c.status_assinatura || "").toString().toLowerCase();
       if (v === "ativa") s.ativa += 1;
       else if (v === "pendente") s.pendente += 1;
       else if (v === "atrasada") s.atrasada += 1;
@@ -616,10 +619,11 @@ export default function ClientesList() {
                       <td className="px-2 py-3">
                         <span
                           className={`inline-flex items-center px-2 py-1 rounded-full border text-[10px] ${statusChipClass(
-                            c.status_assinatura
+                            c.status_assinatura,
+                            c.tipo_cliente
                           )}`}
                         >
-                          {statusLabel(c.status_assinatura)}
+                          {statusLabel(c.status_assinatura, c.tipo_cliente)}
                         </span>
                       </td>
 

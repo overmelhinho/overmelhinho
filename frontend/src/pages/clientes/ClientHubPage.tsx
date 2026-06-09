@@ -196,7 +196,7 @@ export default function ClientHubPage() {
                                     </div>
                                 )}
                                 <div className="absolute -bottom-2 -right-2">
-                                    <StatusBadge status={cliente?.status_assinatura ?? "inativo"} />
+                                    <StatusBadge status={cliente?.tipo_cliente === 'gratuito' ? 'ativo' : (cliente?.status_assinatura ?? "inativo")} />
                                 </div>
                             </div>
 

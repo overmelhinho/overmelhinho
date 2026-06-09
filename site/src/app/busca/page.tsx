@@ -504,7 +504,7 @@ function SearchContent() {
                             <motion.section
                                 initial={{ opacity: 0, y: -20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className={`relative group ${topBanner.link ? 'cursor-pointer' : 'cursor-default'}`}
+                                className={`relative group ${topBanner.link ? 'cursor-pointer' : 'cursor-default'} lg:max-w-[85%] lg:mx-auto`}
                                 onClick={() => {
                                     if (topBanner.link) {
                                         trackAd(topBanner.id, 'click', topBanner.isInstitutional ? 'INSTITUTIONAL_TOP' : 'SEARCH_RESULT');
@@ -515,7 +515,7 @@ function SearchContent() {
                                 <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden transition-transform duration-700 ${topBanner.link ? 'group-hover:scale-[1.01]' : ''}`}>
                                     <img 
                                         src={topBanner.image} 
-                                        className="w-full h-auto max-h-[300px] object-cover" 
+                                        className="w-full h-auto max-h-[300px] lg:max-h-[240px] object-cover" 
                                         alt={topBanner.title} 
                                     />
                                     {/* Link Indicator (Optional but subtle) */}

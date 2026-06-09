@@ -115,17 +115,7 @@ class FinancialController extends Controller
                 $query->where('due_date', '<=', $request->date_end);
             }
             if ($request->filled('q')) {
-                $search = $request->q;
-                $query->whereHas('client', function($q) use ($search) {
-                    $q->where('nome_fantasia', 'ilike', "%{$search}%")
-                      ->orWhere('cpf_cnpj', 'like', "%{$search}%");
-                });
-                if (is_numeric($search)) {
-                    $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
-                    if ($authId) {
-                        $query->orWhere('group_id', 'autorizacao-' . $authId);
-                    }
-                }
+                $query->search($request->q);
             }
             return $query;
         };
@@ -190,17 +180,7 @@ class FinancialController extends Controller
             ->where('due_date', '>=', $sixMonthsAgo);
             
         if ($request->filled('q')) {
-            $search = $request->q;
-            $recentPaidInvoicesQuery->whereHas('client', function($q) use ($search) {
-                $q->where('nome_fantasia', 'ilike', "%{$search}%")
-                  ->orWhere('cpf_cnpj', 'like', "%{$search}%");
-            });
-            if (is_numeric($search)) {
-                $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
-                if ($authId) {
-                    $recentPaidInvoicesQuery->orWhere('group_id', 'autorizacao-' . $authId);
-                }
-            }
+            $recentPaidInvoicesQuery->search($request->q);
         }
         $recentPaidInvoicesQuery->groupByRaw('to_char(due_date, \'MM/YY\'), to_char(due_date, \'YYYY-MM\')')
             ->orderByRaw('to_char(due_date, \'YYYY-MM\') asc');
@@ -221,17 +201,7 @@ class FinancialController extends Controller
             ->where('due_date', '>=', $fourQuartersAgo);
             
         if ($request->filled('q')) {
-            $search = $request->q;
-            $quarterlyInvoicesQuery->whereHas('client', function($q) use ($search) {
-                $q->where('nome_fantasia', 'ilike', "%{$search}%")
-                  ->orWhere('cpf_cnpj', 'like', "%{$search}%");
-            });
-            if (is_numeric($search)) {
-                $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
-                if ($authId) {
-                    $quarterlyInvoicesQuery->orWhere('group_id', 'autorizacao-' . $authId);
-                }
-            }
+            $quarterlyInvoicesQuery->search($request->q);
         }
         
         $quarterlyInvoicesQuery->groupByRaw('extract(year from due_date), extract(quarter from due_date)')
@@ -445,34 +415,7 @@ class FinancialController extends Controller
         }
 
         if ($request->filled('q')) {
-            $search = $request->q;
-
-            static $unaccentExists = null;
-            if ($unaccentExists === null) {
-                try {
-                    \Illuminate\Support\Facades\DB::select("SELECT unaccent('a')");
-                    $unaccentExists = true;
-                } catch (\Exception $e) {
-                    $unaccentExists = false;
-                }
-            }
-
-            $query->whereHas('client', function($q) use ($search, $unaccentExists) {
-                if ($unaccentExists) {
-                    $q->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$search}%"])
-                      ->orWhere('cpf_cnpj', 'like', "%{$search}%");
-                } else {
-                    $q->where('nome_fantasia', 'ilike', "%{$search}%")
-                      ->orWhere('cpf_cnpj', 'like', "%{$search}%");
-                }
-            });
-            // Also search by autorizacao_numero via group_id
-            if (is_numeric($search)) {
-                $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
-                if ($authId) {
-                    $query->orWhere('group_id', 'autorizacao-' . $authId);
-                }
-            }
+            $query->search($request->q);
         }
 
         $invoices = $query->orderBy('due_date', 'asc')

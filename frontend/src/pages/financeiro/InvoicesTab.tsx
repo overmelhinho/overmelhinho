@@ -73,7 +73,9 @@ interface Invoice {
         whatsapp?: string;
         contatos?: Array<{
             telefone_principal?: string;
+            telefone_secundario?: string;
             celular?: string;
+            telefone_outro?: string;
             email_principal?: string;
             email_cobranca?: string;
             nome_contato?: string;
@@ -359,24 +361,46 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
         if (searchTerm) {
             const isNumeric = /^\d+$/.test(searchTerm.trim());
             
+            // 1. Busca por Autorização (match exato ou com padding de zeros)
+            const padded = searchTerm.trim().padStart(5, '0');
+            const matchesAutorizacao = 
+                invoice.autorizacao_numero === searchTerm.trim() ||
+                invoice.autorizacao_numero === padded;
+
+            // 2. Busca por CNPJ (se tiver 8+ dígitos)
+            const cleanSearch = searchTerm.trim();
+            const matchesCnpj = cleanSearch.length >= 8 && invoice.client.cpf_cnpj?.includes(cleanSearch);
+
+            // 3. Busca por Nome
+            const matchesName = normalizeText(invoice.client.nome_fantasia).includes(searchNorm) ||
+                normalizeText(invoice.client.razao_social || '').includes(searchNorm);
+
+            // 4. Busca por Telefone (compara apenas os dígitos para ignorar parênteses, traços, etc.)
+            let matchesPhone = false;
+            const digitsSearch = searchTerm.replace(/\D/g, "");
+            if (digitsSearch) {
+                const checkPhone = (p?: string) => {
+                    if (!p) return false;
+                    return p.replace(/\D/g, "").includes(digitsSearch);
+                };
+
+                const whatsappMatch = checkPhone(invoice.client.whatsapp);
+                const contatosMatch = invoice.client.contatos?.some(c => 
+                    checkPhone(c.telefone_principal) ||
+                    checkPhone(c.telefone_secundario) ||
+                    checkPhone(c.celular) ||
+                    checkPhone(c.telefone_outro)
+                ) || false;
+
+                matchesPhone = whatsappMatch || contatosMatch;
+            }
+
             if (isNumeric) {
-                // Busca numérica: prioriza AUTORIZAÇÃO (match exato ou com padding)
-                const padded = searchTerm.trim().padStart(5, '0');
-                const matchesAutorizacao = 
-                    invoice.autorizacao_numero === searchTerm.trim() ||
-                    invoice.autorizacao_numero === padded;
-                
-                if (matchesAutorizacao) {
-                    matchesSearch = true;
-                } else {
-                    // Só busca no CNPJ se o termo tiver 8+ dígitos (evita falso positivo de autorização curta)
-                    const matchesCnpj = searchTerm.trim().length >= 8 && invoice.client.cpf_cnpj?.includes(searchTerm.trim());
-                    matchesSearch = !!matchesCnpj;
-                }
+                // Se for numérico: prioriza Autorização, depois CNPJ, depois Telefone
+                matchesSearch = matchesAutorizacao || matchesCnpj || matchesPhone;
             } else {
-                // Busca textual: nome do cliente
-                matchesSearch = normalizeText(invoice.client.nome_fantasia).includes(searchNorm) ||
-                    normalizeText(invoice.client.razao_social || '').includes(searchNorm);
+                // Se não for numérico: Nome do cliente ou Telefone (ex: com formatação "(54) 98118-8149" ou "98118-8149")
+                matchesSearch = matchesName || matchesPhone;
             }
         }
 
