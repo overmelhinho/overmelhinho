@@ -225,6 +225,25 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
         }
     };
 
+    const handleBulkPrintReceipts = async () => {
+        if (selectedInvoices.length === 0) return;
+        try {
+            const loadingToast = toast.loading("Gerando recibos para impressão...");
+            const response = await axios.post(`/v1/financial/invoices/print-receipts`, {
+                ids: selectedInvoices
+            }, {
+                responseType: 'blob'
+            });
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast.success("Recibos gerados com sucesso!", { id: loadingToast });
+            setSelectedInvoices([]);
+        } catch (error) {
+            toast.error("Erro ao gerar recibos para impressão.");
+        }
+    };
+
     const handleSync = async () => {
         setIsSyncing(true);
         try {
@@ -600,8 +619,15 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                         onClick={handleBulkDownloadReceipts}
                         className="flex items-center gap-2 px-3 py-1.5 bg-white text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors font-bold text-[10px] uppercase border border-emerald-100 shadow-sm"
                     >
+                        <Download size={14} />
+                        Baixar Recibos
+                    </button>
+                    <button
+                        onClick={handleBulkPrintReceipts}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white text-violet-600 rounded-lg hover:bg-violet-50 transition-colors font-bold text-[10px] uppercase border border-violet-100 shadow-sm"
+                    >
                         <Printer size={14} />
-                        Recibos
+                        Imprimir
                     </button>
                     <button
                         onClick={handleBulkMarkAsPaid}

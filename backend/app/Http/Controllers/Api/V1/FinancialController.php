@@ -1064,6 +1064,61 @@ class FinancialController extends Controller
     }
 
     /**
+     * Gerar PDF consolidado para impressão em lote
+     */
+    public function printReceiptsBatch(Request $request)
+    {
+        $ids = $request->input('ids');
+        if (!$ids || !is_array($ids)) {
+            return response()->json(['message' => 'Nenhuma fatura selecionada.'], 422);
+        }
+
+        $invoices = Invoice::with(['client', 'plan'])
+            ->whereIn('id', $ids)
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return response()->json(['message' => 'Faturas não encontradas.'], 404);
+        }
+
+        // Carregar Logo em Base64 para o PDF
+        $logoPath = public_path('logo-contract.png');
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoData = base64_encode(file_get_contents($logoPath));
+            $logoBase64 = 'data:image/png;base64,' . $logoData;
+        }
+
+        $items = [];
+        foreach ($invoices as $invoice) {
+            // Buscar número da autorização se existir no group_id
+            $authNumero = null;
+            if (str_starts_with($invoice->group_id ?? '', 'autorizacao-')) {
+                $authId = (int) str_replace('autorizacao-', '', $invoice->group_id);
+                $authNumero = \App\Models\Autorizacao::where('id', $authId)->value('numero');
+            }
+
+            $payableAmount = $invoice->payable_amount ?? $invoice->amount;
+            $payableAmount_extenso = $this->valorPorExtenso($payableAmount);
+
+            $items[] = [
+                'invoice' => $invoice,
+                'client' => $invoice->client,
+                'authNumero' => $authNumero ? str_pad($authNumero, 5, '0', STR_PAD_LEFT) : null,
+                'emissaoDate' => \Carbon\Carbon::now()->format('d/m/Y'),
+                'payableAmount_extenso' => $payableAmount_extenso,
+                'logoBase64' => $logoBase64
+            ];
+        }
+
+        $pdf = Pdf::loadView('reports.receipts_print', ['items' => $items])
+            ->setPaper('a4', 'portrait')
+            ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
+
+        return $pdf->stream('Recibos_Selecionados.pdf');
+    }
+
+    /**
      * Sincroniza as faturas pendentes com o Tiny ERP (assíncrono)
      */
     public function syncInvoices()

@@ -4,18 +4,16 @@
     <meta charset="UTF-8">
     <title>Recibo Financeiro - O Vermelhinho</title>
     <style>
-        @page { size: a4 portrait; margin: 0; }
+        @page { size: a5 landscape; margin: 0; }
         body { font-family: 'Helvetica', 'Arial', sans-serif; margin: 0; padding: 0; background: #fff; color: #333; }
         
-        /* Container A6 (1/4 da A4) */
+        /* Container A5 Landscape (210mm x 148mm) */
         .receipt-container { 
-            width: 148mm; 
-            height: 105mm; 
-            padding: 5mm; 
-            box-sizing: border-box; 
-            position: relative;
-            border-right: 1px dashed #ddd;
-            border-bottom: 1px dashed #ddd;
+            width: 194mm; 
+            height: 132mm; 
+            position: absolute;
+            top: 8mm;
+            left: 8mm;
         }
 
         table { width: 100%; border-collapse: collapse; margin-bottom: 5pt; }
@@ -41,18 +39,18 @@
         .legal-text { font-size: 7pt; line-height: 1.3; text-align: justify; margin-bottom: 8pt; color: #444; }
         
         /* Rodapé com Assinaturas */
-        .signature-area { margin-top: 30pt; }
+        .signature-area { margin-top: 15pt; }
         .sig-box { border-top: 0.5pt solid #000; font-size: 6.5pt; text-align: center; padding-top: 5pt; width: 45%; }
         .date-box { font-size: 6.5pt; text-align: center; padding-top: 5pt; width: 45%; }
 
         /* Canhoto Destacável (Bottom) */
         .canhoto { 
             position: absolute; 
-            bottom: 5mm; 
-            left: 5mm; 
-            right: 5mm; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
             border-top: 1pt dashed #ccc; 
-            padding-top: 15pt; 
+            padding-top: 10pt; 
             font-size: 7.5pt; 
         }
 
