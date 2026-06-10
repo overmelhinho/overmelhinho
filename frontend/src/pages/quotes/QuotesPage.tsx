@@ -372,7 +372,7 @@ export default function QuotesPage() {
                                         {getStatusBadge(quote.status)}
                                     </td>
                                     <td className="px-8 py-6 text-center">
-                                        {quote.status === 'new' ? (
+                                         {quote.status === 'new' || quote.status === 'replied' ? (
                                             (() => {
                                                 const contatos = quote.cliente.contatos || [];
                                                 const contactWithPhone = contatos.find(c => c.celular || c.telefone_principal);
