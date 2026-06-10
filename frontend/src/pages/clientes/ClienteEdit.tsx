@@ -513,7 +513,7 @@ export default function ClienteEdit() {
                 });
               } catch (e) {
                 console.error("Falha commit banner:", e);
-                toast.error("Alterações salvas, mas falhou ao publicar o banner.");
+                toast.error("Alterações salvas, mas falhou ao publicar a capa.");
               }
             }
 

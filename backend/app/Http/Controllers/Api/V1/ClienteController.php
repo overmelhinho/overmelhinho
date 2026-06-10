@@ -28,7 +28,7 @@ class ClienteController extends Controller
         return Cliente::query()
             ->select(['id', 'slug', 'updated_at'])
             ->where(function ($sub) {
-                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente'])
+                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
                     ->orWhere('tipo_cliente', 'gratuito');
             })
             ->where('exibir_no_site', 'true')
@@ -58,7 +58,7 @@ class ClienteController extends Controller
         $query = Cliente::query()
             ->where('exibir_no_site', 'true')
             ->where(function($sub) {
-                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido'])
+                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido', 'inadimplente'])
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
@@ -421,7 +421,7 @@ class ClienteController extends Controller
                 }
             })
             ->where('exibir_no_site', 'true')
-            ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido'])->orWhere('tipo_cliente', 'gratuito'))
+            ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido', 'inadimplente'])->orWhere('tipo_cliente', 'gratuito'))
             ->with(['segmentos', 'enderecos', 'cidadesAtendidas'])
             ->when($cityId, function($sq) use ($cityId) {
                 $sq->where(function($sub) use ($cityId) {
@@ -436,7 +436,7 @@ class ClienteController extends Controller
             ->orderByRaw("
                 CASE 
                     WHEN nome_fantasia ilike ? THEN 0
-                    WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 1
+                    WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
                     ELSE 2
                 END ASC
             ", [$q])
@@ -461,7 +461,7 @@ class ClienteController extends Controller
 
         return response()->json([
             'results' => $clientes->map(function($c) use ($cityId) {
-                $isPagante = ($c->tipo_cliente === 'pagante' && in_array($c->status_assinatura, ['ativa', 'ativo']));
+                $isPagante = ($c->tipo_cliente === 'pagante' && in_array($c->status_assinatura, ['ativa', 'ativo', 'inadimplente']));
                 
                 // Gerar SEO URL
                 $seoUrl = null;
@@ -590,7 +590,7 @@ class ClienteController extends Controller
         }
 
         if ($statusAss !== '') {
-            $allowed = ['ativa', 'ativo', 'pendente', 'vencida', 'vencido', 'cancelada', 'cancelado'];
+            $allowed = ['ativa', 'ativo', 'pendente', 'vencida', 'vencido', 'cancelada', 'cancelado', 'inadimplente'];
             if ($statusAss === 'atrasada') {
                 $statusAss = 'vencida';
             }
@@ -817,7 +817,7 @@ class ClienteController extends Controller
             ->where('id', '!=', $cliente->id)
             ->where('exibir_no_site', 'true')
             ->where('tipo_cliente', 'pagante')
-            ->whereIn('status_assinatura', ['ativa', 'ativo'])
+            ->whereIn('status_assinatura', ['ativa', 'ativo', 'inadimplente'])
             ->whereDoesntHave('segmentos', function($q) {
                 $q->whereIn('segmentos.slug', [
                     'acompanhantes',
@@ -1170,7 +1170,7 @@ public function historico(Request $request, int $id)
 
             // ✅ se não vier status_assinatura, define padrão conforme tipo_cliente
             $statusAssinatura = $validated['status_assinatura'] ?? (
-                $tipoCliente === 'pagante' ? 'pendente' : 'cancelada'
+                $tipoCliente === 'pagante' ? 'pendente' : 'ativa'
             );
 
             $seoSource = $generate ? 'ai' : 'manual';
@@ -1651,9 +1651,15 @@ public function historico(Request $request, int $id)
 
             $tipoCliente = $validated['tipo_cliente'] ?? ($cliente->tipo_cliente ?? 'gratuito');
 
-            // se não vier status_assinatura, mantém atual; se não existir, define default
-            $statusAssinatura = $validated['status_assinatura']
-                ?? ($cliente->status_assinatura ?? ($tipoCliente === 'pagante' ? 'pendente' : 'cancelada'));
+            // se não vier status_assinatura, define com base no tipo_cliente (gratuito recebe 'ativa' para evitar re-promoção automática)
+            $statusAssinatura = $validated['status_assinatura'] ?? null;
+            if (is_null($statusAssinatura)) {
+                if ($tipoCliente === 'gratuito') {
+                    $statusAssinatura = 'ativa';
+                } else {
+                    $statusAssinatura = $cliente->status_assinatura ?? 'pendente';
+                }
+            }
 
             $seoSource = $generate ? 'generated' : 'manual';
 

@@ -165,9 +165,9 @@ export default function TabMidia() {
       const uploaded = data.files[0];
       setFieldValue("banner", uploaded.public_url);
       setFieldValue("banner_path", uploaded.path || null);
-      toast.success("Banner enviado!");
+      toast.success("Capa enviada!");
     } catch (error) {
-      toast.error("Falha ao enviar banner.");
+      toast.error("Falha ao enviar capa.");
     } finally {
       setUploading(false);
       setProgress(0);
@@ -177,10 +177,10 @@ export default function TabMidia() {
 
   return (
     <div className="space-y-8">
-      {/* 🖼️ BANNER SECTION */}
+      {/* 🖼️ CAPA SECTION */}
       <section className="p-6 bg-red-50/30 rounded-2xl border border-red-100">
         <h3 className="text-lg font-semibold text-[#B70F0A] flex items-center gap-2 mb-2">
-          <Upload className="w-5 h-5 text-[#B70F0A]" /> Banner da Empresa
+          <Upload className="w-5 h-5 text-[#B70F0A]" /> Capa
         </h3>
         
         <div className="grid md:grid-cols-2 gap-6 items-start">
@@ -210,7 +210,7 @@ export default function TabMidia() {
                 htmlFor="bannerUpload"
                 className="cursor-pointer flex items-center gap-2 bg-[#B70F0A] text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50"
               >
-                <Upload className="w-4 h-4" /> Enviar Banner
+                <Upload className="w-4 h-4" /> Enviar Capa
               </label>
 
               {values.banner && (
@@ -229,14 +229,14 @@ export default function TabMidia() {
           </div>
 
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Prévia do Banner</span>
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Prévia da Capa</span>
             <div className="aspect-[3/1] bg-gray-100 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center relative group">
               {values.banner ? (
-                <img src={values.banner} alt="Banner Preview" className="w-full h-full object-cover" />
+                <img src={values.banner} alt="Capa Preview" className="w-full h-full object-cover" />
               ) : (
                 <div className="text-center p-4">
                   <Eye className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-xs text-gray-400">Nenhum banner selecionado</p>
+                  <p className="text-xs text-gray-400">Nenhuma capa selecionada</p>
                 </div>
               )}
               {uploading && (

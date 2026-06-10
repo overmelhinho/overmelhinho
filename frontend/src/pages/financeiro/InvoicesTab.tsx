@@ -23,11 +23,13 @@ import {
     Mail,
     User,
     ChevronDown,
+    ChevronUp,
     RefreshCw,
     Pencil,
     Landmark,
     Info,
     Printer,
+    Filter,
 } from "lucide-react";
 import { format, isBefore, startOfDay, subDays, isAfter, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -54,6 +56,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DateRangePicker } from "@/components/reports/DateRangePicker";
+import { useCidades } from "@/hooks/useCidades";
 
 interface Invoice {
     id: number;
@@ -127,6 +131,58 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     const dateRange = searchParams.get("dateRange") || "all";
     const customStartDate = searchParams.get("start") || "";
     const customEndDate = searchParams.get("end") || "";
+
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+    // Advanced Filters Local States
+    const [planId, setPlanId] = useState("all");
+    const [vendedorId, setVendedorId] = useState("all");
+    const [collectionTypes, setCollectionTypes] = useState<string[]>([]);
+    const [termo, setTermo] = useState("");
+    const [tipoPfPj, setTipoPfPj] = useState("all");
+    const [cidade, setCidade] = useState("all");
+    const [bairro, setBairro] = useState("");
+    const [telefone, setTelefone] = useState("");
+    const [numeroAutorizacaoDe, setNumeroAutorizacaoDe] = useState("");
+    const [numeroAutorizacaoAte, setNumeroAutorizacaoAte] = useState("");
+    const [dataCadInicial, setDataCadInicial] = useState("");
+    const [dataCadFinal, setDataCadFinal] = useState("");
+    const [tipoPublicidade, setTipoPublicidade] = useState("all");
+
+    // Applied Advanced Filters (to trigger search only on button click/clear)
+    const [appliedFilters, setAppliedFilters] = useState<any>({
+        planId: "all",
+        vendedorId: "all",
+        collectionTypes: [],
+        termo: "",
+        tipoPfPj: "all",
+        cidade: "all",
+        bairro: "",
+        telefone: "",
+        numeroAutorizacaoDe: "",
+        numeroAutorizacaoAte: "",
+        dataCadInicial: "",
+        dataCadFinal: "",
+        tipoPublicidade: "all",
+    });
+
+    const { data: plans } = useQuery({
+        queryKey: ["plans"],
+        queryFn: async () => {
+            const resp = await axios.get("/v1/plans");
+            return resp.data;
+        }
+    });
+
+    const { data: vendedores } = useQuery({
+        queryKey: ["comerciais"],
+        queryFn: async () => {
+            const resp = await axios.get("/v1/comerciais");
+            return resp.data;
+        }
+    });
+
+    const { data: cidadesList } = useCidades();
 
     const updateFilter = (key: string, value: string) => {
         setSearchParams(prev => {
@@ -336,12 +392,32 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                 if (customStartDate) params.date_start = customStartDate;
                 if (customEndDate) params.date_end = customEndDate;
             }
+
+            // Advanced filters mapped to stats request
+            if (appliedFilters.planId !== "all") params.plan_id = appliedFilters.planId;
+            if (appliedFilters.vendedorId !== "all") params.vendedor_id = appliedFilters.vendedorId;
+            if (appliedFilters.collectionTypes.length > 0) {
+                params.collection_type = appliedFilters.collectionTypes.join(",");
+            }
+            if (appliedFilters.termo) params.termo = appliedFilters.termo;
+            if (appliedFilters.tipoPfPj !== "all") params.tipo_pf_pj = appliedFilters.tipoPfPj;
+            if (appliedFilters.cidade !== "all") params.cidade = appliedFilters.cidade;
+            if (appliedFilters.bairro) params.bairro = appliedFilters.bairro;
+            if (appliedFilters.telefone) params.telefone = appliedFilters.telefone;
+            if (appliedFilters.numeroAutorizacaoDe) params.numero_autorizacao_de = appliedFilters.numeroAutorizacaoDe;
+            if (appliedFilters.numeroAutorizacaoAte) params.numero_autorizacao_ate = appliedFilters.numeroAutorizacaoAte;
+            if (appliedFilters.dataCadInicial && appliedFilters.dataCadFinal) {
+                params.data_cad_inicial = appliedFilters.dataCadInicial;
+                params.data_cad_final = appliedFilters.dataCadFinal;
+            }
+            if (appliedFilters.tipoPublicidade !== "all") params.tipo_publicidade = appliedFilters.tipoPublicidade;
+
             onFiltersChange(params);
         }
-    }, [statusFilter, searchTerm, dateRange, customStartDate, customEndDate, syncFilter]);
+    }, [statusFilter, searchTerm, dateRange, customStartDate, customEndDate, syncFilter, appliedFilters]);
 
     const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
-        queryKey: ["financial-invoices", statusFilter, searchTerm, dateRange, customStartDate, customEndDate],
+        queryKey: ["financial-invoices", statusFilter, searchTerm, dateRange, customStartDate, customEndDate, appliedFilters],
         queryFn: async () => {
             const params: any = {};
             if (statusFilter !== "all") params.status = statusFilter;
@@ -361,6 +437,25 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                 if (customStartDate) params.date_start = customStartDate;
                 if (customEndDate) params.date_end = customEndDate;
             }
+
+            // Advanced filters mapped to list request
+            if (appliedFilters.planId !== "all") params.plan_id = appliedFilters.planId;
+            if (appliedFilters.vendedorId !== "all") params.vendedor_id = appliedFilters.vendedorId;
+            if (appliedFilters.collectionTypes.length > 0) {
+                params.collection_type = appliedFilters.collectionTypes.join(",");
+            }
+            if (appliedFilters.termo) params.termo = appliedFilters.termo;
+            if (appliedFilters.tipoPfPj !== "all") params.tipo_pf_pj = appliedFilters.tipoPfPj;
+            if (appliedFilters.cidade !== "all") params.cidade = appliedFilters.cidade;
+            if (appliedFilters.bairro) params.bairro = appliedFilters.bairro;
+            if (appliedFilters.telefone) params.telefone = appliedFilters.telefone;
+            if (appliedFilters.numeroAutorizacaoDe) params.numero_autorizacao_de = appliedFilters.numeroAutorizacaoDe;
+            if (appliedFilters.numeroAutorizacaoAte) params.numero_autorizacao_ate = appliedFilters.numeroAutorizacaoAte;
+            if (appliedFilters.dataCadInicial && appliedFilters.dataCadFinal) {
+                params.data_cad_inicial = appliedFilters.dataCadInicial;
+                params.data_cad_final = appliedFilters.dataCadFinal;
+            }
+            if (appliedFilters.tipoPublicidade !== "all") params.tipo_publicidade = appliedFilters.tipoPublicidade;
 
             const response = await axios.get("/v1/financial/invoices", { params });
             return response.data;
@@ -613,6 +708,19 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                         {isResending ? "Reenviando..." : "Reenviar ao Tiny"}
                     </Button>
 
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAdvancedFilters(prev => !prev)}
+                        className={cn(
+                            "h-9 border-gray-200 rounded-xl px-4 text-xs font-bold gap-2 hover:bg-gray-50 bg-white",
+                            showAdvancedFilters && "border-red-300 bg-red-50 text-red-700 hover:bg-red-50"
+                        )}
+                    >
+                        <Filter size={14} />
+                        {showAdvancedFilters ? "Ocultar Filtros" : "Filtros Avançados"}
+                    </Button>
+
                     {dateRange === "custom" && (
                         <div className="flex items-center gap-2 animate-in slide-in-from-right-2 duration-300">
                             <input
@@ -632,6 +740,293 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                     )}
                 </div>
             </div>
+
+            {showAdvancedFilters && (
+                <div className="p-6 border border-gray-150 shadow-sm rounded-2xl bg-white space-y-4 animate-in fade-in slide-in-from-top-2 duration-250">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <div className="flex items-center gap-2">
+                            <Filter size={16} className="text-[#B70F0A]" />
+                            <h4 className="text-xs font-black uppercase tracking-widest text-gray-900">Filtros Avançados do Financeiro</h4>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setPlanId("all");
+                                setVendedorId("all");
+                                setCollectionTypes([]);
+                                setTermo("");
+                                setTipoPfPj("all");
+                                setCidade("all");
+                                setBairro("");
+                                setTelefone("");
+                                setNumeroAutorizacaoDe("");
+                                setNumeroAutorizacaoAte("");
+                                setDataCadInicial("");
+                                setDataCadFinal("");
+                                setTipoPublicidade("all");
+                                setAppliedFilters({
+                                    planId: "all",
+                                    vendedorId: "all",
+                                    collectionTypes: [],
+                                    termo: "",
+                                    tipoPfPj: "all",
+                                    cidade: "all",
+                                    bairro: "",
+                                    telefone: "",
+                                    numeroAutorizacaoDe: "",
+                                    numeroAutorizacaoAte: "",
+                                    dataCadInicial: "",
+                                    dataCadFinal: "",
+                                    tipoPublicidade: "all",
+                                });
+                            }}
+                            className="text-[10px] font-black text-[#B70F0A] hover:underline uppercase tracking-wider"
+                        >
+                            Limpar Filtros
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                        {/* Nº Autorização (Faixa) */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Nº Autorização (Faixa)</label>
+                            <div className="flex items-center gap-1.5">
+                                <Input 
+                                    placeholder="De" 
+                                    className="rounded-xl border-gray-150 bg-gray-50/50 h-10 text-xs text-center font-semibold"
+                                    value={numeroAutorizacaoDe}
+                                    onChange={e => setNumeroAutorizacaoDe(e.target.value)}
+                                />
+                                <span className="text-gray-300 text-[10px] font-black uppercase">a</span>
+                                <Input 
+                                    placeholder="Até" 
+                                    className="rounded-xl border-gray-150 bg-gray-50/50 h-10 text-xs text-center font-semibold"
+                                    value={numeroAutorizacaoAte}
+                                    onChange={e => setNumeroAutorizacaoAte(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Tipo de Produto */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipo de Produto</label>
+                            <Select value={planId} onValueChange={setPlanId}>
+                                <SelectTrigger className="rounded-xl border-gray-150 bg-gray-50/50 h-10">
+                                    <SelectValue placeholder="Todos os Planos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Planos</SelectItem>
+                                    {plans?.map((p: any) => (
+                                        <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Vendedor */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Vendedor</label>
+                            <Select value={vendedorId} onValueChange={setVendedorId}>
+                                <SelectTrigger className="rounded-xl border-gray-150 bg-gray-50/50 h-10">
+                                    <SelectValue placeholder="Todos os Vendedores" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Vendedores</SelectItem>
+                                    {vendedores?.map((v: any) => (
+                                        <SelectItem key={v.id} value={v.id.toString()}>{v.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Cobrança / Pagamento */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cobrança / Pagamento</label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-between rounded-xl border-gray-150 bg-gray-50/50 h-10 px-3 text-left font-normal text-xs hover:bg-gray-50/50 hover:border-gray-250 transition-all shadow-none"
+                                    >
+                                        <span className="truncate text-gray-700 font-bold">
+                                            {collectionTypes.length === 0
+                                                ? "Todos os tipos"
+                                                : collectionTypes.length === 1
+                                                ? [
+                                                    { value: "bank", label: "Boleto Bancário" },
+                                                    { value: "card", label: "Cartão de Crédito/Débito" },
+                                                    { value: "pix", label: "Pix / Transferência" },
+                                                    { value: "cash", label: "Cheque / Dinheiro" },
+                                                    { value: "permuta", label: "Permuta" },
+                                                    { value: "direct", label: "Faturamento Direto" }
+                                                  ].find(o => o.value === collectionTypes[0])?.label
+                                                : `${collectionTypes.length} selecionados`}
+                                        </span>
+                                        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[220px] p-2 bg-white rounded-xl shadow-md border border-gray-150 z-50 animate-in fade-in zoom-in-95 duration-100" align="start">
+                                    <div className="space-y-1">
+                                        {[
+                                            { value: "bank", label: "Boleto Bancário" },
+                                            { value: "card", label: "Cartão de Crédito/Débito" },
+                                            { value: "pix", label: "Pix / Transferência" },
+                                            { value: "cash", label: "Cheque / Dinheiro" },
+                                            { value: "permuta", label: "Permuta" },
+                                            { value: "direct", label: "Faturamento Direto" }
+                                        ].map((option) => {
+                                            const isSelected = collectionTypes.includes(option.value);
+                                            return (
+                                                <div
+                                                    key={option.value}
+                                                    onClick={() => {
+                                                        setCollectionTypes(prev =>
+                                                            prev.includes(option.value)
+                                                                ? prev.filter(v => v !== option.value)
+                                                                : [...prev, option.value]
+                                                        );
+                                                    }}
+                                                    className={cn(
+                                                        "flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-xs font-semibold hover:bg-red-50/50 hover:text-[#B70F0A] transition-all",
+                                                        isSelected && "bg-red-50 text-[#B70F0A]"
+                                                    )}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => {}} // handled by click
+                                                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 h-4 w-4 cursor-pointer"
+                                                    />
+                                                    <span>{option.label}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        {/* Tipo de Cliente */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipo de Cliente</label>
+                            <Select value={tipoPfPj} onValueChange={setTipoPfPj}>
+                                <SelectTrigger className="rounded-xl border-gray-150 bg-gray-50/50 h-10">
+                                    <SelectValue placeholder="PF / PJ" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Ambos</SelectItem>
+                                    <SelectItem value="pf">Pessoa Física</SelectItem>
+                                    <SelectItem value="pj">Pessoa Jurídica</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Tipo de Publicidade */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipo de Publicidade</label>
+                            <Select value={tipoPublicidade} onValueChange={setTipoPublicidade}>
+                                <SelectTrigger className="rounded-xl border-gray-150 bg-gray-50/50 h-10">
+                                    <SelectValue placeholder="WEB/Impressa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas</SelectItem>
+                                    <SelectItem value="WEB">WEB</SelectItem>
+                                    <SelectItem value="APP">APP</SelectItem>
+                                    <SelectItem value="IMPRESSO">Impressa</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Termo da Consulta */}
+                        <div className="space-y-2 lg:col-span-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Termo da Consulta (Nome/Razão/CNPJ)</label>
+                            <Input 
+                                placeholder="Buscar..." 
+                                className="rounded-xl border-gray-150 bg-gray-50/50 h-10"
+                                value={termo}
+                                onChange={e => setTermo(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Cidade */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Cidade</label>
+                            <Select value={cidade} onValueChange={setCidade}>
+                                <SelectTrigger className="rounded-xl border-gray-150 bg-gray-50/50 h-10">
+                                    <SelectValue placeholder="Todas as cidades" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas as cidades</SelectItem>
+                                    {cidadesList?.map((c) => (
+                                        <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Bairro */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Bairro</label>
+                            <Input 
+                                placeholder="Bairro" 
+                                className="rounded-xl border-gray-150 bg-gray-50/50 h-10"
+                                value={bairro}
+                                onChange={e => setBairro(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Telefone */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Telefone</label>
+                            <Input 
+                                placeholder="Ex: 54999..." 
+                                className="rounded-xl border-gray-150 bg-gray-50/50 h-10"
+                                value={telefone}
+                                onChange={e => setTelefone(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Data Emissão */}
+                        <div className="space-y-2 lg:col-span-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Data Emissão (Cad. Inicial/Final)</label>
+                            <DateRangePicker 
+                                startDate={dataCadInicial} 
+                                endDate={dataCadFinal} 
+                                onRangeChange={(start, end) => {
+                                    setDataCadInicial(start);
+                                    setDataCadFinal(end);
+                                }}
+                            />
+                        </div>
+
+                        {/* Botão Aplicar Filtros */}
+                        <div className="space-y-2 lg:col-span-2 flex items-end">
+                            <Button 
+                                onClick={() => {
+                                    setAppliedFilters({
+                                        planId,
+                                        vendedorId,
+                                        collectionTypes,
+                                        termo,
+                                        tipoPfPj,
+                                        cidade,
+                                        bairro,
+                                        telefone,
+                                        numeroAutorizacaoDe,
+                                        numeroAutorizacaoAte,
+                                        dataCadInicial,
+                                        dataCadFinal,
+                                        tipoPublicidade,
+                                    });
+                                }}
+                                className="w-full rounded-xl bg-gray-900 hover:bg-black text-white font-bold h-10 gap-2 shadow-sm"
+                            >
+                                <Search size={16} />
+                                Aplicar Filtros Avançados
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {selectedInvoices.length > 0 && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl mb-4 animate-in fade-in slide-in-from-top-2">

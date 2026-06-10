@@ -10,6 +10,8 @@ use App\Services\TinyErpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
+use App\Models\Autorizacao;
 
 class FinancialController extends Controller
 {
@@ -92,6 +94,185 @@ class FinancialController extends Controller
     }
 
     /**
+     * Aplicar filtros financeiros avançados
+     */
+    private function applyFinancialFilters($query, Request $request)
+    {
+        // 1. Status Filter
+        if ($request->filled('status') && $request->status !== 'all') {
+            if ($request->status === 'overdue') {
+                $query->where('status', 'pending')
+                      ->where('due_date', '<', now()->startOfDay());
+            } else {
+                $query->where('status', $request->status);
+            }
+        }
+
+        // 2. Vencimento: date_start / date_end (which translates to start_date / end_date)
+        if ($request->filled('date_start')) {
+            $query->where('due_date', '>=', $request->date_start);
+        }
+        if ($request->filled('date_end')) {
+            $query->where('due_date', '<=', $request->date_end);
+        }
+
+        // 3. Search query: q
+        if ($request->filled('q')) {
+            $query->search($request->q);
+        }
+
+        // --- Advanced Filters from salesReport ---
+
+        // 4. Emissão (Data Cad. Inicial/Final)
+        if ($request->filled('data_cad_inicial') && $request->filled('data_cad_final')) {
+            $query->whereBetween(DB::raw('DATE(created_at)'), [$request->data_cad_inicial, $request->data_cad_final]);
+        }
+
+        // 5. Termo (Nome/Razão Social/CNPJ)
+        if ($request->filled('termo')) {
+            $termo = mb_strtolower($request->termo);
+            $query->whereHas('client', function ($q) use ($termo) {
+                $q->where(function($sq) use ($termo) {
+                    $sq->whereRaw('LOWER(nome_fantasia) LIKE ?', ["%{$termo}%"])
+                      ->orWhereRaw('LOWER(razao_social) LIKE ?', ["%{$termo}%"])
+                      ->orWhereRaw('LOWER(cpf_cnpj) LIKE ?', ["%{$termo}%"]);
+                });
+            });
+        }
+
+        // 6. PF / PJ
+        if ($request->filled('tipo_pf_pj') && $request->tipo_pf_pj !== 'all') {
+            $query->whereHas('client', function ($q) use ($request) {
+                if ($request->tipo_pf_pj === 'pf') {
+                    $q->whereRaw('LENGTH(REGEXP_REPLACE(cpf_cnpj, \'[^0-9]\', \'\')) <= 11');
+                } else {
+                    $q->whereRaw('LENGTH(REGEXP_REPLACE(cpf_cnpj, \'[^0-9]\', \'\')) > 11');
+                }
+            });
+        }
+
+        // 7. Cidade / Bairro
+        if ($request->filled('cidade') || $request->filled('bairro')) {
+            $query->whereHas('client.enderecos', function ($q) use ($request) {
+                if ($request->filled('cidade') && $request->cidade !== 'all') {
+                    $q->where('cidade', 'like', '%' . $request->cidade . '%');
+                }
+                if ($request->filled('bairro')) {
+                    $q->where('bairro', 'like', '%' . $request->bairro . '%');
+                }
+            });
+        }
+
+        // 8. Telefone
+        if ($request->filled('telefone')) {
+            $query->whereHas('client.contatos', function ($q) use ($request) {
+                $q->where('telefone', 'like', '%' . $request->telefone . '%');
+            });
+        }
+
+        // 9. Autorizacao / Vendedor / Tipo Publicidade
+        $hasAuthFilter = $request->filled('numero_autorizacao') || 
+                        $request->filled('numero_autorizacao_de') ||
+                        $request->filled('numero_autorizacao_ate') ||
+                        ($request->filled('tipo_publicidade') && $request->tipo_publicidade !== 'all') ||
+                        ($request->filled('vendedor_id') && $request->vendedor_id !== 'all');
+
+        if ($hasAuthFilter) {
+            $authQuery = Autorizacao::query();
+            
+            if ($request->filled('numero_autorizacao_de') && $request->filled('numero_autorizacao_ate')) {
+                $de = (int)$request->numero_autorizacao_de;
+                $ate = (int)$request->numero_autorizacao_ate;
+                $authQuery->whereRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END BETWEEN ? AND ?", [$de, $ate]);
+            } elseif ($request->filled('numero_autorizacao_de')) {
+                $de = $request->numero_autorizacao_de;
+                $deClean = ltrim($de, '0');
+                $authQuery->where(function($q) use ($de, $deClean) {
+                    $q->where('numero', $de);
+                    if ($deClean !== "") {
+                        $q->orWhere('numero', $deClean);
+                    }
+                });
+            } elseif ($request->filled('numero_autorizacao_ate')) {
+                $ate = (int)$request->numero_autorizacao_ate;
+                $authQuery->whereRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END <= ?", [$ate]);
+            } elseif ($request->filled('numero_autorizacao')) {
+                $num = $request->numero_autorizacao;
+                $numClean = ltrim($num, '0');
+                $authQuery->where(function($q) use ($num, $numClean) {
+                    $q->where('numero', 'like', "%{$num}%");
+                    if ($numClean !== "") {
+                        $q->orWhere('numero', 'like', "%{$numClean}%");
+                    }
+                });
+            }
+            
+            if ($request->filled('tipo_publicidade') && $request->tipo_publicidade !== 'all') {
+                $authQuery->where('tipo_publicidade', $request->tipo_publicidade);
+            }
+            
+            if ($request->filled('vendedor_id') && $request->vendedor_id !== 'all') {
+                $authQuery->where('vendedor_id', $request->vendedor_id);
+            }
+            
+            $authIds = $authQuery->pluck('id');
+            $groupIds = $authIds->map(fn($id) => 'autorizacao-' . $id)->toArray();
+            
+            if (empty($groupIds)) {
+                $query->where('id', 0);
+            } else {
+                $query->whereIn('group_id', $groupIds);
+            }
+        }
+
+        // 10. Plano
+        if ($request->filled('plan_id') && $request->plan_id !== 'all') {
+            $query->where('plan_id', $request->plan_id);
+        }
+
+        // 11. Cobrança / Pagamento
+        if ($request->filled('collection_type') && $request->collection_type !== 'all') {
+            $types = is_array($request->collection_type) 
+                ? $request->collection_type 
+                : explode(',', $request->collection_type);
+            
+            $methods = [];
+            $hasDirect = false;
+            
+            foreach ($types as $type) {
+                if ($type === 'bank') {
+                    $methods[] = 'boleto';
+                } elseif ($type === 'card') {
+                    $methods[] = 'cartao';
+                } elseif ($type === 'pix') {
+                    $methods[] = 'pix';
+                } elseif ($type === 'cash') {
+                    $methods[] = 'dinheiro';
+                } elseif ($type === 'permuta') {
+                    $methods[] = 'permuta';
+                } elseif ($type === 'direct') {
+                    $hasDirect = true;
+                }
+            }
+            
+            if ($hasDirect) {
+                $query->where(function($q) use ($methods) {
+                    $q->whereNotIn('payment_method', ['boleto', 'cartao', 'pix', 'permuta']);
+                    if (!empty($methods)) {
+                        $q->orWhereIn('payment_method', $methods);
+                    }
+                });
+            } else {
+                if (!empty($methods)) {
+                    $query->whereIn('payment_method', $methods);
+                }
+            }
+        }
+
+        return $query;
+    }
+
+    /**
      * Obter Estatísticas Globais Financeiras
      */
     public function getStats(Request $request)
@@ -101,23 +282,7 @@ class FinancialController extends Controller
         $endOfMonth = $now->copy()->endOfMonth();
 
         $applyFilters = function($query) use ($request) {
-            if ($request->filled('status') && $request->status !== 'all') {
-                if ($request->status === 'overdue') {
-                    $query->where('status', 'pending')->where('due_date', '<', now()->startOfDay());
-                } else {
-                    $query->where('status', $request->status);
-                }
-            }
-            if ($request->filled('date_start')) {
-                $query->where('due_date', '>=', $request->date_start);
-            }
-            if ($request->filled('date_end')) {
-                $query->where('due_date', '<=', $request->date_end);
-            }
-            if ($request->filled('q')) {
-                $query->search($request->q);
-            }
-            return $query;
+            return $this->applyFinancialFilters($query, $request);
         };
 
         // MRR
@@ -397,26 +562,7 @@ class FinancialController extends Controller
     {
         $query = Invoice::with(['client.contatos', 'plan']);
 
-        if ($request->filled('status') && $request->status !== 'all') {
-            if ($request->status === 'overdue') {
-                $query->where('status', 'pending')
-                      ->where('due_date', '<', now()->startOfDay());
-            } else {
-                $query->where('status', $request->status);
-            }
-        }
-
-        if ($request->filled('date_start')) {
-            $query->where('due_date', '>=', $request->date_start);
-        }
-
-        if ($request->filled('date_end')) {
-            $query->where('due_date', '<=', $request->date_end);
-        }
-
-        if ($request->filled('q')) {
-            $query->search($request->q);
-        }
+        $query = $this->applyFinancialFilters($query, $request);
 
         $invoices = $query->orderBy('due_date', 'asc')
             ->limit(300)
@@ -604,10 +750,18 @@ class FinancialController extends Controller
 
         $invoice->update($updateData);
 
-        // Se marcou como pago, ativa a assinatura do cliente e sincroniza com o Tiny
-        if ($validated['status'] === 'paid') {
-            $invoice->client->update(['status_assinatura' => 'ativo']);
+        // Se marcou como pago, ativa a assinatura do cliente (ou mantém inadimplente se ainda tiver >= 2 vencidas) e sincroniza com o Tiny
+        if ($validated['status'] === 'paid' && $invoice->client && $invoice->client->tipo_cliente === 'pagante') {
+            $overdueCount = Invoice::where('client_id', $invoice->client_id)
+                ->where('status', 'pending')
+                ->where('due_date', '<', now()->startOfDay())
+                ->count();
+            
+            $statusAssinatura = $overdueCount >= 2 ? 'inadimplente' : 'ativa';
+            $invoice->client->update(['status_assinatura' => $statusAssinatura]);
+        }
 
+        if ($validated['status'] === 'paid') {
             // Sincronizar baixa com o Tiny se a fatura tiver um ID lá
             if ($invoice->tiny_account_id) {
                 try {

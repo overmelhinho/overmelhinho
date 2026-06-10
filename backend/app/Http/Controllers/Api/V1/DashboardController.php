@@ -22,7 +22,7 @@ class DashboardController extends Controller
         $conversionRate = $leadsTotal > 0 ? round(($leadsConverted / $leadsTotal) * 100, 1) : 0;
 
         // 2. Financeiro
-        $activeClients = \App\Models\Cliente::where('status_assinatura', 'ativo')->count();
+        $activeClients = \App\Models\Cliente::whereIn('status_assinatura', ['ativa', 'ativo'])->count();
         // Receita Prévia do Mês Atual (Soma de faturas com vencimento neste mês, excluindo canceladas/inadimplentes se houver, ou apenas pegando paid + pending)
         $startOfMonth = now()->startOfMonth();
         $endOfMonth = now()->endOfMonth();

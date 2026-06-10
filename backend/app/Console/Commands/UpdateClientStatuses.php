@@ -47,10 +47,17 @@ class UpdateClientStatuses extends Command
             ->update(['tipo_cliente' => 'gratuito', 'status_assinatura' => 'cancelada', 'updated_at' => now()]);
 
         // 2. Promover para 'pagante' (e status 'ativa') os clientes que POSSUEM autorização vigente
+        // Apenas promove se forem clientes pagantes inativos, ou se forem gratuitos que foram automaticamente cancelados.
         $reativadosCount = DB::table('clientes')
             ->where(function($q) {
-                $q->where('tipo_cliente', '!=', 'pagante')
-                  ->orWhereNotIn('status_assinatura', ['ativa', 'ativo']);
+                $q->where(function($sub) {
+                    $sub->where('tipo_cliente', 'gratuito')
+                        ->where('status_assinatura', 'cancelada');
+                })
+                ->orWhere(function($sub) {
+                    $sub->where('tipo_cliente', 'pagante')
+                        ->whereNotIn('status_assinatura', ['ativa', 'ativo', 'inadimplente']);
+                });
             })
             ->whereExists(function ($query) use ($today) {
                 $query->select(DB::raw(1))
@@ -60,11 +67,42 @@ class UpdateClientStatuses extends Command
                     ->where('autorizacoes.data_fim', '>=', $today);
             })
             ->update(['tipo_cliente' => 'pagante', 'status_assinatura' => 'ativa', 'updated_at' => now()]);
+
+        // 3. Identificar clientes pagantes inadimplentes (2 ou mais parcelas vencidas no mínimo)
+        $inadimplentesClientIds = DB::table('invoices')
+            ->select('client_id')
+            ->where('status', 'pending')
+            ->where('due_date', '<', $today)
+            ->groupBy('client_id')
+            ->havingRaw('COUNT(*) >= 2')
+            ->pluck('client_id')
+            ->toArray();
+
+        $inadimplentesCount = DB::table('clientes')
+            ->where('tipo_cliente', 'pagante')
+            ->whereIn('id', $inadimplentesClientIds)
+            ->update(['status_assinatura' => 'inadimplente', 'updated_at' => now()]);
+
+        // 4. Restaurar para ativa os inadimplentes que voltaram a ter menos de 2 parcelas vencidas
+        $normalizadosCount = DB::table('clientes')
+            ->where('tipo_cliente', 'pagante')
+            ->where('status_assinatura', 'inadimplente')
+            ->whereNotIn('id', $inadimplentesClientIds)
+            ->whereExists(function ($query) use ($today) {
+                $query->select(DB::raw(1))
+                    ->from('autorizacoes')
+                    ->whereColumn('autorizacoes.cliente_id', 'clientes.id')
+                    ->where('autorizacoes.status', 'assinado')
+                    ->where('autorizacoes.data_fim', '>=', $today);
+            })
+            ->update(['status_assinatura' => 'ativa', 'updated_at' => now()]);
         
         $this->info("Processo concluído!");
-        $this->line("Clientes marcados como VENCIDA: {$vencidosCount}");
-        $this->line("Clientes reativados: {$reativadosCount}");
+        $this->line("Clientes marcados como GRATUITO/CANCELADA (Sem autorização): {$vencidosCount}");
+        $this->line("Clientes reativados como PAGANTE/ATIVA: {$reativadosCount}");
+        $this->line("Clientes marcados como INADIMPLENTE (2+ parcelas vencidas): {$inadimplentesCount}");
+        $this->line("Clientes inadimplentes normalizados para ATIVA: {$normalizadosCount}");
         
-        Log::info("Verificação de contratos concluída. Vencidos: {$vencidosCount}. Reativados: {$reativadosCount}");
+        Log::info("Verificação de contratos concluída. Vencidos: {$vencidosCount}. Reativados: {$reativadosCount}. Inadimplentes: {$inadimplentesCount}. Normalizados: {$normalizadosCount}");
     }
 }

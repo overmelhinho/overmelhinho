@@ -198,6 +198,7 @@ function statusLabel(s?: StatusAssinatura | null, tipo?: string | null) {
     atrasada: "Atrasada",
     suspensa: "Suspensa",
     cancelada: "Cancelada",
+    inadimplente: "Inadimplente ⚠️",
   };
   return map[v] || v;
 }
@@ -209,6 +210,7 @@ function statusChipClass(s?: StatusAssinatura | null, tipo?: string | null) {
   if (v === "pendente") return "bg-yellow-50 text-yellow-800 border-yellow-200";
   if (v === "atrasada") return "bg-red-50 text-red-700 border-red-200";
   if (v === "suspensa") return "bg-red-50 text-red-700 border-red-200";
+  if (v === "inadimplente") return "bg-red-100 text-red-700 border-red-300 font-bold";
   if (v === "cancelada") return "bg-gray-50 text-gray-700 border-gray-200";
   return "bg-gray-50 text-gray-700 border-gray-200";
 }
@@ -265,6 +267,7 @@ export default function ClientesList() {
   const [searchDebounced, setSearchDebounced] = useState("");
   const [tipo, setTipo] = useState<"all" | TipoCliente>("all");
   const [visibilidade, setVisibilidade] = useState<"all" | "visible" | "hidden">("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sort, setSort] = useState<string>("latest");
   const [page, setPage] = useState<number>(1);
 
@@ -310,7 +313,7 @@ export default function ClientesList() {
     }
   };
 
-  const queryKey = useMemo(() => ["clientes", { page, sort, searchDebounced, tipo, visibilidade }], [page, sort, searchDebounced, tipo, visibilidade]);
+  const queryKey = useMemo(() => ["clientes", { page, sort, searchDebounced, tipo, visibilidade, statusFilter }], [page, sort, searchDebounced, tipo, visibilidade, statusFilter]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey,
@@ -325,6 +328,7 @@ export default function ClientesList() {
           q: searchDebounced,
           tipo: tipo !== "all" ? tipo : undefined,
           visibilidade: visibilidade !== "all" ? visibilidade : undefined,
+          status_assinatura: statusFilter !== "all" ? statusFilter : undefined,
         },
       });
       return resp?.data;
@@ -343,6 +347,7 @@ export default function ClientesList() {
       atrasada: 0,
       suspensa: 0,
       cancelada: 0,
+      inadimplente: 0,
     };
     for (const c of clientesRaw) {
       const isGratuito = c.tipo_cliente === "gratuito";
@@ -352,6 +357,7 @@ export default function ClientesList() {
       else if (v === "atrasada") s.atrasada += 1;
       else if (v === "suspensa") s.suspensa += 1;
       else if (v === "cancelada") s.cancelada += 1;
+      else if (v === "inadimplente") s.inadimplente += 1;
     }
     return s;
   }, [clientesRaw]);
@@ -422,7 +428,7 @@ export default function ClientesList() {
       </div>
 
       {/* Cards rápidos */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
         <div className="border rounded-2xl p-4 bg-white shadow-sm">
           <div className="text-xs font-semibold text-gray-500">Total</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">
@@ -452,6 +458,12 @@ export default function ClientesList() {
         <div className="border rounded-2xl p-4 bg-white shadow-sm">
           <div className="text-xs font-semibold text-gray-500">Suspensas</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">{stats.suspensa}</div>
+          <div className="text-xs text-gray-400 mt-1">Página atual</div>
+        </div>
+
+        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+          <div className="text-xs font-semibold text-gray-500">Inadimplentes</div>
+          <div className="text-lg font-semibold text-gray-900 mt-1">{stats.inadimplente}</div>
           <div className="text-xs text-gray-400 mt-1">Página atual</div>
         </div>
 
@@ -492,6 +504,24 @@ export default function ClientesList() {
             </div>
 
             <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <Select value={statusFilter || "all"} onValueChange={(val: any) => setStatusFilter(val)}>
+                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-[140px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
+                  <SelectValue placeholder="Qualquer Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Qualquer Status</SelectItem>
+                  <SelectItem value="ativa">Ativa</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="atrasada">Atrasada</SelectItem>
+                  <SelectItem value="suspensa">Suspensa</SelectItem>
+                  <SelectItem value="inadimplente">Inadimplente ⚠️</SelectItem>
+                  <SelectItem value="cancelada">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
               <Eye className="w-4 h-4 text-gray-500" />
               <Select value={visibilidade || "all"} onValueChange={(val: any) => setVisibilidade(val)}>
                 <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-[170px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
@@ -526,6 +556,7 @@ export default function ClientesList() {
                 setSearchDebounced("");
                 setTipo("all");
                 setVisibilidade("all");
+                setStatusFilter("all");
                 setSort("latest");
                 setPage(1);
                 setTimeout(() => refetch(), 0);
