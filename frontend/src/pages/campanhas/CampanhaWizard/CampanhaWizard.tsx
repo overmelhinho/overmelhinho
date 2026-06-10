@@ -78,9 +78,14 @@ export default function CampanhaWizard({
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [triedNext, setTriedNext] = useState(false);
 
     const isPopup = selectedType === "popup";
     const stepCount = isPopup ? 4 : 5;
+
+    const isNomeError = triedNext && !w.form.nome?.trim();
+    const isClienteError = triedNext && !w.form.is_institucional && !w.form.cliente_id;
+    const isPeriodoError = triedNext && !w.form.is_institucional && (!w.form.data_inicio || !w.form.data_fim);
 
     // Se estiver em modo edit, pular para um passo que mostre tudo ou usar um layout unificado
     // Vou criar um layout de "Edição Rápida" que condensa os passos.
@@ -166,6 +171,7 @@ export default function CampanhaWizard({
 
     const nextStep = () => {
         if (step === 2) {
+            setTriedNext(true);
             if (!w.form.nome?.trim()) {
                 toast.error("Preencha o Nome da campanha.");
                 return;
@@ -176,12 +182,24 @@ export default function CampanhaWizard({
                     return;
                 }
             }
+            setTriedNext(false);
         }
         setStep((prev) => prev + 1);
         window.scrollTo(0, 0);
     };
 
     const handleSave = async () => {
+        setTriedNext(true);
+        if (!w.form.nome?.trim()) {
+            toast.error("Preencha o Nome da campanha.");
+            return;
+        }
+        if (!w.form.is_institucional) {
+            if (!w.form.cliente_id || !w.form.data_inicio || !w.form.data_fim) {
+                toast.error("Preencha Cliente e Período.");
+                return;
+            }
+        }
         setSaving(true);
         try {
             const result = await w.onSubmit();
@@ -284,13 +302,27 @@ export default function CampanhaWizard({
                                     selectedType === type.id
                                         ? "bg-red-50 text-[#B70F0A]"
                                         : "bg-gray-50 text-gray-400"
-                                )}
+                                    )}
                             >
                                 <Icon size={24} />
                             </div>
                             <div className="ml-5 flex-1">
                                 <h3 className="font-bold text-gray-900 mb-1">{type.label}</h3>
-                                <p className="text-xs text-gray-500">{type.description}</p>
+                                <p className="text-xs text-gray-500 mb-3">{type.description}</p>
+                                {type.id === "popup" ? (
+                                    <span className="inline-block text-[10px] font-bold text-red-700 bg-red-50 border border-red-100 rounded-lg px-2.5 py-1">
+                                        Tamanho único: 800x800px
+                                    </span>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <span className="inline-block text-[10px] font-bold text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1">
+                                            Desktop: {PLACEMENT_SPECS[type.placement]?.desktop}
+                                        </span>
+                                        <span className="inline-block text-[10px] font-bold text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1">
+                                            Mobile: {PLACEMENT_SPECS[type.placement]?.mobile}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </button>
                     );
@@ -303,16 +335,30 @@ export default function CampanhaWizard({
         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 max-w-2xl mx-auto text-left">
             <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
                 <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Título</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                        Título<span className="text-red-500 font-bold ml-0.5">*</span>
+                    </label>
                     <Input
                         value={w.form.nome || ""}
                         onChange={(e) => w.onPatch({ nome: e.target.value })}
                         placeholder="Ex: Banner Natal 2025"
-                        className="h-12 rounded-2xl"
+                        className={cn(
+                            "h-12 rounded-2xl transition-all",
+                            isNomeError
+                                ? "border-red-300 bg-red-50/20 focus-visible:ring-red-100 focus-visible:border-red-300"
+                                : "border-gray-200"
+                        )}
                     />
+                    {isNomeError && (
+                        <span className="text-xs font-semibold text-red-600 animate-in fade-in duration-200 block mt-1">
+                            O título da campanha é obrigatório.
+                        </span>
+                    )}
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Cliente</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                        Cliente{!w.form.is_institucional && <span className="text-red-500 font-bold ml-0.5">*</span>}
+                    </label>
                     <Select
                         placeholder="Pesquisar cliente..."
                         isLoading={w.loadingClientes}
@@ -338,11 +384,19 @@ export default function CampanhaWizard({
                                 borderRadius: "20px",
                                 minHeight: "64px",
                                 paddingLeft: "12px",
-                                borderColor: state.isFocused ? "#B70F0A" : "#F3F4F6",
-                                boxShadow: state.isFocused ? "0 0 0 4px rgba(183, 15, 10, 0.1)" : "none",
-                                "&:hover": { borderColor: "#E5E7EB" },
+                                borderColor: isClienteError
+                                    ? "#FCA5A5"
+                                    : state.isFocused
+                                    ? "#B70F0A"
+                                    : "#F3F4F6",
+                                backgroundColor: isClienteError ? "#FEF2F2" : "#FFF",
+                                boxShadow: isClienteError
+                                    ? "0 0 0 4px rgba(239, 68, 68, 0.1)"
+                                    : state.isFocused
+                                    ? "0 0 0 4px rgba(183, 15, 10, 0.1)"
+                                    : "none",
+                                "&:hover": { borderColor: isClienteError ? "#FCA5A5" : "#E5E7EB" },
                                 transition: "all 0.3s ease",
-                                backgroundColor: "#FFF",
                             }),
                             placeholder: (base) => ({ ...base, color: "#9CA3AF", fontSize: "14px", fontWeight: "600" }),
                             menu: (base) => ({
@@ -364,19 +418,33 @@ export default function CampanhaWizard({
                             }),
                         }}
                     />
+                    {isClienteError && (
+                        <span className="text-xs font-semibold text-red-600 animate-in fade-in duration-200 block mt-1">
+                            O cliente é obrigatório.
+                        </span>
+                    )}
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Período de Veiculação</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                        Período de Veiculação{!w.form.is_institucional && <span className="text-red-500 font-bold ml-0.5">*</span>}
+                    </label>
                     <Popover>
                         <PopoverTrigger asChild>
                             <button
                                 type="button"
                                 className={cn(
                                     "w-full flex items-center gap-4 h-16 px-6 rounded-[20px] border-2 transition-all text-left",
-                                    w.form.data_inicio ? "border-gray-100 bg-white" : "border-dashed border-gray-200 bg-gray-50/50"
+                                    isPeriodoError
+                                        ? "border-red-300 bg-red-50/20 text-[#B70F0A]"
+                                        : w.form.data_inicio
+                                        ? "border-gray-100 bg-white"
+                                        : "border-dashed border-gray-200 bg-gray-50/50"
                                 )}
                             >
-                                <div className="p-3 bg-red-50 text-[#B70F0A] rounded-xl">
+                                <div className={cn(
+                                    "p-3 rounded-xl transition-colors",
+                                    isPeriodoError ? "bg-red-100 text-[#B70F0A]" : "bg-red-50 text-[#B70F0A]"
+                                )}>
                                     <Calendar size={20} />
                                 </div>
                                 <div className="flex-1">
@@ -388,10 +456,15 @@ export default function CampanhaWizard({
                                             </span>
                                         </div>
                                     ) : (
-                                        <span className="text-sm font-bold text-gray-400 italic">Clique para selecionar as datas</span>
+                                        <span className={cn(
+                                            "text-sm font-bold italic",
+                                            isPeriodoError ? "text-red-400" : "text-gray-400"
+                                        )}>
+                                            Clique para selecionar as datas
+                                        </span>
                                     )}
                                 </div>
-                                <ChevronRight size={18} className="text-gray-300" />
+                                <ChevronRight size={18} className={isPeriodoError ? "text-red-400" : "text-gray-300"} />
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0 border-none bg-transparent shadow-none" align="start">
@@ -402,6 +475,11 @@ export default function CampanhaWizard({
                             />
                         </PopoverContent>
                     </Popover>
+                    {isPeriodoError && (
+                        <span className="text-xs font-semibold text-red-600 animate-in fade-in duration-200 block mt-1">
+                            O período de veiculação é obrigatório.
+                        </span>
+                    )}
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-gray-400">URL de Destino <span className="font-normal">(opcional)</span></label>
@@ -581,8 +659,8 @@ export default function CampanhaWizard({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {(["desktop", "mobile"] as const).map((device) => {
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-center">
+                    {(isPopup ? (["desktop"] as const) : (["desktop", "mobile"] as const)).map((device) => {
                         const previewUrl =
                             device === "desktop"
                                 ? w.form.midia_desktop_public_url
@@ -590,11 +668,25 @@ export default function CampanhaWizard({
                         const dimension = device === "desktop" ? specs.desktop : specs.mobile;
 
                         return (
-                            <div key={device} className="space-y-4">
+                            <div key={device} className={cn("space-y-4", isPopup && "col-span-1 md:col-span-2 max-w-md mx-auto w-full")}>
                                 <div className="flex items-center justify-between px-2">
                                     <div className="flex items-center gap-2">
-                                        {device === "desktop" ? <Monitor size={16} /> : <Smartphone size={16} />}
-                                        <span className="text-xs font-black uppercase tracking-widest text-gray-900">{device}</span>
+                                        {isPopup ? (
+                                            <>
+                                                <Upload size={16} className="text-[#B70F0A]" />
+                                                <span className="text-xs font-black uppercase tracking-widest text-gray-900">Arte Única</span>
+                                            </>
+                                        ) : device === "desktop" ? (
+                                            <>
+                                                <Monitor size={16} />
+                                                <span className="text-xs font-black uppercase tracking-widest text-gray-900">Desktop</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Smartphone size={16} />
+                                                <span className="text-xs font-black uppercase tracking-widest text-gray-900">Mobile</span>
+                                            </>
+                                        )}
                                     </div>
                                     <span className="text-[11px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-lg border border-red-100">
                                         {dimension}
@@ -624,7 +716,7 @@ export default function CampanhaWizard({
                                         onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (!file) return;
-
+ 
                                             // 1) Ler arquivo para base64 para o cropper
                                             const reader = new FileReader();
                                             reader.onload = (event) => {
@@ -650,6 +742,9 @@ export default function CampanhaWizard({
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     w.setTempMedia(device, "", "", "");
+                                                    if (isPopup) {
+                                                        w.setTempMedia("mobile", "", "", "");
+                                                    }
                                                 }}
                                                 className="absolute top-4 right-4 z-20 bg-gray-900/80 backdrop-blur-md text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
                                             >
@@ -674,55 +769,89 @@ export default function CampanhaWizard({
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Desktop Mockup */}
-                            {w.form.midia_desktop_public_url && (
-                                <div className="space-y-4">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Desktop View</span>
+                            {isPopup && w.form.midia_desktop_public_url ? (
+                                <div className="space-y-4 col-span-1 lg:col-span-2 max-w-lg mx-auto w-full">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Modal Popup View</span>
                                     <div className="relative bg-gray-100 rounded-2xl p-2 border-4 border-gray-200 shadow-2xl overflow-hidden aspect-video">
-                                        <div className="bg-white h-full w-full rounded-lg overflow-hidden flex flex-col">
+                                        <div className="bg-white h-full w-full rounded-lg overflow-hidden flex flex-col relative">
+                                            {/* Browser header */}
                                             <div className="h-6 bg-gray-50 border-b flex items-center gap-1 px-3">
                                                 <div className="w-2 h-2 rounded-full bg-red-300" />
                                                 <div className="w-2 h-2 rounded-full bg-yellow-300" />
                                                 <div className="w-2 h-2 rounded-full bg-green-300" />
                                             </div>
-                                            <div className="flex-1 overflow-y-auto bg-white p-2 space-y-4">
+                                            {/* Page content blurred */}
+                                            <div className="flex-1 p-2 space-y-4 opacity-30 select-none pointer-events-none">
                                                 <div className="w-full h-8 bg-gray-50 rounded-md" />
-                                                <div className="relative w-full overflow-hidden rounded-xl border border-dashed border-red-200">
-                                                    <img src={w.form.midia_desktop_public_url} className="w-full object-cover" />
-                                                    <div className="absolute top-2 right-2 bg-red-600/80 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase">Ad</div>
-                                                </div>
                                                 <div className="grid grid-cols-3 gap-2">
                                                     <div className="h-20 bg-gray-50 rounded-md" />
                                                     <div className="h-20 bg-gray-50 rounded-md" />
                                                     <div className="h-20 bg-gray-50 rounded-md" />
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Mobile Mockup */}
-                            {w.form.midia_mobile_public_url && (
-                                <div className="space-y-4 flex flex-col items-center lg:items-start">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Mobile View</span>
-                                    <div className="relative w-[180px] bg-gray-900 rounded-[35px] p-2.5 border-4 border-gray-800 shadow-2xl overflow-hidden aspect-[9/18]">
-                                        <div className="bg-white h-full w-full rounded-[25px] overflow-hidden flex flex-col">
-                                            <div className="h-4 bg-white flex items-center justify-center">
-                                                <div className="w-10 h-1 bg-gray-900/10 rounded-full" />
-                                            </div>
-                                            <div className="flex-1 overflow-y-auto bg-white p-2 space-y-3">
-                                                <div className="w-10 h-10 bg-red-50 rounded-full mx-auto" />
-                                                <div className="w-full h-4 bg-gray-50 rounded-full" />
-                                                <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-dashed border-red-200">
-                                                    <img src={w.form.midia_mobile_public_url} className="w-full h-full object-cover" />
+                                            {/* Popup overlay */}
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-4">
+                                                <div className="relative bg-white rounded-xl shadow-2xl p-1 max-w-[140px] aspect-square w-full border border-gray-100 animate-in zoom-in-95 duration-300">
+                                                    <img src={w.form.midia_desktop_public_url} className="w-full h-full object-contain rounded-lg" />
+                                                    <div className="absolute -top-1.5 -right-1.5 bg-gray-900 text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold cursor-default shadow-md">×</div>
                                                 </div>
-                                                <div className="h-10 bg-gray-50 rounded-xl" />
-                                                <div className="h-10 bg-gray-50 rounded-xl" />
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                            ) : (
+                                <>
+                                    {/* Desktop Mockup */}
+                                    {w.form.midia_desktop_public_url && (
+                                        <div className="space-y-4">
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Desktop View</span>
+                                            <div className="relative bg-gray-100 rounded-2xl p-2 border-4 border-gray-200 shadow-2xl overflow-hidden aspect-video">
+                                                <div className="bg-white h-full w-full rounded-lg overflow-hidden flex flex-col">
+                                                    <div className="h-6 bg-gray-50 border-b flex items-center gap-1 px-3">
+                                                        <div className="w-2 h-2 rounded-full bg-red-300" />
+                                                        <div className="w-2 h-2 rounded-full bg-yellow-300" />
+                                                        <div className="w-2 h-2 rounded-full bg-green-300" />
+                                                    </div>
+                                                    <div className="flex-1 overflow-y-auto bg-white p-2 space-y-4">
+                                                        <div className="w-full h-8 bg-gray-50 rounded-md" />
+                                                        <div className="relative w-full overflow-hidden rounded-xl border border-dashed border-red-200">
+                                                            <img src={w.form.midia_desktop_public_url} className="w-full object-cover" />
+                                                            <div className="absolute top-2 right-2 bg-red-600/80 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase">Ad</div>
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            <div className="h-20 bg-gray-50 rounded-md" />
+                                                            <div className="h-20 bg-gray-50 rounded-md" />
+                                                            <div className="h-20 bg-gray-50 rounded-md" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Mobile Mockup */}
+                                    {w.form.midia_mobile_public_url && (
+                                        <div className="space-y-4 flex flex-col items-center lg:items-start">
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Mobile View</span>
+                                            <div className="relative w-[180px] bg-gray-900 rounded-[35px] p-2.5 border-4 border-gray-800 shadow-2xl overflow-hidden aspect-[9/18]">
+                                                <div className="bg-white h-full w-full rounded-[25px] overflow-hidden flex flex-col">
+                                                    <div className="h-4 bg-white flex items-center justify-center">
+                                                        <div className="w-10 h-1 bg-gray-900/10 rounded-full" />
+                                                    </div>
+                                                    <div className="flex-1 overflow-y-auto bg-white p-2 space-y-3">
+                                                        <div className="w-10 h-10 bg-red-50 rounded-full mx-auto" />
+                                                        <div className="w-full h-4 bg-gray-50 rounded-full" />
+                                                        <div className="relative w-full aspect-square overflow-hidden rounded-2xl border border-dashed border-red-200">
+                                                            <img src={w.form.midia_mobile_public_url} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="h-10 bg-gray-50 rounded-xl" />
+                                                        <div className="h-10 bg-gray-50 rounded-xl" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -764,6 +893,9 @@ export default function CampanhaWizard({
                                 if (data?.success && data.files?.length > 0) {
                                     const uploaded = data.files[0];
                                     w.setTempMedia(slot, uploaded.path, uploaded.public_url, `crop_${slot}.jpg`);
+                                    if (isPopup) {
+                                        w.setTempMedia("mobile", uploaded.path, uploaded.public_url, `crop_${slot}.jpg`);
+                                    }
                                     toast.dismiss(t);
                                     toast.success("Imagem recortada e aplicada!");
                                 }
@@ -812,15 +944,25 @@ export default function CampanhaWizard({
                 </div>
                 {(w.form.midia_desktop_public_url || w.form.midia_mobile_public_url) && (
                     <div className="flex gap-2 flex-wrap">
-                        {w.form.midia_desktop_public_url && (
-                            <span className="px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
-                                ✓ Desktop
-                            </span>
-                        )}
-                        {w.form.midia_mobile_public_url && (
-                            <span className="px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
-                                ✓ Mobile
-                            </span>
+                        {isPopup ? (
+                            w.form.midia_desktop_public_url && (
+                                <span className="px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                                    ✓ Arte Popup
+                                </span>
+                            )
+                        ) : (
+                            <>
+                                {w.form.midia_desktop_public_url && (
+                                    <span className="px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                                        ✓ Desktop
+                                    </span>
+                                )}
+                                {w.form.midia_mobile_public_url && (
+                                    <span className="px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                                        ✓ Mobile
+                                    </span>
+                                )}
+                            </>
                         )}
                     </div>
                 )}
@@ -856,15 +998,29 @@ export default function CampanhaWizard({
                         <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6">
                             <h3 className="text-lg font-bold text-gray-900 border-b pb-4">Dados Básicos</h3>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">Título da Campanha</label>
+                                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                    Título da Campanha<span className="text-red-500 font-bold ml-0.5">*</span>
+                                </label>
                                 <Input
                                     value={w.form.nome || ""}
                                     onChange={(e) => w.onPatch({ nome: e.target.value })}
-                                    className="h-12 rounded-2xl"
+                                    className={cn(
+                                        "h-12 rounded-2xl transition-all",
+                                        isNomeError
+                                            ? "border-red-300 bg-red-50/20 focus-visible:ring-red-100 focus-visible:border-red-300"
+                                            : "border-gray-200"
+                                    )}
                                 />
+                                {isNomeError && (
+                                    <span className="text-xs font-semibold text-red-600 animate-in fade-in duration-200 block mt-1">
+                                        O título da campanha é obrigatório.
+                                    </span>
+                                )}
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">Cliente</label>
+                                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                    Cliente{!w.form.is_institucional && <span className="text-red-500 font-bold ml-0.5">*</span>}
+                                </label>
                                 <Select
                                     placeholder="Pesquisar cliente..."
                                     isLoading={w.loadingClientes}
@@ -884,15 +1040,71 @@ export default function CampanhaWizard({
                                             : null
                                     }
                                     onChange={(val: any) => w.onPatch({ cliente_id: val?.value || "" })}
+                                    styles={{
+                                        control: (base, state) => ({
+                                            ...base,
+                                            borderRadius: "20px",
+                                            minHeight: "48px",
+                                            paddingLeft: "12px",
+                                            borderColor: isClienteError
+                                                ? "#FCA5A5"
+                                                : state.isFocused
+                                                ? "#B70F0A"
+                                                : "#F3F4F6",
+                                            backgroundColor: isClienteError ? "#FEF2F2" : "#FFF",
+                                            boxShadow: isClienteError
+                                                ? "0 0 0 4px rgba(239, 68, 68, 0.1)"
+                                                : state.isFocused
+                                                ? "0 0 0 4px rgba(183, 15, 10, 0.1)"
+                                                : "none",
+                                            "&:hover": { borderColor: isClienteError ? "#FCA5A5" : "#E5E7EB" },
+                                            transition: "all 0.3s ease",
+                                        }),
+                                        placeholder: (base) => ({ ...base, color: "#9CA3AF", fontSize: "14px", fontWeight: "600" }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            borderRadius: "24px",
+                                            padding: "8px",
+                                            border: "1px solid #F3F4F6",
+                                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                                            overflow: "hidden",
+                                        }),
+                                        option: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isFocused ? "#FEF2F2" : "transparent",
+                                            color: state.isFocused ? "#B70F0A" : "#111827",
+                                            borderRadius: "16px",
+                                            cursor: "pointer",
+                                            "&:active": { backgroundColor: "#FEE2E2" },
+                                        }),
+                                    }}
                                 />
+                                {isClienteError && (
+                                    <span className="text-xs font-semibold text-red-600 animate-in fade-in duration-200 block mt-1">
+                                        O cliente é obrigatório.
+                                    </span>
+                                )}
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">Período de Veiculação</label>
+                                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                    Período de Veiculação{!w.form.is_institucional && <span className="text-red-500 font-bold ml-0.5">*</span>}
+                                </label>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <button className="w-full flex items-center gap-4 h-14 px-4 rounded-2xl border-2 border-gray-100 bg-white hover:border-red-100 transition-all text-left">
+                                        <button
+                                            type="button"
+                                            className={cn(
+                                                "w-full flex items-center gap-4 h-14 px-4 rounded-2xl border-2 transition-all text-left",
+                                                isPeriodoError
+                                                    ? "border-red-300 bg-red-50/20 text-[#B70F0A]"
+                                                    : "border-gray-100 bg-white hover:border-red-100"
+                                            )}
+                                        >
                                             <Calendar size={18} className="text-[#B70F0A]" />
-                                            <span className="text-sm font-bold text-gray-900 flex-1">
+                                            <span className={cn(
+                                                "text-sm font-bold flex-1",
+                                                isPeriodoError ? "text-[#B70F0A]" : "text-gray-900"
+                                            )}>
                                                 {w.form.data_inicio ? `${formatDateBR(w.form.data_inicio)} — ${formatDateBR(w.form.data_fim)}` : "Selecionar datas"}
                                             </span>
                                         </button>
@@ -905,6 +1117,11 @@ export default function CampanhaWizard({
                                         />
                                     </PopoverContent>
                                 </Popover>
+                                {isPeriodoError && (
+                                    <span className="text-xs font-semibold text-red-600 animate-in fade-in duration-200 block mt-1">
+                                        O período de veiculação é obrigatório.
+                                    </span>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">URL de Destino (opcional)</label>
@@ -1036,13 +1253,15 @@ export default function CampanhaWizard({
                         <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm space-y-6 text-left">
                             <h3 className="text-lg font-bold text-gray-900 border-b pb-4">Mídias</h3>
                             <div className="grid grid-cols-1 gap-6">
-                                {(["desktop", "mobile"] as const).map((device) => {
+                                {(isPopup ? (["desktop"] as const) : (["desktop", "mobile"] as const)).map((device) => {
                                     const previewUrl = device === "desktop" ? w.form.midia_desktop_public_url : w.form.midia_mobile_public_url;
                                     const dimension = device === "desktop" ? specs.desktop : specs.mobile;
                                     return (
                                         <div key={device} className="space-y-2">
                                             <div className="flex justify-between items-center px-1">
-                                                <span className="text-[10px] font-black uppercase text-gray-400">{device} - {dimension}</span>
+                                                <span className="text-[10px] font-black uppercase text-gray-400">
+                                                    {isPopup ? `Arte Única - ${dimension}` : `${device} - ${dimension}`}
+                                                </span>
                                             </div>
                                             <div className="relative aspect-video bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden group">
                                                 {previewUrl ? (
@@ -1050,7 +1269,12 @@ export default function CampanhaWizard({
                                                         <img src={previewUrl} className="w-full h-full object-contain rounded-xl" />
                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                              <button 
-                                                                onClick={() => w.setTempMedia(device, "", "", "")}
+                                                                onClick={() => {
+                                                                    w.setTempMedia(device, "", "", "");
+                                                                    if (isPopup) {
+                                                                        w.setTempMedia("mobile", "", "", "");
+                                                                    }
+                                                                }}
                                                                 className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
                                                             >
                                                                 <X size={16} />
@@ -1123,6 +1347,9 @@ export default function CampanhaWizard({
                                 if (data?.success && data.files?.length > 0) {
                                     const uploaded = data.files[0];
                                     w.setTempMedia(slot, uploaded.path, uploaded.public_url, `crop_${slot}.jpg`);
+                                    if (isPopup) {
+                                        w.setTempMedia("mobile", uploaded.path, uploaded.public_url, `crop_${slot}.jpg`);
+                                    }
                                     toast.dismiss(t);
                                     toast.success("Imagem atualizada!");
                                 }
@@ -1167,15 +1394,24 @@ export default function CampanhaWizard({
 
                 {mode === "create" && (
                     <div className="flex gap-2 max-w-sm mx-auto">
-                        {Array.from({ length: stepCount }).map((_, i) => (
-                            <div
-                                key={i}
-                                className={cn(
-                                    "h-2 flex-1 rounded-full transition-all duration-300",
-                                    i + 1 <= step ? "bg-[#B70F0A]" : "bg-gray-200"
-                                )}
-                            />
-                        ))}
+                        {Array.from({ length: stepCount }).map((_, i) => {
+                            const stepNum = i + 1;
+                            const isPast = stepNum < step;
+                            return (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    disabled={!isPast}
+                                    onClick={() => setStep(stepNum)}
+                                    className={cn(
+                                        "h-2 flex-1 rounded-full transition-all duration-300 outline-none",
+                                        stepNum <= step ? "bg-[#B70F0A]" : "bg-gray-200",
+                                        isPast ? "cursor-pointer hover:bg-[#8B0B08]" : "cursor-default"
+                                    )}
+                                    title={isPast ? `Voltar para o Passo ${stepNum}` : undefined}
+                                />
+                            );
+                        })}
                     </div>
                 )}
 

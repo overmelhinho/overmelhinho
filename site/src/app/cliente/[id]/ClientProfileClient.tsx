@@ -268,15 +268,19 @@ export default function ClientProfileClient() {
         return phone;
     };
 
-    const allPhones = contactInfo ? [
+    const rawPhones = contactInfo ? [
         { label: 'Tel. Principal', number: formatPhone(contactInfo.telefone_principal), flag: contactInfo.exibir_tel_principal, hidden: isPrincipalHidden, isWhatsApp: contactInfo.has_whatsapp_principal && isPagante, obs: contactInfo.obs_telefone_principal },
         { label: 'Tel. Secundário', number: formatPhone(contactInfo.telefone_secundario), flag: contactInfo.exibir_tel_secundario, hidden: false, isWhatsApp: contactInfo.has_whatsapp_secundario && isPagante, obs: contactInfo.obs_telefone_secundario },
         { label: 'Celular', number: formatPhone(contactInfo.celular), flag: contactInfo.exibir_celular, hidden: false, isWhatsApp: contactInfo.has_whatsapp_celular && isPagante, obs: contactInfo.obs_celular },
         { label: 'Outro Telefone', number: formatPhone(contactInfo.telefone_outro), flag: contactInfo.exibir_tel_outro, hidden: false, isWhatsApp: contactInfo.has_whatsapp_outro && isPagante, obs: contactInfo.obs_telefone_outro },
     ].filter(p => p.number && p.flag && !p.hidden) : [];
 
+    const allPhones = (rawPhones.length === 0 && !isPagante)
+        ? [{ label: 'Telefone', number: 'Informação não disponível', flag: true, hidden: false, isWhatsApp: false, obs: '' }]
+        : rawPhones;
+
     const primaryPhone = allPhones[0]?.number;
-    const hasPhone = allPhones.length > 0;
+    const hasPhone = allPhones.length > 0 && allPhones[0].number !== 'Informação não disponível';
 
     let primaryWhatsApp = null;
     if (contactInfo?.whatsapp_selected && contactInfo[contactInfo.whatsapp_selected]) {
@@ -1001,24 +1005,32 @@ export default function ClientProfileClient() {
                                                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{p.label}</span>
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex flex-col">
-                                                        <a 
-                                                            href={`tel:${p.number.replace(/\D/g, '')}`} 
-                                                            className="text-lg font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic leading-none"
-                                                        >
-                                                            {p.number}
-                                                        </a>
+                                                        {p.number === 'Informação não disponível' ? (
+                                                            <span className="text-base font-black text-gray-400 font-serif italic leading-none">
+                                                                {p.number}
+                                                            </span>
+                                                        ) : (
+                                                            <a 
+                                                                href={`tel:${p.number.replace(/\D/g, '')}`} 
+                                                                className="text-lg font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic leading-none"
+                                                            >
+                                                                {p.number}
+                                                            </a>
+                                                        )}
                                                         {p.obs && (
                                                             <span className="text-[11px] text-gray-400 font-medium italic mt-1.5 leading-tight">{p.obs}</span>
                                                         )}
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <a 
-                                                            href={`tel:${p.number.replace(/\D/g, '')}`}
-                                                            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-brand-red hover:bg-red-50 transition-all border border-gray-100"
-                                                            title="Ligar"
-                                                        >
-                                                            <Phone size={16} />
-                                                        </a>
+                                                        {p.number !== 'Informação não disponível' && (
+                                                            <a 
+                                                                href={`tel:${p.number.replace(/\D/g, '')}`}
+                                                                className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-brand-red hover:bg-red-50 transition-all border border-gray-100"
+                                                                title="Ligar"
+                                                            >
+                                                                <Phone size={16} />
+                                                            </a>
+                                                        )}
                                                         {p.isWhatsApp && (
                                                             <button 
                                                                 onClick={() => {

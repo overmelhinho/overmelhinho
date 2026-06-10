@@ -212,7 +212,7 @@ export default function TabContato() {
         {/* Responsável */}
         <div>
           <label className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-            <User className="w-4 h-4 text-[#B70F0A]" /> Responsável*
+            <User className="w-4 h-4 text-[#B70F0A]" /> Responsável (Opcional)
           </label>
           <input
             type="text"

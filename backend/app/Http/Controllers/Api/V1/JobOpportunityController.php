@@ -53,7 +53,7 @@ class JobOpportunityController extends Controller
     public function showPublic($id)
     {
         $job = JobOpportunity::published()
-            ->with('client:id,nome_fantasia,logo_url')
+            ->with(['client:id,nome_fantasia,logo_url,slug', 'client.contatos'])
             ->findOrFail($id);
 
         // Incrementar contador de visualizações

@@ -69,3 +69,24 @@ input[type="button"] {
 .mask-fade-right {
   mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
+
+/* Rich Text / HTML Content styling */
+.rich-text p {
+  margin-bottom: 0.75rem;
+}
+.rich-text p:last-child {
+  margin-bottom: 0;
+}
+.rich-text ul, .rich-text ol {
+  margin-left: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.rich-text ul {
+  list-style-type: disc;
+}
+.rich-text ol {
+  list-style-type: decimal;
+}
+.rich-text li {
+  margin-bottom: 0.25rem;
+}

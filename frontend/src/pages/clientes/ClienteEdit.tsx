@@ -126,7 +126,7 @@ export default function ClienteEdit() {
     telefone_principal: Yup.string()
       .min(8, "Telefone muito curto")
       .required("Telefone principal é obrigatório"),
-    responsavel: Yup.string().required("Responsável é obrigatório"),
+    responsavel: Yup.string().nullable(),
   });
 
   const tabs = useMemo(() => {

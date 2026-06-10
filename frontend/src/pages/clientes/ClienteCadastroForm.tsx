@@ -44,7 +44,7 @@ export default function ClienteCreateFromLead() {
     email: Yup.string().email('Email inválido').required('Email é obrigatório'),
     telefone: Yup.string().required('Telefone é obrigatório'),
     origem: Yup.string().required('Origem é obrigatória'),
-    responsavel: Yup.string().required('Responsável é obrigatório'),
+    responsavel: Yup.string().nullable(),
     cep: Yup.string().matches(/^\d{5}-?\d{3}$/, 'CEP inválido').required('CEP é obrigatório'),
     estado: Yup.string().required('Estado é obrigatório'),
     cidade: Yup.string().required('Cidade é obrigatória'),

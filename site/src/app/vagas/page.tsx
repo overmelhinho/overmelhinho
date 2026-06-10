@@ -9,17 +9,16 @@ import {
     Clock,
     Filter,
     ArrowLeft,
-    Building2,
     X,
     ChevronDown,
     CheckSquare,
     Square,
     ExternalLink,
     Phone,
-    Mail,
     Tag
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { slugify } from '@/utils/slugify';
 
 // ── TIPOS ─────────────────────────────────────────────────────────
 interface Job {
@@ -52,292 +51,6 @@ const CATEGORIES = [
     'Orçamentista', 'Portaria | Zeladoria', 'Produção', 'Recursos Humanos', 'Saúde', 
     'Saúde Animal', 'Serviços', 'Serviços Gerais', 'Telemarketing', 'Vendas', 'Outros'
 ];
-
-// ── MÁSCARA FONE ──────────────────────────────────────────────────
-function maskPhone(value: string): string {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 2) return `(${digits}`;
-    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    if (digits.length <= 11)
-        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-    return value;
-}
-
-// ── JOB MODAL ─────────────────────────────────────────────────────
-function JobModal({ job, onClose }: { job: Job; onClose: () => void }) {
-    const [isApplying, setIsApplying] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        resume: null as File | null
-    });
-    const [errorMsg, setErrorMsg] = useState('');
-
-    const handleApply = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMsg('');
-
-        if (!formData.name || !formData.email || !formData.resume) {
-            setErrorMsg('Por favor, preencha nome, e-mail e anexe o currículo.');
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            const payload = new FormData();
-            payload.append('name', formData.name);
-            payload.append('email', formData.email);
-            payload.append('phone', formData.phone);
-            payload.append('resume', formData.resume);
-            
-            await api.post(`/jobs/${job.id}/apply`, payload, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            
-            setIsSuccess(true);
-        } catch (error: any) {
-            setErrorMsg(error.response?.data?.message || 'Erro ao enviar candidatura. Tente novamente.');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    return (
-        <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-            onClick={onClose}
-        >
-            {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-
-            {/* Card */}
-            <div
-                className="relative w-full sm:max-w-2xl bg-white rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl overflow-y-auto max-h-[90vh] z-10"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="sticky top-0 bg-white/90 backdrop-blur-sm border-b border-gray-50 px-8 py-6 flex items-start justify-between gap-4 rounded-t-[3rem]">
-                    <div className="space-y-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">{job.title}</h2>
-                            <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded">Nova</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm font-bold text-gray-400 flex-wrap">
-                            <span className="flex items-center gap-1"><Briefcase size={14} />{job.company}</span>
-                            <span className="flex items-center gap-1"><MapPin size={14} className="text-brand-red" />{job.location}</span>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-brand-red hover:text-white transition-colors flex-shrink-0"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
-
-                <div className="px-8 py-8 space-y-8">
-                    {!isApplying ? (
-                        <>
-                            {/* Salário + Tipo */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 rounded-2xl p-5 space-y-1">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Salário</p>
-                                    <p className="font-black text-gray-900">{job.salary}</p>
-                                </div>
-                                <div className="bg-gray-50 rounded-2xl p-5 space-y-1">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Contrato</p>
-                                    <p className="font-black text-gray-900">{job.type}</p>
-                                </div>
-                            </div>
-
-                            {/* Tags */}
-                            <div className="flex flex-wrap gap-2">
-                                {job.tags.map(tag => (
-                                    <span key={tag} className="px-3 py-1.5 bg-brand-red/5 text-brand-red text-[10px] font-black uppercase tracking-widest rounded-lg">{tag}</span>
-                                ))}
-                            </div>
-
-                            {/* Descrição */}
-                            <div className="space-y-3">
-                                <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Sobre a Vaga</h3>
-                                <p className="text-gray-500 font-medium leading-relaxed">{job.desc}</p>
-                            </div>
-
-                            {/* Requisitos */}
-                            <div className="space-y-3">
-                                <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Requisitos</h3>
-                                <ul className="space-y-2">
-                                    {job.requirements.map((r, i) => (
-                                        <li key={i} className="flex items-center gap-3 text-gray-600 font-medium text-sm">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-brand-red flex-shrink-0" />
-                                            {r}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            {/* Benefícios */}
-                            <div className="space-y-3">
-                                <h3 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Benefícios</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {job.benefits.map((b, i) => (
-                                        <span key={i} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-black rounded-lg">{b}</span>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* CTA Section */}
-                            <div className="bg-gray-900 rounded-[2rem] p-8 space-y-4">
-                                <p className="text-white font-black text-lg">Interessado(a)?</p>
-                                <p className="text-gray-400 text-sm font-medium">Preencha seus dados e anexe seu currículo para esta vaga.</p>
-                                <div className="space-y-3">
-                                    <button
-                                        onClick={() => setIsApplying(true)}
-                                        className="w-full bg-brand-red text-white py-4 px-4 rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30 text-center"
-                                    >
-                                        Candidatar pelo Site
-                                    </button>
-                                    
-                                    {job.whatsapp && (
-                                        <a
-                                            href={`https://wa.me/55${job.whatsapp.replace(/\\D/g, '')}?text=Olá! Gostaria de me candidatar para a vaga de ${job.title} que vi no Vermelhinho.`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-full bg-[#25D366] text-white py-4 px-4 rounded-xl font-black text-base md:text-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[#25D366]/30 text-center"
-                                        >
-                                            <Phone size={18} />
-                                            Candidatar via WhatsApp
-                                        </a>
-                                    )}
-                                </div>
-                                {job.clientSlug && (
-                                    <div className="pt-6 border-t border-gray-800 mt-6 text-center">
-                                        <a
-                                            href={`/cliente/${job.clientSlug}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 text-gray-400 hover:text-white font-bold text-sm transition-colors"
-                                        >
-                                            <Building2 size={16} /> Ver Página da Empresa <ExternalLink size={14} />
-                                        </a>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    ) : isSuccess ? (
-                        <div className="bg-emerald-50 rounded-[2rem] p-10 text-center space-y-4">
-                            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <CheckSquare size={40} />
-                            </div>
-                            <h3 className="text-2xl font-black text-emerald-900 tracking-tight">Currículo Enviado!</h3>
-                            <p className="text-emerald-700 font-medium">Sua candidatura foi enviada com sucesso para a empresa <strong>{job.company}</strong>.</p>
-                            <button
-                                onClick={onClose}
-                                className="mt-6 px-8 py-3 bg-emerald-600 text-white rounded-xl font-black hover:bg-emerald-700 transition-colors"
-                            >
-                                Fechar
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-                                <button onClick={() => setIsApplying(false)} className="text-gray-400 hover:text-brand-red transition-colors">
-                                    <ArrowLeft size={20} />
-                                </button>
-                                <div>
-                                    <h3 className="font-black text-xl text-gray-900">Sua Candidatura</h3>
-                                    <p className="text-xs font-bold text-gray-400 tracking-widest uppercase mt-1">Vaga: {job.title}</p>
-                                </div>
-                            </div>
-
-                            <form onSubmit={handleApply} className="space-y-5">
-                                {errorMsg && (
-                                    <div className="p-4 bg-red-50 text-brand-red font-bold text-sm rounded-xl border border-red-100">
-                                        {errorMsg}
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">Nome Completo *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red focus:bg-white rounded-xl py-3 px-4 outline-none font-bold text-gray-900 transition-all placeholder:text-gray-300"
-                                        placeholder="Seu nome"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div>
-                                        <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">E-mail *</label>
-                                        <input
-                                            type="email"
-                                            required
-                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red focus:bg-white rounded-xl py-3 px-4 outline-none font-bold text-gray-900 transition-all placeholder:text-gray-300"
-                                            placeholder="seu@email.com"
-                                            value={formData.email}
-                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">WhatsApp</label>
-                                        <input
-                                            type="text"
-                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-brand-red focus:bg-white rounded-xl py-3 px-4 outline-none font-bold text-gray-900 transition-all placeholder:text-gray-300"
-                                            placeholder="(00) 00000-0000"
-                                            value={maskPhone(formData.phone)}
-                                            onChange={e => setFormData({ ...formData, phone: maskPhone(e.target.value) })}
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black text-gray-900 uppercase tracking-widest mb-2">Anexar Currículo (PDF/Word) *</label>
-                                    <div className="relative">
-                                        <input
-                                            type="file"
-                                            required
-                                            accept=".pdf,.doc,.docx"
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                            onChange={e => {
-                                                if (e.target.files && e.target.files.length > 0) {
-                                                    setFormData({ ...formData, resume: e.target.files[0] });
-                                                }
-                                            }}
-                                        />
-                                        <div className={`w-full border-2 border-dashed ${formData.resume ? 'border-brand-red bg-brand-red/5' : 'border-gray-200 bg-gray-50'} rounded-xl p-6 text-center transition-colors pointer-events-none`}>
-                                            <div className="flex flex-col items-center gap-2">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${formData.resume ? 'bg-brand-red text-white' : 'bg-gray-200 text-gray-500'}`}>
-                                                    <Briefcase size={18} />
-                                                </div>
-                                                {formData.resume ? (
-                                                    <p className="font-black text-sm text-brand-red">{formData.resume.name}</p>
-                                                ) : (
-                                                    <p className="font-bold text-sm text-gray-500">Clique ou arraste seu arquivo aqui</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="w-full bg-brand-red text-white py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-red-900/30 disabled:opacity-50 disabled:pointer-events-none mt-4"
-                                >
-                                    {isSubmitting ? 'Enviando...' : 'Enviar Currículo'}
-                                </button>
-                            </form>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
 
 // ── COMPONENTES AUXILIARES ────────────────────────────────────────
 const CompanyLogo = ({ company, logo, className = '' }: { company: string, logo?: string, className?: string }) => {
@@ -372,7 +85,6 @@ export default function VagasPage() {
     const [selectedCity, setSelectedCity] = useState<string>('Todas as Cidades');
     const [sortBy, setSortBy] = useState<'recentes' | 'salario'>('recentes');
     const [showFilters, setShowFilters] = useState(false);
-    const [selectedJob, setSelectedJob] = useState<Job | null>(null);
     const [jobs, setJobs] = useState<Job[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -690,7 +402,7 @@ export default function VagasPage() {
                                     <div
                                         key={job.id}
                                         className="group bg-white p-6 md:p-8 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 hover:border-brand-red/10 transition-all cursor-pointer"
-                                        onClick={() => setSelectedJob(job)}
+                                        onClick={() => router.push(`/vagas/${job.id}-${slugify(job.title)}`)}
                                     >
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                             <div className="flex items-start gap-5">
@@ -723,7 +435,7 @@ export default function VagasPage() {
                                                     <p className="text-lg font-black text-gray-900">{job.salary}</p>
                                                 </div>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}
+                                                    onClick={(e) => { e.stopPropagation(); router.push(`/vagas/${job.id}-${slugify(job.title)}`); }}
                                                     className="bg-gray-900 group-hover:bg-brand-red text-white px-6 py-3 rounded-xl font-black text-sm transition-all active:scale-95 shadow-sm flex items-center gap-2 whitespace-nowrap"
                                                 >
                                                     Ver Detalhes
@@ -779,10 +491,6 @@ export default function VagasPage() {
                 </div>
             </section>
 
-            {/* ── MODAL ── */}
-            {selectedJob && (
-                <JobModal job={selectedJob} onClose={() => setSelectedJob(null)} />
-            )}
         </div>
     );
 }

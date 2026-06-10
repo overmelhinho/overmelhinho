@@ -191,7 +191,7 @@ export default function ClienteCreateFromLead() {
     cnpj: Yup.string().nullable(),
     email: Yup.string().email("Email inválido").nullable(),
     telefone_principal: Yup.string().required("Telefone principal é obrigatório"),
-    responsavel: Yup.string().required("Responsável é obrigatório"),
+    responsavel: Yup.string().nullable(),
   });
 
   // ✅ tabs dependem do tipoCliente (pagante mostra tudo)

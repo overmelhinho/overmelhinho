@@ -1,6 +1,7 @@
 import api from '@/services/api';
 import { Metadata } from 'next';
 import ClientProfileClient from './ClientProfileClient';
+import { slugify } from '@/utils/slugify';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://novo.overmelhinho.com.br';
 
@@ -21,19 +22,6 @@ async function getClient(id: string) {
     } catch (e) {
         return null;
     }
-}
-
-// Função auxiliar para criar slug a partir de string
-function slugify(text: string) {
-    return text
-        .toString()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^\w\s-]/g, "")
-        .replace(/\s+/g, '-')
-        .replace(/--+/g, '-')
-        .trim();
 }
 
 // 🔍 SEO Dinâmico: Título, Descrição e Keywords baseadas na intenção de busca (Serviço + Cidade)

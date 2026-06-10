@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mic, Sparkles, Menu, Search, User, Home as HomeIcon, Briefcase, Heart, MessageCircle, ArrowRight, Building2 } from 'lucide-react';
+import { Mic, Sparkles, Menu, Search, User, Home as HomeIcon, Briefcase, Heart, MessageCircle, Building2 } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAds } from '@/hooks/useAds';
 import { useClients } from '@/hooks/useClients';
@@ -24,7 +24,6 @@ function WhatsAppIcon({ size = 20 }) {
 export default function Home() {
   const router = useRouter();
   const { trackSearch, trackAdInteraction } = useAnalytics();
-  const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [trackedHomeAd, setTrackedHomeAd] = useState(false);
   const scrollyRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -176,34 +175,23 @@ export default function Home() {
                         {categories.map((cat) => (
                             <div
                                 key={cat.id}
-                                onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
-                                className={`gummy-card p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] flex items-center cursor-pointer relative overflow-hidden transition-all duration-500 border-2 border-white ${cat.color} ${activeCategory === cat.id ? 'scale-[1.02] shadow-md' : 'hover:scale-[1.02] shadow-sm'}`}
+                                onClick={() => {
+                                    if (cat.name === 'Vagas') {
+                                        router.push('/vagas');
+                                    } else if (cat.name === 'Saúde') {
+                                        handleQuickSearch('clinicas');
+                                    } else {
+                                        handleQuickSearch(cat.name);
+                                    }
+                                }}
+                                className={`gummy-card p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] flex items-center cursor-pointer relative overflow-hidden transition-all duration-500 border-2 border-white ${cat.color} hover:scale-[1.02] shadow-sm`}
                             >
-                                <div className={`bg-white/80 w-10 h-10 md:w-12 md:h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xl md:text-2xl shadow-sm transition-all duration-500 ${activeCategory === cat.id ? 'rotate-12 scale-110' : ''}`}>
+                                <div className="bg-white/80 w-10 h-10 md:w-12 md:h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xl md:text-2xl shadow-sm transition-all duration-500">
                                     {cat.icon}
                                 </div>
                                 <div className="relative z-10 transition-all duration-500 ml-3 md:ml-4 flex-1">
                                     <p className="text-[8px] md:text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] font-sans leading-none mb-1">{cat.desc}</p>
                                     <h3 className="font-black text-sm md:text-base text-gray-900 tracking-tighter font-serif leading-none">{cat.name}</h3>
-                                    
-                                    {activeCategory === cat.id && (
-                                        <div
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (cat.name === 'Vagas') {
-                                                    router.push('/vagas');
-                                                } else if (cat.name === 'Saúde') {
-                                                    handleQuickSearch('clinicas');
-                                                } else {
-                                                    handleQuickSearch(cat.name);
-                                                }
-                                            }}
-                                            className="mt-2 flex items-center space-x-1 text-brand-red font-black text-[10px] uppercase animate-in fade-in slide-in-from-left-2 transition-all font-sans cursor-pointer"
-                                        >
-                                            <span>Descobrir</span>
-                                            <ArrowRight size={12} />
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         ))}

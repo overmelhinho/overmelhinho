@@ -100,7 +100,7 @@ export default function Footer() {
 
                     <div className="lg:col-span-4 space-y-8">
                         <div className="bg-gray-50 rounded-[2.5rem] px-5 py-6 sm:p-8 space-y-6 border border-gray-100/50">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Suporte Premium</h4>
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Suporte O Vermelhinho</h4>
                             <div className="space-y-4">
                                 {/* WhatsApp */}
                                 <div className="flex items-start space-x-3 sm:space-x-4">
