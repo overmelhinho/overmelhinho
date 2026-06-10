@@ -38,6 +38,7 @@ class ClienteController extends Controller
     public function indexPublic(Request $request)
     {
         $q = trim((string) ($request->input('q') ?? ''));
+        $q = $this->normalizeQueryTypo($q);
         $perPage = (int) ($request->input('per_page') ?? 15);
         $cityId = $request->input('city_id');
         $cityName = $request->input('city_name');
@@ -346,6 +347,7 @@ class ClienteController extends Controller
     public function suggestions(Request $request)
     {
         $q = trim((string) ($request->input('q') ?? ''));
+        $q = $this->normalizeQueryTypo($q);
         $cityId = $request->input('city_id');
 
         // ✅ Detecta se o termo de busca contém o nome de alguma cidade
@@ -3170,6 +3172,39 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         }
 
         return $bestCity;
+    }
+
+    /**
+     * ✅ Normaliza o termo de busca "vermelhinho" com tolerância a erros (typos)
+     */
+    private function normalizeQueryTypo(string $q): string
+    {
+        if ($q !== '') {
+            $words = explode(' ', $q);
+            $modified = false;
+            foreach ($words as &$word) {
+                $cleanWord = strtolower(Str::ascii($word));
+                $cleanWord = preg_replace('/[^a-z]/', '', $cleanWord);
+                if (strlen($cleanWord) >= 6) {
+                    if (in_array($cleanWord, ['vermelho', 'vermelha', 'vermelhao', 'vermelhas', 'vermelhos'])) {
+                        continue;
+                    }
+                    $dist = levenshtein($cleanWord, 'vermelhinho');
+                    if ($dist <= 4) {
+                        $startsWithVOrW = in_array($cleanWord[0], ['v', 'w']);
+                        $containsMAndL = strpos($cleanWord, 'm') !== false && strpos($cleanWord, 'l') !== false;
+                        if ($startsWithVOrW && $containsMAndL) {
+                            $word = str_replace($cleanWord, 'vermelhinho', strtolower($word));
+                            $modified = true;
+                        }
+                    }
+                }
+            }
+            if ($modified) {
+                $q = implode(' ', $words);
+            }
+        }
+        return $q;
     }
 }
 
