@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "@/services/api";
 import {
     MessageCircle,
@@ -56,10 +56,20 @@ const getLogoUrl = (logoPath?: string | null) => {
 };
 
 export default function QuotesPage() {
+    const queryClient = useQueryClient();
     const [page, setPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState("");
     const [period, setPeriod] = useState("all");
     const [customDates, setCustomDates] = useState({ start: "", end: "" });
+
+    const updateStatusMutation = useMutation({
+        mutationFn: async (quoteId: number) => {
+            await axios.patch(`/v1/quotes/${quoteId}/status`, { status: "replied" });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-quotes"] });
+        }
+    });
 
     const { data: responseData, isLoading } = useQuery({
         queryKey: ["admin-quotes", page, statusFilter, period, customDates],
@@ -92,7 +102,7 @@ export default function QuotesPage() {
             case "new":
                 return <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase ring-1 ring-blue-100">Novo</span>;
             case "replied":
-                return <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase ring-1 ring-green-100">Respondido</span>;
+                return <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase ring-1 ring-green-100">Enviado</span>;
             case "closed":
                 return <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-full text-[10px] font-black uppercase ring-1 ring-gray-100">Fechado</span>;
             default:
@@ -148,12 +158,14 @@ export default function QuotesPage() {
             const url = `https://web.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msgText)}`;
             window.open(url, "_blank");
             toast.success(`WhatsApp Web aberto para enviar à empresa ${lojistaNome}`);
+            updateStatusMutation.mutate(quote.id);
         } else if (email) {
             const subject = encodeURIComponent("Novo Orçamento Recebido - O Vermelhinho");
             const body = encodeURIComponent(msgText);
             const url = `mailto:${email}?subject=${subject}&body=${body}`;
             window.open(url, "_self");
             toast.success(`E-mail aberto para enviar à empresa ${lojistaNome}`);
+            updateStatusMutation.mutate(quote.id);
         }
     };
 
@@ -181,7 +193,7 @@ export default function QuotesPage() {
                                     : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                                     }`}
                             >
-                                {s === '' ? 'Todos' : s === 'new' ? 'Pendentes' : 'Respondidos'}
+                                {s === '' ? 'Todos' : s === 'new' ? 'Pendentes' : 'Enviados'}
                             </button>
                         ))}
                     </div>
