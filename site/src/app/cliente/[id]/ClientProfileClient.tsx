@@ -30,6 +30,16 @@ const slugify = (text: string) => {
         .trim();
 };
 
+const isImage = (url: string) => {
+    if (!url) return false;
+    const cleanUrl = url.split('?')[0].toLowerCase();
+    return cleanUrl.endsWith('.png') || 
+           cleanUrl.endsWith('.jpg') || 
+           cleanUrl.endsWith('.jpeg') || 
+           cleanUrl.endsWith('.webp') || 
+           cleanUrl.endsWith('.gif');
+};
+
 function WhatsAppIcon({ size = 20 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -76,6 +86,7 @@ export default function ClientProfileClient() {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [isCitiesExpanded, setIsCitiesExpanded] = useState(false);
     const [copiedEmail, setCopiedEmail] = useState(false);
+    const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
 
     // Estados para o formulário de orçamento (Quotes)
     const [quoteName, setQuoteName] = useState('');
@@ -383,6 +394,108 @@ export default function ClientProfileClient() {
     const isFormByEmail = !hasPhoneContact && hasEmailContact;
     const showQuoteForm = client.quotes_enabled && (hasPhoneContact || hasEmailContact);
 
+    const handleScrollToQuoteForm = () => {
+        const element = document.getElementById('quote-form');
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    const renderMaterialOrQuoteButton = (isMobile: boolean) => {
+        const hasMaterial = !!client.portfolio_url;
+        
+        if (hasMaterial) {
+            let label = 'Ver Catálogo';
+            let IconComponent = BookOpen;
+            
+            if (client.tipo_arquivo_midia === 'portfolio') {
+                label = 'Ver Portfólio';
+                IconComponent = Briefcase;
+            } else if (client.tipo_arquivo_midia === 'cardapio') {
+                label = 'Ver Cardápio';
+                IconComponent = Utensils;
+            }
+            
+            if (isMobile) {
+                return (
+                    <button
+                        onClick={() => setIsMaterialModalOpen(true)}
+                        className="bg-brand-red/5 text-brand-red border border-brand-red/10 px-6 py-4 rounded-[2rem] font-black text-xs uppercase tracking-wider flex items-center active:scale-95 transition-all hover:bg-brand-red/10"
+                    >
+                        <IconComponent size={16} className="mr-1.5" /> {label}
+                    </button>
+                );
+            } else {
+                return (
+                    <button
+                        onClick={() => setIsMaterialModalOpen(true)}
+                        className="bg-brand-red/5 text-brand-red border border-brand-red/10 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-brand-red/10"
+                    >
+                        <IconComponent size={20} className="mr-2" /> {label}
+                    </button>
+                );
+            }
+        }
+        
+        if (showQuoteForm) {
+            if (isMobile) {
+                return (
+                    <button
+                        onClick={handleScrollToQuoteForm}
+                        className="bg-gray-50 text-gray-700 border border-gray-200 px-6 py-4 rounded-[2rem] font-black text-xs uppercase tracking-wider flex items-center active:scale-95 transition-all hover:bg-gray-100"
+                    >
+                        <MessageSquare size={16} className="mr-1.5" /> Fazer Orçamento
+                    </button>
+                );
+            } else {
+                return (
+                    <button
+                        onClick={handleScrollToQuoteForm}
+                        className="bg-gray-50 text-gray-700 border border-gray-200 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-gray-100"
+                    >
+                        <MessageSquare size={20} className="mr-2" /> Fazer Orçamento
+                    </button>
+                );
+            }
+        }
+        
+        return null;
+    };
+
+    const renderCompactMaterialOrQuoteButton = () => {
+        const hasMaterial = !!client.portfolio_url;
+        
+        if (hasMaterial) {
+            let label = 'Ver Catálogo';
+            if (client.tipo_arquivo_midia === 'portfolio') {
+                label = 'Ver Portfólio';
+            } else if (client.tipo_arquivo_midia === 'cardapio') {
+                label = 'Ver Cardápio';
+            }
+            return (
+                <button
+                    onClick={() => setIsMaterialModalOpen(true)}
+                    className="bg-brand-red/5 hover:bg-brand-red/10 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-brand-red text-center transition-all border border-brand-red/10 flex items-center justify-center gap-1.5"
+                >
+                    {label}
+                </button>
+            );
+        }
+        
+        if (showQuoteForm) {
+            return (
+                <button
+                    onClick={handleScrollToQuoteForm}
+                    className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-gray-700 text-center transition-all border border-gray-100 flex items-center justify-center gap-1.5"
+                >
+                    Fazer Orçamento
+                </button>
+            );
+        }
+        
+        return null;
+    };
+
     const tabs = isPagante ? ['Sobre', 'Fotos'] : ['Sobre'];
     if (client.reviews?.length > 0 && isPagante) tabs.push('Avaliações');
     if (client.job_opportunities?.length > 0 && isPagante) tabs.push('Vagas');
@@ -612,6 +725,11 @@ export default function ClientProfileClient() {
                                             : 'Endereço não informado'}
                                     </p>
                                 </div>
+
+                                {/* Mobile Actions Row */}
+                                <div className="flex md:hidden flex-wrap items-center gap-3 mt-4">
+                                    {renderMaterialOrQuoteButton(true)}
+                                </div>
                             </div>
 
                             {/* CTAs DESKTOP */}
@@ -655,6 +773,9 @@ export default function ClientProfileClient() {
                                         </a>
                                     </>
                                 )}
+
+                                {renderMaterialOrQuoteButton(false)}
+
                                 <button
                                     onClick={handleShareClick}
                                     className="p-5 bg-white border border-gray-100 rounded-[1.5rem] shadow-xl text-gray-400 hover:text-brand-red transition-all active:scale-75"
@@ -962,6 +1083,7 @@ export default function ClientProfileClient() {
                                                                 Waze
                                                             </a>
                                                         )}
+                                                        {renderCompactMaterialOrQuoteButton()}
                                                     </div>
                                                 </div>
                                             )) : (
@@ -1339,6 +1461,7 @@ export default function ClientProfileClient() {
                                                         Waze
                                                     </a>
                                                 )}
+                                                {renderCompactMaterialOrQuoteButton()}
                                             </div>
                                         </div>
                                     )) : (
@@ -1355,7 +1478,7 @@ export default function ClientProfileClient() {
 
                 {/* ✍️ FORMULÁRIO DE ORÇAMENTO (QUOTES) */}
                 {showQuoteForm && (
-                    <section className="mt-12 bg-white rounded-[2.5rem] md:rounded-[4rem] p-8 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.12)] border-2 border-white relative">
+                    <section id="quote-form" className="mt-12 bg-white rounded-[2.5rem] md:rounded-[4rem] p-8 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.12)] border-2 border-white relative">
                         {/* Header */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-gray-100 mb-8">
                             <div>
@@ -1654,6 +1777,78 @@ export default function ClientProfileClient() {
                     )}
                 </div>
             </footer>
+
+            {/* 📄 MATERIAL PREVIEW MODAL */}
+            <AnimatePresence>
+                {isMaterialModalOpen && client.portfolio_url && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+                        onClick={() => setIsMaterialModalOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.95 }}
+                            className="bg-white rounded-[2rem] w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden shadow-2xl relative"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                <div>
+                                    <h3 className="text-xl font-black font-serif italic text-gray-900 uppercase">
+                                        {client.tipo_arquivo_midia === 'cardapio' ? 'Visualizar Cardápio' :
+                                            client.tipo_arquivo_midia === 'portfolio' ? 'Visualizar Portfólio' :
+                                                'Visualizar Catálogo'}
+                                    </h3>
+                                    <p className="text-xs font-bold text-gray-400 mt-1">{client.nome_fantasia}</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsMaterialModalOpen(false)}
+                                    className="p-3 bg-white hover:bg-gray-100 border border-gray-200 rounded-full transition-all active:scale-90"
+                                >
+                                    <X size={18} className="text-gray-500" />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 bg-gray-100/50 relative overflow-hidden flex items-center justify-center p-4">
+                                {isImage(client.portfolio_url) ? (
+                                    <img
+                                        src={client.portfolio_url}
+                                        alt={client.nome_fantasia}
+                                        className="max-w-full max-h-full object-contain rounded-lg shadow-md"
+                                    />
+                                ) : (
+                                    <iframe
+                                        src={client.portfolio_url}
+                                        title={client.nome_fantasia}
+                                        className="w-full h-full border-0 rounded-lg shadow-sm"
+                                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                                    />
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-5 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white">
+                                <span className="text-xs text-gray-400 font-semibold text-center sm:text-left">
+                                    Não conseguiu visualizar? Você pode abrir o arquivo diretamente.
+                                </span>
+                                <a
+                                    href={client.portfolio_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-brand-red hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                                >
+                                    <ExternalLink size={14} /> Abrir em Nova Guia
+                                </a>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* 🖼️ IMAGE LIGHTBOX MODAL */}
             <AnimatePresence>
