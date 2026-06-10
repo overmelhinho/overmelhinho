@@ -511,12 +511,8 @@ export default function ClientesList() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Qualquer Status</SelectItem>
-                  <SelectItem value="ativa">Ativa</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="atrasada">Atrasada</SelectItem>
-                  <SelectItem value="suspensa">Suspensa</SelectItem>
-                  <SelectItem value="inadimplente">Inadimplente ⚠️</SelectItem>
-                  <SelectItem value="cancelada">Cancelada</SelectItem>
+                  <SelectItem value="ativa">Ativo</SelectItem>
+                  <SelectItem value="inadimplente">Inadimplente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
