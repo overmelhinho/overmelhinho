@@ -15,7 +15,8 @@ import {
     TrendingUp,
     Timer,
     Zap,
-    Calendar
+    Calendar,
+    Mail
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -34,12 +35,25 @@ interface Quote {
     cliente: {
         id: number;
         nome_fantasia: string;
+        logo_url?: string | null;
         contatos?: Array<{
             celular?: string;
             telefone_principal?: string;
+            email_principal?: string;
+            exibir_email?: boolean;
         }>;
     };
 }
+
+const getLogoUrl = (logoPath?: string | null) => {
+    if (!logoPath) return "";
+    if (logoPath.startsWith("http://") || logoPath.startsWith("https://")) {
+        return logoPath;
+    }
+    const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || "https://api.overmelhinho.com.br/api";
+    const baseStorage = apiBase.replace(/\/api$/, "/storage").replace(/\/v1$/, "/storage").replace(/\/api\/v1$/, "/storage");
+    return `${baseStorage}/${logoPath.replace(/^\//, "")}`;
+};
 
 export default function QuotesPage() {
     const [page, setPage] = useState(1);
@@ -100,19 +114,47 @@ export default function QuotesPage() {
     const notifyLojista = (quote: Quote) => {
         const lojistaNome = quote.cliente.nome_fantasia;
         const contatos = quote.cliente.contatos || [];
-        const contatoPrincipal = contatos[0]?.celular || contatos[0]?.telefone_principal || "";
-        const fone = contatoPrincipal.replace(/\D/g, "");
+        
+        // Find phone
+        const contactWithPhone = contatos.find(c => c.celular || c.telefone_principal);
+        const phone = contactWithPhone ? (contactWithPhone.celular || contactWithPhone.telefone_principal || "").replace(/\D/g, "") : "";
 
-        if (!fone) {
-            toast.error(`A empresa ${lojistaNome} não possui celular cadastrado.`);
+        // Find email
+        const contactWithEmail = contatos.find(c => c.email_principal && c.exibir_email);
+        const email = contactWithEmail ? contactWithEmail.email_principal : "";
+
+        if (!phone && !email) {
+            toast.error(`A empresa ${lojistaNome} não possui celular ou e-mail válido cadastrado.`);
             return;
         }
 
-        const msg = `Olá ${lojistaNome}, notamos que o orçamento de ${quote.customer_name} (${quote.urgency}) ainda não foi respondido no painel do O Vermelhinho. Por favor, verifique sua Fila de Foco para não perder o lead!`;
-        const url = `https://wa.me/55${fone}?text=${encodeURIComponent(msg)}`;
+        // Check lead contact type and construct direct link for merchant to reply to lead
+        const isLeadEmail = quote.customer_whatsapp.includes("@");
+        let directContactLink = "";
+        if (isLeadEmail) {
+            const subject = encodeURIComponent("Orçamento - O Vermelhinho");
+            const body = encodeURIComponent(`Olá ${quote.customer_name}! Sou da ${lojistaNome}, recebemos seu contato via O Vermelhinho sobre: ${quote.service_requested}`);
+            directContactLink = `mailto:${quote.customer_whatsapp}?subject=${subject}&body=${body}`;
+        } else {
+            const leadPhone = quote.customer_whatsapp.replace(/\D/g, "");
+            const text = encodeURIComponent(`Olá ${quote.customer_name}! Sou da ${lojistaNome}, recebemos seu contato via O Vermelhinho sobre: ${quote.service_requested}`);
+            directContactLink = `https://wa.me/55${leadPhone}?text=${text}`;
+        }
 
-        window.open(url, "_blank");
-        toast.success(`WhatsApp aberto para cobrar a empresa ${lojistaNome}`);
+        // Message body to send to the merchant
+        const msgText = `Olá, Aqui é do O Vermelhinho e recebemos uma solicitação de orçamento/contato de um possível cliente para você. Segue abaixo:\n\n"${quote.service_requested}"\n- ${quote.customer_name}\n\nPara entrar em contato diretamente com o cliente, clique no link abaixo:\n${directContactLink}`;
+
+        if (phone) {
+            const url = `https://web.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msgText)}`;
+            window.open(url, "_blank");
+            toast.success(`WhatsApp Web aberto para enviar à empresa ${lojistaNome}`);
+        } else if (email) {
+            const subject = encodeURIComponent("Novo Orçamento Recebido - O Vermelhinho");
+            const body = encodeURIComponent(msgText);
+            const url = `mailto:${email}?subject=${subject}&body=${body}`;
+            window.open(url, "_self");
+            toast.success(`E-mail aberto para enviar à empresa ${lojistaNome}`);
+        }
     };
 
     return (
@@ -277,8 +319,16 @@ export default function QuotesPage() {
                                     </td>
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 border border-gray-100 group-hover:bg-red-50 group-hover:text-[#C00000] transition-colors">
-                                                <Briefcase size={20} />
+                                            <div className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 border border-gray-100 group-hover:bg-red-50 group-hover:text-[#C00000] transition-colors overflow-hidden">
+                                                {quote.cliente.logo_url ? (
+                                                    <img 
+                                                        src={getLogoUrl(quote.cliente.logo_url)} 
+                                                        alt={quote.cliente.nome_fantasia}
+                                                        className="w-full h-full object-contain p-1"
+                                                    />
+                                                ) : (
+                                                    <Briefcase size={20} />
+                                                )}
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-gray-900">{quote.cliente.nome_fantasia}</span>
@@ -312,28 +362,41 @@ export default function QuotesPage() {
                                     <td className="px-8 py-6 text-center">
                                         {quote.status === 'new' ? (
                                             (() => {
-                                                const fone = (quote.cliente.contatos?.[0]?.celular || quote.cliente.contatos?.[0]?.telefone_principal || "").replace(/\D/g, "");
+                                                const contatos = quote.cliente.contatos || [];
+                                                const contactWithPhone = contatos.find(c => c.celular || c.telefone_principal);
+                                                const phone = contactWithPhone ? (contactWithPhone.celular || contactWithPhone.telefone_principal || "").replace(/\D/g, "") : "";
 
-                                                if (fone) {
-                                                    const alreadyNotified = !!quote.notified_at;
+                                                const contactWithEmail = contatos.find(c => c.email_principal && c.exibir_email);
+                                                const email = contactWithEmail ? contactWithEmail.email_principal : "";
+
+                                                if (phone) {
                                                     return (
                                                         <button
                                                             onClick={() => notifyLojista(quote)}
-                                                            className={`h-12 px-6 rounded-[20px] text-[10px] font-black uppercase transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-lg ${alreadyNotified
-                                                                ? 'bg-white border-2 border-gray-100 text-gray-500 hover:bg-gray-50'
-                                                                : 'bg-[#C00000] text-white hover:bg-black shadow-red-100'
-                                                                }`}
+                                                            className="h-12 px-6 rounded-[20px] text-[10px] font-black uppercase transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-lg bg-[#C00000] text-white hover:bg-black shadow-red-100"
                                                         >
                                                             <Smartphone size={16} />
-                                                            {alreadyNotified ? 'Cobrar Manualmente' : 'Cobrar Empresa'}
+                                                            Enviar para Empresa
+                                                        </button>
+                                                    );
+                                                }
+
+                                                if (email) {
+                                                    return (
+                                                        <button
+                                                            onClick={() => notifyLojista(quote)}
+                                                            className="h-12 px-6 rounded-[20px] text-[10px] font-black uppercase transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-lg bg-blue-600 text-white hover:bg-black shadow-blue-100"
+                                                        >
+                                                            <Mail size={16} />
+                                                            Enviar para Empresa
                                                         </button>
                                                     );
                                                 }
 
                                                 return (
                                                     <div className="flex flex-col items-center gap-1 opacity-30">
-                                                        <Smartphone size={16} className="text-gray-400" />
-                                                        <span className="text-[8px] font-black uppercase tracking-tighter">Sem Telefone</span>
+                                                        <AlertTriangle size={16} className="text-gray-400" />
+                                                        <span className="text-[8px] font-black uppercase tracking-tighter">Sem Contato</span>
                                                     </div>
                                                 );
                                             })()

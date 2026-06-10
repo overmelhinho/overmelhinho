@@ -69,7 +69,8 @@ class ClienteResource extends JsonResource
             'galeria_imagens_count' => $this->galeria_imagens_count ?? ($this->relationLoaded('galeriaImagens') ? $this->galeriaImagens->count() : 0),
             
             'quotes_enabled' => $this->relationLoaded('contatos') 
-                ? $this->contatos->whereNotNull('celular')->count() > 0 
+                ? ($this->contatos->whereNotNull('celular')->count() > 0 || 
+                   $this->contatos->where('exibir_email', true)->whereNotNull('email_principal')->count() > 0)
                 : false,
 
             'segmentos' => SegmentoResource::collection($this->whenLoaded('segmentos')),

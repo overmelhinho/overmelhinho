@@ -314,7 +314,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
 
 // ✅ Rotas Públicas de Orçamentos e Tracking
-Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store']);
+Route::post('/v1/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'store'])->middleware('throttle:3,1');
 Route::post('/v1/tracking/interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'store']);
 Route::post('/v1/tracking/ad-interaction', [\App\Http\Controllers\Api\V1\TrackingController::class, 'adInteraction']);
 Route::post('/v1/tracking/search', [\App\Http\Controllers\Api\V1\TrackingController::class, 'search']);

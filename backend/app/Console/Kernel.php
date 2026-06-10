@@ -19,6 +19,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\SyncMissingInvoices::class,
         \App\Console\Commands\SyncTinyErpCommand::class,
         \App\Console\Commands\ReconcileTinyInvoicesCommand::class,
+        \App\Console\Commands\SendDailyQuotesReport::class,
     ];
 
     /**
@@ -46,6 +47,9 @@ class Kernel extends ConsoleKernel
 
         // 🤖 Sincroniza faturas pendentes com o Tiny ERP automaticamente a cada 10 minutos
         $schedule->command('tiny:sync-status')->everyTenMinutes();
+
+        // 📊 Envia o relatório diário de orçamentos às 08:00 da manhã
+        $schedule->command('app:send-daily-quotes-report')->dailyAt('08:00');
     }
 
     /**

@@ -66,6 +66,14 @@ class QuoteController extends Controller
      */
     public function store(Request $request)
     {
+        // Honeypot check: se o campo invisível estiver preenchido, é um bot de spam.
+        // Retornamos 200 OK falso para despistar o robô sem salvar nada.
+        if ($request->filled('email_confirmation')) {
+            return response()->json([
+                'message' => 'Solicitação enviada com sucesso!'
+            ], 200);
+        }
+
         $request->validate([
             'cliente_id' => 'required|exists:clientes,id',
             'customer_name' => 'required|string|max:255',

@@ -48,31 +48,61 @@ class GenerateAiQuoteResponse implements ShouldQueue
 
         if (!$cliente) return;
 
-        $contato = $cliente->contatos->whereNotNull('celular')->first();
-        if (!$contato) return;
-
-        $phone = preg_replace('/\D+/', '', (string)$contato->celular);
+        $contatoCelular = $cliente->contatos->whereNotNull('celular')->first();
         
-        // Adicionar DDI 55 se não tiver
-        if (strlen($phone) === 11 || strlen($phone) === 10) {
-            $phone = '55' . $phone;
+        // Se o lojista possui celular/WhatsApp cadastrado, o envio da notificação é feito
+        // manualmente pelo administrador no Painel de Orçamentos (via botão "Enviar para Empresa").
+        if ($contatoCelular) {
+            return;
         }
 
-        $message = "🔴 *Novo Orçamento Urgente — O Vermelhinho*\n\n" .
-                   "Olá, *{$cliente->nome_fantasia}*!\n\n" .
-                   "O cliente *{$this->quote->customer_name}* solicitou um orçamento pelo seu site:\n\n" .
-                   "📋 *Pedido:* {$this->quote->service_requested}\n" .
-                   "⏱ *Urgência:* " . ucfirst($this->quote->urgency) . "\n" .
-                   "📱 *WhatsApp:* {$this->quote->customer_whatsapp}\n\n" .
-                   "🤖 *Rascunho IA sugerido:*\n" .
-                   "\"" . substr($this->quote->ai_draft_response, 0, 300) . "...\"\n\n" .
-                   "👉 Acesse sua Fila de Foco para responder:\n" .
-                   "https://dash.overmelhinho.com.br/dashboard/foco";
+        // Se o lojista possuir apenas e-mail cadastrado (e ativo para exibição),
+        // enviamos a notificação por e-mail automaticamente em segundo plano.
+        $contatoEmail = $cliente->contatos->where('exibir_email', true)->whereNotNull('email_principal')->first();
 
-        if ($zapiService->sendText($phone, $message)) {
-            $this->quote->update([
-                'notified_at' => now()
-            ]);
+        if ($contatoEmail) {
+            $email = $contatoEmail->email_principal;
+            
+            $contactLabel = str_contains($this->quote->customer_whatsapp, '@') ? 'E-mail' : 'WhatsApp';
+            $urgencyLabel = ucfirst($this->quote->urgency);
+
+            $subject = "🔴 Novo Orçamento Urgente — O Vermelhinho";
+
+            $htmlContent = "
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;'>
+                    <h2 style='color: #C00000; margin-top: 0;'>🔴 Novo Orçamento Urgente — O Vermelhinho</h2>
+                    <p>Olá, <strong>{$cliente->nome_fantasia}</strong>!</p>
+                    <p>O cliente <strong>{$this->quote->customer_name}</strong> solicitou um orçamento pelo seu site:</p>
+                    <div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #C00000; margin: 15px 0;'>
+                        <p style='margin: 5px 0;'><strong>📋 Pedido:</strong> {$this->quote->service_requested}</p>
+                        <p style='margin: 5px 0;'><strong>⏱ Urgência:</strong> {$urgencyLabel}</p>
+                        <p style='margin: 5px 0;'><strong>{$contactLabel}:</strong> {$this->quote->customer_whatsapp}</p>
+                    </div>
+                    <div style='margin: 20px 0;'>
+                        <h4 style='margin-bottom: 5px; color: #333;'>🤖 Rascunho IA sugerido:</h4>
+                        <p style='font-style: italic; color: #555; background-color: #f5f5f5; padding: 10px; border-radius: 4px; white-space: pre-wrap;'>
+                            \"{$this->quote->ai_draft_response}\"
+                        </p>
+                    </div>
+                    <div style='text-align: center; margin-top: 25px;'>
+                        <a href='https://dash.overmelhinho.com.br/dashboard/foco' style='background-color: #C00000; color: white; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;'>👉 Acesse sua Fila de Foco para responder</a>
+                    </div>
+                </div>
+            ";
+
+            try {
+                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $subject, $htmlContent) {
+                    $message->to($email)
+                        ->subject($subject)
+                        ->html($htmlContent);
+                });
+
+                $this->quote->update([
+                    'notified_at' => now()
+                ]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Erro ao enviar e-mail de notificação para o lojista {$cliente->nome_fantasia}: " . $e->getMessage());
+            }
         }
     }
 }

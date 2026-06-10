@@ -8,7 +8,7 @@ import {
     User, Menu, Info, ImageIcon, MessageSquare, Instagram,
     Facebook, Globe, ExternalLink, ChevronLeft, Linkedin, Youtube,
     X, Maximize2, Copy, Check, Bike, Utensils, CreditCard, DollarSign,
-    Smartphone, Banknote, Coins, FileText, BookOpen, Mail
+    Smartphone, Banknote, Coins, FileText, BookOpen, Mail, Send, AlertTriangle
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -76,6 +76,83 @@ export default function ClientProfileClient() {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [isCitiesExpanded, setIsCitiesExpanded] = useState(false);
     const [copiedEmail, setCopiedEmail] = useState(false);
+
+    // Estados para o formulário de orçamento (Quotes)
+    const [quoteName, setQuoteName] = useState('');
+    const [quoteWhatsapp, setQuoteWhatsapp] = useState('');
+    const [quoteService, setQuoteService] = useState('');
+    const [quoteUrgency, setQuoteUrgency] = useState('semana');
+    const [quoteEmailConfirmation, setQuoteEmailConfirmation] = useState('');
+    const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
+    const [quoteSuccess, setQuoteSuccess] = useState(false);
+    const [quoteError, setQuoteError] = useState('');
+
+    const handlePhoneChange = (value: string) => {
+        const cleaned = value.replace(/\D/g, '');
+        const truncated = cleaned.slice(0, 11);
+        
+        let formatted = truncated;
+        if (truncated.length > 2) {
+            formatted = `(${truncated.slice(0, 2)}) ${truncated.slice(2)}`;
+        }
+        if (truncated.length > 7) {
+            formatted = `(${truncated.slice(0, 2)}) ${truncated.slice(2, 7)}-${truncated.slice(7)}`;
+        }
+        setQuoteWhatsapp(formatted);
+    };
+
+    const handleQuoteSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!quoteName.trim()) {
+            setQuoteError('Por favor, informe seu nome.');
+            return;
+        }
+        
+        if (isFormByEmail) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(quoteWhatsapp)) {
+                setQuoteError('Por favor, informe um E-mail válido.');
+                return;
+            }
+        } else {
+            const cleanPhone = quoteWhatsapp.replace(/\D/g, '');
+            if (cleanPhone.length < 10) {
+                setQuoteError('Por favor, informe um WhatsApp válido.');
+                return;
+            }
+        }
+        
+        if (quoteService.trim().length < 10) {
+            setQuoteError('Descreva o que você precisa com pelo menos 10 caracteres.');
+            return;
+        }
+
+        setIsSubmittingQuote(true);
+        setQuoteError('');
+
+        try {
+            await api.post('/quotes', {
+                cliente_id: client.id,
+                service_requested: quoteService,
+                urgency: quoteUrgency,
+                customer_name: quoteName,
+                customer_whatsapp: quoteWhatsapp,
+                email_confirmation: quoteEmailConfirmation,
+            });
+            setQuoteSuccess(true);
+            setQuoteName('');
+            setQuoteWhatsapp('');
+            setQuoteService('');
+            setQuoteUrgency('semana');
+            setQuoteEmailConfirmation('');
+        } catch (err) {
+            console.error('Erro ao enviar orçamento:', err);
+            setQuoteError('Ops! Ocorreu um erro ao enviar sua solicitação. Tente novamente.');
+        } finally {
+            setIsSubmittingQuote(false);
+        }
+    };
 
     const citySlug = params.citySlug as string;
 
@@ -291,6 +368,20 @@ export default function ClientProfileClient() {
         primaryWhatsApp = allPhones.find(p => p.isWhatsApp)?.number || allPhones[0]?.number;
     }
     const hasWhatsApp = !!primaryWhatsApp && isPagante;
+
+    const hasPhoneContact = contactInfo ? (
+        !!contactInfo.celular || 
+        !!contactInfo.telefone_principal || 
+        !!contactInfo.telefone_secundario || 
+        !!contactInfo.telefone_outro
+    ) : false;
+
+    const hasEmailContact = contactInfo ? (
+        !!contactInfo.email_principal && contactInfo.exibir_email !== false
+    ) : false;
+
+    const isFormByEmail = !hasPhoneContact && hasEmailContact;
+    const showQuoteForm = client.quotes_enabled && (hasPhoneContact || hasEmailContact);
 
     const tabs = isPagante ? ['Sobre', 'Fotos'] : ['Sobre'];
     if (client.reviews?.length > 0 && isPagante) tabs.push('Avaliações');
@@ -1261,6 +1352,172 @@ export default function ClientProfileClient() {
                         )}
                     </aside>
                 </div>
+
+                {/* ✍️ FORMULÁRIO DE ORÇAMENTO (QUOTES) */}
+                {showQuoteForm && (
+                    <section className="mt-12 bg-white rounded-[2.5rem] md:rounded-[4rem] p-8 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.12)] border-2 border-white relative">
+                        {/* Header */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-gray-100 mb-8">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-brand-red/10 text-brand-red">
+                                        <MessageSquare size={12} className="mr-1" /> Solicitar Orçamento
+                                    </span>
+                                </div>
+                                <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter font-serif uppercase italic">
+                                    Entre em contato com {client.nome_fantasia}
+                                </h2>
+                                <p className="text-gray-500 text-sm md:text-base font-medium mt-1">
+                                    {isFormByEmail 
+                                        ? `Descreva sua necessidade e receba uma resposta ou orçamento personalizado no seu E-mail.` 
+                                        : `Descreva sua necessidade e receba uma resposta ou orçamento personalizado no seu WhatsApp.`}
+                                </p>
+                            </div>
+                        </div>
+
+                        {quoteSuccess ? (
+                            <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 max-w-lg mx-auto animate-in zoom-in-95 duration-300">
+                                <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center shadow-lg border border-green-100">
+                                    <CheckCircle2 size={40} className="animate-pulse" />
+                                </div>
+                                <h3 className="text-2xl font-black font-serif italic text-gray-900 uppercase">Solicitação Enviada!</h3>
+                                <p className="text-sm text-gray-500 font-semibold leading-relaxed">
+                                    Muito obrigado! Sua solicitação foi registrada com sucesso.
+                                    A empresa <strong>{client.nome_fantasia}</strong> recebeu os detalhes e entrará em contato via {isFormByEmail ? 'E-mail' : 'WhatsApp'} o quanto antes.
+                                </p>
+                                <button
+                                    onClick={() => setQuoteSuccess(false)}
+                                    className="mt-4 px-6 py-3 bg-gray-900 hover:bg-brand-red text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-md active:scale-95"
+                                >
+                                    Enviar Nova Solicitação
+                                </button>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleQuoteSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Honeypot field (invisible to humans, filled by bots) */}
+                                <input
+                                    type="text"
+                                    name="email_confirmation"
+                                    value={quoteEmailConfirmation}
+                                    onChange={(e) => setQuoteEmailConfirmation(e.target.value)}
+                                    className="absolute opacity-0 pointer-events-none w-0 h-0 z-[-1]"
+                                    autoComplete="off"
+                                    tabIndex={-1}
+                                />
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 block">
+                                            O que você precisa? *
+                                        </label>
+                                        <textarea
+                                            value={quoteService}
+                                            onChange={(e) => setQuoteService(e.target.value)}
+                                            placeholder="Ex: Preciso de uma revisão nos freios ou orçamento para pintura de uma porta de garagem..."
+                                            className="w-full h-40 p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:ring-4 focus:ring-brand-red/10 focus:border-brand-red transition-all outline-none text-sm font-semibold resize-none text-gray-900"
+                                        />
+                                        <div className="flex justify-between items-center mt-1">
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase">Mínimo 10 caracteres</p>
+                                            <span className={`text-[10px] font-bold ${quoteService.length >= 10 ? 'text-green-500' : 'text-gray-400'}`}>
+                                                {quoteService.length} caracteres
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 block">
+                                            Qual a sua urgência?
+                                        </label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            {[
+                                                { id: 'pesquisa', label: 'Pesquisa', icon: Search, color: 'text-blue-500', bg: 'bg-blue-50' },
+                                                { id: 'semana', label: 'Esta Semana', icon: Clock, color: 'text-orange-500', bg: 'bg-orange-50' },
+                                                { id: 'emergencia', label: 'Emergência', icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
+                                            ].map((opt) => {
+                                                const Icon = opt.icon;
+                                                const isSelected = quoteUrgency === opt.id;
+                                                return (
+                                                    <button
+                                                        key={opt.id}
+                                                        type="button"
+                                                        onClick={() => setQuoteUrgency(opt.id)}
+                                                        className={`flex items-center justify-center sm:flex-col gap-2 p-4 rounded-2xl border-2 transition-all text-xs font-black uppercase tracking-wider ${
+                                                            isSelected
+                                                                ? 'border-brand-red bg-brand-red/5 text-brand-red'
+                                                                : 'border-gray-100 bg-white hover:bg-gray-50 text-gray-600'
+                                                        }`}
+                                                    >
+                                                        <div className={`p-2 rounded-xl ${isSelected ? 'bg-brand-red/10' : opt.bg} ${isSelected ? 'text-brand-red' : opt.color}`}>
+                                                            <Icon size={16} />
+                                                        </div>
+                                                        <span>{opt.label}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6 flex flex-col justify-between">
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 block">
+                                                Seu Nome *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={quoteName}
+                                                onChange={(e) => setQuoteName(e.target.value)}
+                                                placeholder="Ex: Carlos Silva"
+                                                className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:ring-4 focus:ring-brand-red/10 focus:border-brand-red transition-all outline-none text-sm font-semibold text-gray-900"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 block">
+                                                {isFormByEmail ? 'Seu E-mail *' : 'Seu WhatsApp *'}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={quoteWhatsapp}
+                                                onChange={(e) => {
+                                                    if (isFormByEmail) {
+                                                        setQuoteWhatsapp(e.target.value);
+                                                    } else {
+                                                        handlePhoneChange(e.target.value);
+                                                    }
+                                                }}
+                                                placeholder={isFormByEmail ? 'Ex: seuemail@dominio.com' : '(00) 00000-0000'}
+                                                className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:ring-4 focus:ring-brand-red/10 focus:border-brand-red transition-all outline-none text-sm font-semibold text-gray-900"
+                                            />
+                                        </div>
+
+                                        {quoteError && (
+                                            <div className="p-4 bg-red-50 border border-red-100 text-brand-red rounded-2xl flex items-start gap-2.5 text-xs font-black uppercase tracking-wider animate-shake">
+                                                <AlertTriangle size={16} className="flex-shrink-0" />
+                                                <span>{quoteError}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmittingQuote}
+                                        className="w-full h-14 bg-gray-900 hover:bg-brand-red text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer border-b-4 border-gray-950 hover:border-red-800"
+                                    >
+                                        {isSubmittingQuote ? (
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                Enviar Solicitação
+                                                <Send size={16} />
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </section>
+                )}
 
                 {/* 🧩 RECOMMENDATIONS */}
                 {recommendations?.length > 0 && (

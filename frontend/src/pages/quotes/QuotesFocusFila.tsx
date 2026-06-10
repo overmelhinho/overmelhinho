@@ -12,7 +12,8 @@ import {
     ArrowRight,
     Search,
     BrainCircuit,
-    Send
+    Send,
+    Mail
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -67,14 +68,22 @@ export default function QuotesFocusFila({ clienteId }: QuotesFocusFilaProps) {
         }
     });
 
-    const handleSendWhatsApp = () => {
+    const isEmail = activeQuote?.customer_whatsapp.includes("@");
+
+    const handleSend = () => {
         if (!activeQuote) return;
 
-        const fone = activeQuote.customer_whatsapp.replace(/\D/g, "");
-        const msg = encodeURIComponent(focusedAiResponse);
-        const url = `https://wa.me/55${fone}?text=${msg}`;
-
-        window.open(url, "_blank");
+        if (isEmail) {
+            const subject = encodeURIComponent(`Orçamento - O Vermelhinho`);
+            const body = encodeURIComponent(focusedAiResponse);
+            const url = `mailto:${activeQuote.customer_whatsapp}?subject=${subject}&body=${body}`;
+            window.open(url, "_self");
+        } else {
+            const fone = activeQuote.customer_whatsapp.replace(/\D/g, "");
+            const msg = encodeURIComponent(focusedAiResponse);
+            const url = `https://wa.me/55${fone}?text=${msg}`;
+            window.open(url, "_blank");
+        }
         updateStatusMutation.mutate(activeQuote.id);
     };
 
@@ -144,8 +153,17 @@ export default function QuotesFocusFila({ clienteId }: QuotesFocusFilaProps) {
                                 <div>
                                     <h3 className="text-2xl font-black text-gray-900 leading-tight mb-1">{activeQuote?.customer_name}</h3>
                                     <div className="flex items-center gap-2">
-                                        <Smartphone size={14} className="text-green-500" />
-                                        <span className="text-sm font-bold text-gray-600">{activeQuote?.customer_whatsapp}</span>
+                                        {isEmail ? (
+                                            <>
+                                                <Mail size={14} className="text-blue-500" />
+                                                <span className="text-sm font-bold text-gray-600">{activeQuote?.customer_whatsapp}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Smartphone size={14} className="text-green-500" />
+                                                <span className="text-sm font-bold text-gray-600">{activeQuote?.customer_whatsapp}</span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -191,11 +209,11 @@ export default function QuotesFocusFila({ clienteId }: QuotesFocusFilaProps) {
                         {/* Gimme Gummy Button */}
                         <div className="mt-8">
                             <button
-                                onClick={handleSendWhatsApp}
+                                onClick={handleSend}
                                 className="w-full h-20 bg-[#C00000] text-white rounded-[30px] font-black text-lg shadow-xl shadow-red-200 hover:bg-[#a00000] active:scale-95 transition-all flex items-center justify-center gap-4 group"
                             >
                                 <Send size={24} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                Enviar Resposta via WhatsApp
+                                {isEmail ? 'Enviar Resposta via E-mail' : 'Enviar Resposta via WhatsApp'}
                             </button>
                         </div>
                     </div>
