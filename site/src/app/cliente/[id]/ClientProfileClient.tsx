@@ -1826,7 +1826,6 @@ export default function ClientProfileClient() {
                                         src={client.portfolio_url}
                                         title={client.nome_fantasia}
                                         className="w-full h-full border-0 rounded-lg shadow-sm"
-                                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                                     />
                                 )}
                             </div>
