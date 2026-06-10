@@ -672,21 +672,36 @@ class ClienteController extends Controller
                     }
 
                     // contatos
-                    $sub->orWhereHas('contatos', function ($cq) use ($q) {
+                    $sub->orWhereHas('contatos', function ($cq) use ($q, $qDigits) {
                         $cq->where('email_principal', 'ilike', "%{$q}%")
                            ->orWhere('telefone_principal', 'ilike', "%{$q}%")
+                           ->orWhere('telefone_secundario', 'ilike', "%{$q}%")
+                           ->orWhere('celular', 'ilike', "%{$q}%")
+                           ->orWhere('telefone_outro', 'ilike', "%{$q}%")
                            ->orWhere('nome_contato', 'ilike', "%{$q}%");
+                        
+                        if ($qDigits !== '') {
+                            $cq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_principal, '\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_secundario, '\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(celular, '\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_outro, '\D', '', 'g')"), 'like', "%{$qDigits}%");
+                        }
                     });
 
                     // endereços
-                    $sub->orWhereHas('enderecos', function ($eq) use ($q, $unaccentExists) {
+                    $sub->orWhereHas('enderecos', function ($eq) use ($q, $qDigits, $unaccentExists) {
+                        $eq->where('telefone', 'ilike', "%{$q}%");
+                        if ($qDigits !== '') {
+                            $eq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone, '\D', '', 'g')"), 'like', "%{$qDigits}%");
+                        }
+
                         if ($unaccentExists) {
-                            $eq->whereRaw("unaccent(cidade) ilike unaccent(?)", ["%{$q}%"])
+                            $eq->orWhereRaw("unaccent(cidade) ilike unaccent(?)", ["%{$q}%"])
                                ->orWhereRaw("unaccent(estado) ilike unaccent(?)", ["%{$q}%"])
                                ->orWhereRaw("unaccent(bairro) ilike unaccent(?)", ["%{$q}%"])
                                ->orWhereRaw("unaccent(rua) ilike unaccent(?)", ["%{$q}%"]);
                         } else {
-                            $eq->where('cidade', 'ilike', "%{$q}%")
+                            $eq->orWhere('cidade', 'ilike', "%{$q}%")
                                ->orWhere('estado', 'ilike', "%{$q}%")
                                ->orWhere('bairro', 'ilike', "%{$q}%")
                                ->orWhere('rua', 'ilike', "%{$q}%");
@@ -2631,13 +2646,29 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         // Se houver busca (q), traz todas independente do status. Senão, filtra pelo status (pending/ok).
         if ($request->filled('q')) {
             $q = $request->input('q');
-            $query->where(function($sub) use ($q) {
+            $qDigits = preg_replace('/\D/', '', $q);
+
+            $query->where(function($sub) use ($q, $qDigits) {
                 $sub->where('nome_fantasia', 'ilike', "%{$q}%")
                     ->orWhere('razao_social', 'ilike', "%{$q}%")
-                    ->orWhereHas('contatos', function($cq) use ($q) {
+                    ->orWhereHas('contatos', function($cq) use ($q, $qDigits) {
                         $cq->where('telefone_principal', 'ilike', "%{$q}%")
+                           ->orWhere('telefone_secundario', 'ilike', "%{$q}%")
                            ->orWhere('celular', 'ilike', "%{$q}%")
-                           ->orWhere('telefone_secundario', 'ilike', "%{$q}%");
+                           ->orWhere('telefone_outro', 'ilike', "%{$q}%");
+                        
+                        if ($qDigits !== '') {
+                            $cq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_principal, '\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_secundario, '\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(celular, '\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_outro, '\D', '', 'g')"), 'like', "%{$qDigits}%");
+                        }
+                    })
+                    ->orWhereHas('enderecos', function($eq) use ($q, $qDigits) {
+                        $eq->where('telefone', 'ilike', "%{$q}%");
+                        if ($qDigits !== '') {
+                            $eq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone, '\D', '', 'g')"), 'like', "%{$qDigits}%");
+                        }
                     });
             });
         } else {

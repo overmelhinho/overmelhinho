@@ -20,15 +20,22 @@ interface LeadIntelData {
   data_fundacao?: string;
 }
 
-export function useLeadIntel(query: string, enabled = true) {
+export function useLeadIntel(query: string, cidade?: string | boolean, cnpj?: string, enabled = true) {
+  const actualCidade = typeof cidade === 'string' ? cidade : undefined;
+  const actualEnabled = typeof cidade === 'boolean' ? cidade : enabled;
+
   return useQuery<LeadIntelData>({
-    queryKey: ['lead-intel', query],
+    queryKey: ['lead-intel', query, actualCidade, cnpj],
     queryFn: async () => {
       const response = await api.get(`/v1/lead-intel/fetch`, {
-        params: { query },
+        params: {
+          query,
+          cidade: actualCidade || undefined,
+          cnpj: cnpj || undefined
+        },
       });
       return response.data.dados;
     },
-    enabled: !!query && enabled,
+    enabled: !!query && actualEnabled,
   });
 }

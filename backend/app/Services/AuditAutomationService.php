@@ -25,7 +25,10 @@ class AuditAutomationService
 
         $query = $cliente->nome_fantasia ?: $cliente->razao_social;
         $cnpj = $cliente->cpf_cnpj;
-        $cidade = $cliente->enderecos->first()?->cidade;
+        
+        // Prioriza o endereço operacional (não-cobrança) para obter a cidade correta
+        $endereco = $cliente->enderecos->where('is_cobranca', false)->first() ?: $cliente->enderecos->first();
+        $cidade = $endereco?->cidade;
 
         $resultado = $this->intelService->buscarDados($query, $cnpj, $cidade);
         $novosDados = $resultado['dados'] ?? null;

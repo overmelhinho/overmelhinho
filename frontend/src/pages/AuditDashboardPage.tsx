@@ -82,6 +82,7 @@ const AuditDashboardPage: React.FC = () => {
     const [expandedClientId, setExpandedClientId] = useState<number | null>(null);
     const [inlineStatus, setInlineStatus] = useState<Record<string, 'accepted' | 'rejected'>>({});
     const [showCitiesPanel, setShowCitiesPanel] = useState(false);
+    const [editingObservations, setEditingObservations] = useState<string>('');
 
     // Filtros persistentes na URL
     const tab = (searchParams.get('tab') as 'queue' | 'history' | 'cities') || 'queue';
@@ -256,6 +257,7 @@ const AuditDashboardPage: React.FC = () => {
             redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
             exibir_no_site: client.exibir_no_site,
             exibir_data_fundacao: client.exibir_data_fundacao,
+            observacoes: editingObservations,
         };
 
         const diffs = client.audit_differences || {};
@@ -314,6 +316,7 @@ const AuditDashboardPage: React.FC = () => {
             redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
             exibir_no_site: client.exibir_no_site,
             exibir_data_fundacao: client.exibir_data_fundacao,
+            observacoes: editingObservations,
         };
 
         payload.audit_status = 'ok';
@@ -333,6 +336,7 @@ const AuditDashboardPage: React.FC = () => {
             redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
             exibir_no_site: client.exibir_no_site,
             exibir_data_fundacao: client.exibir_data_fundacao,
+            observacoes: editingObservations,
         };
 
         payload.audit_status = 'manual_review';
@@ -864,8 +868,10 @@ const AuditDashboardPage: React.FC = () => {
                                                         if (isExpanded) {
                                                             setExpandedClientId(null);
                                                             setInlineStatus({});
+                                                            setEditingObservations('');
                                                         } else {
                                                             setExpandedClientId(c.id);
+                                                            setEditingObservations(c.observacoes || '');
                                                             const diffs = c.audit_differences || {};
                                                             const initialStatus: Record<string, 'accepted' | 'rejected'> = {};
                                                             Object.keys(diffs).forEach(k => {
@@ -956,11 +962,11 @@ const AuditDashboardPage: React.FC = () => {
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <div className="flex flex-col gap-1">
-                                                            <span className="text-xs font-bold text-slate-700">
+                                                            <span className="text-xs font-bold text-slate-700 whitespace-nowrap">
                                                                 {formatPhone(c.contatos?.[0]?.telefone_principal)}
                                                             </span>
                                                             {c.contatos?.[0]?.celular && (
-                                                                <span className="text-[10px] text-slate-400 font-medium">
+                                                                <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
                                                                     {formatPhone(c.contatos[0].celular)}
                                                                 </span>
                                                             )}
@@ -1091,17 +1097,21 @@ const AuditDashboardPage: React.FC = () => {
                                                                                     </div>
                                                                                     <div className="flex items-start gap-2">
                                                                                         <span className="font-extrabold text-slate-500 whitespace-nowrap">E-mail:</span>
-                                                                                        <span className="font-bold text-slate-800 truncate" title={c.contatos?.[0]?.email}>{c.contatos?.[0]?.email || 'Não informado'}</span>
+                                                                                        <span className="font-bold text-slate-800 truncate" title={c.contatos?.[0]?.email_principal}>{c.contatos?.[0]?.email_principal || 'Não informado'}</span>
                                                                                     </div>
                                                                                     <div className="flex items-start gap-2 col-span-1 md:col-span-2">
                                                                                         <span className="font-extrabold text-slate-500 whitespace-nowrap">Endereço:</span>
                                                                                         <span className="font-bold text-slate-800">{addressDisplay}</span>
                                                                                     </div>
-                                                                                    <div className="flex items-start gap-2 col-span-1 md:col-span-2">
-                                                                                        <span className="font-extrabold text-slate-500 whitespace-nowrap">Observações:</span>
-                                                                                        <span className="font-medium text-slate-650 bg-white px-3 py-1.5 rounded-xl border border-slate-100 max-h-24 overflow-y-auto block w-full leading-relaxed whitespace-pre-line text-xs font-semibold">
-                                                                                            {c.observacoes || 'Sem observações registradas.'}
-                                                                                        </span>
+                                                                                    <div className="flex flex-col gap-1.5 col-span-1 md:col-span-2">
+                                                                                        <span className="font-extrabold text-slate-500 text-xs">Observações:</span>
+                                                                                        <textarea
+                                                                                            className="font-semibold text-xs text-slate-800 bg-white px-3 py-2 rounded-xl border border-slate-200 focus:border-[#B70F0A] focus:ring-1 focus:ring-[#B70F0A] w-full min-h-[60px] leading-relaxed resize-y outline-none transition-all shadow-sm"
+                                                                                            placeholder="Adicione observações da conferência..."
+                                                                                            value={editingObservations}
+                                                                                            onChange={(e) => setEditingObservations(e.target.value)}
+                                                                                            onClick={(e) => e.stopPropagation()}
+                                                                                        />
                                                                                     </div>
                                                                                     <div className="flex items-start gap-2 col-span-1 md:col-span-2 pt-2 border-t border-slate-100/50">
                                                                                         <span className="font-extrabold text-slate-500 whitespace-nowrap">Última correção:</span>

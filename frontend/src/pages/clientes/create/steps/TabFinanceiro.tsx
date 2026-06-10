@@ -1537,7 +1537,7 @@ export default function TabFinanceiro() {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Novo Vencimento</label>
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Data de Pagamento</label>
                                 <Input
                                     type="date" value={editDueDate}
                                     onChange={e => setEditDueDate(e.target.value)}

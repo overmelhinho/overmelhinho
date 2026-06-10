@@ -78,10 +78,14 @@ const AuditMatchPage: React.FC = () => {
 
     // 2. Busca Dados na Internet via IA (Fallback ou Refresh)
     const searchQuery = client ? (client.nome_fantasia || client.razao_social) : '';
+    const clientCity = client?.enderecos?.[0]?.cidade || '';
+    const clientCnpj = client?.cpf_cnpj || '';
     const hasExistingDiffs = client?.audit_differences && Object.keys(client.audit_differences).length > 0;
 
     const { data: intelData, isLoading: loadingIntel, refetch: refreshIntel } = useLeadIntel(
         searchQuery,
+        clientCity,
+        clientCnpj,
         !!client && !hasExistingDiffs // Só busca automático se NÃO tiver dados do script noturno
     );
 

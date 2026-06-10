@@ -133,39 +133,14 @@ class LeadIntelService
             }
 
             // =====================================================
-            // 5) Data de Fundação via IA
-            // ===================================
-            if (empty($dados['data_fundacao'])) {
-                 $aiService = app(ClientAiService::class);
-                 $dados['data_fundacao'] = $aiService->predictFoundationDate(
-                     $dados['nome_fantasia'] ?: $query,
-                     $cidadePreferida ?: ''
-                 );
-                 if (!empty($dados['data_fundacao'])) {
-                     $dados['sources']['data_fundacao'] = 'Previsão por IA';
-                 }
-            }
-
-            $dados['origem_dado'] = ($dados['origem_dado'] ?? 'Merged') . '+IA_Foundation';
+            // 5) Data de Fundação (mantém apenas o que veio do fiscal, sem dedução por IA)
+            // =====================================================
+            // Removido predictFoundationDate para evitar deduções e manter assertividade 100%
 
             // =====================================================
-            // 6) Enriquecimento Redes Sociais via IA (se ainda vazias)
+            // 6) Enriquecimento Redes Sociais via IA (desativado para evitar deduções/alucinações)
             // =====================================================
-            $hasSocial = !empty($dados['instagram']) || !empty($dados['facebook']) || !empty($dados['linkedin']);
-            if (!$hasSocial) {
-                $aiService = app(ClientAiService::class);
-                $redesIA = $aiService->predictSocialMedia(
-                    $dados['nome_fantasia'] ?: $query,
-                    $cidadePreferida ?: '',
-                    $dados['website'] ?: null
-                );
-                foreach ($redesIA as $rk => $rv) {
-                    if (!empty($rv) && empty($dados[$rk])) {
-                        $dados[$rk] = $rv;
-                        $dados['sources'][$rk] = 'Previsão por IA';
-                    }
-                }
-            }
+            // Removido predictSocialMedia para evitar deduções e manter assertividade 100%
 
             Log::info("✅ [LeadIntel] Retorno", [
                 'nome_fantasia' => $dados['nome_fantasia'],
@@ -297,32 +272,75 @@ class LeadIntelService
                 $nomeCandidate    = mb_strtolower($candidate['name'] ?? '');
                 $enderecoCandidate = mb_strtolower($candidate['formatted_address'] ?? '');
 
-                // 1. VALIDAÇÃO POR PALAVRAS (Word Recall):
-                // Verifica quantas palavras do nome buscado existem no nome encontrado.
-                // Isso é mais preciso que similar_text para nomes de empresas porque:
-                //   - "MV Gessos" → "MV Gessos e Decorações" = 100% (mesma empresa, nome maior no Google) ✅
-                //   - "Farmácia São João" → "Farmácia São José" = 67% (empresa diferente) ❌
-                //   - "MV Gessos" → "Magnifica Gessos" = 50% (empresa diferente) ❌
-                $palavrasBuscadas  = preg_split('/\s+/', $nomeLimpo, -1, PREG_SPLIT_NO_EMPTY);
-                $totalPalavras     = count($palavrasBuscadas);
-                $palavrasEncontradas = 0;
-                foreach ($palavrasBuscadas as $palavra) {
-                    if (str_contains($nomeCandidate, $palavra)) {
-                        $palavrasEncontradas++;
+                $nomeLimpoNorm = $this->normalizeText($nomeLimpo);
+                $nomeCandidateNorm = $this->normalizeText($nomeCandidate);
+                $enderecoCandidateNorm = $this->normalizeText($enderecoCandidate);
+
+                // 1. VALIDAÇÃO POR PALAVRAS (Word Recall Avançado)
+                $ignoreWords = ['de', 'do', 'da', 'em', 'um', 'os', 'as', 'com', 'sem', 'por', 'pra', 'pro', 'para', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'ao', 'aos', 'ou', 'se', 'um', 'uma', 'uns', 'umas', 'e'];
+                $genericTerms = [
+                    'mercado', 'supermercado', 'minimercado', 'comercio', 'loja', 'ltda', 'epp', 'me', 'eireli', 
+                    'bar', 'restaurante', 'padaria', 'farmacia', 'drogaria', 'oficina', 'gesso', 'auto', 'car', 
+                    'motos', 'servicos', 'cia', 'grupo', 'clinica', 'consultorio', 'portao', 'portoes', 'grade', 
+                    'grades', 'metalurgica', 'serralheria', 'panificadora', 'confeitaria'
+                ];
+
+                $searchWords = preg_split('/\s+/', $nomeLimpoNorm, -1, PREG_SPLIT_NO_EMPTY);
+                $significantWords = [];
+                $uniqueWords = [];
+
+                foreach ($searchWords as $word) {
+                    if (in_array($word, $ignoreWords)) {
+                        continue;
+                    }
+                    $significantWords[] = $word;
+                    if (!in_array($word, $genericTerms)) {
+                        $uniqueWords[] = $word;
                     }
                 }
-                $recall = $totalPalavras > 0 ? ($palavrasEncontradas / $totalPalavras) * 100 : 0;
 
-                if ($recall < 70) {
+                if (empty($significantWords)) {
+                    continue;
+                }
+
+                $sigMatches = 0;
+                foreach ($significantWords as $word) {
+                    if (str_contains($nomeCandidateNorm, $word)) {
+                        $sigMatches++;
+                    }
+                }
+                $significantRecall = ($sigMatches / count($significantWords)) * 100;
+
+                $matched = false;
+                if (!empty($uniqueWords)) {
+                    $uniqueMatches = 0;
+                    foreach ($uniqueWords as $word) {
+                        if (str_contains($nomeCandidateNorm, $word)) {
+                            $uniqueMatches++;
+                        }
+                    }
+                    $uniqueRecall = ($uniqueMatches / count($uniqueWords)) * 100;
+
+                    if ($uniqueRecall >= 100.0 && $significantRecall >= 50.0) {
+                        $matched = true;
+                    }
+                }
+
+                if (!$matched && $significantRecall >= 70.0) {
+                    $matched = true;
+                }
+
+                if (!$matched) {
                     Log::info("⚠️ [LeadIntel][GooglePlaces] Resultado descartado: recall de palavras insuficiente", [
-                        'buscado'    => $nomeLimpo,
-                        'encontrado' => $nomeCandidate,
-                        'recall'     => round($recall, 1) . '%',
-                        'palavras_buscadas'    => implode(', ', $palavrasBuscadas),
-                        'palavras_encontradas' => $palavrasEncontradas . '/' . $totalPalavras,
+                        'buscado'             => $nomeLimpoNorm,
+                        'encontrado'          => $nomeCandidateNorm,
+                        'significant_recall'  => round($significantRecall, 1) . '%',
                     ]);
                     continue;
                 }
+
+                // Define $palavrasBuscadas para compatibilidade com a validação de sigla abaixo
+                $palavrasBuscadas = $significantWords;
 
                 // 2. Validação de sigla/iniciais: tokens curtos (≤3 chars) como "MV", "KNN"
                 // devem aparecer obrigatoriamente no resultado.
@@ -330,10 +348,10 @@ class LeadIntelService
                 foreach ($palavrasBuscadas as $token) {
                     $token = trim($token);
                     if (mb_strlen($token) >= 2 && mb_strlen($token) <= 3 && !is_numeric($token)) {
-                        if (!str_contains($nomeCandidate, $token)) {
+                        if (!str_contains($nomeCandidateNorm, $token)) {
                             Log::info("⚠️ [LeadIntel][GooglePlaces] Resultado descartado: sigla/inicial '{$token}' ausente", [
-                                'buscado'    => $nomeLimpo,
-                                'encontrado' => $nomeCandidate,
+                                'buscado'    => $nomeLimpoNorm,
+                                'encontrado' => $nomeCandidateNorm,
                             ]);
                             $siglaRejeitada = true;
                             break;
@@ -344,11 +362,11 @@ class LeadIntelService
 
                 // 3. Se temos cidade esperada, verifica se o resultado é nessa cidade
                 if ($cidadeEsperada) {
-                    $cidadeNormalizada = mb_strtolower(trim($cidadeEsperada));
-                    if (!str_contains($enderecoCandidate, $cidadeNormalizada)) {
+                    $cidadeNormalizada = $this->normalizeText($cidadeEsperada);
+                    if (!str_contains($enderecoCandidateNorm, $cidadeNormalizada)) {
                         Log::info("⚠️ [LeadIntel][GooglePlaces] Resultado descartado por cidade diferente", [
                             'buscado'            => $cidadeNormalizada,
-                            'endereco_encontrado' => $enderecoCandidate,
+                            'endereco_encontrado' => $enderecoCandidateNorm,
                         ]);
                         continue;
                     }
@@ -567,5 +585,20 @@ class LeadIntelService
             }
         }
         return $out;
+    }
+
+    private function normalizeText(string $text): string
+    {
+        $text = mb_strtolower(trim($text));
+        $utf8 = [
+            '/[áàâãä]/u'   => 'a',
+            '/[éèêë]/u'    => 'e',
+            '/[íìîï]/u'    => 'i',
+            '/[óòôõö]/u'   => 'o',
+            '/[úùûü]/u'    => 'u',
+            '/[ç]/u'       => 'c',
+            '/[ñ]/u'       => 'n',
+        ];
+        return preg_replace(array_keys($utf8), array_values($utf8), $text);
     }
 }
