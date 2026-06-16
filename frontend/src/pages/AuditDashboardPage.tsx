@@ -95,7 +95,7 @@ const AuditDashboardPage: React.FC = () => {
     const filterVisibilidade = searchParams.get('visibilidade') || '';
     const filterSegmento = searchParams.get('segmento_id') || '';
     const filterResult = searchParams.get('result') || ''; // 'all' | 'corrected' | 'kept'
-    const filterStatus = searchParams.get('status') || 'manual_review'; // pending | manual_review | all
+    const filterStatus = searchParams.get('status') || 'manual_review'; // pending | manual_review | ok | all | any
     const searchTerm = searchParams.get('q') || '';
 
     const updateFilter = (params: Record<string, string | number | null>) => {
@@ -715,6 +715,12 @@ const AuditDashboardPage: React.FC = () => {
                                                     <span className="flex items-center gap-2">
                                                         <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
                                                         Conferidos
+                                                    </span>
+                                                </SelectItem>
+                                                <SelectItem value="any">
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+                                                        Todos Cadastros
                                                     </span>
                                                 </SelectItem>
                                             </SelectContent>

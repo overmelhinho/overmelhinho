@@ -2683,6 +2683,8 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             if ($status === 'all') {
                 // Todos os status que precisam de atenção (pending + manual_review)
                 $query->whereIn('audit_status', ['pending', 'manual_review']);
+            } elseif ($status === 'any') {
+                // Todos os cadastros (não filtra por status)
             } else {
                 $query->where('audit_status', $status);
             }

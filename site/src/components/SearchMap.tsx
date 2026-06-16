@@ -13,7 +13,7 @@ type Business = {
   logotipo_url?: string;
   status_assinatura?: string;
   tipo_cliente?: string;
-  enderecos?: { latitude?: number; longitude?: number; bairro?: string }[];
+  enderecos?: { latitude?: number; longitude?: number; bairro?: string; cidade?: string }[];
 };
 
 type SearchMapProps = {
@@ -24,14 +24,33 @@ type SearchMapProps = {
   onMapClick?: () => void;
 };
 
-// Coordenadas base das cidades da Serra Gaúcha
-const CITY_COORDS: Record<string, [number, number]> = {
-  'Farroupilha': [-29.2272, -51.3486],
-  'Caxias do Sul': [-29.1682, -51.1794],
-  'Bento Gonçalves': [-29.1691, -51.5188],
-  'Garibaldi': [-29.2566, -51.5341],
-  'Carlos Barbosa': [-29.2974, -51.5034],
-  'Flores da Cunha': [-29.0287, -51.1824],
+// Coordenadas base das cidades do Rio Grande do Sul
+const getCityCoords = (cityName: string | null | undefined): [number, number] | undefined => {
+  if (!cityName) return undefined;
+  const normalized = cityName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  
+  const lookup: Record<string, [number, number]> = {
+    'farroupilha': [-29.2272, -51.3486],
+    'caxias do sul': [-29.1682, -51.1794],
+    'caxias de sul': [-29.1682, -51.1794],
+    'bento goncalves': [-29.1691, -51.5188],
+    'garibaldi': [-29.2566, -51.5341],
+    'carlos barbosa': [-29.2974, -51.5034],
+    'flores da cunha': [-29.0287, -51.1824],
+    'flores de cunha': [-29.0287, -51.1824],
+    'canela': [-29.3664, -50.8122],
+    'gramado': [-29.3789, -50.8739],
+    'lajeado': [-29.4674, -51.9619],
+    'campo bom': [-29.6781, -51.0583],
+    'novo hamburgo': [-29.6842, -51.1311],
+    'sao marcos': [-28.9714, -51.0678],
+    'feliz': [-29.4533, -51.3094],
+    'nova prata': [-28.7844, -51.6092],
+    'veranopolis': [-28.9378, -51.5492]
+  };
+  
+  const key = normalized.replace(/\b(do|da|de)\b/g, 'do');
+  return lookup[key];
 };
 
 // Centro padrão — Caxias do Sul (Serra Gaúcha)
@@ -42,7 +61,7 @@ export default function SearchMap({ results, highlighted, onHover, onClick, onMa
   const mapDivRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<number, any>>(new Map());
   const { cityName } = useLocation();
-  const currentCenter = (cityName && CITY_COORDS[cityName]) ? CITY_COORDS[cityName] : DEFAULT_CENTER;
+  const currentCenter = getCityCoords(cityName) || DEFAULT_CENTER;
 
   useEffect(() => {
     let isMounted = true;
@@ -112,10 +131,20 @@ export default function SearchMap({ results, highlighted, onHover, onClick, onMa
     const validPoints: [number, number][] = [];
 
     results.forEach((business, idx) => {
-      const lat = business.enderecos?.[0]?.latitude;
-      const lng = business.enderecos?.[0]?.longitude;
+      const address = business.enderecos?.[0];
+      let lat = address?.latitude;
+      let lng = address?.longitude;
       
-      if (!lat || !lng) return;
+      if (!lat || !lng) {
+        const addrCity = address?.cidade;
+        const baseCoords = getCityCoords(addrCity) || currentCenter;
+        
+        // Deterministic offset based on business id to prevent pins overlapping
+        const offsetLat = Math.sin(business.id) * 0.008;
+        const offsetLng = Math.cos(business.id) * 0.008;
+        lat = baseCoords[0] + offsetLat;
+        lng = baseCoords[1] + offsetLng;
+      }
 
       validPoints.push([lat, lng]);
       const isFirst = idx === 0;
