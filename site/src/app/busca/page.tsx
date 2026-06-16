@@ -71,21 +71,50 @@ const getTodayStatus = (client: any) => {
     const systemDay = today === 0 ? 7 : today;
     const todaySchedule = schedule.find((s: any) => s.day === systemDay);
 
-    if (!todaySchedule || todaySchedule.closed) return { open: false, label: 'Fechado' };
-
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    if (currentTime >= todaySchedule.open && currentTime <= todaySchedule.close) {
-        return { open: true, label: `Aberto até ${todaySchedule.close}` };
+    const isWithinShift = (open: string, close: string, time: string) => {
+        if (!open || !close) return false;
+        return close >= open 
+            ? (time >= open && time <= close) 
+            : (time >= open || time <= close);
+    };
+
+    // 1. Check if we are within today's shifts
+    if (todaySchedule && !todaySchedule.closed) {
+        if (isWithinShift(todaySchedule.open, todaySchedule.close, currentTime)) {
+            return { open: true, label: `Aberto até ${todaySchedule.close}` };
+        }
+        if (todaySchedule.open2 && todaySchedule.close2 && isWithinShift(todaySchedule.open2, todaySchedule.close2, currentTime)) {
+            return { open: true, label: `Aberto até ${todaySchedule.close2}` };
+        }
     }
-    if (todaySchedule.open2 && todaySchedule.close2 && currentTime >= todaySchedule.open2 && currentTime <= todaySchedule.close2) {
-        return { open: true, label: `Aberto até ${todaySchedule.close2}` };
+
+    // 2. Check if we are within a shift that started yesterday and crossed midnight
+    const yesterdayDay = systemDay === 1 ? 7 : systemDay - 1;
+    const yesterdaySchedule = schedule.find((s: any) => s.day === yesterdayDay);
+    if (yesterdaySchedule && !yesterdaySchedule.closed) {
+        if (yesterdaySchedule.close < yesterdaySchedule.open && currentTime <= yesterdaySchedule.close) {
+            return { open: true, label: `Aberto até ${yesterdaySchedule.close}` };
+        }
+        if (yesterdaySchedule.open2 && yesterdaySchedule.close2 && yesterdaySchedule.close2 < yesterdaySchedule.open2 && currentTime <= yesterdaySchedule.close2) {
+            return { open: true, label: `Aberto até ${yesterdaySchedule.close2}` };
+        }
     }
-    if (todaySchedule.open2 && currentTime < todaySchedule.open2 && currentTime > todaySchedule.close) {
-        return { open: false, label: `Fechado (Abre às ${todaySchedule.open2})` };
+
+    // 3. Fallbacks for closed state
+    if (todaySchedule && !todaySchedule.closed) {
+        if (todaySchedule.open2 && currentTime < todaySchedule.open2 && currentTime > todaySchedule.close) {
+            return { open: false, label: `Fechado (Abre às ${todaySchedule.open2})` };
+        }
+        if (currentTime < todaySchedule.open) {
+            return { open: false, label: `Fechado (Abre às ${todaySchedule.open})` };
+        }
+        return { open: false, label: `Fechado (Abre às ${todaySchedule.open})` };
     }
-    return { open: false, label: `Fechado (Abre às ${todaySchedule.open})` };
+
+    return { open: false, label: 'Fechado' };
 };
 
 function SearchContent() {
@@ -588,11 +617,16 @@ function SearchContent() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-wrap items-center gap-4">
-                                                <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
-                                                    <MapPin size={12} className="mr-1.5 text-brand-red" /> 
-                                                    {matchPerfeito.enderecos?.[0]?.bairro || 'Local'}
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <span className="flex items-center text-[10px] font-black text-brand-red uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-xl border border-red-100 shadow-sm">
+                                                    <MapPin size={12} className="mr-1.5" /> 
+                                                    {matchPerfeito.enderecos?.[0]?.cidade || 'Local'}
                                                 </span>
+                                                {matchPerfeito.enderecos?.[0]?.bairro && matchPerfeito.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
+                                                    <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+                                                        {matchPerfeito.enderecos[0].bairro}
+                                                    </span>
+                                                )}
                                                 {getTodayStatus(matchPerfeito) && (
                                                     <span className={`${getTodayStatus(matchPerfeito)?.open ? 'text-green-500 bg-green-50 border-green-100' : 'text-brand-red bg-red-50 border-red-100'} font-black flex items-center text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-xl border`}>
                                                         <div className={`w-1.5 h-1.5 ${getTodayStatus(matchPerfeito)?.open ? 'bg-green-500' : 'bg-brand-red'} rounded-full mr-1.5 ${getTodayStatus(matchPerfeito)?.open ? 'animate-pulse' : ''}`}></div>
@@ -661,11 +695,19 @@ function SearchContent() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div className="flex flex-wrap items-center text-[9px] font-bold text-gray-400 gap-y-2 gap-x-3 uppercase tracking-[0.1em] mt-auto pt-2">
-                                                        <span className="flex items-center"><MapPin size={12} className="mr-1 text-brand-red" /> <span className="truncate max-w-[120px]">{item.enderecos?.[0]?.bairro || 'Local'}</span></span>
+                                                    <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
+                                                        <span className="flex items-center text-[9px] font-black text-brand-red bg-red-50/80 px-2.5 py-1 rounded-lg border border-red-100 uppercase tracking-wider shadow-sm">
+                                                            <MapPin size={11} className="mr-1" />
+                                                            {item.enderecos?.[0]?.cidade || 'Local'}
+                                                        </span>
+                                                        {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
+                                                            <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[100px]">
+                                                                {item.enderecos[0].bairro}
+                                                            </span>
+                                                        )}
                                                         {getTodayStatus(item) && (
-                                                            <span className={`${getTodayStatus(item)?.open ? 'text-green-500' : 'text-brand-red'} font-black flex items-center`}>
-                                                                <div className={`w-1.5 h-1.5 ${getTodayStatus(item)?.open ? 'bg-green-500' : 'bg-brand-red'} rounded-full mr-1.5`}></div>
+                                                            <span className={`${getTodayStatus(item)?.open ? 'text-green-500 bg-green-50/80 border-green-100' : 'text-brand-red bg-red-50/80 border-red-100'} font-black flex items-center text-[9px] uppercase tracking-wider px-2 py-1 rounded-lg border`}>
+                                                                <div className={`w-1 h-1 ${getTodayStatus(item)?.open ? 'bg-green-500' : 'bg-brand-red'} rounded-full mr-1 ${getTodayStatus(item)?.open ? 'animate-pulse' : ''}`}></div>
                                                                 {getTodayStatus(item)?.label}
                                                             </span>
                                                         )}
@@ -739,6 +781,17 @@ function SearchContent() {
                                                                     <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-base md:text-lg leading-tight">{item.nome_fantasia}</h5>
                                                                 </div>
                                                                 <p className="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
+                                                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                                    <span className="flex items-center text-[9px] font-black text-brand-red bg-red-50/80 px-2 py-0.5 rounded-lg border border-red-100 uppercase tracking-wider">
+                                                                        <MapPin size={10} className="mr-1" />
+                                                                        {item.enderecos?.[0]?.cidade || 'Local'}
+                                                                    </span>
+                                                                    {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
+                                                                        <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider">
+                                                                            {item.enderecos[0].bairro}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && (

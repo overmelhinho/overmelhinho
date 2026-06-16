@@ -514,27 +514,50 @@ export default function ClientProfileClient() {
         const systemDay = today === 0 ? 7 : today;
         const todaySchedule = schedule.find((s: any) => s.day === systemDay);
 
-        if (!todaySchedule || todaySchedule.closed) return { open: false, label: 'Fechado' };
-
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-        // Primeiro turno
-        if (currentTime >= todaySchedule.open && currentTime <= todaySchedule.close) {
-            return { open: true, label: `Aberto até ${todaySchedule.close}` };
+        const isWithinShift = (open: string, close: string, time: string) => {
+            if (!open || !close) return false;
+            return close >= open 
+                ? (time >= open && time <= close) 
+                : (time >= open || time <= close);
+        };
+
+        // 1. Check if we are within today's shifts
+        if (todaySchedule && !todaySchedule.closed) {
+            if (isWithinShift(todaySchedule.open, todaySchedule.close, currentTime)) {
+                return { open: true, label: `Aberto até ${todaySchedule.close}` };
+            }
+            if (todaySchedule.open2 && todaySchedule.close2 && isWithinShift(todaySchedule.open2, todaySchedule.close2, currentTime)) {
+                return { open: true, label: `Aberto até ${todaySchedule.close2}` };
+            }
         }
 
-        // Segundo turno
-        if (todaySchedule.open2 && todaySchedule.close2 && currentTime >= todaySchedule.open2 && currentTime <= todaySchedule.close2) {
-            return { open: true, label: `Aberto até ${todaySchedule.close2}` };
+        // 2. Check if we are within a shift that started yesterday and crossed midnight
+        const yesterdayDay = systemDay === 1 ? 7 : systemDay - 1;
+        const yesterdaySchedule = schedule.find((s: any) => s.day === yesterdayDay);
+        if (yesterdaySchedule && !yesterdaySchedule.closed) {
+            if (yesterdaySchedule.close < yesterdaySchedule.open && currentTime <= yesterdaySchedule.close) {
+                return { open: true, label: `Aberto até ${yesterdaySchedule.close}` };
+            }
+            if (yesterdaySchedule.open2 && yesterdaySchedule.close2 && yesterdaySchedule.close2 < yesterdaySchedule.open2 && currentTime <= yesterdaySchedule.close2) {
+                return { open: true, label: `Aberto até ${yesterdaySchedule.close2}` };
+            }
         }
 
-        // Se estiver entre os turnos (meio-dia)
-        if (todaySchedule.open2 && currentTime < todaySchedule.open2 && currentTime > todaySchedule.close) {
-            return { open: false, label: `Fechado (Abre às ${todaySchedule.open2})` };
+        // 3. Fallbacks for closed state
+        if (todaySchedule && !todaySchedule.closed) {
+            if (todaySchedule.open2 && currentTime < todaySchedule.open2 && currentTime > todaySchedule.close) {
+                return { open: false, label: `Fechado (Abre às ${todaySchedule.open2})` };
+            }
+            if (currentTime < todaySchedule.open) {
+                return { open: false, label: `Fechado (Abre às ${todaySchedule.open})` };
+            }
+            return { open: false, label: `Fechado (Abre às ${todaySchedule.open})` };
         }
 
-        return { open: false, label: `Fechado (Abre às ${todaySchedule.open})` };
+        return { open: false, label: 'Fechado' };
     };
 
     const status = getTodayStatus();
@@ -721,7 +744,14 @@ export default function ClientProfileClient() {
                                         {client.enderecos?.[0]
                                             ? (client.enderecos[0].exibir_apenas_cidade
                                                 ? `Atendimento em ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`
-                                                : `${client.enderecos[0].rua}, ${client.enderecos[0].numero}${client.enderecos[0].complemento ? `, ${client.enderecos[0].complemento}` : ''} - ${client.enderecos[0].cidade}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`)
+                                                : (() => {
+                                                    const end = client.enderecos[0];
+                                                    const parts = [end.rua];
+                                                    if (end.numero) parts.push(end.numero);
+                                                    if (end.complemento) parts.push(end.complemento);
+                                                    if (end.bairro && end.bairro.trim() !== '' && end.bairro.toLowerCase() !== 'vazio') parts.push(end.bairro);
+                                                    return `${parts.join(', ')} - ${end.cidade}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`;
+                                                })())
                                             : 'Endereço não informado'}
                                     </p>
                                 </div>
