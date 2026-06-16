@@ -1040,23 +1040,7 @@ public function historico(Request $request, int $id)
             $validated = $request->validate([
                 'nome_fantasia' => 'required|string|max:255',
 
-                'cpf_cnpj' => [
-                    'nullable',
-                    'string',
-                    'max:20',
-                    Rule::unique('clientes', 'cpf_cnpj'),
-                    function ($attribute, $value, $fail) {
-                        if (empty($value)) return;
-                        $exists = Cliente::query()
-                            ->select(['id', 'nome_fantasia', 'cpf_cnpj'])
-                            ->where('cpf_cnpj', $value)
-                            ->first();
-
-                        if ($exists) {
-                            $fail("CNPJ já cadastrado (cliente #{$exists->id}: {$exists->nome_fantasia}).");
-                        }
-                    }
-                ],
+                'cpf_cnpj' => 'nullable|string|max:20',
 
                 'razao_social'          => 'nullable|string|max:255',
                 'nome_alternativo'      => 'nullable|string|max:255',
@@ -1516,24 +1500,7 @@ public function historico(Request $request, int $id)
             $validated = $request->validate([
                 'nome_fantasia' => 'required|string|max:255',
 
-                'cpf_cnpj' => [
-                    'nullable',
-                    'string',
-                    'max:20',
-                    Rule::unique('clientes', 'cpf_cnpj')->ignore($cliente->id),
-                    function ($attribute, $value, $fail) use ($cliente) {
-                        if (empty($value)) return;
-                        $exists = Cliente::query()
-                            ->select(['id', 'nome_fantasia', 'cpf_cnpj'])
-                            ->where('cpf_cnpj', $value)
-                            ->where('id', '!=', $cliente->id)
-                            ->first();
-
-                        if ($exists) {
-                            $fail("CNPJ já cadastrado (cliente #{$exists->id}: {$exists->nome_fantasia}).");
-                        }
-                    }
-                ],
+                'cpf_cnpj' => 'nullable|string|max:20',
 
                 'razao_social'          => 'nullable|string|max:255',
                 'nome_alternativo'      => 'nullable|string|max:255',

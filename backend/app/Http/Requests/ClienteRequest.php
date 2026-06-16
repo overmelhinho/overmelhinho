@@ -17,7 +17,7 @@ class ClienteRequest extends FormRequest
             // Identificação
             'nome' => 'required|string|max:191',
             'razao_social' => 'required|string|max:191',
-            'cnpj' => 'required|string|max:20|unique:clientes,cnpj,' . $this->cliente,
+            'cnpj' => 'required|string|max:20',
 
             // Contatos
             'email' => 'required|email|max:191',

@@ -9,6 +9,26 @@ class Autorizacao extends Model
 {
     use HasFactory;
 
+    protected static function booted()
+    {
+        static::saved(function ($autorizacao) {
+            if ($autorizacao->status === 'assinado' && $autorizacao->cliente_id) {
+                $today = \Carbon\Carbon::today()->format('Y-m-d');
+                $dataFim = $autorizacao->data_fim ? \Carbon\Carbon::parse($autorizacao->data_fim)->format('Y-m-d') : null;
+                
+                if ($dataFim && $dataFim >= $today) {
+                    $cliente = $autorizacao->cliente;
+                    if ($cliente && ($cliente->status_assinatura !== 'ativa' || $cliente->tipo_cliente !== 'pagante')) {
+                        $cliente->update([
+                            'tipo_cliente' => 'pagante',
+                            'status_assinatura' => 'ativa'
+                        ]);
+                    }
+                }
+            }
+        });
+    }
+
     protected $table = 'autorizacoes';
 
     protected $fillable = [
