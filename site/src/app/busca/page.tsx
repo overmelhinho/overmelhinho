@@ -661,7 +661,21 @@ function SearchContent() {
                         {!isLoading && destaques.length > 0 && (
                             <section className="space-y-8">
                                 <div className="flex justify-between items-end px-2">
-                                    <h3 className="text-lg md:text-xl font-black text-gray-900 tracking-tighter font-serif">Encontramos os melhores resultados para você</h3>
+                                    <h3 className="text-base md:text-xl font-black text-gray-900 tracking-tight font-serif flex flex-wrap items-center gap-1.5 md:gap-2 leading-relaxed">
+                                        <span>Encontramos</span>
+                                        <span className="text-brand-red bg-red-50/80 px-2.5 py-1 rounded-xl border border-red-100 text-xs md:text-sm font-black shadow-sm tracking-wide">
+                                            {allResults.length} {allResults.length === 1 ? 'resultado' : 'resultados'}
+                                        </span>
+                                        <span>em</span>
+                                        <button
+                                            onClick={() => setIsCityModalOpen(true)}
+                                            className="inline-flex items-center px-4 py-2 bg-brand-red text-white hover:bg-brand-red/90 rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all group cursor-pointer border-b-4 border-red-800"
+                                        >
+                                            <span>{cityName || 'Qualquer Cidade'}</span>
+                                            <ChevronDown size={14} className="ml-1.5 group-hover:translate-y-0.5 transition-transform duration-300" />
+                                        </button>
+                                        <span>para você</span>
+                                    </h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {destaques.map((item: any) => (
