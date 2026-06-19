@@ -68,18 +68,19 @@ class UpdateClientStatuses extends Command
             })
             ->update(['tipo_cliente' => 'pagante', 'status_assinatura' => 'ativa', 'updated_at' => now()]);
 
-        // 3. Identificar clientes pagantes inadimplentes (2 ou mais parcelas vencidas no mínimo)
+        $threeMonthsAgo = now()->subMonths(3)->format('Y-m-d');
+
+        // 3. Identificar clientes inadimplentes (2+ parcelas vencidas ou 1 vencida há 3 meses ou mais)
         $inadimplentesClientIds = DB::table('invoices')
             ->select('client_id')
             ->where('status', 'pending')
             ->where('due_date', '<', $today)
             ->groupBy('client_id')
-            ->havingRaw('COUNT(*) >= 2')
+            ->havingRaw('COUNT(*) >= 2 OR MIN(due_date) <= ?', [$threeMonthsAgo])
             ->pluck('client_id')
             ->toArray();
 
         $inadimplentesCount = DB::table('clientes')
-            ->where('tipo_cliente', 'pagante')
             ->whereIn('id', $inadimplentesClientIds)
             ->update(['status_assinatura' => 'inadimplente', 'updated_at' => now()]);
 
@@ -96,6 +97,13 @@ class UpdateClientStatuses extends Command
                     ->where('autorizacoes.data_fim', '>=', $today);
             })
             ->update(['status_assinatura' => 'ativa', 'updated_at' => now()]);
+
+        // 5. Restaurar para cancelada os inadimplentes gratuitos que pagaram suas dividas
+        $normalizadosGratuitosCount = DB::table('clientes')
+            ->where('tipo_cliente', 'gratuito')
+            ->where('status_assinatura', 'inadimplente')
+            ->whereNotIn('id', $inadimplentesClientIds)
+            ->update(['status_assinatura' => 'cancelada', 'updated_at' => now()]);
         
         $this->info("Processo concluído!");
         $this->line("Clientes marcados como GRATUITO/CANCELADA (Sem autorização): {$vencidosCount}");

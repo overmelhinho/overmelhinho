@@ -189,8 +189,9 @@ function formatContato(c: ClienteLite) {
 }
 
 function statusLabel(s?: StatusAssinatura | null, tipo?: string | null) {
-  if (tipo === "gratuito") return "Ativa";
   const v = (s || "").toString().toLowerCase();
+  if (v === "inadimplente") return "Inadimplente";
+  if (tipo === "gratuito") return "Ativa";
   if (!v) return "—";
   const map: Record<string, string> = {
     ativa: "Ativa",
@@ -198,19 +199,19 @@ function statusLabel(s?: StatusAssinatura | null, tipo?: string | null) {
     atrasada: "Atrasada",
     suspensa: "Suspensa",
     cancelada: "Cancelada",
-    inadimplente: "Inadimplente ⚠️",
+    inadimplente: "Inadimplente",
   };
   return map[v] || v;
 }
 
 function statusChipClass(s?: StatusAssinatura | null, tipo?: string | null) {
-  if (tipo === "gratuito") return "bg-green-50 text-green-700 border-green-200";
   const v = (s || "").toString().toLowerCase();
+  if (v === "inadimplente") return "bg-red-50 text-red-700 border-red-200";
+  if (tipo === "gratuito") return "bg-green-50 text-green-700 border-green-200";
   if (v === "ativa") return "bg-green-50 text-green-700 border-green-200";
   if (v === "pendente") return "bg-yellow-50 text-yellow-800 border-yellow-200";
   if (v === "atrasada") return "bg-red-50 text-red-700 border-red-200";
   if (v === "suspensa") return "bg-red-50 text-red-700 border-red-200";
-  if (v === "inadimplente") return "bg-red-100 text-red-700 border-red-300 font-bold";
   if (v === "cancelada") return "bg-gray-50 text-gray-700 border-gray-200";
   return "bg-gray-50 text-gray-700 border-gray-200";
 }
@@ -262,14 +263,24 @@ function ActionButton({
 
 export default function ClientesList() {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => sessionStorage.getItem('clientes_search') || "");
 
-  const [searchDebounced, setSearchDebounced] = useState("");
-  const [tipo, setTipo] = useState<"all" | TipoCliente>("all");
-  const [visibilidade, setVisibilidade] = useState<"all" | "visible" | "hidden">("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sort, setSort] = useState<string>("latest");
-  const [page, setPage] = useState<number>(1);
+  const [searchDebounced, setSearchDebounced] = useState(() => sessionStorage.getItem('clientes_searchDebounced') || "");
+  const [tipo, setTipo] = useState<"all" | TipoCliente>(() => (sessionStorage.getItem('clientes_tipo') as any) || "all");
+  const [visibilidade, setVisibilidade] = useState<"all" | "visible" | "hidden">(() => (sessionStorage.getItem('clientes_visibilidade') as any) || "all");
+  const [statusFilter, setStatusFilter] = useState<string>(() => sessionStorage.getItem('clientes_statusFilter') || "all");
+  const [sort, setSort] = useState<string>(() => sessionStorage.getItem('clientes_sort') || "latest");
+  const [page, setPage] = useState<number>(() => Number(sessionStorage.getItem('clientes_page')) || 1);
+
+  useEffect(() => {
+    sessionStorage.setItem('clientes_search', search);
+    sessionStorage.setItem('clientes_searchDebounced', searchDebounced);
+    sessionStorage.setItem('clientes_tipo', tipo);
+    sessionStorage.setItem('clientes_visibilidade', visibilidade);
+    sessionStorage.setItem('clientes_statusFilter', statusFilter);
+    sessionStorage.setItem('clientes_sort', sort);
+    sessionStorage.setItem('clientes_page', page.toString());
+  }, [search, searchDebounced, tipo, visibilidade, statusFilter, sort, page]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selected, setSelected] = useState<ClienteLite | null>(null);
@@ -350,8 +361,13 @@ export default function ClientesList() {
       inadimplente: 0,
     };
     for (const c of clientesRaw) {
-      const isGratuito = c.tipo_cliente === "gratuito";
-      const v = isGratuito ? "ativa" : (c.status_assinatura || "").toString().toLowerCase();
+      const isGratuito = (c.tipo_cliente || "").toLowerCase() === "gratuito";
+      let v = (c.status_assinatura || "").toString().toLowerCase();
+      
+      if (v !== "inadimplente" && isGratuito) {
+        v = "ativa";
+      }
+
       if (v === "ativa") s.ativa += 1;
       else if (v === "pendente") s.pendente += 1;
       else if (v === "atrasada") s.atrasada += 1;

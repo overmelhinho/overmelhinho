@@ -128,7 +128,14 @@ class AutorizacaoController extends Controller
             $parent = Autorizacao::find($validated['parent_id']);
             $count = Autorizacao::where('parent_id', $parent->id)->count();
             $parentNum = preg_replace('/\D/', '', (string) $parent->numero);
-            $validated['numero'] = str_pad($parentNum, 5, '0', STR_PAD_LEFT) . '-' . ($count + 2);
+            
+            $nextSuffix = $count + 2;
+            $numeroAttempt = str_pad($parentNum, 5, '0', STR_PAD_LEFT) . '-' . $nextSuffix;
+            while (Autorizacao::where('numero', $numeroAttempt)->exists()) {
+                $nextSuffix++;
+                $numeroAttempt = str_pad($parentNum, 5, '0', STR_PAD_LEFT) . '-' . $nextSuffix;
+            }
+            $validated['numero'] = $numeroAttempt;
             $validated['is_bonificacao'] = true;
             $validated['valor_total'] = 0;
             $validated['taxa_cadastro'] = 0;
