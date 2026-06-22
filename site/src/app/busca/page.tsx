@@ -56,7 +56,7 @@ const SearchMap = dynamic(() => import('@/components/SearchMap'), {
 import { Suspense } from 'react';
 
 const getTodayStatus = (client: any) => {
-    if (!client || client.tipo_cliente !== 'pagante' || !['ativa', 'ativo'].includes(client.status_assinatura)) return null;
+    if (!client || client.tipo_cliente !== 'pagante' || !['ativa', 'ativo', 'inadimplente'].includes(client.status_assinatura)) return null;
     
     let schedule = [];
     if (Array.isArray(client.horario_atendimento)) {
@@ -370,7 +370,7 @@ function SearchContent() {
         if (!lastPage || !lastPage.data || lastPage.data.length === 0) return;
         
         const lastItem = lastPage.data[lastPage.data.length - 1];
-        const isLastItemPagante = lastItem.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(lastItem.status_assinatura);
+        const isLastItemPagante = lastItem.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(lastItem.status_assinatura);
 
         if (isLastItemPagante) {
             fetchNextPage();
@@ -404,7 +404,7 @@ function SearchContent() {
         if (matchPerfeito && item.id === matchPerfeito.id) return false;
         
         if (idx === 0 && !matchPerfeito) return true;
-        return item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura);
+        return item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura);
     });
     
     // Todos os Resultados: todos os que não entraram nos destaques E não são match perfeito
@@ -587,7 +587,7 @@ function SearchContent() {
                                     onMouseLeave={() => setHoveredResult(null)}
                                     className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border-4 border-brand-red/10 cursor-pointer overflow-hidden flex flex-col md:flex-row group gummy-card"
                                 >
-                                    {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && (
+                                    {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(matchPerfeito.status_assinatura) && (
                                         <div className="w-full md:w-2/5 h-40 md:h-auto relative overflow-hidden flex-shrink-0">
                                             {matchPerfeito.banner_url || matchPerfeito.galeria?.[0]?.url ? (
                                                 <img src={matchPerfeito.banner_url || matchPerfeito.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
@@ -635,7 +635,7 @@ function SearchContent() {
                                                 )}
                                             </div>
                                             
-                                            {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(matchPerfeito.status_assinatura) && matchPerfeito.contatos?.[0]?.celular && (
+                                            {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(matchPerfeito.status_assinatura) && matchPerfeito.contatos?.[0]?.celular && (
                                                 <div className="pt-2">
                                                     <button 
                                                         onClick={(e) => {
@@ -781,7 +781,7 @@ function SearchContent() {
                                                         className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
                                                     >
                                                         <div className="flex items-center space-x-4 md:space-x-6">
-                                                            {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && (
+                                                            {item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura) && (
                                                                 <div className="w-20 h-20 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[1.8rem] bg-white overflow-hidden shadow-md border-4 border-white flex-shrink-0 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center">
                                                                     {item.logotipo_url ? (
                                                                         <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1.5rem]" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-2xl font-black text-gray-400 uppercase">${item.nome_fantasia.charAt(0)}</span>`; }} />
@@ -808,7 +808,7 @@ function SearchContent() {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    {item.tipo_cliente === 'pagante' && ['ativa', 'ativo'].includes(item.status_assinatura) && (
+                                                    {item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura) && (
                                                         <button 
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
