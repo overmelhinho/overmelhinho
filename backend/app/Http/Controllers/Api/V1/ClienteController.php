@@ -2698,7 +2698,8 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
         ];
 
-        $query = \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+        $innerQuery = \App\Models\AuditLog::selectRaw('DISTINCT ON (actor_user_id, cliente_id, DATE(created_at)) audit_logs.*')
+            ->where('action', 'ilike', '%audit%')
             ->whereHas('cliente', function($q) use ($cidadesPermitidas) {
                 $q->where(function($sub) use ($cidadesPermitidas) {
                     $sub->whereHas('enderecos', function($end) use ($cidadesPermitidas) {
@@ -2708,7 +2709,6 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
                     });
                 });
             })
-            ->with(['actor', 'cliente'])
             ->when($request->input('user_id'), function($q, $uid) {
                 return $q->where('actor_user_id', $uid);
             })
@@ -2727,11 +2727,9 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             })
             ->when($request->input('result'), function($q, $res) {
                 if ($res === 'corrected') {
-                    // Tem alguma chave que não seja last_audit_at ou updated_at
                     return $q->whereNotNull('field_changes')
                              ->whereRaw("(SELECT count(*) FROM jsonb_object_keys(field_changes::jsonb) k WHERE k NOT IN ('last_audit_at', 'updated_at')) > 0");
                 } elseif ($res === 'kept') {
-                    // Não tem chaves relevantes
                     return $q->where(function($sq) {
                         $sq->whereNull('field_changes')
                            ->orWhereRaw("(SELECT count(*) FROM jsonb_object_keys(field_changes::jsonb) k WHERE k NOT IN ('last_audit_at', 'updated_at')) = 0");
@@ -2749,6 +2747,10 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
                        });
                 });
             })
+            ->orderByRaw('actor_user_id, cliente_id, DATE(created_at), created_at DESC');
+
+        $query = \App\Models\AuditLog::fromSub($innerQuery, 'audit_logs')
+            ->with(['actor', 'cliente'])
             ->orderBy('created_at', 'desc');
 
         return response()->json($query->paginate($request->input('per_page', 15)));
