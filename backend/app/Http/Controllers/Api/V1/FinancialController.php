@@ -750,14 +750,21 @@ class FinancialController extends Controller
 
         $invoice->update($updateData);
 
-        // Se marcou como pago, ativa a assinatura do cliente (ou mantém inadimplente se ainda tiver >= 2 vencidas) e sincroniza com o Tiny
+        // Se marcou como pago, ativa a assinatura do cliente (ou mantém inadimplente se ainda tiver >= 2 vencidas ou 1 vencida há 2 meses) e sincroniza com o Tiny
         if ($validated['status'] === 'paid' && $invoice->client && $invoice->client->tipo_cliente === 'pagante') {
             $overdueCount = Invoice::where('client_id', $invoice->client_id)
                 ->where('status', 'pending')
                 ->where('due_date', '<', now()->startOfDay())
                 ->count();
             
-            $statusAssinatura = $overdueCount >= 2 ? 'inadimplente' : 'ativa';
+            $oldestOverdue = Invoice::where('client_id', $invoice->client_id)
+                ->where('status', 'pending')
+                ->where('due_date', '<', now()->startOfDay())
+                ->min('due_date');
+
+            $twoMonthsAgo = now()->subMonths(2)->startOfDay();
+            
+            $statusAssinatura = ($overdueCount >= 2 || ($oldestOverdue && $oldestOverdue <= $twoMonthsAgo)) ? 'inadimplente' : 'ativa';
             $invoice->client->update(['status_assinatura' => $statusAssinatura]);
         }
 

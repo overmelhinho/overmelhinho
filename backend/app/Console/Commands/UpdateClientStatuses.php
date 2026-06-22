@@ -68,15 +68,15 @@ class UpdateClientStatuses extends Command
             })
             ->update(['tipo_cliente' => 'pagante', 'status_assinatura' => 'ativa', 'updated_at' => now()]);
 
-        $threeMonthsAgo = now()->subMonths(3)->format('Y-m-d');
+        $twoMonthsAgo = now()->subMonths(2)->format('Y-m-d');
 
-        // 3. Identificar clientes inadimplentes (2+ parcelas vencidas ou 1 vencida há 3 meses ou mais)
+        // 3. Identificar clientes inadimplentes (2+ parcelas vencidas ou 1 vencida há 2 meses ou mais)
         $inadimplentesClientIds = DB::table('invoices')
             ->select('client_id')
             ->where('status', 'pending')
             ->where('due_date', '<', $today)
             ->groupBy('client_id')
-            ->havingRaw('COUNT(*) >= 2 OR MIN(due_date) <= ?', [$threeMonthsAgo])
+            ->havingRaw('COUNT(*) >= 2 OR MIN(due_date) <= ?', [$twoMonthsAgo])
             ->pluck('client_id')
             ->toArray();
 
