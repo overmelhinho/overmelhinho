@@ -442,7 +442,17 @@ export default function TabFinanceiro() {
         }
     };
 
-    const getStatusBadge = (status: string) => {
+    const getStatusBadge = (status: string, dueDate?: string) => {
+        const isOverdue = status === "pending" && dueDate && new Date(dueDate) < new Date(new Date().setHours(0, 0, 0, 0));
+
+        if (isOverdue) {
+            return (
+                <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-black uppercase bg-red-100 text-red-700 shadow-sm animate-pulse">
+                    <AlertCircle size={12} /> Atrasado
+                </span>
+            );
+        }
+
         switch (status) {
             case "paid":
                 return (
@@ -928,7 +938,7 @@ export default function TabFinanceiro() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {getStatusBadge(invoice.status)}
+                                            {getStatusBadge(invoice.status, invoice.due_date)}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-1.5">
