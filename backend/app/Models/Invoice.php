@@ -106,7 +106,7 @@ class Invoice extends Model
                               ->orWhere('celular', 'like', "%{$search}%")
                               ->orWhere('telefone_outro', 'like', "%{$search}%");
 
-                    if (!empty($digits)) {
+                    if (!empty($digits) && strlen($digits) >= 4) {
                         $qContatos->orWhereRaw("regexp_replace(telefone_principal, '[^0-9]', '', 'g') like ?", ["%{$digits}%"])
                                   ->orWhereRaw("regexp_replace(telefone_secundario, '[^0-9]', '', 'g') like ?", ["%{$digits}%"])
                                   ->orWhereRaw("regexp_replace(celular, '[^0-9]', '', 'g') like ?", ["%{$digits}%"])
@@ -119,7 +119,7 @@ class Invoice extends Model
                     $digits = preg_replace('/\D/', '', $search);
                     $qEnderecos->where('telefone', 'like', "%{$search}%");
 
-                    if (!empty($digits)) {
+                    if (!empty($digits) && strlen($digits) >= 4) {
                         $qEnderecos->orWhereRaw("regexp_replace(telefone, '[^0-9]', '', 'g') like ?", ["%{$digits}%"]);
                     }
                 });

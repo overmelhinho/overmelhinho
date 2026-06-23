@@ -564,6 +564,14 @@ class FinancialController extends Controller
 
         $query = $this->applyFinancialFilters($query, $request);
 
+        // Se a busca for numérica e bater com uma autorização exata, priorizamos esses registros no topo
+        if ($request->filled('q') && is_numeric($request->q)) {
+            $authId = \App\Models\Autorizacao::where('numero', $request->q)->value('id');
+            if ($authId) {
+                $query->orderByRaw("CASE WHEN invoices.group_id = 'autorizacao-{$authId}' THEN 0 ELSE 1 END");
+            }
+        }
+
         $invoices = $query->orderBy('due_date', 'asc')
             ->limit(300)
             ->get();
