@@ -1242,6 +1242,11 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                 <span className="text-sm font-semibold text-gray-900">
                                                     R$ {Number(invoice.payable_amount ?? invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </span>
+                                                {invoice.amount !== undefined && invoice.payable_amount !== undefined && Number(invoice.payable_amount) < Number(invoice.amount) && Number(invoice.payable_amount) > 0 && (
+                                                    <span className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                                        (Total: R$ {Number(invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Pago: R$ {(Number(invoice.amount) - Number(invoice.payable_amount)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                                                    </span>
+                                                )}
                                                 {invoice.is_permuta && (
                                                     <span className="text-[9px] text-orange-600 font-bold uppercase tracking-tight bg-orange-50 px-1.5 py-0.5 rounded w-fit mt-1 border border-orange-100/50">
                                                         + Permuta R$ {Number(invoice.permuta_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
