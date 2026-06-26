@@ -57,37 +57,13 @@ function normalizeTempPath(p: any): string | null {
   return `temp/${v}`;
 }
 
-function redesArrayToObject(arr: any[]): Record<string, string> {
-  const out: Record<string, string> = {
-    facebook: "",
-    instagram: "",
-    linkedin: "",
-    youtube: "",
-    tiktok: "",
-    x: "",
-  };
-
-  if (!Array.isArray(arr)) return out;
-
-  for (const item of arr) {
-    const tipo = (item?.tipo || "").toString().toLowerCase();
-    const url = (item?.url || "").toString();
-    if (!tipo || !url) continue;
-    if (tipo in out) out[tipo] = url;
-  }
-
-  return out;
-}
-
 function ensureRedesFormik(values: any): any[] {
-  // TabRedesSociais espera SEMPRE redes_sociais[0] como objeto {facebook,...}
-  const v = values;
-  const current = Array.isArray(v?.redes_sociais) ? v.redes_sociais : [];
-
-  if (current.length && current[0] && typeof current[0] === "object") return current;
-
-  // fallback
-  return [{ facebook: "", instagram: "", linkedin: "", youtube: "", tiktok: "", x: "" }];
+  // Retorna o array de redes_sociais no formato [{tipo, url}]
+  const current = Array.isArray(values?.redes_sociais) ? values.redes_sociais : [];
+  // Filtra só entradas com tipo e url não vazios
+  return current
+    .filter((r: any) => r && typeof r === 'object' && 'tipo' in r)
+    .filter((r: any) => r.url && String(r.url).trim());
 }
 
 export default function ClienteEdit() {
@@ -291,8 +267,10 @@ export default function ClienteEdit() {
       arquivo_midia_mime: null,
       tipo_arquivo_midia: c?.tipo_arquivo_midia || "cardapio",
 
-      // redes sociais: TabRedesSociais espera SEMPRE redes_sociais[0].facebook...
-      redes_sociais: [{ ...redesObj }],
+      // redes sociais: mantém no formato [{tipo, url}] para suportar múltiplos do mesmo tipo
+      redes_sociais: Array.isArray(c?.redes_sociais) && c.redes_sociais.length > 0 && c.redes_sociais[0]?.tipo
+        ? c.redes_sociais  // já está no formato correto [{tipo, url}]
+        : [],  // formulário em branco (a tab vai mostrar o campo vazio)
 
       // seo
       generate_seo_keywords: c?.generate_seo_keywords !== false,
@@ -452,8 +430,8 @@ export default function ClienteEdit() {
                 },
               ],
 
-              // redes sociais no formato que o backend já aceita no create
-              redes_sociais: redesFixed,
+              // redes sociais no formato [{tipo, url}] que o backend aceita nativamente
+              redes_sociais: ensureRedesFormik(values),
 
               tipo_cliente: values.tipoCliente,
 
