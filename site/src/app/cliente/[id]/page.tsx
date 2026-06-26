@@ -2,6 +2,7 @@ import api from '@/services/api';
 import { Metadata } from 'next';
 import ClientProfileClient from './ClientProfileClient';
 import { slugify } from '@/utils/slugify';
+import { permanentRedirect } from 'next/navigation';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://novo.overmelhinho.com.br';
 
@@ -72,6 +73,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     const city = address.cidade || '';
     const uf = address.estado || 'RS';
     const segment = client.segmentos?.[0]?.nome || 'Empresa';
+    
+    // Calcula a nova URL canonical para o redirecionamento 301
+    const canonicalCitySlug = city ? slugify(city) : 'cidade';
+    const canonicalSegmentSlug = segment ? slugify(segment) : 'segmento';
+    const canonicalPath = `/${canonicalCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`;
+
+    // Força o Redirecionamento 301 Movido Permanentemente
+    permanentRedirect(canonicalPath);
     
     // Padrão H1: Idêntico ao Title para relevância máxima
     const h1Title = `${segment} em ${city} - ${uf}: ${client.nome_fantasia}`;
