@@ -1451,10 +1451,11 @@ public function historico(Request $request, int $id)
 
             if (is_array($redes) && isset($redes[0]) && is_array($redes[0]) && array_key_exists('tipo', $redes[0])) {
                 foreach ($redes as $r) {
-                    $tipo = isset($r['tipo']) ? trim((string) $r['tipo']) : '';
-                    $url  = isset($r['url']) ? trim((string) $r['url']) : '';
+                    $tipo  = isset($r['tipo'])  ? trim((string) $r['tipo'])  : '';
+                    $url   = isset($r['url'])   ? trim((string) $r['url'])   : '';
+                    $label = isset($r['label']) && $r['label'] !== '' ? trim((string) $r['label']) : null;
                     if ($tipo !== '') {
-                        $redesNormalized[] = ['tipo' => $tipo, 'url' => ($url !== '' ? $url : null)];
+                        $redesNormalized[] = ['tipo' => $tipo, 'url' => ($url !== '' ? $url : null), 'label' => $label];
                     }
                 }
             }
@@ -1793,19 +1794,27 @@ public function historico(Request $request, int $id)
             }
 
             // redes sociais: recria
-            if (array_key_exists('redes_sociais', $validated)) {
+            // Usa $request->input() ao invés de $validated para garantir que
+            // campos como 'label' não sejam stripped pelo validated() do Laravel
+            if ($request->has('redes_sociais')) {
+                $redesInput = $request->input('redes_sociais', []);
                 $cliente->redesSociais()->delete();
 
-                if (!empty($validated['redes_sociais']) && is_array($validated['redes_sociais'])) {
-                    foreach ($validated['redes_sociais'] as $rede) {
+                if (!empty($redesInput) && is_array($redesInput)) {
+                    foreach ($redesInput as $rede) {
+                        $tipo = isset($rede['tipo']) ? (string) $rede['tipo'] : null;
+                        $url  = isset($rede['url'])  ? (string) $rede['url']  : null;
+                        $label = isset($rede['label']) && $rede['label'] !== '' ? (string) $rede['label'] : null;
+                        if (!$tipo || !$url) continue;
                         $cliente->redesSociais()->create([
-                            'tipo'  => $rede['tipo'],
-                            'url'   => $rede['url'] ?? null,
-                            'label' => $rede['label'] ?? null,
+                            'tipo'  => $tipo,
+                            'url'   => $url,
+                            'label' => $label,
                         ]);
                     }
                 }
             }
+
 
 
             // SEO manual
