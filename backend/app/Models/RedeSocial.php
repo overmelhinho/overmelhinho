@@ -12,5 +12,7 @@ class RedeSocial extends Model
         'cliente_id',
         'tipo',
         'url',
+        'label',
     ];
+
 }
