@@ -1129,9 +1129,10 @@ public function historico(Request $request, int $id)
                 'contatos.*.site'                => 'nullable|string|max:255',
                 'contatos.*.nome_contato'        => 'nullable|string|max:255',
 
-                'redes_sociais'        => 'nullable|array',
-                'redes_sociais.*.tipo' => 'nullable|string|max:50',
-                'redes_sociais.*.url'  => 'nullable|string|max:500',
+                'redes_sociais'          => 'nullable|array',
+                'redes_sociais.*.tipo'   => 'nullable|string|max:50',
+                'redes_sociais.*.url'    => 'nullable|string|max:500',
+                'redes_sociais.*.label'  => 'nullable|string|max:100',
 
                 'logo_url' => 'nullable|string|max:255',
                 'banner_url' => 'nullable|string|max:255',
@@ -1591,9 +1592,10 @@ public function historico(Request $request, int $id)
                 'contatos.*.site'                => 'nullable|string|max:255',
                 'contatos.*.nome_contato'        => 'nullable|string|max:255',
 
-                'redes_sociais'        => 'nullable|array',
-                'redes_sociais.*.tipo' => 'nullable|string|max:50',
-                'redes_sociais.*.url'  => 'nullable|string|max:500',
+                'redes_sociais'          => 'nullable|array',
+                'redes_sociais.*.tipo'   => 'nullable|string|max:50',
+                'redes_sociais.*.url'    => 'nullable|string|max:500',
+                'redes_sociais.*.label'  => 'nullable|string|max:100',
 
                 'logo_url' => 'nullable|string|max:255',
                 'banner_url' => 'nullable|string|max:255',
