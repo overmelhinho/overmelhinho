@@ -236,29 +236,12 @@ function SearchContent() {
                 isInstitutional: false
             };
         }
-        return {
-            id: 101,
-            title: "Anuncie no O Vermelhinho",
-            image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-            link: "https://overmelhinho.com.br/anuncie",
-            isInstitutional: true
-        };
+        return null;
     }, [heroAd]);
 
     const interstitialAds = useMemo(() => {
         if (!searchAds || searchAds.length < 2) {
-            // Fallback para ads internos se não houver campanhas suficientes
-            return [
-                {
-                    id: 101,
-                    title: "Anuncie no O Vermelhinho",
-                    description: "Sua empresa em destaque para quem realmente procura.",
-                    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-                    cta: "Saber Mais",
-                    link: "https://overmelhinho.com.br/anuncie",
-                    bgColor: "bg-indigo-600"
-                }
-            ];
+            return [];
         }
         
         return searchAds.slice(1).map(ad => {
@@ -768,9 +751,9 @@ function SearchContent() {
                                 <h3 className="text-xl font-black text-gray-900 tracking-tight font-serif px-2">Todos os Resultados</h3>
                                 <div className="bg-white rounded-[4rem] shadow-2xl border border-white overflow-hidden p-2">
                                     {outrosResultados.map((item: any, idx: number) => {
-                                        const showAd = idx >= 4 && (idx - 4) % 30 === 0;
+                                        const showAd = idx >= 4 && (idx - 4) % 30 === 0 && interstitialAds.length > 0;
                                         const adIndex = idx >= 4 ? Math.floor((idx - 4) / 30) : 0;
-                                        const ad = interstitialAds[adIndex % interstitialAds.length];
+                                        const ad = interstitialAds.length > 0 ? interstitialAds[adIndex % interstitialAds.length] : null;
 
                                         return (
                                             <React.Fragment key={item.id}>
@@ -821,7 +804,7 @@ function SearchContent() {
                                                     )}
                                                 </div>
 
-                                                {showAd && (
+                                                {showAd && ad && (
                                                     <div className="mx-4 my-8">
                                                         <div 
                                                             className={`relative ${ad.bgColor} rounded-[2rem] p-6 overflow-hidden group/ad cursor-pointer shadow-sm`}

@@ -80,6 +80,35 @@ function tipoLabelPt(t: string) {
   return map[v] ?? t;
 }
 
+function tipoLabelPtComPlacements(c: CampanhaRow) {
+  const t = (c.tipo || "").toLowerCase();
+  if (t !== "banner") {
+    return tipoLabelPt(c.tipo);
+  }
+
+  const mediaTypes = (c as any).media_types || [];
+  if (mediaTypes.length === 0) {
+    return "Banner";
+  }
+
+  const labels: string[] = [];
+  if (mediaTypes.includes("banner_topo")) {
+    labels.push("Banner Home");
+  }
+  if (mediaTypes.includes("banner_keyword")) {
+    labels.push("Banner Busca / Cidades");
+  }
+  if (mediaTypes.includes("banner_segmento")) {
+    labels.push("Banner Listagem");
+  }
+
+  if (labels.length > 0) {
+    return labels.join(" / ");
+  }
+
+  return "Banner";
+}
+
 function fmtDate(iso?: string | null) {
   if (!iso) return "—";
   try {
@@ -347,16 +376,18 @@ export default function CampanhasList() {
                     onChange={(e) => setFilters((f) => ({ ...f, tipo: e.target.value as any, page: 1 }))}
                   >
                     <option value="">Tipo: Todos</option>
-                    <option value="banner">Banner</option>
+                    <option value="banner_home">Banner Home</option>
+                    <option value="banner_busca">Banner Busca / Cidades</option>
+                    <option value="banner_listagem">Banner Listagem</option>
                     <option value="popup">Pop-up</option>
                     <option value="destaque">Destaque</option>
-                    <option value="combo">Combo</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="mb-2 block text-[10px] font-black text-slate-400 uppercase tracking-widest">ID do Cliente</label>
                   <input
+                    type="text"
                     className="w-full h-11 rounded-xl border border-slate-100 bg-slate-50 px-4 text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-200"
                     placeholder="Somente números..."
                     value={filters.cliente_id}
@@ -436,18 +467,18 @@ export default function CampanhasList() {
                             {fmtDate(c.data_fim)}
                           </span>
                         </div>
-                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{tipoLabelPt(c.tipo)}</div>
+                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{tipoLabelPtComPlacements(c)}</div>
                       </td>
 
-                        <td className="px-8 py-6">
+                      <td className="px-8 py-6">
                         <div className="flex items-center gap-3">
                           <StatusToggle id={c.id} initialStatus={c.status} />
                           <Badge tone={statusTone(c.status)}>{statusLabelPt(c.status)}</Badge>
-                          {finStatus && (
+                          {/* {finStatus && (
                             <Badge tone={financeiroTone(finStatus)}>
                               {financeiroLabelPt(finStatus)}
                             </Badge>
-                          )}
+                          )} */}
                           {!!c.is_institucional && (
                             <Badge tone="purple">
                               Institucional
@@ -464,9 +495,9 @@ export default function CampanhasList() {
                       <td className="px-8 py-6 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setDeleteRequest({ id: c.id, nome: c.nome }); 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteRequest({ id: c.id, nome: c.nome });
                             }}
                             className="p-2 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
                             title="Excluir Campanha"

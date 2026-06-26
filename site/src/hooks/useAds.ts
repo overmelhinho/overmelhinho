@@ -23,9 +23,9 @@ export interface Ad {
   };
 }
 
-export function useAds(params: { city_id?: number | null; keywords?: string; tipo?: string }) {
+export function useAds(params: { city_id?: number | null; keywords?: string; tipo?: string; placement?: string }) {
   return useQuery({
-    queryKey: ['ads', params.city_id, params.keywords, params.tipo],
+    queryKey: ['ads', params.city_id, params.keywords, params.tipo, params.placement],
     queryFn: async () => {
       const res = await api.get('/public/ads', { params });
       return res.data.data as Ad[];

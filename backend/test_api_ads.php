@@ -29,3 +29,4 @@ echo "Cities elapsed time: {$elapsedCities}s\n";
 
 $queries = DB::getQueryLog();
 echo "Total queries executed: " . count($queries) . "\n";
+

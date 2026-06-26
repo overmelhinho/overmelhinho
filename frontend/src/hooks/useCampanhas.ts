@@ -8,7 +8,14 @@ import api from "@/services/api";
  * ============================
  */
 export type CampanhaStatus = "rascunho" | "ativa" | "encerrada" | "cancelada";
-export type CampanhaTipo = "banner" | "popup" | "destaque" | "combo";
+export type CampanhaTipo =
+  | "banner"
+  | "banner_home"
+  | "banner_busca"
+  | "banner_listagem"
+  | "popup"
+  | "destaque"
+  | "combo";
 export type CampanhaOrigem = "venda_nova" | "renovacao" | "upgrade";
 
 /**
@@ -91,7 +98,7 @@ export type Paginated<T> = {
 export type CampanhasQueryParams = {
   cliente_id?: number | string;
   status?: CampanhaStatus;
-  tipo?: CampanhaTipo;
+  tipo?: CampanhaTipo | string;
   page?: number;
   per_page?: number;
 };

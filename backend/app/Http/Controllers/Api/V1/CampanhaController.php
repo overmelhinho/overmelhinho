@@ -116,7 +116,64 @@ class CampanhaController extends Controller
         }
 
         if ($request->filled('tipo')) {
-            $q->where('c.tipo', $request->query('tipo'));
+            $tipoFilter = $request->query('tipo');
+            if ($tipoFilter === 'banner_home') {
+                $q->where(function ($subQ) {
+                    $subQ->where('c.tipo', 'banner')
+                         ->where(function ($orQ) {
+                             $orQ->whereExists(function ($sub) {
+                                 $sub->select(DB::raw(1))
+                                     ->from('campanha_midias')
+                                     ->whereColumn('campanha_id', 'c.id')
+                                     ->where('tipo', 'banner_topo');
+                             });
+                             if (Schema::hasColumn('campanhas', 'placements_json')) {
+                                 $orQ->orWhere('c.placements_json', 'LIKE', '%HOME_TOP%');
+                             }
+                             if (Schema::hasColumn('campanhas', 'placements')) {
+                                 $orQ->orWhere('c.placements', 'LIKE', '%HOME_TOP%');
+                             }
+                         });
+                });
+            } elseif ($tipoFilter === 'banner_busca') {
+                $q->where(function ($subQ) {
+                    $subQ->where('c.tipo', 'banner')
+                         ->where(function ($orQ) {
+                             $orQ->whereExists(function ($sub) {
+                                 $sub->select(DB::raw(1))
+                                     ->from('campanha_midias')
+                                     ->whereColumn('campanha_id', 'c.id')
+                                     ->whereIn('tipo', ['banner_keyword', 'imagem']);
+                             });
+                             if (Schema::hasColumn('campanhas', 'placements_json')) {
+                                 $orQ->orWhere('c.placements_json', 'LIKE', '%SEARCH_RESULT%');
+                             }
+                             if (Schema::hasColumn('campanhas', 'placements')) {
+                                 $orQ->orWhere('c.placements', 'LIKE', '%SEARCH_RESULT%');
+                             }
+                         });
+                });
+            } elseif ($tipoFilter === 'banner_listagem') {
+                $q->where(function ($subQ) {
+                    $subQ->where('c.tipo', 'banner')
+                         ->where(function ($orQ) {
+                             $orQ->whereExists(function ($sub) {
+                                 $sub->select(DB::raw(1))
+                                     ->from('campanha_midias')
+                                     ->whereColumn('campanha_id', 'c.id')
+                                     ->where('tipo', 'banner_segmento');
+                             });
+                             if (Schema::hasColumn('campanhas', 'placements_json')) {
+                                 $orQ->orWhere('c.placements_json', 'LIKE', '%SEGMENT_LISTING%');
+                             }
+                             if (Schema::hasColumn('campanhas', 'placements')) {
+                                 $orQ->orWhere('c.placements', 'LIKE', '%SEGMENT_LISTING%');
+                             }
+                         });
+                });
+            } else {
+                $q->where('c.tipo', $tipoFilter);
+            }
         }
 
         if ($request->filled('data_inicio')) {
@@ -131,9 +188,28 @@ class CampanhaController extends Controller
           ->orderByDesc('c.created_at');
 
         $perPage = min(max((int) $request->query('per_page', 20), 1), 100);
+        $paginator = $q->paginate($perPage);
+
+        $campaignIds = collect($paginator->items())->pluck('id')->all();
+
+        $midias = DB::table('campanha_midias')
+            ->whereIn('campanha_id', $campaignIds)
+            ->get(['campanha_id', 'tipo']);
+
+        $midiasByCampaign = $midias->groupBy('campanha_id');
+
+        foreach ($paginator->items() as $item) {
+            $types = collect($midiasByCampaign->get($item->id) ?? [])
+                ->pluck('tipo')
+                ->unique()
+                ->values()
+                ->all();
+            
+            $item->media_types = $types;
+        }
 
         return response()->json([
-            'data' => $q->paginate($perPage),
+            'data' => $paginator,
         ]);
     }
 

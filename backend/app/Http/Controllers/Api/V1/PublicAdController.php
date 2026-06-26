@@ -18,6 +18,7 @@ class PublicAdController extends Controller
         $tipo = $request->query('tipo'); // BANNER, POPUP, etc.
         $cidadeId = $request->query('city_id');
         $keywords = $request->query('keywords'); // string separada por vírgula ou espaço
+        $placement = $request->query('placement');
 
         $q = DB::table('campanhas as c')
             ->where('c.status', 'ativa')
@@ -32,6 +33,29 @@ class PublicAdController extends Controller
 
         if ($tipo) {
             $q->whereRaw('UPPER(c.tipo) = ?', [strtoupper($tipo)]);
+        }
+
+        if ($placement) {
+            $mediaTypes = [];
+            if ($placement === 'HOME_TOP') {
+                $mediaTypes = ['banner_topo'];
+            } elseif ($placement === 'SEARCH_RESULT') {
+                $mediaTypes = ['banner_keyword', 'imagem'];
+            } elseif ($placement === 'POPUP_GLOBAL') {
+                $mediaTypes = ['popup'];
+            } elseif ($placement === 'SEGMENT_LISTING') {
+                $mediaTypes = ['banner_segmento'];
+            }
+
+            if (!empty($mediaTypes)) {
+                $q->whereExists(function ($sub) use ($mediaTypes) {
+                    $sub->select(DB::raw(1))
+                        ->from('campanha_midias')
+                        ->whereColumn('campanha_id', 'c.id')
+                        ->whereIn('status', ['publicado', 'ativa'])
+                        ->whereIn('tipo', $mediaTypes);
+                });
+            }
         }
 
         // 1) Filtro de Cidade (Se a campanha tem cidades, a cidade_id deve estar lá)

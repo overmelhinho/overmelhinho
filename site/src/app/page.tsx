@@ -38,7 +38,7 @@ export default function Home() {
     setPreferredSegments(getTopSegments().join(','));
   }, [getTopSegments]);
 
-  const { data: homeAds } = useAds({ city_id: cityId, tipo: 'BANNER' });
+  const { data: homeAds } = useAds({ city_id: cityId, tipo: 'BANNER', placement: 'HOME_TOP' });
   const { data: realClients, isLoading } = useClients(
     { city_id: cityId, per_page: 4, preferred_segments: preferredSegments },
     { enabled: isMounted }
@@ -307,51 +307,36 @@ export default function Home() {
                 </section>
 
                 {/* 5. SCROLLYTELLING ADS */}
-                <section ref={scrollyRef} className="h-[120vh] relative pt-10 px-2 sm:px-0">
-                    <div className="sticky top-20 h-[70vh] w-full bg-black rounded-[5rem] overflow-hidden shadow-3xl group">
-                        <div
-                            className="absolute inset-0 transition-all duration-200"
-                            style={{
-                                transform: `scale(${1 + scrollProgress})`,
-                                opacity: Math.min(1, scrollProgress + 0.3)
+                {scrollyAd && (
+                    <section ref={scrollyRef} className="h-[120vh] relative pt-10 px-2 sm:px-0">
+                        <div 
+                            onClick={() => {
+                                trackAdInteraction(scrollyAd.id, 'click', 'HOME_TOP', scrollyAd.cliente.id);
+                                const destinationUrl = scrollyAd.url || 
+                                    (scrollyAd.cliente.whatsapp ? `https://wa.me/55${scrollyAd.cliente.whatsapp.replace(/\D/g, '')}` : null) || 
+                                    (scrollyAd.cliente ? getClientSeoUrl(scrollyAd.cliente) : null);
+                                if (destinationUrl) {
+                                    window.open(destinationUrl, '_blank');
+                                }
                             }}
+                            className="sticky top-20 h-[70vh] w-full bg-black rounded-[5rem] overflow-hidden shadow-3xl group cursor-pointer"
                         >
-                            <img
-                                src={scrollyAd?.imageUrl || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1600&auto=format&fit=crop&q=80"}
-                                className="w-full h-full object-cover filter brightness-[0.4] contrast-[1.2]"
-                                alt="Destaque Patrocinado"
-                            />
-                        </div>
-
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white space-y-6 z-10">
-                            <div className="bg-brand-red/90 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.4em] shadow-xl font-sans">
-                                {scrollyAd ? 'Destaque Patrocinado' : 'Espaço Publicitário'}
-                            </div>
-                            <h3 className="text-4xl md:text-6xl font-black tracking-tighter leading-none max-w-4xl mx-auto font-serif italic">
-                                {scrollyAd ? scrollyAd.nome : <>Sua empresa aqui,<br />onde todos<br />estão olhando.</>}
-                            </h3>
-                            <p className="text-xl font-bold opacity-60 font-sans">
-                                {scrollyAd ? `Oferecido por ${scrollyAd.cliente.nome}` : 'Destaque Premium no Portal O Vermelhinho'}
-                            </p>
-                            <button
-                                onClick={() => {
-                                    if (scrollyAd) {
-                                        trackAdInteraction(scrollyAd.id, 'click', 'HOME_TOP', scrollyAd.cliente.id);
-                                        if (scrollyAd.cliente.whatsapp) window.open(`https://wa.me/55${scrollyAd.cliente.whatsapp.replace(/\D/g, '')}`, '_blank');
-                                        else router.push(getClientSeoUrl(scrollyAd.cliente));
-                                    } else {
-                                        router.push('/anuncie?ref=home_banner');
-                                    }
+                            <div
+                                className="absolute inset-0 transition-all duration-200"
+                                style={{
+                                    transform: 'none',
+                                    opacity: 1
                                 }}
-                                className="mt-10 bg-white text-black px-12 py-6 rounded-[2.5rem] font-black text-xl active:scale-90 transition-transform shadow-2xl hover:bg-brand-red hover:text-white font-sans cursor-pointer"
                             >
-                                {scrollyAd ? 'Aproveitar Agora' : 'Quero Anunciar'}
-                            </button>
+                                <img
+                                    src={scrollyAd.imageUrl}
+                                    className="w-full h-full object-contain filter brightness-100"
+                                    alt="Destaque Patrocinado"
+                                />
+                            </div>
                         </div>
-
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-60 pointer-events-none"></div>
-                    </div>
-                </section>
+                    </section>
+                )}
 
             </main>
         </div>
