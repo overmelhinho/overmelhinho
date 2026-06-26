@@ -13,7 +13,7 @@ class UploadTempController extends Controller
     {
         $request->validate([
             'files' => 'required',
-            'files.*' => 'file|max:10240|mimes:jpg,jpeg,png,webp,pdf',
+            'files.*' => 'file|max:10240|mimes:jpg,jpeg,png,webp,pdf,gif',
         ]);
 
         $supabaseUrl = rtrim(config('services.supabase.url', ''), '/');

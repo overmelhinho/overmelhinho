@@ -716,7 +716,35 @@ export default function CampanhaWizard({
                                         onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (!file) return;
- 
+
+                                            // Se for GIF, envia diretamente para não quebrar a animação nem converter para JPG
+                                            if (file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif")) {
+                                                const slot = device;
+                                                const t = toast.loading("Enviando GIF...");
+                                                const fd = new FormData();
+                                                fd.append("files[]", file, file.name);
+                                                try {
+                                                    const { data } = await api.post("/v1/upload-temp", fd);
+                                                    if (data?.success && data.files?.length > 0) {
+                                                        const uploaded = data.files[0];
+                                                        w.setTempMedia(slot, uploaded.path, uploaded.public_url, file.name);
+                                                        if (isPopup) {
+                                                            w.setTempMedia("mobile", uploaded.path, uploaded.public_url, file.name);
+                                                        }
+                                                        toast.dismiss(t);
+                                                        toast.success("GIF enviado e aplicado!");
+                                                    } else {
+                                                        toast.dismiss(t);
+                                                        toast.error("Erro no upload do GIF.");
+                                                    }
+                                                } catch (err) {
+                                                    toast.dismiss(t);
+                                                    toast.error("Erro ao enviar GIF.");
+                                                }
+                                                e.target.value = "";
+                                                return;
+                                            }
+
                                             // 1) Ler arquivo para base64 para o cropper
                                             const reader = new FileReader();
                                             reader.onload = (event) => {
@@ -1283,15 +1311,53 @@ export default function CampanhaWizard({
                                                     </div>
                                                 ) : (
                                                     <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-400">
-                                                        <Upload size={24} />
-                                                        <span className="text-[10px] font-bold uppercase">Clique para subir</span>
+                                                        {!previewUrl && (
+                                                            <div className="flex flex-col items-center gap-3">
+                                                                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300">
+                                                                    <Upload size={24} />
+                                                                </div>
+                                                                <div className="text-center">
+                                                                    <p className="text-xs font-black text-gray-900 uppercase">Enviar Arquivo</p>
+                                                                    <p className="text-[10px] text-gray-400 mt-0.5">JPG, PNG ou GIF</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                         <input
                                                             type="file"
                                                             accept="image/*"
-                                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                                             onChange={async (e) => {
                                                                 const file = e.target.files?.[0];
                                                                 if (!file) return;
+
+                                                                // Se for GIF, envia diretamente para não quebrar a animação nem converter para JPG
+                                                                if (file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif")) {
+                                                                    const slot = device;
+                                                                    const t = toast.loading("Enviando GIF...");
+                                                                    const fd = new FormData();
+                                                                    fd.append("files[]", file, file.name);
+                                                                    try {
+                                                                        const { data } = await api.post("/v1/upload-temp", fd);
+                                                                        if (data?.success && data.files?.length > 0) {
+                                                                            const uploaded = data.files[0];
+                                                                            w.setTempMedia(slot, uploaded.path, uploaded.public_url, file.name);
+                                                                            if (isPopup) {
+                                                                                w.setTempMedia("mobile", uploaded.path, uploaded.public_url, file.name);
+                                                                            }
+                                                                            toast.dismiss(t);
+                                                                            toast.success("GIF enviado e aplicado!");
+                                                                        } else {
+                                                                            toast.dismiss(t);
+                                                                            toast.error("Erro no upload do GIF.");
+                                                                        }
+                                                                    } catch (err) {
+                                                                        toast.dismiss(t);
+                                                                        toast.error("Erro ao enviar GIF.");
+                                                                    }
+                                                                    e.target.value = "";
+                                                                    return;
+                                                                }
+
                                                                 const reader = new FileReader();
                                                                 reader.onload = (event) => {
                                                                     const dim = parseDimension(dimension);
