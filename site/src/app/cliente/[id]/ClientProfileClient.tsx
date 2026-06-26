@@ -975,7 +975,7 @@ export default function ClientProfileClient() {
                                                     const thisIdx = tipoIdx[t];
                                                     const hasDupes = (tipoCount[t] || 1) > 1;
                                                     const badgeLabel = rede.label?.trim()
-                                                        ? rede.label.trim().substring(0, 3).toUpperCase()
+                                                        ? rede.label.trim()
                                                         : String(thisIdx);
                                                     const tooltipText = rede.label?.trim()
                                                         ? rede.label.trim()
@@ -1006,7 +1006,7 @@ export default function ClientProfileClient() {
                                                             {!['instagram','facebook','linkedin','youtube','tiktok','website','site','globo'].includes(t) && <ExternalLink size={24} />}
                                                             {/* Badge com label abreviado quando há múltiplos */}
                                                             {hasDupes && (
-                                                                <span className="absolute -top-2 -right-2 min-w-[22px] h-[18px] px-1 bg-[#E1306C] text-white text-[8px] font-black rounded-full flex items-center justify-center shadow leading-none">
+                                                                <span className="absolute -top-2 -right-2 max-w-[80px] px-1.5 py-0.5 bg-[#E1306C] text-white text-[8px] font-black rounded-full flex items-center justify-center shadow leading-none whitespace-nowrap truncate">
                                                                     {badgeLabel}
                                                                 </span>
                                                             )}
@@ -1421,7 +1421,7 @@ export default function ClientProfileClient() {
                                         const thisIdx = tipoIdx[t];
                                         const hasDupes = (tipoCount[t] || 1) > 1;
                                         const badgeLabel = rede.label?.trim()
-                                            ? rede.label.trim().substring(0, 3).toUpperCase()
+                                            ? rede.label.trim()
                                             : String(thisIdx);
                                         const tooltipText = rede.label?.trim()
                                             ? rede.label.trim()
@@ -1452,7 +1452,7 @@ export default function ClientProfileClient() {
                                                 {!['instagram','facebook','linkedin','youtube','tiktok','website','site','globo'].includes(t) && <ExternalLink size={24} />}
                                                 {/* Badge com label abreviado */}
                                                 {hasDupes && (
-                                                    <span className="absolute -top-2 -right-2 min-w-[22px] h-[18px] px-1 bg-[#E1306C] text-white text-[8px] font-black rounded-full flex items-center justify-center shadow leading-none">
+                                                    <span className="absolute -top-2 -right-2 max-w-[80px] px-1.5 py-0.5 bg-[#E1306C] text-white text-[8px] font-black rounded-full flex items-center justify-center shadow leading-none whitespace-nowrap truncate">
                                                         {badgeLabel}
                                                     </span>
                                                 )}
