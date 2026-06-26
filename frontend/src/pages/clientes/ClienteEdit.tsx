@@ -154,8 +154,6 @@ export default function ClienteEdit() {
     const tipo = (c?.tipo_cliente || "pagante").toString().toLowerCase();
     const tipoNorm: TipoCliente = tipo === "gratuito" ? "gratuito" : "pagante";
 
-    const redesObj = redesArrayToObject(Array.isArray(c?.redes_sociais) ? c.redes_sociais : []);
-
     // galeria (se backend retornar algo como galeria/galeria_imagens/galerias)
     const galeriaRaw =
       Array.isArray(c?.galeria) ? c.galeria :
