@@ -1073,7 +1073,8 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
             )}
 
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                <table className="min-w-full divide-y divide-gray-200">
+                <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '900px' }}>
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-4 py-3 w-10">
@@ -1111,7 +1112,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                 ERP
                             </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th className="sticky right-0 bg-gray-50 px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.06)] z-10">
                                 Ações
                             </th>
                         </tr>
@@ -1313,7 +1314,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                        <td className="sticky right-0 bg-white whitespace-nowrap px-6 py-4 text-right group-hover:bg-red-50/40 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.06)] z-10" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex justify-end gap-2">
                                                 {invoice.sync_status === 'syncing' ? (
                                                     <span className="text-xs font-semibold text-gray-400 italic">Processando...</span>
@@ -1430,6 +1431,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                         )}
                     </tbody>
                 </table>
+                </div>
                 <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
                         <div className="flex items-center gap-3">

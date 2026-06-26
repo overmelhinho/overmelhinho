@@ -83,6 +83,10 @@ export default function SalesReportsTab() {
     const [undoInvoiceId, setUndoInvoiceId] = useState<number | null>(null);
     const queryClient = useQueryClient();
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(50);
+
     const getFilterParams = () => {
         const params = new URLSearchParams();
         if (startDate && endDate) {
@@ -144,6 +148,7 @@ export default function SalesReportsTab() {
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
     const handleSearchClick = () => {
+        setCurrentPage(1);
         setSearchTrigger(prev => prev + 1);
     };
 
@@ -283,6 +288,13 @@ export default function SalesReportsTab() {
             setSelectedInvoices(salesData?.data?.map((i: any) => i.id) || []);
         }
     };
+
+    const totalItems = salesData?.data?.length || 0;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const paginatedSales = salesData?.data?.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    ) || [];
 
     return (
         <div className="p-6 bg-[#F8F9FC] min-h-screen space-y-6">
@@ -650,7 +662,7 @@ export default function SalesReportsTab() {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                    <table className="w-full text-left" style={{ minWidth: '1050px' }}>
                         <thead>
                             <tr className="bg-gray-50/30 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 border-b border-gray-50">
                                 <th className="px-4 py-5 w-10">
@@ -670,7 +682,7 @@ export default function SalesReportsTab() {
                                 <th className="px-6 py-5">Restante</th>
                                 <th className="px-6 py-5">Vencimento</th>
                                 <th className="px-6 py-5">Situação</th>
-                                <th className="px-6 py-5 text-right">Ações</th>
+                                <th className="sticky right-0 bg-gray-50/30 px-6 py-5 text-right shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.06)] z-10">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -690,7 +702,7 @@ export default function SalesReportsTab() {
                                     </td>
                                 </tr>
                             ) : (
-                                salesData?.data?.map((sale: any) => (
+                                paginatedSales.map((sale: any) => (
                                     <tr key={sale.id} className={cn(
                                         "hover:bg-gray-50/50 transition-colors group",
                                         selectedInvoices.includes(sale.id) && "bg-red-50/30"
@@ -772,7 +784,7 @@ export default function SalesReportsTab() {
                                                 {sale.status === 'paid' ? 'Pago (PG)' : 'Aberto (AB)'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5 text-right">
+                                        <td className="sticky right-0 bg-white px-6 py-5 text-right group-hover:bg-gray-50/50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.06)] z-10">
                                             <div className="flex items-center justify-end gap-2">
                                                 {sale.autorizacao_id && (
                                                     <button
@@ -807,6 +819,87 @@ export default function SalesReportsTab() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Footer */}
+                {(salesData?.data?.length || 0) > 0 && (
+                    <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-gray-500 font-medium text-xs">Mostrar:</span>
+                                    <Select
+                                        value={String(itemsPerPage)}
+                                        onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}
+                                    >
+                                        <SelectTrigger className="w-[70px] h-8 bg-white border-gray-200 text-xs font-bold rounded-lg">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                                            <SelectItem value="50">50</SelectItem>
+                                            <SelectItem value="100">100</SelectItem>
+                                            <SelectItem value="150">150</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <span className="text-gray-500 text-xs">
+                                    Mostrando{' '}
+                                    {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}{' '}a{' '}
+                                    {Math.min(currentPage * itemsPerPage, totalItems)}{' '}de{' '}
+                                    <span className="font-bold text-gray-900">{totalItems}</span> faturas
+                                </span>
+                            </div>
+
+                            {totalPages > 1 && (
+                                <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="h-7 w-7 p-0 rounded-md text-xs font-bold disabled:opacity-40"
+                                    >
+                                        ‹
+                                    </Button>
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        let page: number;
+                                        if (totalPages <= 5) {
+                                            page = i + 1;
+                                        } else if (currentPage <= 3) {
+                                            page = i + 1;
+                                        } else if (currentPage >= totalPages - 2) {
+                                            page = totalPages - 4 + i;
+                                        } else {
+                                            page = currentPage - 2 + i;
+                                        }
+                                        return (
+                                            <button
+                                                key={page}
+                                                onClick={() => setCurrentPage(page)}
+                                                className={cn(
+                                                    "h-7 w-7 rounded-md text-xs font-bold transition-colors",
+                                                    currentPage === page
+                                                        ? "bg-gray-900 text-white"
+                                                        : "text-gray-500 hover:bg-gray-100"
+                                                )}
+                                            >
+                                                {page}
+                                            </button>
+                                        );
+                                    })}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="h-7 w-7 p-0 rounded-md text-xs font-bold disabled:opacity-40"
+                                    >
+                                        ›
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </Card>
 
             {/* Modal de Confirmação de Desfazer Pagamento */}

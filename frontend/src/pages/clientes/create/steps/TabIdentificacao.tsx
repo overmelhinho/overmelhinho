@@ -165,13 +165,21 @@ export default function TabIdentificacao() {
         if (d.telefone && !values.telefone_principal) setFieldValue("telefone_principal", d.telefone);
         if (d.email && !values.email) setFieldValue("email", d.email);
 
-        // ✅ Redes Sociais
+        // ✅ Redes Sociais → escrevemos no novo formato [{tipo, url}]
         const socialIds = ["instagram", "facebook", "linkedin", "youtube", "tiktok", "x"] as const;
+        const existingRedes: {tipo: string; url: string}[] = Array.isArray(values.redes_sociais)
+          ? values.redes_sociais.filter((r: any) => r && "tipo" in r)
+          : [];
+        const existingTipos = new Set(existingRedes.map((r) => r.tipo));
+        const newRedes = [...existingRedes];
         socialIds.forEach((key) => {
-          if (d[key] && !values[key]) {
-            setFieldValue(key, String(d[key]));
+          if (d[key] && !existingTipos.has(key)) {
+            newRedes.push({ tipo: key, url: String(d[key]) });
           }
         });
+        if (newRedes.length !== existingRedes.length) {
+          setFieldValue("redes_sociais", newRedes);
+        }
 
         toast.success("Dados preenchidos via IA!", { id: t });
       } else {
