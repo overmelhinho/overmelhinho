@@ -13,8 +13,10 @@ class RedeSocialResource extends JsonResource
             'cliente_id' => $this->cliente_id,
             'tipo'       => $this->tipo,
             'url'        => $this->url,
+            'label'      => $this->label,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+
     }
 }
