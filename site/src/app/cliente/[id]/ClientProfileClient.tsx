@@ -6,7 +6,7 @@ import {
     MessageCircle, Phone, MapPin, Share2, Heart, Star, Clock,
     Briefcase, ChevronRight, CheckCircle2, ArrowLeft, Search,
     User, Menu, Info, ImageIcon, MessageSquare, Instagram,
-    Facebook, Globe, ExternalLink, ChevronLeft, Linkedin, Youtube,
+    Facebook, Globe, ExternalLink, ChevronLeft, Linkedin, Youtube, Music2,
     X, Maximize2, Copy, Check, Bike, Utensils, CreditCard, DollarSign,
     Smartphone, Banknote, Coins, FileText, BookOpen, Mail, Send, AlertTriangle
 } from 'lucide-react';
@@ -958,38 +958,59 @@ export default function ClientProfileClient() {
                                         </section>
                                     )}
 
-                                    {client.redes_sociais?.length > 0 && isPagante && (
+                                    {client.redes_sociais?.length > 0 && isPagante && (() => {
+                                        // Contagem por tipo para badge de múltiplos
+                                        const tipoCount: Record<string, number> = {};
+                                        const tipoIdx: Record<string, number> = {};
+                                        return (
                                         <section className="lg:hidden space-y-6">
                                             <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Redes Sociais</h2>
                                             <div className="flex flex-wrap gap-4">
                                                 {client.redes_sociais.map((rede: any) => {
                                                     const t = rede.tipo?.toLowerCase() || '';
+                                                    tipoCount[t] = (tipoCount[t] || 0) + 1;
+                                                })}
+                                                {client.redes_sociais.map((rede: any) => {
+                                                    const t = rede.tipo?.toLowerCase() || '';
+                                                    tipoIdx[t] = (tipoIdx[t] || 0) + 1;
+                                                    const thisIdx = tipoIdx[t];
+                                                    const hasDupes = (tipoCount[t] || 1) > 1;
                                                     const formattedUrl = rede.url?.startsWith('http') ? rede.url : `https://${rede.url}`;
-                                                    const colorClass = t.includes('instagram') ? 'text-[#E1306C] hover:bg-pink-50' :
-                                                                       t.includes('facebook') ? 'text-[#1877F2] hover:bg-blue-50' :
-                                                                       t.includes('linkedin') ? 'text-[#0A66C2] hover:bg-blue-50' :
-                                                                       t.includes('youtube') ? 'text-[#FF0000] hover:bg-red-50' :
+                                                    const colorClass = t === 'instagram' ? 'text-[#E1306C] hover:bg-pink-50' :
+                                                                       t === 'facebook'  ? 'text-[#1877F2] hover:bg-blue-50' :
+                                                                       t === 'linkedin'  ? 'text-[#0A66C2] hover:bg-blue-50' :
+                                                                       t === 'youtube'   ? 'text-[#FF0000] hover:bg-red-50' :
+                                                                       t === 'tiktok'    ? 'text-gray-900 hover:bg-gray-100' :
                                                                        'text-gray-500 hover:text-brand-red hover:bg-gray-100';
                                                     return (
                                                         <a
-                                                            key={rede.id}
+                                                            key={`${rede.id ?? t}-${thisIdx}`}
                                                             href={formattedUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className={`w-14 h-14 bg-white shadow-xl rounded-2xl flex items-center justify-center border border-gray-50 active:scale-75 transition-all ${colorClass}`}
+                                                            title={hasDupes ? `${t.charAt(0).toUpperCase() + t.slice(1)} ${thisIdx}` : undefined}
+                                                            className={`relative w-14 h-14 bg-white shadow-xl rounded-2xl flex items-center justify-center border border-gray-50 active:scale-75 transition-all ${colorClass}`}
                                                         >
-                                                            {t.includes('instagram') && <Instagram size={24} />}
-                                                            {t.includes('facebook') && <Facebook size={24} />}
-                                                            {t.includes('linkedin') && <Linkedin size={24} />}
-                                                            {t.includes('youtube') && <Youtube size={24} />}
-                                                            {(t.includes('site') || t.includes('globo') || t.includes('website')) && <Globe size={24} />}
-                                                            {!['instagram', 'facebook', 'linkedin', 'youtube', 'site', 'globo', 'website'].some(k => t.includes(k)) && <ExternalLink size={24} />}
+                                                            {t === 'instagram' && <Instagram size={24} />}
+                                                            {t === 'facebook'  && <Facebook size={24} />}
+                                                            {t === 'linkedin'  && <Linkedin size={24} />}
+                                                            {t === 'youtube'   && <Youtube size={24} />}
+                                                            {t === 'tiktok'    && <Music2 size={24} />}
+                                                            {(t === 'site' || t === 'globo' || t === 'website') && <Globe size={24} />}
+                                                            {!['instagram','facebook','linkedin','youtube','tiktok','site','globo','website'].includes(t) && <ExternalLink size={24} />}
+                                                            {/* Badge de número quando há múltiplos do mesmo tipo */}
+                                                            {hasDupes && (
+                                                                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#E1306C] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow">
+                                                                    {thisIdx}
+                                                                </span>
+                                                            )}
                                                         </a>
                                                     );
                                                 })}
                                             </div>
                                         </section>
-                                    )}
+                                        );
+                                    })()}
 
                                     {client.video && (
                                         <section className="space-y-6">
@@ -1377,38 +1398,58 @@ export default function ClientProfileClient() {
                         )}
 
                         {/* Redes Sociais Dinâmicas */}
-                        {client.redes_sociais?.length > 0 && isPagante && (
+                        {client.redes_sociais?.length > 0 && isPagante && (() => {
+                            const tipoCount: Record<string, number> = {};
+                            const tipoIdx: Record<string, number> = {};
+                            client.redes_sociais.forEach((r: any) => {
+                                const t = r.tipo?.toLowerCase() || '';
+                                tipoCount[t] = (tipoCount[t] || 0) + 1;
+                            });
+                            return (
                             <div className="hidden lg:block bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                                 <h3 className="text-xl font-black font-serif italic text-gray-900">Redes Sociais</h3>
                                 <div className="flex flex-wrap gap-4">
                                     {client.redes_sociais.map((rede: any) => {
                                         const t = rede.tipo?.toLowerCase() || '';
+                                        tipoIdx[t] = (tipoIdx[t] || 0) + 1;
+                                        const thisIdx = tipoIdx[t];
+                                        const hasDupes = (tipoCount[t] || 1) > 1;
                                         const formattedUrl = rede.url?.startsWith('http') ? rede.url : `https://${rede.url}`;
-                                        const colorClass = t.includes('instagram') ? 'text-[#E1306C] hover:bg-pink-50' :
-                                                           t.includes('facebook') ? 'text-[#1877F2] hover:bg-blue-50' :
-                                                           t.includes('linkedin') ? 'text-[#0A66C2] hover:bg-blue-50' :
-                                                           t.includes('youtube') ? 'text-[#FF0000] hover:bg-red-50' :
+                                        const colorClass = t === 'instagram' ? 'text-[#E1306C] hover:bg-pink-50' :
+                                                           t === 'facebook'  ? 'text-[#1877F2] hover:bg-blue-50' :
+                                                           t === 'linkedin'  ? 'text-[#0A66C2] hover:bg-blue-50' :
+                                                           t === 'youtube'   ? 'text-[#FF0000] hover:bg-red-50' :
+                                                           t === 'tiktok'    ? 'text-gray-900 hover:bg-gray-100' :
                                                            'text-gray-500 hover:text-brand-red hover:bg-gray-100';
                                         return (
                                             <a
-                                                key={rede.id}
+                                                key={`${rede.id ?? t}-${thisIdx}`}
                                                 href={formattedUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className={`w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 active:scale-75 transition-all ${colorClass}`}
+                                                title={hasDupes ? `${t.charAt(0).toUpperCase() + t.slice(1)} ${thisIdx}` : undefined}
+                                                className={`relative w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 active:scale-75 transition-all ${colorClass}`}
                                             >
-                                                {t.includes('instagram') && <Instagram size={24} />}
-                                                {t.includes('facebook') && <Facebook size={24} />}
-                                                {t.includes('linkedin') && <Linkedin size={24} />}
-                                                {t.includes('youtube') && <Youtube size={24} />}
-                                                {(t.includes('site') || t.includes('globo') || t.includes('website')) && <Globe size={24} />}
-                                                {!['instagram', 'facebook', 'linkedin', 'youtube', 'site', 'globo', 'website'].some(k => t.includes(k)) && <ExternalLink size={24} />}
+                                                {t === 'instagram' && <Instagram size={24} />}
+                                                {t === 'facebook'  && <Facebook size={24} />}
+                                                {t === 'linkedin'  && <Linkedin size={24} />}
+                                                {t === 'youtube'   && <Youtube size={24} />}
+                                                {t === 'tiktok'    && <Music2 size={24} />}
+                                                {(t === 'site' || t === 'globo' || t === 'website') && <Globe size={24} />}
+                                                {!['instagram','facebook','linkedin','youtube','tiktok','site','globo','website'].includes(t) && <ExternalLink size={24} />}
+                                                {/* Badge de número para múltiplas contas do mesmo tipo */}
+                                                {hasDupes && (
+                                                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#E1306C] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow">
+                                                        {thisIdx}
+                                                    </span>
+                                                )}
                                             </a>
                                         );
                                     })}
                                 </div>
                             </div>
-                        )}
+                            );
+                        })()}
 
                         {/* Onde nos Encontrar (Mobile Only) */}
                         {isPagante && client.enderecos?.length > 1 && (
