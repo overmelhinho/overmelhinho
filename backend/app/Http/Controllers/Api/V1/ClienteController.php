@@ -1797,12 +1797,14 @@ public function historico(Request $request, int $id)
                 if (!empty($validated['redes_sociais']) && is_array($validated['redes_sociais'])) {
                     foreach ($validated['redes_sociais'] as $rede) {
                         $cliente->redesSociais()->create([
-                            'tipo' => $rede['tipo'],
-                            'url'  => $rede['url'] ?? null,
+                            'tipo'  => $rede['tipo'],
+                            'url'   => $rede['url'] ?? null,
+                            'label' => $rede['label'] ?? null,
                         ]);
                     }
                 }
             }
+
 
             // SEO manual
             if (!$generate && Schema::hasColumn('clientes', 'seo_keywords')) {

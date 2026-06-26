@@ -959,28 +959,34 @@ export default function ClientProfileClient() {
                                     )}
 
                                     {client.redes_sociais?.length > 0 && isPagante && (() => {
-                                        // Contagem por tipo para badge de múltiplos
                                         const tipoCount: Record<string, number> = {};
                                         const tipoIdx: Record<string, number> = {};
+                                        client.redes_sociais.forEach((r: any) => {
+                                            const t = r.tipo?.toLowerCase() || '';
+                                            tipoCount[t] = (tipoCount[t] || 0) + 1;
+                                        });
                                         return (
                                         <section className="lg:hidden space-y-6">
                                             <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Redes Sociais</h2>
                                             <div className="flex flex-wrap gap-4">
                                                 {client.redes_sociais.map((rede: any) => {
                                                     const t = rede.tipo?.toLowerCase() || '';
-                                                    tipoCount[t] = (tipoCount[t] || 0) + 1;
-                                                })}
-                                                {client.redes_sociais.map((rede: any) => {
-                                                    const t = rede.tipo?.toLowerCase() || '';
                                                     tipoIdx[t] = (tipoIdx[t] || 0) + 1;
                                                     const thisIdx = tipoIdx[t];
                                                     const hasDupes = (tipoCount[t] || 1) > 1;
+                                                    const badgeLabel = rede.label?.trim()
+                                                        ? rede.label.trim().substring(0, 3).toUpperCase()
+                                                        : String(thisIdx);
+                                                    const tooltipText = rede.label?.trim()
+                                                        ? rede.label.trim()
+                                                        : `${t.charAt(0).toUpperCase() + t.slice(1)} ${thisIdx}`;
                                                     const formattedUrl = rede.url?.startsWith('http') ? rede.url : `https://${rede.url}`;
                                                     const colorClass = t === 'instagram' ? 'text-[#E1306C] hover:bg-pink-50' :
                                                                        t === 'facebook'  ? 'text-[#1877F2] hover:bg-blue-50' :
                                                                        t === 'linkedin'  ? 'text-[#0A66C2] hover:bg-blue-50' :
                                                                        t === 'youtube'   ? 'text-[#FF0000] hover:bg-red-50' :
                                                                        t === 'tiktok'    ? 'text-gray-900 hover:bg-gray-100' :
+                                                                       t === 'website'   ? 'text-gray-600 hover:bg-gray-100' :
                                                                        'text-gray-500 hover:text-brand-red hover:bg-gray-100';
                                                     return (
                                                         <a
@@ -988,7 +994,7 @@ export default function ClientProfileClient() {
                                                             href={formattedUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            title={hasDupes ? `${t.charAt(0).toUpperCase() + t.slice(1)} ${thisIdx}` : undefined}
+                                                            title={hasDupes ? tooltipText : rede.label?.trim() || undefined}
                                                             className={`relative w-14 h-14 bg-white shadow-xl rounded-2xl flex items-center justify-center border border-gray-50 active:scale-75 transition-all ${colorClass}`}
                                                         >
                                                             {t === 'instagram' && <Instagram size={24} />}
@@ -996,12 +1002,12 @@ export default function ClientProfileClient() {
                                                             {t === 'linkedin'  && <Linkedin size={24} />}
                                                             {t === 'youtube'   && <Youtube size={24} />}
                                                             {t === 'tiktok'    && <Music2 size={24} />}
-                                                            {(t === 'site' || t === 'globo' || t === 'website') && <Globe size={24} />}
-                                                            {!['instagram','facebook','linkedin','youtube','tiktok','site','globo','website'].includes(t) && <ExternalLink size={24} />}
-                                                            {/* Badge de número quando há múltiplos do mesmo tipo */}
+                                                            {(t === 'website' || t === 'site' || t === 'globo') && <Globe size={24} />}
+                                                            {!['instagram','facebook','linkedin','youtube','tiktok','website','site','globo'].includes(t) && <ExternalLink size={24} />}
+                                                            {/* Badge com label abreviado quando há múltiplos */}
                                                             {hasDupes && (
-                                                                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#E1306C] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow">
-                                                                    {thisIdx}
+                                                                <span className="absolute -top-2 -right-2 min-w-[22px] h-[18px] px-1 bg-[#E1306C] text-white text-[8px] font-black rounded-full flex items-center justify-center shadow leading-none">
+                                                                    {badgeLabel}
                                                                 </span>
                                                             )}
                                                         </a>
@@ -1414,12 +1420,19 @@ export default function ClientProfileClient() {
                                         tipoIdx[t] = (tipoIdx[t] || 0) + 1;
                                         const thisIdx = tipoIdx[t];
                                         const hasDupes = (tipoCount[t] || 1) > 1;
+                                        const badgeLabel = rede.label?.trim()
+                                            ? rede.label.trim().substring(0, 3).toUpperCase()
+                                            : String(thisIdx);
+                                        const tooltipText = rede.label?.trim()
+                                            ? rede.label.trim()
+                                            : `${t.charAt(0).toUpperCase() + t.slice(1)} ${thisIdx}`;
                                         const formattedUrl = rede.url?.startsWith('http') ? rede.url : `https://${rede.url}`;
                                         const colorClass = t === 'instagram' ? 'text-[#E1306C] hover:bg-pink-50' :
                                                            t === 'facebook'  ? 'text-[#1877F2] hover:bg-blue-50' :
                                                            t === 'linkedin'  ? 'text-[#0A66C2] hover:bg-blue-50' :
                                                            t === 'youtube'   ? 'text-[#FF0000] hover:bg-red-50' :
                                                            t === 'tiktok'    ? 'text-gray-900 hover:bg-gray-100' :
+                                                           t === 'website'   ? 'text-gray-600 hover:bg-gray-100' :
                                                            'text-gray-500 hover:text-brand-red hover:bg-gray-100';
                                         return (
                                             <a
@@ -1427,7 +1440,7 @@ export default function ClientProfileClient() {
                                                 href={formattedUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                title={hasDupes ? `${t.charAt(0).toUpperCase() + t.slice(1)} ${thisIdx}` : undefined}
+                                                title={hasDupes ? tooltipText : rede.label?.trim() || undefined}
                                                 className={`relative w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 active:scale-75 transition-all ${colorClass}`}
                                             >
                                                 {t === 'instagram' && <Instagram size={24} />}
@@ -1435,12 +1448,12 @@ export default function ClientProfileClient() {
                                                 {t === 'linkedin'  && <Linkedin size={24} />}
                                                 {t === 'youtube'   && <Youtube size={24} />}
                                                 {t === 'tiktok'    && <Music2 size={24} />}
-                                                {(t === 'site' || t === 'globo' || t === 'website') && <Globe size={24} />}
-                                                {!['instagram','facebook','linkedin','youtube','tiktok','site','globo','website'].includes(t) && <ExternalLink size={24} />}
-                                                {/* Badge de número para múltiplas contas do mesmo tipo */}
+                                                {(t === 'website' || t === 'site' || t === 'globo') && <Globe size={24} />}
+                                                {!['instagram','facebook','linkedin','youtube','tiktok','website','site','globo'].includes(t) && <ExternalLink size={24} />}
+                                                {/* Badge com label abreviado */}
                                                 {hasDupes && (
-                                                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#E1306C] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow">
-                                                        {thisIdx}
+                                                    <span className="absolute -top-2 -right-2 min-w-[22px] h-[18px] px-1 bg-[#E1306C] text-white text-[8px] font-black rounded-full flex items-center justify-center shadow leading-none">
+                                                        {badgeLabel}
                                                     </span>
                                                 )}
                                             </a>

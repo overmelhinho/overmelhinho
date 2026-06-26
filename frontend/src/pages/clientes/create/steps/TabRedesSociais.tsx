@@ -10,53 +10,50 @@ import {
   ExternalLink,
   Plus,
   X,
+  Globe,
 } from "lucide-react";
 
 export default function TabRedesSociais() {
   const { values, setFieldValue } = useFormikContext<any>();
 
-  // ─── Inicialização ───────────────────────────────────────────────────────────
-  // Converte o formato legado { facebook, instagram, ... } para [{ tipo, url }]
+  // ─── Inicialização ─────────────────────────────────────────────────────────
   useEffect(() => {
     const raw = values.redes_sociais;
 
-    // Se já vier no formato correto [{tipo, url}], não faz nada
+    // Já no formato [{tipo, url, label?}] → não mexe
     if (Array.isArray(raw) && raw.length > 0 && raw[0] && typeof raw[0] === "object" && "tipo" in raw[0]) {
       return;
     }
 
     // Formato legado: redes_sociais[0] = { facebook, instagram, ... }
     const legacyObj = Array.isArray(raw) && raw[0] && typeof raw[0] === "object" ? raw[0] : null;
-    const legacyRoot = !raw || typeof raw !== "object" ? values : null;
-
-    const source = legacyObj || legacyRoot || {};
-    const normalizedKeys = ["facebook", "instagram", "linkedin", "youtube", "tiktok", "x"] as const;
-    const normalized: { tipo: string; url: string }[] = [];
+    const source = legacyObj || {};
+    const normalizedKeys = ["facebook", "instagram", "linkedin", "youtube", "tiktok", "x", "website"] as const;
+    const normalized: { tipo: string; url: string; label: string }[] = [];
 
     for (const tipo of normalizedKeys) {
       const url = (source as any)[tipo];
       if (url && String(url).trim()) {
-        normalized.push({ tipo, url: String(url).trim() });
+        normalized.push({ tipo, url: String(url).trim(), label: "" });
       }
     }
 
-    // Se não achou nada, inicializa com array vazio (formulário limpo)
     setFieldValue("redes_sociais", normalized.length > 0 ? normalized : []);
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
-  const redes: { tipo: string; url: string }[] = Array.isArray(values.redes_sociais)
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+  type Rede = { tipo: string; url: string; label: string };
+
+  const redes: Rede[] = Array.isArray(values.redes_sociais)
     ? values.redes_sociais.filter((r: any) => r && "tipo" in r)
     : [];
 
-  const getByTipo = (tipo: string) =>
-    redes.filter((r) => r.tipo === tipo).map((r) => r.url);
+  const getByTipo = (tipo: string): Rede[] =>
+    redes.filter((r) => r.tipo === tipo);
 
-  const setTipoUrls = (tipo: string, urls: string[]) => {
+  const setTipoRedes = (tipo: string, entries: Rede[]) => {
     const others = redes.filter((r) => r.tipo !== tipo);
-    const entries = urls.map((url) => ({ tipo, url }));
     setFieldValue("redes_sociais", [...others, ...entries]);
   };
 
@@ -64,9 +61,9 @@ export default function TabRedesSociais() {
     const idx = redes.findIndex((r) => r.tipo === tipo);
     const next = [...redes];
     if (idx >= 0) {
-      next[idx] = { tipo, url };
+      next[idx] = { ...next[idx], url };
     } else {
-      next.push({ tipo, url });
+      next.push({ tipo, url, label: "" });
     }
     setFieldValue("redes_sociais", next);
   };
@@ -77,33 +74,33 @@ export default function TabRedesSociais() {
     window.open(safe, "_blank", "noopener,noreferrer");
   };
 
-  // ─── Campos fixos (1 por rede) ───────────────────────────────────────────────
+  // ─── Campos fixos (1 por rede) ─────────────────────────────────────────────
   const FIXED_FIELDS = [
-    { tipo: "facebook",  label: "Facebook",    placeholder: "https://facebook.com/empresa",  icon: Facebook  },
-    { tipo: "linkedin",  label: "LinkedIn",     placeholder: "https://linkedin.com/empresa",  icon: Linkedin  },
-    { tipo: "youtube",   label: "YouTube",      placeholder: "https://youtube.com/empresa",   icon: Youtube   },
-    { tipo: "tiktok",    label: "TikTok",       placeholder: "https://tiktok.com/@empresa",   icon: Music2    },
-    { tipo: "x",         label: "X (Twitter)",  placeholder: "https://x.com/empresa",         icon: Twitter   },
+    { tipo: "facebook",  label: "Facebook",    placeholder: "https://facebook.com/empresa",     icon: Facebook  },
+    { tipo: "linkedin",  label: "LinkedIn",     placeholder: "https://linkedin.com/empresa",     icon: Linkedin  },
+    { tipo: "youtube",   label: "YouTube",      placeholder: "https://youtube.com/empresa",      icon: Youtube   },
+    { tipo: "tiktok",    label: "TikTok",       placeholder: "https://tiktok.com/@empresa",      icon: Music2    },
+    { tipo: "x",         label: "X (Twitter)",  placeholder: "https://x.com/empresa",            icon: Twitter   },
+    { tipo: "website",   label: "Website",      placeholder: "https://www.seusite.com.br",       icon: Globe     },
   ];
 
-  // ─── Instagrams (múltiplos) ───────────────────────────────────────────────────
+  // ─── Instagrams (múltiplos) ─────────────────────────────────────────────────
   const instagrams = getByTipo("instagram");
-  // Garante pelo menos 1 campo visível
-  const instagramList = instagrams.length > 0 ? instagrams : [""];
+  const instagramList: Rede[] = instagrams.length > 0 ? instagrams : [{ tipo: "instagram", url: "", label: "" }];
 
   const addInstagram = () => {
-    setTipoUrls("instagram", [...instagrams, ""]);
+    setTipoRedes("instagram", [...instagrams, { tipo: "instagram", url: "", label: "" }]);
   };
 
   const removeInstagram = (index: number) => {
     const next = instagrams.filter((_, i) => i !== index);
-    setTipoUrls("instagram", next.length > 0 ? next : [""]);
+    setTipoRedes("instagram", next.length > 0 ? next : [{ tipo: "instagram", url: "", label: "" }]);
   };
 
-  const updateInstagram = (index: number, value: string) => {
+  const updateInstagram = (index: number, field: "url" | "label", value: string) => {
     const next = [...instagramList];
-    next[index] = value;
-    setTipoUrls("instagram", next);
+    next[index] = { ...next[index], [field]: value };
+    setTipoRedes("instagram", next);
   };
 
   return (
@@ -124,46 +121,62 @@ export default function TabRedesSociais() {
           Instagram
         </label>
 
-        {instagramList.map((url, idx) => (
-          <div key={idx} className="relative flex items-center gap-2">
-            <div className="flex-grow relative">
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => updateInstagram(idx, e.target.value)}
-                placeholder="https://instagram.com/empresa"
-                className="border rounded-md px-3 py-2 w-full pr-10 focus:ring-2 focus:ring-[#B70F0A] outline-none transition"
-              />
-              {url && (
+        {instagramList.map((entry, idx) => (
+          <div
+            key={idx}
+            className="relative border rounded-xl p-3 space-y-2 bg-gray-50"
+          >
+            {/* Cabeçalho da entrada */}
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-gray-400">
+                Instagram {instagramList.length > 1 ? idx + 1 : ""}
+              </span>
+              {instagramList.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => handleOpenLink(url)}
+                  onClick={() => removeInstagram(idx)}
+                  className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                  title="Remover"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Label / Identificador */}
+            <div>
+              <input
+                type="text"
+                value={entry.label || ""}
+                onChange={(e) => updateInstagram(idx, "label", e.target.value)}
+                placeholder='Identificador, ex: "Principal", "Comercial", "Chef"'
+                className="border rounded-md px-3 py-1.5 w-full text-sm focus:ring-2 focus:ring-[#B70F0A] outline-none transition bg-white"
+              />
+              <p className="text-[10px] text-gray-400 mt-1 ml-1">
+                Este nome aparece no perfil público (badge no ícone)
+              </p>
+            </div>
+
+            {/* URL */}
+            <div className="relative">
+              <input
+                type="text"
+                value={entry.url || ""}
+                onChange={(e) => updateInstagram(idx, "url", e.target.value)}
+                placeholder="https://instagram.com/empresa"
+                className="border rounded-md px-3 py-2 w-full pr-10 focus:ring-2 focus:ring-[#B70F0A] outline-none transition bg-white"
+              />
+              {entry.url && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenLink(entry.url)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B70F0A] hover:text-[#8e0c08] transition"
-                  title="Abrir link em nova aba"
+                  title="Abrir link"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </button>
               )}
             </div>
-
-            {/* Botão remover (só mostra se há mais de 1) */}
-            {instagramList.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removeInstagram(idx)}
-                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
-                title={`Remover Instagram ${idx + 1}`}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* Índice (quando há mais de 1) */}
-            {instagramList.length > 1 && (
-              <span className="absolute -top-2 left-3 text-[10px] font-bold text-gray-400 bg-white px-1">
-                Instagram {idx + 1}
-              </span>
-            )}
           </div>
         ))}
 
@@ -178,18 +191,18 @@ export default function TabRedesSociais() {
         </button>
       </div>
 
-      {/* ─── Outras redes (campo único cada) ──────────────────── */}
+      {/* ─── Outras redes (campo único cada) ────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {FIXED_FIELDS.map(({ tipo, label, placeholder, icon: Icon }) => {
-          const urls = getByTipo(tipo);
-          const value = urls[0] || "";
+          const list = getByTipo(tipo);
+          const value = list[0]?.url || "";
 
           return (
-            <div key={tipo} className="relative flex items-center">
-              <div className="flex-grow">
-                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
-                  <Icon className="w-4 h-4 text-[#B70F0A]" /> {label}
-                </label>
+            <div key={tipo} className="relative flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <Icon className="w-4 h-4 text-[#B70F0A]" /> {label}
+              </label>
+              <div className="relative">
                 <input
                   type="text"
                   value={value}
@@ -197,17 +210,17 @@ export default function TabRedesSociais() {
                   placeholder={placeholder}
                   className="border rounded-md px-3 py-2 w-full pr-10 focus:ring-2 focus:ring-[#B70F0A] outline-none transition"
                 />
+                {value && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenLink(value)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B70F0A] hover:text-[#8e0c08] transition"
+                    title="Abrir link"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-              {value && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenLink(value)}
-                  className="absolute right-3 top-[38px] text-[#B70F0A] hover:text-[#8e0c08] transition"
-                  title="Abrir link em nova aba"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </button>
-              )}
             </div>
           );
         })}
