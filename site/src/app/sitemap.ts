@@ -6,7 +6,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://novo.overmelhinho.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     try {
         // 1. Buscar os dados do sitemap no backend
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
         const response = await fetch(`${baseUrl}/public/sitemap-data`, {
             next: { revalidate: 3600 } // Cache de 1 hora para o sitemap
         });

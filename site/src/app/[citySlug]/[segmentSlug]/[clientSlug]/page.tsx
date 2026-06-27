@@ -28,7 +28,7 @@ function formatSlug(slug: string) {
 
 async function getClient(slug: string) {
     try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
         const response = await fetch(`${baseUrl}/public/clientes/${slug}`, {
             headers: {
                 'Accept': 'application/json',

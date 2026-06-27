@@ -29,7 +29,7 @@ interface Job {
 
 async function getJob(id: string) {
     try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
         const response = await fetch(`${baseUrl}/jobs/public/${id}`, {
             headers: {
                 'Accept': 'application/json',
