@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { cidade: string; slug: string; id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ cidade: string; slug: string; id: string }> }
 ) {
-  const { id } = await params;
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
 
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
     
     // Use the public endpoint which is usually faster and accessible
-    const res = await fetch(`${apiUrl}/clientes/public/${id}`);
+    const res = await fetch(`${apiUrl}/public/clientes/${id}`);
     
     if (res.ok) {
       const data = await res.json();
