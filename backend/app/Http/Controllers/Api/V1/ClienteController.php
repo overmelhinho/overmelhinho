@@ -25,7 +25,8 @@ class ClienteController extends Controller
 {
     public function sitemap()
     {
-        return Cliente::query()
+        $clientes = Cliente::query()
+            ->with(['enderecos:id,cliente_id,cidade', 'segmentos:id,nome'])
             ->select(['id', 'slug', 'updated_at'])
             ->where(function ($sub) {
                 $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
@@ -33,6 +34,19 @@ class ClienteController extends Controller
             })
             ->where('exibir_no_site', 'true')
             ->get();
+            
+        return $clientes->map(function ($client) {
+            $city = $client->enderecos->first()->cidade ?? 'cidade';
+            $segment = $client->segmentos->first()->nome ?? 'segmento';
+            
+            return [
+                'id' => $client->id,
+                'slug' => $client->slug,
+                'citySlug' => \Illuminate\Support\Str::slug($city),
+                'segmentSlug' => \Illuminate\Support\Str::slug($segment),
+                'updated_at' => $client->updated_at
+            ];
+        });
     }
 
     public function indexPublic(Request $request)

@@ -17,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
         // 2. Mapear os clientes para o formato do sitemap
         const clientEntries = clients.map((client: any) => ({
-            url: `${SITE_URL}/cliente/${client.slug || client.id}`,
+            url: `${SITE_URL}/${client.citySlug || 'cidade'}/${client.segmentSlug || 'segmento'}/${client.slug || client.id}`,
             lastModified: client.updated_at ? new Date(client.updated_at) : new Date(),
             changeFrequency: 'weekly' as const,
             priority: 0.7,
