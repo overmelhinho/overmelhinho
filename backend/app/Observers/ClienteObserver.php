@@ -16,7 +16,7 @@ class ClienteObserver
 
     public function saved(Cliente $cliente): void
     {
-        $siteUrl = config('app.frontend_url', 'https://novo.overmelhinho.com.br');
+        $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
         
         // Pula indexação para testes E2E, robots ou se rodando localmente
         if (str_contains($siteUrl, 'localhost') || 
@@ -39,7 +39,7 @@ class ClienteObserver
      */
     public function deleted(Cliente $cliente): void
     {
-        $siteUrl = config('app.frontend_url', 'https://novo.overmelhinho.com.br');
+        $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
         
         // Pula indexação para testes E2E, robots ou se rodando localmente
         if (str_contains($siteUrl, 'localhost') || 
