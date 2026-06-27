@@ -4,7 +4,7 @@ import ClientProfileClient from './ClientProfileClient';
 import { slugify } from '@/utils/slugify';
 import { permanentRedirect } from 'next/navigation';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://novo.overmelhinho.com.br';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
 
 async function getClient(id: string) {
     try {

@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import ClientProfileClient from '@/app/cliente/[id]/ClientProfileClient';
 import { redirect } from 'next/navigation';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://novo.overmelhinho.com.br';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
 
 // Função auxiliar para criar slug a partir de string
 function slugify(text: string) {

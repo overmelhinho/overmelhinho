@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { slugify } from '@/utils/slugify';
 import JobDetailClient from './JobDetailClient';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://novo.overmelhinho.com.br';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
 
 interface Job {
     id: number;
