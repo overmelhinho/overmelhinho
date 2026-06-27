@@ -36,8 +36,8 @@ class ClienteController extends Controller
             ->get();
             
         return $clientes->map(function ($client) {
-            $city = $client->enderecos->first()->cidade ?? 'cidade';
-            $segment = $client->segmentos->first()->nome ?? 'segmento';
+            $city = $client->enderecos->first()?->cidade ?? 'cidade';
+            $segment = $client->segmentos->first()?->nome ?? 'segmento';
             
             return [
                 'id' => $client->id,

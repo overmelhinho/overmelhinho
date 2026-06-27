@@ -11,7 +11,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             next: { revalidate: 3600 } // Cache de 1 hora para o sitemap
         });
 
-        if (!response.ok) return [];
+        if (!response.ok) {
+            throw new Error('API request failed');
+        }
         
         const clients = await response.json();
 
