@@ -10,7 +10,8 @@ return [
     'allowed_origins' => [
         'https://dash.overmelhinho.com.br',
         'https://overmelhinho.com.br',
-        'https://novo.overmelhinho.com.br',
+        'https://www.overmelhinho.com.br',
+        'https://api.overmelhinho.com.br',
         'https://novo.overmelhinho.com.br',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
