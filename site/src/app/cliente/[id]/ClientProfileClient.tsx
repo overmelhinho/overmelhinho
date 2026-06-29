@@ -607,6 +607,11 @@ export default function ClientProfileClient() {
         })) : undefined
     };
 
+    const breadcrumbCitySlug = citySlug || (client.enderecos?.[0]?.cidade ? slugify(client.enderecos[0].cidade) : 'cidade');
+    const breadcrumbSegmentSlug = (params.segmentSlug as string) || (client.segmentos?.[0]?.nome ? slugify(client.segmentos[0].nome) : 'categoria');
+    const breadcrumbCityName = cityNameContext || client.enderecos?.[0]?.cidade || 'Cidade';
+    const breadcrumbSegmentName = client.segmentos?.[0]?.nome || 'Categoria';
+
     const breadcrumbData = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -615,13 +620,13 @@ export default function ClientProfileClient() {
                 "@type": "ListItem",
                 "position": 1,
                 "name": "Início",
-                "item": "https://novo.overmelhinho.com.br"
+                "item": "https://www.overmelhinho.com.br"
             },
             {
                 "@type": "ListItem",
                 "position": 2,
-                "name": client.segmentos?.[0]?.nome || "Clientes",
-                "item": `https://novo.overmelhinho.com.br/busca?segmento=${client.segmentos?.[0]?.id || ''}`
+                "name": `${breadcrumbSegmentName} em ${breadcrumbCityName}`,
+                "item": `https://www.overmelhinho.com.br/${breadcrumbCitySlug}/${breadcrumbSegmentSlug}`
             },
             {
                 "@type": "ListItem",
@@ -651,6 +656,25 @@ export default function ClientProfileClient() {
                         <MapPin size={12} className="mr-2" />
                         Atendimento em destaque: {cityNameContext}
                     </p>
+                </div>
+            )}
+
+            {/* 🔗 SEO Breadcrumbs (Barra Discreta Superior) */}
+            {breadcrumbCitySlug && breadcrumbSegmentSlug && breadcrumbCitySlug !== 'cidade' && breadcrumbSegmentSlug !== 'categoria' && (
+                <div className="bg-white border-b border-gray-100 py-2.5 px-4 w-full overflow-x-auto scrollbar-hide">
+                    <div className="max-w-7xl mx-auto flex items-center min-w-max">
+                        <nav className="flex items-center text-[10px] text-gray-400 font-medium tracking-wider uppercase" aria-label="Breadcrumb">
+                            <Link href="/" className="hover:text-brand-red transition-colors flex items-center shrink-0">
+                                Início
+                            </Link>
+                            <ChevronRight size={10} className="mx-2 opacity-40 shrink-0" />
+                            <Link href={`/${breadcrumbCitySlug}/${breadcrumbSegmentSlug}`} className="hover:text-brand-red transition-colors shrink-0">
+                                {breadcrumbSegmentName} em {breadcrumbCityName}
+                            </Link>
+                            <ChevronRight size={10} className="mx-2 opacity-40 shrink-0" />
+                            <span className="text-gray-300 truncate max-w-[150px] md:max-w-[250px]">{client.nome_fantasia}</span>
+                        </nav>
+                    </div>
                 </div>
             )}
 
