@@ -36,36 +36,28 @@ export async function GET() {
         const citiesData = await citiesRes.json();
         const segmentsData = await segmentsRes.json();
 
-        const cities = citiesData.data || [];
-        const segments = segmentsData.data || [];
+        const citiesCount = (citiesData.data || []).length;
+        const segmentsCount = (segmentsData.data || []).length;
+        const totalUrls = citiesCount * segmentsCount;
+        
+        const URLS_PER_SITEMAP = 40000; // Margem segura abaixo do limite de 50.000 do Google
+        const totalPages = Math.ceil(totalUrls / URLS_PER_SITEMAP) || 1;
 
         const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
+        const lastMod = new Date().toISOString().split('T')[0];
 
-        // 2. Building the XML string
+        // 2. Building the Sitemap Index XML
         let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+        xml += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
-        const lastMod = new Date().toISOString().split('T')[0]; // Data de hoje (YYYY-MM-DD)
-
-        // 3. Cartesian Product (Cities x Segments)
-        for (const city of cities) {
-            if (!city.nome) continue;
-            const citySlug = slugify(city.nome);
-
-            for (const segment of segments) {
-                if (!segment.nome) continue;
-                const segmentSlug = slugify(segment.nome);
-
-                xml += '  <url>\n';
-                xml += `    <loc>${SITE_URL}/${citySlug}/${segmentSlug}</loc>\n`;
-                xml += `    <lastmod>${lastMod}</lastmod>\n`;
-                xml += `    <changefreq>weekly</changefreq>\n`;
-                xml += `    <priority>0.8</priority>\n`;
-                xml += '  </url>\n';
-            }
+        for (let i = 1; i <= totalPages; i++) {
+            xml += '  <sitemap>\n';
+            xml += `    <loc>${SITE_URL}/sitemap-categorias/${i}/sitemap.xml</loc>\n`;
+            xml += `    <lastmod>${lastMod}</lastmod>\n`;
+            xml += '  </sitemap>\n';
         }
 
-        xml += '</urlset>';
+        xml += '</sitemapindex>';
 
         return new NextResponse(xml, {
             status: 200,
