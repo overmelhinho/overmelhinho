@@ -9,7 +9,7 @@ export function middleware(request: NextRequest) {
   const clientMatch = pathname.match(/^\/([a-z]{2})\/([^\/]+)\/([^\/]+)\/(\d+)$/i);
   if (clientMatch) {
     const id = clientMatch[4];
-    return NextResponse.redirect(new URL(`/cliente/${id}`, request.url), 301);
+    return new Response(null, { status: 301, headers: { 'Location': `/cliente/${id}` } });
   }
 
   // 2. Redirecionamento de Categorias Legadas: /-{slug}-;cat{id}.php
@@ -17,14 +17,14 @@ export function middleware(request: NextRequest) {
   const categoryMatch = pathname.match(/^\/-(.+)-;cat(\d+)\.php$/i);
   if (categoryMatch) {
     const catId = categoryMatch[2];
-    return NextResponse.redirect(new URL(`/busca?segmento=${catId}`, request.url), 301);
+    return new Response(null, { status: 301, headers: { 'Location': `/busca?segmento=${catId}` } });
   }
 
   // 3. Redirecionamento de Vagas Legadas: /empregos/detalhes/{id}
   if (pathname.startsWith('/empregos/detalhes/')) {
     const segments = pathname.split('/');
     const id = segments[segments.length - 1];
-    return NextResponse.redirect(new URL(`/vagas?id=${id}`, request.url), 301);
+    return new Response(null, { status: 301, headers: { 'Location': `/vagas?id=${id}` } });
   }
 
   // 4. Redirecionamento de busca legada: /busca.php?palavra=...
@@ -34,14 +34,13 @@ export function middleware(request: NextRequest) {
     const idCidade = searchParams.get('id_cidade');
 
     if (idCategoria) {
-      const redirectUrl = new URL(`/api/legacy-busca`, request.url);
-      redirectUrl.searchParams.set('id_categoria', idCategoria);
-      if (idCidade) redirectUrl.searchParams.set('id_cidade', idCidade);
-      if (term) redirectUrl.searchParams.set('palavra', term);
-      return NextResponse.redirect(redirectUrl, 301);
+      let relativeUrl = `/api/legacy-busca?id_categoria=${idCategoria}`;
+      if (idCidade) relativeUrl += `&id_cidade=${idCidade}`;
+      if (term) relativeUrl += `&palavra=${term}`;
+      return new Response(null, { status: 301, headers: { 'Location': relativeUrl } });
     }
 
-    return NextResponse.redirect(new URL(`/busca?q=${term}`, request.url), 301);
+    return new Response(null, { status: 301, headers: { 'Location': `/busca?q=${term}` } });
   }
 
   return NextResponse.next();
