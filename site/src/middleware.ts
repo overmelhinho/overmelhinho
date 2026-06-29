@@ -30,6 +30,17 @@ export function middleware(request: NextRequest) {
   // 4. Redirecionamento de busca legada: /busca.php?palavra=...
   if (pathname === '/busca.php') {
     const term = searchParams.get('palavra') || '';
+    const idCategoria = searchParams.get('id_categoria');
+    const idCidade = searchParams.get('id_cidade');
+
+    if (idCategoria) {
+      const redirectUrl = new URL(`/api/legacy-busca`, request.url);
+      redirectUrl.searchParams.set('id_categoria', idCategoria);
+      if (idCidade) redirectUrl.searchParams.set('id_cidade', idCidade);
+      if (term) redirectUrl.searchParams.set('palavra', term);
+      return NextResponse.redirect(redirectUrl, 301);
+    }
+
     return NextResponse.redirect(new URL(`/busca?q=${term}`, request.url), 301);
   }
 
