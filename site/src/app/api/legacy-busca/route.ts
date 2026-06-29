@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         }
 
         if (citySlug && segmentSlug) {
-            return NextResponse.redirect(new URL(`/busca?q=${segmentSlug}&city_id=${id_cidade}`, request.url), 301);
+            return NextResponse.redirect(new URL(`/${citySlug}/${segmentSlug}`, request.url), 301);
         } else if (segmentSlug) {
             return NextResponse.redirect(new URL(`/busca?q=${segmentSlug}`, request.url), 301);
         } else if (palavra) {
