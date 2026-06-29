@@ -39,28 +39,16 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        const url = request.nextUrl.clone();
-        url.search = '';
-
         if (citySlug && segmentSlug) {
-            url.pathname = `/${citySlug}/${segmentSlug}`;
-            return NextResponse.redirect(url, 301);
+            return new Response(null, { status: 301, headers: { 'Location': `/${citySlug}/${segmentSlug}` } });
         } else if (segmentSlug) {
-            url.pathname = '/busca';
-            url.search = `?q=${segmentSlug}`;
-            return NextResponse.redirect(url, 301);
+            return new Response(null, { status: 301, headers: { 'Location': `/busca?q=${segmentSlug}` } });
         } else if (palavra) {
-            url.pathname = '/busca';
-            url.search = `?q=${palavra}`;
-            return NextResponse.redirect(url, 301);
+            return new Response(null, { status: 301, headers: { 'Location': `/busca?q=${palavra}` } });
         } else {
-            url.pathname = '/busca';
-            return NextResponse.redirect(url, 301);
+            return new Response(null, { status: 301, headers: { 'Location': '/busca' } });
         }
     } catch (e) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/busca';
-        url.search = `?q=${palavra || ''}`;
-        return NextResponse.redirect(url, 301);
+        return new Response(null, { status: 301, headers: { 'Location': `/busca?q=${palavra || ''}` } });
     }
 }
