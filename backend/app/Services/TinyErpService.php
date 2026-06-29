@@ -146,12 +146,12 @@ class TinyErpService
     }
 
     /**
-     * Cria conta a receber no Tiny.
-     * Método: conta.receber.incluir
+     * Cria Pedido de Venda/OS no Tiny.
+     * Método: pedido.incluir.php
+     * Isso gera automaticamente a Conta a Receber no Tiny.
      */
-    public function createReceivable(Invoice $invoice, float $amountOverride = null): array
+    public function createServiceOrder(Invoice $invoice, float $amountOverride = null): array
     {
-        // Tenta sincronizar o cliente apenas se ele ainda não tiver um tiny_id
         try {
             if (empty($invoice->client->tiny_id)) {
                 $tinyId = $this->syncClient($invoice->client);
@@ -180,12 +180,6 @@ class TinyErpService
             }
         }
 
-        $historicoBase = "Fatura #{$invoice->id}";
-        if ($autorizacaoNumero) {
-            $historicoBase .= " (Aut. #{$autorizacaoNumero})";
-        }
-        $historicoBase .= " - Plano " . ($invoice->plan ? $invoice->plan->name : 'Avulso');
-
         $obsBase = "Parcela {$invoice->parcel_number}/{$invoice->total_parcels}.";
         if ($autorizacaoNumero) {
             $obsBase .= " Autorização: {$autorizacaoNumero}.";
@@ -194,13 +188,13 @@ class TinyErpService
             $obsBase .= " Grupo: {$invoice->group_id}";
         }
 
-        $contaReceber = [
-            'data_emissao' => now()->format('d/m/Y'),
-            'vencimento' => $invoice->due_date instanceof \Carbon\Carbon ? $invoice->due_date->format('d/m/Y') : date('d/m/Y', strtotime($invoice->due_date)),
-            'valor' => number_format($valorCobrado, 2, '.', ''),
-            'historico' => $historicoBase,
+        $planName = $invoice->plan ? $invoice->plan->name : 'Plano Avulso';
+        $planCode = $invoice->plan && $invoice->plan->tiny_product_id ? $invoice->plan->tiny_product_id : 'SRV-01';
+
+        $pedido = [
+            'data_pedido' => now()->format('d/m/Y'),
             'cliente' => [
-                'id' => (int)$invoice->client->tiny_id,
+                'codigo' => (int)$tinyId,
                 'nome' => $invoice->client->razao_social ?: $invoice->client->nome_fantasia,
                 'cpf_cnpj' => preg_replace('/\D/', '', $invoice->client->cpf_cnpj ?? ''),
                 'endereco' => $invoice->client->enderecos()->first()->rua ?? '',
@@ -210,49 +204,65 @@ class TinyErpService
                 'cidade' => $invoice->client->enderecos()->first()->cidade ?? '',
                 'uf' => $invoice->client->enderecos()->first()->estado ?? '',
             ],
-            'forma_pagamento' => $this->mapFormaPagamento($invoice->payment_method),
-            'meio_pagamento' => $this->mapPaymentMethod($invoice->payment_method),
-            'observacoes' => $obsBase,
+            'itens' => [
+                [
+                    'item' => [
+                        'codigo' => $planCode,
+                        'descricao' => $planName,
+                        'unidade' => 'UN',
+                        'quantidade' => 1,
+                        'valor_unitario' => number_format($valorCobrado, 2, '.', '')
+                    ]
+                ]
+            ],
+            'parcelas' => [
+                [
+                    'parcela' => [
+                        'dias' => 0,
+                        'data' => $invoice->due_date instanceof \Carbon\Carbon ? $invoice->due_date->format('d/m/Y') : date('d/m/Y', strtotime($invoice->due_date)),
+                        'valor' => number_format($valorCobrado, 2, '.', ''),
+                        'forma_pagamento' => $this->mapFormaPagamento($invoice->payment_method),
+                        'meio_pagamento' => $this->mapPaymentMethod($invoice->payment_method),
+                        'obs' => $obsBase
+                    ]
+                ]
+            ],
+            'obs_internas' => $obsBase,
+            'situacao' => 'aprovado'
         ];
 
         try {
-            $response = Http::asForm()->post("{$this->baseUrl}/conta.receber.incluir.php", [
+            $response = Http::asForm()->post("{$this->baseUrl}/pedido.incluir.php", [
                 'token' => $this->token,
                 'formato' => 'json',
-                'conta' => json_encode(['conta' => array_merge(['sequencia' => '1'], $contaReceber)]),
+                'pedido' => json_encode(['pedido' => $pedido]),
             ]);
 
             $json = $response->json();
-            Log::info('Resposta Tiny createReceivable:', ['invoice_id' => $invoice->id, 'response' => $json]);
+            Log::info('Resposta Tiny createServiceOrder:', ['invoice_id' => $invoice->id, 'response' => $json]);
 
             if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
-                Log::error('Erro ao criar conta no Tiny', ['response' => $json, 'invoice_id' => $invoice->id]);
+                Log::error('Erro ao criar pedido no Tiny', ['response' => $json, 'invoice_id' => $invoice->id]);
                 throw new \Exception("Erro Tiny: " . ($json['retorno']['erros'][0]['erro'] ?? 'Erro desconhecido'));
             }
 
-            $tinyContaId = $json['retorno']['registros'][0]['registro']['id']
+            $tinyOrderId = $json['retorno']['registros'][0]['registro']['id']
                 ?? $json['retorno']['registros']['registro']['id']
                 ?? null;
-
-            // O Tiny retorna ID da conta. O link de pagamento (boleto) geralmente precisa ser gerado em outro passo
-            // ou se o Tiny estiver configurado p/ gerar boleto automático, ele pode retornar o link ou token.
-            // Para simplificar, assumimos que vamos pegar o 'link_boleto' se vier, ou vamos precisar de outra chamada 
-            // 'boleto.gerar' se for o caso. O prompt diz: "O Tiny devolve o ID da conta e o link de pagamento".
-            // Vamos logar o retorno para debug, mas salvar o ID.
-
-            $paymentLink = null;
-            // Verifica se o Tiny retornou link (depende da config da conta Tiny)
-            // Se não, teríamos que chamar algo como 'gerar.boleto'.
-            // Vamos salvar o ID primeiro.
+                
+            $tinyContaId = $json['retorno']['registros'][0]['registro']['id_conta_receber']
+                ?? $json['retorno']['registros']['registro']['id_conta_receber']
+                ?? null;
 
             return [
-                'tiny_account_id' => $tinyContaId,
-                'payment_url' => $paymentLink, // Pode ser null inicialmente
+                'tiny_order_id' => $tinyOrderId,
+                'tiny_account_id' => $tinyContaId, // O Tiny V2 pode não retornar isso direto no pedido, mas guardamos se retornar
+                'payment_url' => null,
             ];
 
         }
         catch (\Exception $e) {
-            Log::error('Exceção ao criar conta Tiny: ' . $e->getMessage());
+            Log::error('Exceção ao criar pedido Tiny: ' . $e->getMessage());
             throw $e;
         }
     }

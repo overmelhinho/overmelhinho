@@ -889,9 +889,13 @@ export default function ClientProfileClient() {
                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
                                                     <div className="flex flex-wrap gap-1.5">
                                                         {client.segmentos.map((seg: any) => (
-                                                            <span key={seg.id} className="text-xs text-gray-800 bg-white px-2.5 py-1 rounded-xl border border-gray-100 shadow-sm font-medium">
+                                                            <Link 
+                                                                key={seg.id} 
+                                                                href={`/busca?q=${encodeURIComponent(seg.nome)}`}
+                                                                className="text-xs text-gray-800 hover:text-brand-red bg-white hover:bg-red-50 px-2.5 py-1 rounded-xl border border-gray-100 hover:border-brand-red/30 shadow-sm font-medium cursor-pointer transition-all active:scale-95"
+                                                            >
                                                                 {seg.nome}
-                                                            </span>
+                                                            </Link>
                                                         ))}
                                                     </div>
                                                 </div>

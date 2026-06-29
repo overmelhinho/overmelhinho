@@ -52,13 +52,16 @@ class SyncInvoicesToTinyJob implements ShouldQueue
                 }
 
                 // Se a fatura já possui um ID do Tiny, verifica se ele realmente existe
-                if ($invoice->tiny_account_id && $invoice->tiny_account_id !== 'syncing') {
-                    $status = $tinyService->getReceivableStatus($invoice->tiny_account_id);
+                if (($invoice->tiny_account_id || $invoice->tiny_order_id) && $invoice->tiny_account_id !== 'syncing') {
+                    $status = null;
+                    if ($invoice->tiny_account_id) {
+                        $status = $tinyService->getReceivableStatus($invoice->tiny_account_id);
+                    }
                     if ($status && !isset($status['not_found'])) {
-                        Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} já existe no Tiny ERP com o ID {$invoice->tiny_account_id}. Pulando criação.");
+                        Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} já existe no Tiny ERP. Pulando criação.");
                         
                         // Garante que o status do pagamento seja sincronizado caso já tenha sido paga localmente
-                        if ($invoice->status === 'paid') {
+                        if ($invoice->status === 'paid' && $invoice->tiny_account_id) {
                             $tinyService->payReceivable($invoice->tiny_account_id, $valorCobrado, 0);
                         }
                         
@@ -67,25 +70,27 @@ class SyncInvoicesToTinyJob implements ShouldQueue
                     }
                     
                     // Se não foi localizada, limpa localmente para que possa ser recriada
-                    Log::warning("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} possui Tiny ID {$invoice->tiny_account_id} inválido/inexistente no Tiny. Limpando e recriando.");
+                    Log::warning("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} possui Tiny ID inválido/inexistente no Tiny. Limpando e recriando.");
                     $invoice->update([
+                        'tiny_order_id'   => null,
                         'tiny_account_id' => null,
                         'payment_url'     => null,
                     ]);
                 }
 
-                $tinyData = $tinyService->createReceivable($invoice, $valorCobrado);
+                $tinyData = $tinyService->createServiceOrder($invoice, $valorCobrado);
                 
                 $invoice->update([
-                    'tiny_account_id' => $tinyData['tiny_account_id'],
-                    'payment_url'     => $tinyData['payment_url'],
+                    'tiny_order_id'   => $tinyData['tiny_order_id'] ?? null,
+                    'tiny_account_id' => $tinyData['tiny_account_id'] ?? null,
+                    'payment_url'     => $tinyData['payment_url'] ?? null,
                     'sync_status'     => null,
                 ]);
 
-                Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} enviada ao Tiny com sucesso. ID: {$tinyData['tiny_account_id']}");
+                Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} enviada ao Tiny com sucesso. Order ID: " . ($tinyData['tiny_order_id'] ?? 'null') . ", Account ID: " . ($tinyData['tiny_account_id'] ?? 'null'));
 
                 // Se a fatura já estiver paga localmente, dar baixa imediatamente no Tiny
-                if ($invoice->status === 'paid') {
+                if ($invoice->status === 'paid' && !empty($tinyData['tiny_account_id'])) {
                     $tinyService->payReceivable($tinyData['tiny_account_id'], $valorCobrado, 0);
                     Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} já estava paga. Baixa retroativa realizada no Tiny com sucesso.");
                 }
