@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
+export async function GET(request: NextRequest) {
+    const { searchParams } = request.nextUrl;
     const id_categoria = searchParams.get('id_categoria');
     const id_cidade = searchParams.get('id_cidade');
     const palavra = searchParams.get('palavra');
@@ -38,18 +39,28 @@ export async function GET(request: Request) {
             }
         }
 
+        const url = request.nextUrl.clone();
+        url.search = '';
+
         if (citySlug && segmentSlug) {
-            return NextResponse.redirect(new URL(`/${citySlug}/${segmentSlug}`, request.url), 301);
+            url.pathname = `/${citySlug}/${segmentSlug}`;
+            return NextResponse.redirect(url, 301);
         } else if (segmentSlug) {
-            return NextResponse.redirect(new URL(`/busca?q=${segmentSlug}`, request.url), 301);
+            url.pathname = '/busca';
+            url.search = `?q=${segmentSlug}`;
+            return NextResponse.redirect(url, 301);
         } else if (palavra) {
-            return NextResponse.redirect(new URL(`/busca?q=${palavra}`, request.url), 301);
+            url.pathname = '/busca';
+            url.search = `?q=${palavra}`;
+            return NextResponse.redirect(url, 301);
         } else {
-            return NextResponse.redirect(new URL(`/busca`, request.url), 301);
+            url.pathname = '/busca';
+            return NextResponse.redirect(url, 301);
         }
     } catch (e) {
-        // Fallback in case of error
-        const term = palavra || '';
-        return NextResponse.redirect(new URL(`/busca?q=${term}`, request.url), 301);
+        const url = request.nextUrl.clone();
+        url.pathname = '/busca';
+        url.search = `?q=${palavra || ''}`;
+        return NextResponse.redirect(url, 301);
     }
 }
