@@ -4,12 +4,23 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  const getRedirect = (newPath: string, newSearchParams?: URLSearchParams) => {
+    const url = request.nextUrl.clone();
+    url.pathname = newPath;
+    if (newSearchParams) {
+      url.search = newSearchParams.toString();
+    } else {
+      url.search = '';
+    }
+    return NextResponse.redirect(url, 301);
+  };
+
   // 1. Redirecionamento de Empresas Legadas: /{estado}/{cidade}/{slug}/{id}
   // Exemplo: /rs/farroupilha/borsoi-dariff-bernardi-adv/101215
   const clientMatch = pathname.match(/^\/([a-z]{2})\/([^\/]+)\/([^\/]+)\/(\d+)$/i);
   if (clientMatch) {
     const id = clientMatch[4];
-    return new Response(null, { status: 301, headers: { 'Location': `/cliente/${id}` } });
+    return getRedirect(`/cliente/${id}`);
   }
 
   // 2. Redirecionamento de Categorias Legadas: /-{slug}-;cat{id}.php
@@ -17,14 +28,18 @@ export function middleware(request: NextRequest) {
   const categoryMatch = pathname.match(/^\/-(.+)-;cat(\d+)\.php$/i);
   if (categoryMatch) {
     const catId = categoryMatch[2];
-    return new Response(null, { status: 301, headers: { 'Location': `/busca?segmento=${catId}` } });
+    const sp = new URLSearchParams();
+    sp.set('segmento', catId);
+    return getRedirect('/busca', sp);
   }
 
   // 3. Redirecionamento de Vagas Legadas: /empregos/detalhes/{id}
   if (pathname.startsWith('/empregos/detalhes/')) {
     const segments = pathname.split('/');
     const id = segments[segments.length - 1];
-    return new Response(null, { status: 301, headers: { 'Location': `/vagas?id=${id}` } });
+    const sp = new URLSearchParams();
+    sp.set('id', id);
+    return getRedirect('/vagas', sp);
   }
 
   // 4. Redirecionamento de busca legada: /busca.php?palavra=...
@@ -34,13 +49,16 @@ export function middleware(request: NextRequest) {
     const idCidade = searchParams.get('id_cidade');
 
     if (idCategoria) {
-      let relativeUrl = `/api/legacy-busca?id_categoria=${idCategoria}`;
-      if (idCidade) relativeUrl += `&id_cidade=${idCidade}`;
-      if (term) relativeUrl += `&palavra=${term}`;
-      return new Response(null, { status: 301, headers: { 'Location': relativeUrl } });
+      const sp = new URLSearchParams();
+      sp.set('id_categoria', idCategoria);
+      if (idCidade) sp.set('id_cidade', idCidade);
+      if (term) sp.set('palavra', term);
+      return getRedirect('/api/legacy-busca', sp);
     }
 
-    return new Response(null, { status: 301, headers: { 'Location': `/busca?q=${term}` } });
+    const sp = new URLSearchParams();
+    if (term) sp.set('q', term);
+    return getRedirect('/busca', sp);
   }
 
   return NextResponse.next();
