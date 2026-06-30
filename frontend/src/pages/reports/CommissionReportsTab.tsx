@@ -268,9 +268,9 @@ export default function CommissionReportsTab() {
                                             {item.cliente_nome}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="text-sm font-black text-gray-900 group-hover:text-red-600 transition-colors">
-                                            #{formatNumero(item.numero)}
+                                    <td className="px-6 py-4">
+                                        <span className="text-xs font-black text-gray-900 bg-gray-50 px-2 py-1 rounded-md">
+                                            {formatNumero(item.numero)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-center">
