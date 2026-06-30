@@ -51,8 +51,7 @@ class UpdateClientStatuses extends Command
         $reativadosCount = DB::table('clientes')
             ->where(function($q) {
                 $q->where(function($sub) {
-                    $sub->where('tipo_cliente', 'gratuito')
-                        ->where('status_assinatura', 'cancelada');
+                    $sub->where('tipo_cliente', 'gratuito');
                 })
                 ->orWhere(function($sub) {
                     $sub->where('tipo_cliente', 'pagante')

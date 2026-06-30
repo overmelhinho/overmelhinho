@@ -1269,7 +1269,7 @@ export default function ClientProfileClient() {
                                                 <Star size={20} fill="currentColor" />
                                                 <Star size={20} fill="currentColor" />
                                             </div>
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2">{client.reviews_count || '0'} avaliações reais</p>
+                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2">{client.reviews?.length || client.reviews_count || '0'} avaliações reais</p>
                                         </div>
                                     </div>
 
@@ -1281,7 +1281,7 @@ export default function ClientProfileClient() {
                                                     {[...Array(rev.rating || 5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                                                 </div>
                                             </div>
-                                            <p className="text-sm text-gray-500 font-medium leading-relaxed italic">"{rev.text}"</p>
+                                            <p className="text-sm text-gray-500 font-medium leading-relaxed italic" dangerouslySetInnerHTML={{ __html: `"${rev.text}"` }} />
                                         </div>
                                     )) : (
                                         <p className="text-center py-10 text-gray-400 font-bold italic">Seja o primeiro a avaliar!</p>
