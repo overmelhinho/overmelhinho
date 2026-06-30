@@ -16,6 +16,7 @@ class EnderecoResource extends JsonResource
             'estado'       => $this->estado,
             'cidade'       => $this->cidade,
             'bairro'       => $this->bairro,
+            'tipo_logradouro' => $this->tipo_logradouro,
             'rua'          => $this->rua,
             'numero'       => $this->numero,
             'complemento'  => $this->complemento,
