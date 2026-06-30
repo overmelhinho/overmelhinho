@@ -208,13 +208,17 @@ export default function CampanhaWizard({
             }
         } catch (e: any) {
             console.error("Erro ao salvar:", e);
-        } finally {
+} finally {
             setSaving(false);
         }
     };
 
     const formatDateBR = (dateStr: string) => {
         if (!dateStr) return "—";
+        const parts = dateStr.split('T')[0].split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
         return dayjs(dateStr).format("DD/MM/YYYY");
     };
 

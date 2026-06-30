@@ -111,6 +111,10 @@ function tipoLabelPtComPlacements(c: CampanhaRow) {
 
 function fmtDate(iso?: string | null) {
   if (!iso) return "—";
+  const parts = iso.split('T')[0].split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
   try {
     return new Date(iso).toLocaleDateString("pt-BR");
   } catch {
