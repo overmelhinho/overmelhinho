@@ -958,7 +958,7 @@ export default function ClientProfileClient() {
                                             <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Cidades Atendidas</h2>
                                             <div>
                                                 <div className="flex flex-wrap gap-3">
-                                                    {client.cidades_atendidas.map((city: any, i: number) => {
+                                                    {[...client.cidades_atendidas].sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR')).map((city: any, i: number) => {
                                                         const cityUrlSlug = slugify(city.nome);
                                                         const segmentUrlSlug = client.segmentos?.[0] ? slugify(client.segmentos[0].nome) : 'servicos';
                                                         const clientUrlSlug = client.slug || client.id;
