@@ -2,9 +2,40 @@ import { useFormikContext } from "formik";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "@/services/api";
 import CreatableSelect from "react-select/creatable";
-import { Layers, Loader2 } from "lucide-react";
+import { components, MultiValueProps } from "react-select";
+import { Layers, Loader2, Star } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
+
+const CustomMultiValue = (props: MultiValueProps<any>) => {
+  const isFirst = props.index === 0;
+  
+  return (
+    <components.MultiValue {...props}>
+      <div className="flex items-center gap-1.5 pl-1 pr-1 py-0.5">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isFirst) return;
+            const currentValues = props.getValue();
+            const clickedValue = currentValues[props.index];
+            const newValues = [clickedValue, ...currentValues.filter((_, i) => i !== props.index)];
+            if (props.selectProps.onChange) {
+              props.selectProps.onChange(newValues, { action: 'set-value', option: clickedValue, name: props.selectProps.name });
+            }
+          }}
+          className={`flex-shrink-0 transition-colors ${isFirst ? 'text-yellow-500 cursor-default' : 'text-gray-400 hover:text-yellow-500'}`}
+          title={isFirst ? 'Segmento Principal' : 'Tornar Principal'}
+        >
+          <Star className={`w-3.5 h-3.5 ${isFirst ? 'fill-current' : ''}`} />
+        </button>
+        <span className={isFirst ? 'font-bold text-[#B70F0A]' : ''}>{props.children}</span>
+      </div>
+    </components.MultiValue>
+  );
+};
 
 export default function TabSegmentos() {
   const { values, setFieldValue } = useFormikContext<any>();
@@ -25,7 +56,9 @@ export default function TabSegmentos() {
     label: s.nome,
   }));
 
-  const selected = options.filter((o: any) => (values.segmentos || []).includes(o.value));
+  const selected = (values.segmentos || [])
+    .map((id: number) => options.find((o: any) => o.value === id))
+    .filter(Boolean);
 
   const handleCreate = async (inputValue: string) => {
     setIsCreating(true);
@@ -75,6 +108,7 @@ export default function TabSegmentos() {
             value={selected}
             isDisabled={isCreating}
             isLoading={isCreating}
+            components={{ MultiValue: CustomMultiValue }}
             onCreateOption={handleCreate}
             onChange={(sel) =>
               setFieldValue(
