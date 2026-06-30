@@ -23,22 +23,16 @@ const slugify = (text: string) => {
 
 export async function GET() {
     try {
-        // 1. Fetching data in parallel to save time
-        const [citiesRes, segmentsRes] = await Promise.all([
-            fetch(`${getApiUrl()}/cidades`),
-            fetch(`${getApiUrl()}/segmentos`)
-        ]);
+        // Fetching only active combinations
+        const res = await fetch(`${getApiUrl()}/public/active-sitemap-combinations`, { next: { revalidate: 86400 } });
 
-        if (!citiesRes.ok || !segmentsRes.ok) {
+        if (!res.ok) {
             return new NextResponse('Erro ao buscar dados da API', { status: 500 });
         }
 
-        const citiesData = await citiesRes.json();
-        const segmentsData = await segmentsRes.json();
-
-        const citiesCount = (citiesData.data || []).length;
-        const segmentsCount = (segmentsData.data || []).length;
-        const totalUrls = citiesCount * segmentsCount;
+        const data = await res.json();
+        const combinations = data.data || [];
+        const totalUrls = combinations.length;
         
         const URLS_PER_SITEMAP = 40000; // Margem segura abaixo do limite de 50.000 do Google
         const totalPages = Math.ceil(totalUrls / URLS_PER_SITEMAP) || 1;

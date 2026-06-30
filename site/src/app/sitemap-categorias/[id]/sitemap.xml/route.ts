@@ -32,53 +32,23 @@ export async function GET(
             return new NextResponse('Página inválida', { status: 400 });
         }
 
-        const [citiesRes, segmentsRes] = await Promise.all([
-            fetch(`${getApiUrl()}/cidades`),
-            fetch(`${getApiUrl()}/segmentos`)
-        ]);
+        const res = await fetch(`${getApiUrl()}/public/active-sitemap-combinations`, { next: { revalidate: 86400 } });
 
-        if (!citiesRes.ok || !segmentsRes.ok) {
+        if (!res.ok) {
             return new NextResponse('Erro ao buscar dados da API', { status: 500 });
         }
 
-        const citiesData = await citiesRes.json();
-        const segmentsData = await segmentsRes.json();
-
-        const cities = citiesData.data || [];
-        const segments = segmentsData.data || [];
+        const data = await res.json();
+        const combinations = data.data || [];
 
         const URLS_PER_SITEMAP = 40000;
         const startIndex = (pageId - 1) * URLS_PER_SITEMAP;
         const endIndex = startIndex + URLS_PER_SITEMAP;
 
-        // Generate combinations lazily to avoid memory limits
-        const urlsToGenerate: { citySlug: string, segmentSlug: string }[] = [];
-        let currentIndex = 0;
-
-        for (const city of cities) {
-            if (!city.nome) continue;
-            const citySlug = slugify(city.nome);
-
-            for (const segment of segments) {
-                if (!segment.nome) continue;
-                
-                if (currentIndex >= startIndex && currentIndex < endIndex) {
-                    urlsToGenerate.push({
-                        citySlug,
-                        segmentSlug: slugify(segment.nome)
-                    });
-                }
-                
-                currentIndex++;
-                
-                if (currentIndex >= endIndex) {
-                    break;
-                }
-            }
-            if (currentIndex >= endIndex) {
-                break;
-            }
-        }
+        const urlsToGenerate = combinations.slice(startIndex, endIndex).map((comb: any) => ({
+            citySlug: slugify(comb.city_name),
+            segmentSlug: slugify(comb.segment_name)
+        }));
 
         if (urlsToGenerate.length === 0) {
             return new NextResponse('Página não encontrada', { status: 404 });

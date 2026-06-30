@@ -35,6 +35,25 @@ class ClienteController extends Controller
             ->get();
     }
 
+    public function activeSitemapCombinations()
+    {
+        $combinations = DB::table('clientes as c')
+            ->join('cliente_cidade as cc', 'c.id', '=', 'cc.cliente_id')
+            ->join('cidades as cid', 'cc.cidade_id', '=', 'cid.id')
+            ->join('cliente_segmento as cs', 'c.id', '=', 'cs.cliente_id')
+            ->join('segmentos as seg', 'cs.segmento_id', '=', 'seg.id')
+            ->where('c.exibir_no_site', 'true')
+            ->where(function ($query) {
+                $query->whereIn('c.status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
+                      ->orWhere('c.tipo_cliente', 'gratuito');
+            })
+            ->select('cid.nome as city_name', 'seg.nome as segment_name')
+            ->distinct()
+            ->get();
+
+        return response()->json(['data' => $combinations]);
+    }
+
     public function indexPublic(Request $request)
     {
         $q = trim((string) ($request->input('q') ?? ''));
