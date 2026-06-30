@@ -499,6 +499,8 @@ export default function CampanhaWizardEdit() {
   }
 
   async function onSubmit() {
+    if (update.isPending) return;
+
     if (!canSubmit) {
       toast.error("Complete os campos obrigatórios.");
       return;

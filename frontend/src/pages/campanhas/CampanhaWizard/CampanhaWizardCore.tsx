@@ -433,6 +433,8 @@ export default function CampanhaWizardCore() {
   }
 
   async function onSubmit() {
+    if (create.isPending) return;
+
     if (!canSubmit) {
       toast.error("Complete os campos obrigatórios (cliente, nome, período, placements, cidades se necessário e financeiro).");
       return;
