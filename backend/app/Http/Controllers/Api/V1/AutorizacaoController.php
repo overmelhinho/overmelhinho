@@ -608,16 +608,16 @@ class AutorizacaoController extends Controller
             $filename = "autorizacoes/autorizacao-{$autorizacao->numero}-justificada.pdf";
             Storage::disk('public')->put($filename, $pdf->output());
             $autorizacao->update(['pdf_path' => $filename]);
-        } catch (\Exception $e) {
-            Log::error('Erro ao gerar PDF pós-justificativa: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Erro ao gerar PDF pós-justificativa: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
         }
 
         // Automação: Gerar faturas no Tiny imediatamente
         try {
             $tinyService = app(TinyErpService::class);
             $this->processInvoiceGeneration($autorizacao->fresh(['parcelas', 'cliente']), $tinyService);
-        } catch (\Exception $e) {
-            Log::error("Erro na automação pós-justificativa da autorização #{$autorizacao->id}: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error("Erro na automação pós-justificativa da autorização #{$autorizacao->id}: " . $e->getMessage() . "\n" . $e->getTraceAsString());
         }
 
         return response()->json([

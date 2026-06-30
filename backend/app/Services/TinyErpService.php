@@ -268,6 +268,14 @@ class TinyErpService
     }
 
     /**
+     * Alias para createServiceOrder para manter compatibilidade com outras partes do sistema.
+     */
+    public function createReceivable(Invoice $invoice, float $amountOverride = null): array
+    {
+        return $this->createServiceOrder($invoice, $amountOverride);
+    }
+
+    /**
      * Efetua a baixa (liquidação) de uma conta a receber no Tiny.
      * Método: conta.receber.baixar.php
      *
