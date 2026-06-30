@@ -555,20 +555,20 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
         if (dateRange === "current_month") {
             matchesDate = invoiceDate >= startOfMonth(today) && invoiceDate <= endOfMonth(today);
         } else if (dateRange === "7") {
-            matchesDate = isAfter(invoiceDate, subDays(today, 7));
+            matchesDate = invoiceDate >= subDays(today, 7);
         } else if (dateRange === "15") {
-            matchesDate = isAfter(invoiceDate, subDays(today, 15));
+            matchesDate = invoiceDate >= subDays(today, 15);
         } else if (dateRange === "30") {
-            matchesDate = isAfter(invoiceDate, subDays(today, 30));
+            matchesDate = invoiceDate >= subDays(today, 30);
         } else if (dateRange === "custom") {
             const start = customStartDate ? startOfDay(new Date(customStartDate)) : null;
-            const end = customEndDate ? startOfDay(new Date(customEndDate)) : null;
+            const end = customEndDate ? endOfDay(new Date(customEndDate)) : null;
             if (start && end) {
-                matchesDate = isAfter(invoiceDate, start) && isBefore(invoiceDate, end);
+                matchesDate = invoiceDate >= start && invoiceDate <= end;
             } else if (start) {
-                matchesDate = isAfter(invoiceDate, start);
+                matchesDate = invoiceDate >= start;
             } else if (end) {
-                matchesDate = isBefore(invoiceDate, end);
+                matchesDate = invoiceDate <= end;
             }
         }
 
