@@ -500,9 +500,10 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
             
             // 1. Busca por Autorização (match exato ou com padding de zeros)
             const padded = searchTerm.trim().padStart(5, '0');
+            const authNumStr = invoice.autorizacao_numero ? String(invoice.autorizacao_numero).trim() : "";
             const matchesAutorizacao = 
-                invoice.autorizacao_numero === searchTerm.trim() ||
-                invoice.autorizacao_numero === padded;
+                authNumStr === searchTerm.trim() ||
+                authNumStr === padded;
 
             // 2. Busca por CNPJ (se tiver 8+ dígitos)
             const cleanSearch = searchTerm.trim();
@@ -512,10 +513,10 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
             const matchesName = normalizeText(invoice.client.nome_fantasia).includes(searchNorm) ||
                 normalizeText(invoice.client.razao_social || '').includes(searchNorm);
 
-            // 4. Busca por Telefone (compara apenas os dígitos para ignorar parênteses, traços, etc.)
+            // 4. Busca por Telefone (mínimo de 8 dígitos para evitar coincidências)
             let matchesPhone = false;
             const digitsSearch = searchTerm.replace(/\D/g, "");
-            if (digitsSearch) {
+            if (digitsSearch && digitsSearch.length >= 8) {
                 const checkPhone = (p?: string) => {
                     if (!p) return false;
                     return p.replace(/\D/g, "").includes(digitsSearch);
