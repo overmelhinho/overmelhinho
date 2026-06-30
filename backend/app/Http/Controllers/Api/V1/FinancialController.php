@@ -404,7 +404,7 @@ class FinancialController extends Controller
     public function exportCarnet($groupId)
     {
         $invoices = Invoice::where('group_id', $groupId)
-            ->with(['client', 'plan'])
+            ->with(['client.enderecos', 'plan'])
             ->orderBy('parcel_number', 'asc')
             ->get();
 
@@ -413,6 +413,16 @@ class FinancialController extends Controller
         }
 
         $client = $invoices->first()->client;
+        if ($client && $client->enderecos) {
+            $address = $client->enderecos->where('is_cobranca', true)->first() ?? $client->enderecos->first();
+            if ($address) {
+                $tipo = $address->tipo_logradouro ? $address->tipo_logradouro . ' ' : '';
+                $client->endereco = $tipo . $address->rua;
+                $client->numero = $address->numero;
+                $client->bairro = $address->bairro;
+            }
+        }
+
         $totalAmount = $invoices->sum('amount');
 
         $data = [
@@ -434,7 +444,7 @@ class FinancialController extends Controller
      */
     public function exportReceipt($id)
     {
-        $invoice = Invoice::with(['client', 'plan'])->findOrFail($id);
+        $invoice = Invoice::with(['client.enderecos', 'plan'])->findOrFail($id);
 
         // Buscar número da autorização se existir no group_id
         $authNumero = null;
@@ -455,13 +465,27 @@ class FinancialController extends Controller
             $logoBase64 = 'data:image/png;base64,' . $logoData;
         }
 
+        $client = $invoice->client;
+        if ($client && $client->enderecos) {
+            $address = $client->enderecos->where('is_cobranca', true)->first() ?? $client->enderecos->first();
+            if ($address) {
+                $tipo = $address->tipo_logradouro ? $address->tipo_logradouro . ' ' : '';
+                $client->endereco = $tipo . $address->rua;
+                $client->numero = $address->numero;
+                $client->bairro = $address->bairro;
+            }
+        }
+
+        $acceptDate = request('date') ? \Carbon\Carbon::parse(request('date'))->format('d/m/Y') : \Carbon\Carbon::parse($invoice->action_date ?? now())->format('d/m/Y');
+
         $data = [
             'invoice' => $invoice,
-            'client' => $invoice->client,
+            'client' => $client,
             'authNumero' => $authNumero ? str_pad($authNumero, 5, '0', STR_PAD_LEFT) : null,
             'generatedAt' => $generatedAt,
             'payableAmount_extenso' => $payableAmount_extenso,
-            'logoBase64' => $logoBase64
+            'logoBase64' => $logoBase64,
+            'acceptDate' => $acceptDate
         ];
 
         $pdf = Pdf::loadView('reports.receipt', $data)
@@ -1242,7 +1266,7 @@ class FinancialController extends Controller
             return response()->json(['message' => 'Nenhuma fatura selecionada.'], 422);
         }
 
-        $invoices = Invoice::with(['client', 'plan'])
+        $invoices = Invoice::with(['client.enderecos', 'plan'])
             ->whereIn('id', $ids)
             ->get();
 
@@ -1270,13 +1294,27 @@ class FinancialController extends Controller
             $payableAmount = $invoice->payable_amount ?? $invoice->amount;
             $payableAmount_extenso = $this->valorPorExtenso($payableAmount);
 
+            $client = $invoice->client;
+            if ($client && $client->enderecos) {
+                $address = $client->enderecos->where('is_cobranca', true)->first() ?? $client->enderecos->first();
+                if ($address) {
+                    $tipo = $address->tipo_logradouro ? $address->tipo_logradouro . ' ' : '';
+                    $client->endereco = $tipo . $address->rua;
+                    $client->numero = $address->numero;
+                    $client->bairro = $address->bairro;
+                }
+            }
+
+            $acceptDate = request('date') ? \Carbon\Carbon::parse(request('date'))->format('d/m/Y') : \Carbon\Carbon::parse($invoice->action_date ?? now())->format('d/m/Y');
+
             $items[] = [
                 'invoice' => $invoice,
-                'client' => $invoice->client,
+                'client' => $client,
                 'authNumero' => $authNumero ? str_pad($authNumero, 5, '0', STR_PAD_LEFT) : null,
                 'emissaoDate' => \Carbon\Carbon::now()->format('d/m/Y'),
                 'payableAmount_extenso' => $payableAmount_extenso,
-                'logoBase64' => $logoBase64
+                'logoBase64' => $logoBase64,
+                'acceptDate' => $acceptDate
             ];
         }
 

@@ -122,7 +122,7 @@
         <table width="100%" class="signature-area">
             <tr>
                 <td class="date-box">
-                    <span style="font-size: 8pt; font-weight: bold;">{{ \Carbon\Carbon::parse($invoice->action_date ?? now())->format('d/m/Y') }}</span><br>
+                    <span style="font-size: 8pt; font-weight: bold;">{{ $acceptDate }}</span><br>
                     Data do Aceite / Pagamento
                 </td>
                 <td width="10%"></td>
@@ -132,7 +132,7 @@
 
         <!-- Canhoto / Recibo destacável -->
         <div class="canhoto">
-            Recebemos de <span class="highlight">{{ $client->razao_social ?: $client->nome_fantasia }}</span> a importância de <span style="text-transform: uppercase; font-weight: bold;">{{ $payableAmount_extenso }}</span> em <span class="highlight">{{ \Carbon\Carbon::parse($invoice->action_date ?? now())->format('d/m/Y') }}</span>.
+            Recebemos de <span class="highlight">{{ $client->razao_social ?: $client->nome_fantasia }}</span> a importância de <span style="text-transform: uppercase; font-weight: bold;">{{ $payableAmount_extenso }}</span> em <span class="highlight">{{ $acceptDate }}</span>.
             <div style="float: right; border-top: 0.5pt solid #000; width: 120pt; text-align: center; margin-top: 10pt; font-size: 6pt;">Assinatura</div>
         </div>
     </div>

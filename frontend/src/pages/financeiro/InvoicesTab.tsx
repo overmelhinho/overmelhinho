@@ -149,6 +149,11 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     const [dataCadFinal, setDataCadFinal] = useState("");
     const [tipoPublicidade, setTipoPublicidade] = useState("all");
 
+    // Modal de Data do Recibo
+    const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+    const [receiptDate, setReceiptDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [receiptTarget, setReceiptTarget] = useState<{ type: 'single' | 'bulk', id?: number } | null>(null);
+
     // Applied Advanced Filters (to trigger search only on button click/clear)
     const [appliedFilters, setAppliedFilters] = useState<any>({
         planId: "all",
@@ -304,12 +309,13 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
         }
     };
 
-    const handleBulkPrintReceipts = async () => {
+    const handleBulkPrintReceipts = async (customDate?: string) => {
         if (selectedInvoices.length === 0) return;
         try {
             const loadingToast = toast.loading("Gerando recibos para impressão...");
             const response = await axios.post(`/v1/financial/invoices/print-receipts`, {
-                ids: selectedInvoices
+                ids: selectedInvoices,
+                date: customDate
             }, {
                 responseType: 'blob'
             });
@@ -356,10 +362,12 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
         }
     };
 
-    const handleDownloadReceipt = async (invoiceId: number) => {
+    const handleDownloadReceipt = async (invoiceId: number, customDate?: string) => {
         try {
             const loadingToast = toast.loading("Gerando recibo...");
+            const params = customDate ? { date: customDate } : {};
             const response = await axios.get(`/v1/financial/invoices/${invoiceId}/receipt`, {
+                params,
                 responseType: 'blob'
             });
             const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -1045,7 +1053,11 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                         Baixar Recibos
                     </button>
                     <button
-                        onClick={handleBulkPrintReceipts}
+                        onClick={() => {
+                            setReceiptTarget({ type: 'bulk' });
+                            setReceiptDate(format(new Date(), 'yyyy-MM-dd'));
+                            setIsReceiptModalOpen(true);
+                        }}
                         className="flex items-center gap-2 px-3 py-1.5 bg-white text-violet-600 rounded-lg hover:bg-violet-50 transition-colors font-bold text-[10px] uppercase border border-violet-100 shadow-sm"
                     >
                         <Printer size={14} />
@@ -1419,7 +1431,11 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                         )}
 
                                                         <button
-                                                            onClick={() => handleDownloadReceipt(invoice.id)}
+                                                            onClick={() => {
+                                                                setReceiptTarget({ type: 'single', id: invoice.id });
+                                                                setReceiptDate(format(new Date(), 'yyyy-MM-dd'));
+                                                                setIsReceiptModalOpen(true);
+                                                            }}
                                                             className="p-2 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
                                                             title="Imprimir Recibo de Pagamento"
                                                         >
@@ -1955,6 +1971,57 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
+                <DialogContent className="sm:max-w-md rounded-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black flex items-center gap-2 text-emerald-600">
+                            <Printer size={24} />
+                            Imprimir Recibo
+                        </DialogTitle>
+                        <DialogDescription className="font-medium">
+                            Selecione a data de aceite/pagamento que deve constar no recibo.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-gray-700">Data do Aceite</label>
+                            <input
+                                type="date"
+                                value={receiptDate}
+                                onChange={(e) => setReceiptDate(e.target.value)}
+                                className="flex h-10 w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:justify-end flex-wrap">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsReceiptModalOpen(false)}
+                            className="rounded-xl font-bold border-gray-200 text-gray-700 hover:bg-gray-50 flex-1 sm:flex-none"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                setIsReceiptModalOpen(false);
+                                if (receiptTarget?.type === 'single' && receiptTarget.id) {
+                                    await handleDownloadReceipt(receiptTarget.id, receiptDate);
+                                } else if (receiptTarget?.type === 'bulk') {
+                                    await handleBulkPrintReceipts(receiptDate);
+                                }
+                            }}
+                            className="rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none flex items-center gap-2"
+                        >
+                            <Check size={16} />
+                            Gerar PDF
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </div>
     );
 }
