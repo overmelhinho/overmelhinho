@@ -15,9 +15,22 @@ export default function TabEndereco() {
       try {
         const { data } = await axios.get(`https://viacep.com.br/ws/${numericCep}/json/`);
         if (!data.erro) {
-          const rua = data.logradouro || "";
+          let ruaCompleta = data.logradouro || "";
+          let tipo = "";
+          let rua = ruaCompleta;
+
+          const tiposComuns = ["Rua", "Avenida", "Travessa", "Rodovia", "Estrada", "Alameda", "Viela", "Praça", "Beco"];
+          for (const t of tiposComuns) {
+            if (ruaCompleta.toLowerCase().startsWith(t.toLowerCase() + " ")) {
+              tipo = t;
+              rua = ruaCompleta.substring(t.length + 1).trim();
+              break;
+            }
+          }
+
           const bairro = data.bairro || "";
 
+          setFieldValue(`enderecos[${index}].tipo_logradouro`, tipo);
           setFieldValue(`enderecos[${index}].rua`, rua);
           setFieldValue(`enderecos[${index}].bairro`, bairro);
           setFieldValue(`enderecos[${index}].cidade`, data.localidade || "");
@@ -51,7 +64,11 @@ export default function TabEndereco() {
 
   const generateCompactAddress = (end: any) => {
       const parts = [];
-      if (end.rua) parts.push(end.rua);
+      let rua = end.rua || "";
+      if (end.tipo_logradouro) {
+          rua = `${end.tipo_logradouro} ${rua}`;
+      }
+      if (rua) parts.push(rua);
       if (end.numero) parts.push(end.numero);
       if (end.bairro) parts.push(end.bairro);
       if (end.cidade) parts.push(`${end.cidade}/${end.estado || ""}`);
@@ -268,15 +285,36 @@ export default function TabEndereco() {
 
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <Home className="w-4 h-4 text-[#B70F0A]" /> Rua{!endereco.exibir_apenas_cidade && "*"}
+                      <Home className="w-4 h-4 text-[#B70F0A]" /> Endereço (Tipo e Rua){!endereco.exibir_apenas_cidade && "*"}
                     </label>
-                    <input
-                      type="text"
-                      name={`enderecos[${index}].rua`}
-                      value={endereco.rua || ""}
-                      onChange={(e) => setFieldValue(`enderecos[${index}].rua`, e.target.value)}
-                      className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
-                    />
+                    <div className="flex items-center gap-2">
+                      <select
+                        name={`enderecos[${index}].tipo_logradouro`}
+                        value={endereco.tipo_logradouro || ""}
+                        onChange={(e) => setFieldValue(`enderecos[${index}].tipo_logradouro`, e.target.value)}
+                        className="border rounded-md px-3 py-2 w-1/3 focus:ring-2 focus:ring-[#B70F0A] bg-white"
+                      >
+                        <option value="">Selecione...</option>
+                        <option value="Rua">Rua</option>
+                        <option value="Avenida">Avenida</option>
+                        <option value="Travessa">Travessa</option>
+                        <option value="Rodovia">Rodovia</option>
+                        <option value="Estrada">Estrada</option>
+                        <option value="Alameda">Alameda</option>
+                        <option value="Viela">Viela</option>
+                        <option value="Praça">Praça</option>
+                        <option value="Beco">Beco</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                      <input
+                        type="text"
+                        name={`enderecos[${index}].rua`}
+                        value={endereco.rua || ""}
+                        onChange={(e) => setFieldValue(`enderecos[${index}].rua`, e.target.value)}
+                        className="border rounded-md px-3 py-2 w-2/3 focus:ring-2 focus:ring-[#B70F0A]"
+                        placeholder="Ex: Pinheiro Machado"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -316,6 +354,7 @@ export default function TabEndereco() {
                 estado: "",
                 cidade: "",
                 bairro: "",
+                tipo_logradouro: "",
                 rua: "",
                 numero: "",
                 complemento: "",

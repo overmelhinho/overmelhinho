@@ -153,7 +153,7 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                                                     <div className="flex items-center">
                                                         <MapPin size={16} className="mr-2 text-gray-400" />
                                                         <span className="line-clamp-1">
-                                                            {client.enderecos?.[0]?.rua ? `${client.enderecos[0].rua}` : (client.enderecos?.[0]?.cidade || city.nome)}
+                                                            {client.enderecos?.[0]?.rua ? `${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}` : (client.enderecos?.[0]?.cidade || city.nome)}
                                                         </span>
                                                     </div>
                                                 </div>

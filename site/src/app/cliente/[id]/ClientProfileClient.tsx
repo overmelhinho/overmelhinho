@@ -573,7 +573,7 @@ export default function ClientProfileClient() {
         "telephone": contactInfo?.telefone_principal || contactInfo?.celular,
         "address": client.enderecos?.[0] ? {
             "@type": "PostalAddress",
-            "streetAddress": client.enderecos[0].exibir_apenas_cidade ? undefined : `${client.enderecos[0].rua}, ${client.enderecos[0].numero}${client.enderecos[0].complemento ? `, ${client.enderecos[0].complemento}` : ''}`,
+            "streetAddress": client.enderecos[0].exibir_apenas_cidade ? undefined : `${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}${client.enderecos[0].complemento ? `, ${client.enderecos[0].complemento}` : ''}`,
             "addressLocality": client.enderecos[0].cidade,
             "addressRegion": client.enderecos[0].estado,
             "postalCode": client.enderecos[0].exibir_apenas_cidade ? undefined : client.enderecos[0].cep,
@@ -808,7 +808,7 @@ export default function ClientProfileClient() {
                                     <>
                                         {/* Waze: Apenas Mobile */}
                                         <a
-                                            href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}&navigate=yes`}
+                                            href={`https://waze.com/ul?q=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}&navigate=yes`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="md:hidden bg-blue-50 text-blue-600 border border-blue-100 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-blue-100"
@@ -818,7 +818,7 @@ export default function ClientProfileClient() {
 
                                         {/* Google Maps: Apenas Desktop */}
                                         <a
-                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}`}
+                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="hidden md:flex bg-gray-50 text-gray-600 border border-gray-100 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest items-center active:scale-95 transition-all hover:bg-gray-100"
@@ -1111,7 +1111,7 @@ export default function ClientProfileClient() {
 
                                                         {!end.exibir_apenas_cidade ? (
                                                             <p className="text-base text-gray-500 font-medium leading-relaxed">
-                                                                {end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
+                                                                {(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
                                                                 {end.bairro} • {end.cep}
                                                             </p>
                                                         ) : (
@@ -1150,7 +1150,7 @@ export default function ClientProfileClient() {
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                                                         {!end.exibir_apenas_cidade && (
                                                             <a 
-                                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
+                                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
@@ -1160,7 +1160,7 @@ export default function ClientProfileClient() {
                                                         )}
                                                         {(!end.exibir_apenas_cidade && isPagante) && (
                                                             <a 
-                                                                href={`https://waze.com/ul?q=${encodeURIComponent(`${end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
+                                                                href={`https://waze.com/ul?q=${encodeURIComponent(`${(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="md:hidden bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
@@ -1516,7 +1516,7 @@ export default function ClientProfileClient() {
 
                                                 {!end.exibir_apenas_cidade ? (
                                                     <p className="text-base text-gray-500 font-medium leading-relaxed">
-                                                        {end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
+                                                        {(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, {end.numero} {end.complemento ? `- ${end.complemento}` : ''}<br/>
                                                         {end.bairro} • {end.cep}
                                                     </p>
                                                 ) : (
@@ -1555,7 +1555,7 @@ export default function ClientProfileClient() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                                                 {!end.exibir_apenas_cidade && (
                                                     <a 
-                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
@@ -1565,7 +1565,7 @@ export default function ClientProfileClient() {
                                                 )}
                                                 {(!end.exibir_apenas_cidade && isPagante) && (
                                                     <a 
-                                                        href={`https://waze.com/ul?q=${encodeURIComponent(`${end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
+                                                        href={`https://waze.com/ul?q=${encodeURIComponent(`${(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="md:hidden bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
@@ -1878,7 +1878,7 @@ export default function ClientProfileClient() {
                     )}
                     {(!hasPhone && !hasWhatsApp && client.enderecos?.[0] && !client.enderecos[0].exibir_apenas_cidade && isPagante) && (
                         <a
-                            href={`https://waze.com/ul?q=${encodeURIComponent(`${client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
+                            href={`https://waze.com/ul?q=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 py-4 rounded-full shadow-[0_8px_20px_-6px_rgba(37,136,211,0.2)] font-black text-sm flex items-center justify-center space-x-2 active:scale-95 transition-all overflow-hidden relative font-sans"
