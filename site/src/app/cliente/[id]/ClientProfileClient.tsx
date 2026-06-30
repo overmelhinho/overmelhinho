@@ -770,7 +770,9 @@ export default function ClientProfileClient() {
                                                 ? `Atendimento em ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`
                                                 : (() => {
                                                     const end = client.enderecos[0];
-                                                    const parts = [end.rua];
+                                                    const ruaText = end.tipo_logradouro ? `${end.tipo_logradouro} ${end.rua}` : end.rua;
+                                                    const parts = [];
+                                                    if (ruaText) parts.push(ruaText);
                                                     if (end.numero) parts.push(end.numero);
                                                     if (end.complemento) parts.push(end.complemento);
                                                     if (end.bairro && end.bairro.trim() !== '' && end.bairro.toLowerCase() !== 'vazio') parts.push(end.bairro);
