@@ -31,7 +31,7 @@ import {
     Printer,
     Filter,
 } from "lucide-react";
-import { format, isBefore, startOfDay, subDays, isAfter, startOfMonth, endOfMonth } from "date-fns";
+import { format, isBefore, startOfDay, subDays, isAfter, startOfMonth, endOfMonth, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
     Dialog,
@@ -549,26 +549,29 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
 
         // Date Filtering
         let matchesDate = true;
-        const invoiceDate = new Date(invoice.due_date);
-        const today = startOfDay(new Date());
+        const invoiceDateStr = invoice.due_date ? invoice.due_date.slice(0, 10) : "";
+        const today = new Date();
 
         if (dateRange === "current_month") {
-            matchesDate = invoiceDate >= startOfMonth(today) && invoiceDate <= endOfMonth(today);
+            const startMonthStr = format(startOfMonth(today), 'yyyy-MM-dd');
+            const endMonthStr = format(endOfMonth(today), 'yyyy-MM-dd');
+            matchesDate = invoiceDateStr >= startMonthStr && invoiceDateStr <= endMonthStr;
         } else if (dateRange === "7") {
-            matchesDate = invoiceDate >= subDays(today, 7);
+            const limitStr = format(subDays(today, 7), 'yyyy-MM-dd');
+            matchesDate = invoiceDateStr >= limitStr;
         } else if (dateRange === "15") {
-            matchesDate = invoiceDate >= subDays(today, 15);
+            const limitStr = format(subDays(today, 15), 'yyyy-MM-dd');
+            matchesDate = invoiceDateStr >= limitStr;
         } else if (dateRange === "30") {
-            matchesDate = invoiceDate >= subDays(today, 30);
+            const limitStr = format(subDays(today, 30), 'yyyy-MM-dd');
+            matchesDate = invoiceDateStr >= limitStr;
         } else if (dateRange === "custom") {
-            const start = customStartDate ? startOfDay(new Date(customStartDate)) : null;
-            const end = customEndDate ? endOfDay(new Date(customEndDate)) : null;
-            if (start && end) {
-                matchesDate = invoiceDate >= start && invoiceDate <= end;
-            } else if (start) {
-                matchesDate = invoiceDate >= start;
-            } else if (end) {
-                matchesDate = invoiceDate <= end;
+            if (customStartDate && customEndDate) {
+                matchesDate = invoiceDateStr >= customStartDate && invoiceDateStr <= customEndDate;
+            } else if (customStartDate) {
+                matchesDate = invoiceDateStr >= customStartDate;
+            } else if (customEndDate) {
+                matchesDate = invoiceDateStr <= customEndDate;
             }
         }
 
