@@ -879,7 +879,17 @@ export default function TabFinanceiro() {
                         <tbody className="divide-y divide-gray-100">
                             {invoices && invoices.length > 0 ? (
                                 [...invoices]
-                                    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+                                    .sort((a, b) => {
+                                        const authA = a.autorizacao_numero ? parseInt(String(a.autorizacao_numero), 10) : 0;
+                                        const authB = b.autorizacao_numero ? parseInt(String(b.autorizacao_numero), 10) : 0;
+                                        if (authA !== authB) return authB - authA;
+
+                                        const parcA = Number(a.parcel_number) || 0;
+                                        const parcB = Number(b.parcel_number) || 0;
+                                        if (parcA !== parcB) return parcB - parcA;
+
+                                        return new Date(b.due_date).getTime() - new Date(a.due_date).getTime();
+                                    })
                                     .map((invoice) => (
                                         <tr key={invoice.id} className={cn(
                                             "bg-white hover:bg-gray-50/80 transition-colors group",
