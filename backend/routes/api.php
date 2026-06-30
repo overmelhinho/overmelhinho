@@ -321,6 +321,15 @@ Route::post('/v1/tracking/search', [\App\Http\Controllers\Api\V1\TrackingControl
 Route::get('/v1/public/reports/{token}', [ClientReportController::class, 'showPublic']);
 Route::get('/v1/public/sitemap-data', [\App\Http\Controllers\Api\V1\ClienteController::class, 'sitemap']);
 Route::get('/v1/public/active-sitemap-combinations', [\App\Http\Controllers\Api\V1\ClienteController::class, 'activeSitemapCombinations']);
+Route::get('/v1/public/debug-log', function () {
+    $logPath = storage_path('logs/laravel.log');
+    if (file_exists($logPath)) {
+        $lines = file($logPath);
+        $lastLines = array_slice($lines, -100);
+        return response(implode("", $lastLines), 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
+    }
+    return response('No log file found', 404);
+});
 Route::get('/v1/public/search', [\App\Http\Controllers\Api\V1\ClienteController::class, 'indexPublic']);
 Route::get('/v1/public/search/suggestions', [\App\Http\Controllers\Api\V1\ClienteController::class, 'suggestions']);
 Route::get('/v1/public/clientes/{id}', [\App\Http\Controllers\Api\V1\ClienteController::class, 'showPublic']);
