@@ -157,7 +157,7 @@ class AutorizacaoController extends Controller
             $validated['status']      = 'rascunho';
         }
 
-        $validated['vendedor_id'] = Auth::id();
+        $validated['vendedor_id'] = $request->vendedor_id ?? Auth::id();
         $validated['taxa_cadastro'] = $validated['taxa_cadastro'] ?? 0;
         $validated['payment_method'] = $validated['payment_method'] ?? 'pix';
         $validated['is_permuta'] = $request->boolean('is_permuta') ? 'true' : 'false';
