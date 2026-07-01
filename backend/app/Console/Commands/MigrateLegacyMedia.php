@@ -166,8 +166,9 @@ class MigrateLegacyMedia extends Command
                     }
                 }
             }
-            $this->info("Total de Fotos de Galeria importadas: {$migradas_galeria}\n");
         }
+        $this->info("Total de Fotos de Galeria importadas: {$migradas_galeria}\n");
+    }
 
         $this->info("-> Buscando Cardápios/Portfólios no legado...");
         $cardapiosQuery = $legacyConn->table('clientes')->whereNotNull('cardapio')->where('cardapio', '!=', '');
