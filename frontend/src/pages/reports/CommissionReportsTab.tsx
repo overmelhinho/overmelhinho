@@ -35,7 +35,8 @@ export default function CommissionReportsTab() {
     const [vendedorId, setVendedorId] = useState("all");
     const [tipoPublicidade, setTipoPublicidade] = useState("all");
     const [telefone, setTelefone] = useState("");
-    const [ordem, setOrdem] = useState("data_inicio");
+    const [ordem, setOrdem] = useState("numero");
+    const [direcao, setDirecao] = useState("desc");
 
     // Debounce state para buscas textuais (ao clicar em Pesquisar)
     const [searchCidade, setSearchCidade] = useState("");
@@ -50,7 +51,7 @@ export default function CommissionReportsTab() {
     });
 
     const { data: reportData, isLoading } = useQuery({
-        queryKey: ["commission-report", startDate, endDate, cidade, vendedorId, tipoPublicidade, telefone, ordem],
+        queryKey: ["commission-report", startDate, endDate, cidade, vendedorId, tipoPublicidade, telefone, ordem, direcao],
         queryFn: async () => {
             const params = new URLSearchParams({ 
                 start_date: startDate, 
@@ -61,6 +62,7 @@ export default function CommissionReportsTab() {
             if (tipoPublicidade && tipoPublicidade !== "all") params.append("tipo_publicidade", tipoPublicidade);
             if (telefone) params.append("telefone", telefone);
             if (ordem) params.append("ordem", ordem);
+            if (direcao) params.append("direcao", direcao);
 
             const resp = await axios.get(`/v1/admin/reports/commissions?${params.toString()}`);
             return resp.data;
@@ -192,13 +194,19 @@ export default function CommissionReportsTab() {
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Ordem</label>
-                        <Select value={ordem} onValueChange={setOrdem}>
+                        <Select value={`${ordem}|${direcao}`} onValueChange={(val) => {
+                            const [o, d] = val.split('|');
+                            setOrdem(o);
+                            setDirecao(d);
+                        }}>
                             <SelectTrigger className="w-full rounded-xl border-gray-100 bg-gray-50/50 h-10 font-bold text-sm">
                                 <SelectValue placeholder="Selecione..." />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="data_inicio">Data Emissão</SelectItem>
-                                <SelectItem value="nome_fantasia">Nome Fantasia</SelectItem>
+                                <SelectItem value="numero|desc">Número Autorização (Maior para menor)</SelectItem>
+                                <SelectItem value="numero|asc">Número Autorização (Menor para maior)</SelectItem>
+                                <SelectItem value="data_inicio|desc">Data Emissão (Mais recentes)</SelectItem>
+                                <SelectItem value="data_inicio|asc">Data Emissão (Mais antigas)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
