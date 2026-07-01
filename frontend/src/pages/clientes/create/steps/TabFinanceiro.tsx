@@ -36,7 +36,8 @@ import {
     Info,
     Check,
     Undo2,
-    PenTool
+    PenTool,
+    User
 } from "lucide-react";
 import { useFormikContext } from "formik";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,7 @@ import CreateAutorizacaoModal from "../../../financeiro/components/CreateAutoriz
 import PreviewAutorizacaoModal from "../../../financeiro/components/PreviewAutorizacaoModal";
 import AssinaturaModal from "../../../financeiro/components/AssinaturaModal";
 import EditAutorizacaoModal from "../../../financeiro/components/EditAutorizacaoModal";
+import TransferAutorizacaoModal from "../../../financeiro/components/TransferAutorizacaoModal";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -132,6 +134,8 @@ export default function TabFinanceiro() {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isAssinaturaModalOpen, setIsAssinaturaModalOpen] = useState(false);
     const [selectedAuth, setSelectedAuth] = useState<{ id: number, numero: number } | null>(null);
+    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+    const [authToTransfer, setAuthToTransfer] = useState<Autorizacao | null>(null);
 
     // Payment Confirmation Modal States
     const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -777,6 +781,16 @@ export default function TabFinanceiro() {
                                                     )}
 
                                                     <DropdownMenuSeparator className="bg-gray-50" />
+
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setAuthToTransfer(auth);
+                                                            setIsTransferModalOpen(true);
+                                                        }}
+                                                        className="rounded-lg font-bold text-xs gap-2 py-2 text-purple-600 hover:bg-purple-50 cursor-pointer"
+                                                    >
+                                                        <User size={14} /> Transferir Venda
+                                                    </DropdownMenuItem>
 
                                                     <DropdownMenuItem
                                                         onClick={() => {
@@ -1503,6 +1517,18 @@ export default function TabFinanceiro() {
                 }}
                 autorizacao={authToEdit}
                 onSuccess={refetchAuths}
+            />
+
+            <TransferAutorizacaoModal
+                isOpen={isTransferModalOpen}
+                onClose={() => {
+                    setIsTransferModalOpen(false);
+                    setAuthToTransfer(null);
+                }}
+                onSuccess={() => {
+                    refetchAuths();
+                }}
+                autorizacao={authToTransfer}
             />
 
             {/* Modal de Confirmação de Desfazer Pagamento */}
