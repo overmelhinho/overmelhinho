@@ -14,7 +14,7 @@ class MigrateLegacyMedia extends Command
      *
      * @var string
      */
-    protected $signature = 'legacy:migrate-media';
+    protected $signature = 'legacy:migrate-media {--client= : Executa apenas para um ID de cliente específico}';
 
     /**
      * The console command description.
@@ -28,8 +28,13 @@ class MigrateLegacyMedia extends Command
      */
     public function handle()
     {
+        $clientId = $this->option('client');
+        
         $this->info("====================================");
         $this->info(" MIGRANDO MÍDIAS DO SISTEMA LEGADO  ");
+        if ($clientId) {
+            $this->info(" MODO DE TESTE: APENAS CLIENTE {$clientId} ");
+        }
         $this->info("====================================");
 
         $legacy_db = [
@@ -47,7 +52,11 @@ class MigrateLegacyMedia extends Command
         $legacyConn = DB::connection('legacy');
 
         $this->info("-> Buscando Logos no legado...");
-        $clientesComLogo = $legacyConn->table('clientes')->whereNotNull('pj_logotipo')->where('pj_logotipo', '!=', '')->get(['id', 'pj_logotipo', 'pj_nome_fantasia']);
+        $logosQuery = $legacyConn->table('clientes')->whereNotNull('pj_logotipo')->where('pj_logotipo', '!=', '');
+        if ($clientId) {
+            $logosQuery->where('id', $clientId);
+        }
+        $clientesComLogo = $logosQuery->get(['id', 'pj_logotipo', 'pj_nome_fantasia']);
 
         $migrados_logo = 0;
         foreach ($clientesComLogo as $legacyClient) {
@@ -67,8 +76,7 @@ class MigrateLegacyMedia extends Command
                     Storage::disk('public')->put('logos/' . $fileName, $imageContent);
                     
                     $clienteLocal->logo_url = 'logos/' . $fileName;
-                    // disable updated_at so we don't mess up audit/recent updates if not needed, 
-                    // but it's okay to let it update.
+                    $clienteLocal->timestamps = false;
                     $clienteLocal->save();
                     
                     $this->line("  [LOGOS] Baixado para cliente {$clienteLocal->id} - {$clienteLocal->nome_fantasia}");
@@ -79,7 +87,11 @@ class MigrateLegacyMedia extends Command
         $this->info("Total de Logos importadas: {$migrados_logo}\n");
 
         $this->info("-> Buscando Galerias de Imagens...");
-        $todasImagensLegado = $legacyConn->table('clientes_imagens')->get();
+        $galeriasQuery = $legacyConn->table('clientes_imagens');
+        if ($clientId) {
+            $galeriasQuery->where('id_cliente', $clientId);
+        }
+        $todasImagensLegado = $galeriasQuery->get();
 
         $migradas_galeria = 0;
         foreach ($todasImagensLegado as $img) {
