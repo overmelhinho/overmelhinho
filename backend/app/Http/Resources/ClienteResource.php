@@ -83,7 +83,7 @@ class ClienteResource extends JsonResource
             'job_opportunities' => $this->whenLoaded('jobOpportunities'),
 
             'video' => $this->video,
-            'portfolio_url' => $this->portfolio_url,
+            'portfolio_url' => $this->portfolio_url && !Str::startsWith($this->portfolio_url, ['http://', 'https://']) ? asset('storage/' . $this->portfolio_url) : $this->portfolio_url,
             'tipo_arquivo_midia' => $this->tipo_arquivo_midia ?? 'catalogo',
 
             'google_place_id' => $this->google_place_id,
