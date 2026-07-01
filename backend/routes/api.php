@@ -270,6 +270,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::put('/{id}',      [AutorizacaoController::class, 'update']);
         Route::delete('/{id}',   [AutorizacaoController::class, 'destroy']);
         Route::patch('/{id}/cancel', [AutorizacaoController::class, 'cancel']);
+        Route::patch('/{id}/vendedor', [AutorizacaoController::class, 'transferVendedor']);
         Route::post('/{id}/send-link',       [AutorizacaoController::class, 'sendLink']);
         Route::post('/{id}/justify',         [AutorizacaoController::class, 'justify']);
         Route::post('/autorizacoes/{id}/assinatura/base64', [AutorizacaoController::class, 'processSignature']);

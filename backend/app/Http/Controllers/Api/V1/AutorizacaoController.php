@@ -244,6 +244,7 @@ class AutorizacaoController extends Controller
             'responsavel_nome'        => 'nullable|string|max:255',
             'responsavel_preferencia' => 'nullable|string|max:255',
             'responsavel_turno'       => 'nullable|string|max:255',
+            'vendedor_id'             => 'sometimes|exists:users,id',
         ]);
 
         if ($request->has('is_permuta')) {
@@ -419,6 +420,27 @@ class AutorizacaoController extends Controller
         ]);
 
         return response()->json(['success' => true]);
+    }
+
+    // ─── Transferir Vendedor ──────────────────────────────────────────────────
+
+    public function transferVendedor(Request $request, $id)
+    {
+        $autorizacao = Autorizacao::findOrFail($id);
+
+        $validated = $request->validate([
+            'vendedor_id' => 'required|exists:users,id',
+        ]);
+
+        $autorizacao->update([
+            'vendedor_id' => $validated['vendedor_id']
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Vendedor atualizado com sucesso!',
+            'data'    => $autorizacao->fresh()->load('vendedor')
+        ]);
     }
 
     // ─── Gerar PDF ────────────────────────────────────────────────────────────

@@ -1,0 +1,189 @@
+Encontrados 93 enderecos vazios.
+
+Total de enderecos alterados: 92
+
+--- LISTA DE CLIENTES ALTERADOS ---
+ID 32143 - Yang Modeladores
+  -> Novo Endereco: Rui Barbosa, Centro, Farroupilha
+ID 89125 - Jato Arte Comércio e Serviços 
+  -> Novo Endereco: Alvi Azul, São Vendelino, Bento Gonçalves
+ID 114198 - Bernardini Autocenter
+  -> Novo Endereco: Pádova, Medianeira, Farroupilha
+ID 17119 - Granja Bampi
+  -> Novo Endereco: Para São Miguel - FR 21, Interior, Farroupilha
+ID 107083 - Veratto Clínica Integrada
+  -> Novo Endereco: Tiradentes, Centro, Farroupilha
+ID 64528 - Rossler Diagnósticos por Imagem - CIDI (Filial)
+  -> Novo Endereco: Independência, Centro, Farroupilha
+ID 114835 - La Dolce Forneria
+  -> Novo Endereco: Vereador Cibelli, Planalto, Farroupilha
+ID 109223 - Milena Orlandi - Arquiteta
+  -> Novo Endereco: Giruá, Centenário, Farroupilha
+ID 100788 - Rad Flux Centro de Radiologia Odontológica
+  -> Novo Endereco: Salgado Filho, Centro, Carlos Barbosa
+ID 113085 - Ame Residencial para Idosos | Casa de Repouso
+  -> Novo Endereco: Maria Mocellini, Vicentina, Farroupilha
+ID 84149 - Caregnato Piscinas e Equipamentos
+  -> Novo Endereco: João Nicheli, Cinquentenário, Caxias Do Sul
+ID 115619 - Chapa Nobre Lanches
+  -> Novo Endereco: Lino Zanonatto, 1º de Maio, Farroupilha
+ID 36839 - Casa do Mármore | Marmoraria
+  -> Novo Endereco: Francisco Baretta, América, Farroupilha
+ID 116107 - Duo Clean Higienização de Estofados
+  -> Novo Endereco: Antônio Sachet, 1º de Maio, Farroupilha
+ID 32913 - Estela Eugenia Cavaletti - Pedagoga Clínica
+  -> Novo Endereco: da República, Centro, Farroupilha
+ID 51128 - Faces Radiologia - Serviço de Imagens em Odontologia
+  -> Novo Endereco: Tiradentes, Centro, Farroupilha
+ID 16855 - Impressiart Mimos | Ruth Cópias
+  -> Novo Endereco: Tiradentes, Centro, Farroupilha
+ID 17008 - Auto Elétrica Bentaqui 
+  -> Novo Endereco: ERS 122, Do Parque, Farroupilha
+ID 17559 - Churrascaria e Restaurante Ronda Charrua
+  -> Novo Endereco: RSC 453 Acesso a Caravaggio - , Cinquentenário, Farroupilha
+ID 17685 - Gustavo Bolognesi - Psiquiatra
+  -> Novo Endereco: Júlio de Castilhos, Centro, Farroupilha
+ID 24214 - Romagna Seguros - Corretora de Seguros e Locadora de Veículos
+  -> Novo Endereco: Paim Filho, Centro, Farroupilha
+ID 25123 - Farmácia Drofar
+  -> Novo Endereco: Júlio de Castilhos, Centro, Farroupilha
+ID 26294 - Ponto Econômico
+  -> Novo Endereco: Coronel Pena de Moraes, Centro, Farroupilha
+ID 30499 - Colloda e Valentini Adv. Associados
+  -> Novo Endereco: Coronel Pena de Moraes, Centro, Farroupilha
+ID 31865 - Minassul Matriz | Brita e Areia
+  -> Novo Endereco: Caravaggio, Caravaggio, Farroupilha
+ID 48514 - Chaveiro Casagrande
+  -> Novo Endereco: Minas Gerais, Bela Vista, Farroupilha
+ID 56757 - Autoelétrica FarCar
+  -> Novo Endereco: Giácomo F. Broilo, Vicentina, Farroupilha
+ID 64156 - Assumpção Basalto
+  -> Novo Endereco: RS 122, Nova Milano, Farroupilha
+ID 69910 - Pop Dog Pet Shop
+  -> Novo Endereco: Rui Barbosa, Centro, Farroupilha
+ID 72605 - Designer Móveis
+  -> Novo Endereco: RST 453, Planalto, Farroupilha
+ID 74775 - Ari Antônio Dallegrave Advogado
+  -> Novo Endereco: Garibaldi, Exposição, Caxias Do Sul
+ID 74792 - Baldisserotto e Capaverde Adv. Associados
+  -> Novo Endereco: Júlio de Castilhos, Centro, Caxias Do Sul
+ID 74932 - Claudia Chiarello Hoehr Collato Advogada
+  -> Novo Endereco: Os Dezoito do Forte, São Pelegrino, Caxias Do Sul
+ID 74935 - Munaro, Menegat & Jablonski Adv.
+  -> Novo Endereco: Sinimbú, Centro, Caxias Do Sul
+ID 74978 - Dinnebier Quevedo e Muterle Adv. Associados
+  -> Novo Endereco: Sinimbú, Centro, Caxias Do Sul
+ID 75044 - Evandro Daniel Kayser - Advogado
+  -> Novo Endereco: Rio Branco, São Pelegrino, Caxias Do Sul
+ID 75128 - Karnal Adv.
+  -> Novo Endereco: Borges de Medeiros, Centro, Caxias Do Sul
+ID 75328 - Nelson Luiz Sperotto Advogado
+  -> Novo Endereco: Borges de Medeiros, Centro, Caxias Do Sul
+ID 88457 - Lopes e Pauletto Adv. Associados
+  -> Novo Endereco: Moreira César, Centro, Caxias Do Sul
+ID 88891 - Giorni Felici Lar & Repouso | Casa de Repouso
+  -> Novo Endereco: Marcelino Champagnat, Borgo, Bento Gonçalves
+ID 100758 - Simone Turcatti - Nutricionista
+  -> Novo Endereco: Independência, Centro, Farroupilha
+ID 101215 - Borsoi Dariff & Bernardi Adv.
+  -> Novo Endereco: da República, Centro, Farroupilha
+ID 102221 - Esquadrias Heck
+  -> Novo Endereco: Adolíbio Seibel, Dom Vicente, Bom Princípio
+ID 104320 - Gráfica Orige
+  -> Novo Endereco: Alegrete, Boa Vista, Novo Hamburgo
+ID 106532 - Giovana Stein Gourmet & Garden
+  -> Novo Endereco: Ely, Interior, Farroupilha
+ID 108409 - RB Stúdio de Pilates e Treinamento Funcional
+  -> Novo Endereco: Thomas Edison, Centro, Farroupilha
+ID 108466 - Villa Festas e Eventos | Iupi Festas 
+  -> Novo Endereco: Filisbino Franscischini, Imigrante, Farroupilha
+ID 109635 - Hospital Veterinário Pet por Pet | Veterinária 24hs
+  -> Novo Endereco: Aurélio Bitencourt, Centro, Garibaldi
+ID 109966 - Vegas Burger Farroupilha
+  -> Novo Endereco: Domênico Fin, São Roque, Farroupilha
+ID 112867 - Restaurante Tempero Caseiro
+  -> Novo Endereco: Praça João Correa, Centro, Canela
+ID 113857 - Clínica Domelle
+  -> Novo Endereco: Rui Barbosa, Centro, Farroupilha
+ID 114856 - Pet por Pet - Petshop
+  -> Novo Endereco: Buarque de Macedo, Santa Terezinha, Garibaldi
+ID 114959 - Vida Card Cartão de Saúde
+  -> Novo Endereco: Vinte de Setembro, Centro, Caxias Do Sul
+ID 116061 - Make Mais Cosméticos
+  -> Novo Endereco: Coronel Pena de Moraes, Centro, Farroupilha
+ID 116065 - Serralheria FJS
+  -> Novo Endereco: Ernesto Carlotto, Planalto, Carlos Barbosa
+ID 116089 - Lelê Climatização e Refrigeração
+  -> Novo Endereco: Vazio, vazio, Caxias Do Sul
+ID 116091 - Rede HG Smart - Loja de celulares
+  -> Novo Endereco: Vazio, Vazio, Farroupilha
+ID 116097 - Recanto Sereno l Casa de Repouso Farroupilha
+  -> Novo Endereco: Vicente Zamboni, Do Parque, Farroupilha
+ID 116099 - C&D Climatização
+  -> Novo Endereco: Vazio, Vazio, Farroupilha
+ID 116101 - Fiore | Móveis Sob Medida
+  -> Novo Endereco: Vazio, Vazio, Farroupilha
+ID 116105 - Sitio Espaço do Sossego
+  -> Novo Endereco: Vazio, Vazio, Farroupilha
+ID 116109 - La Bella Cortinas
+  -> Novo Endereco: Júlio de Castilhos, Centro, Farroupilha
+ID 116111 - Bibi Vipdriver | Farroupilha
+  -> Novo Endereco: Vazio, Vazio, Farroupilha
+ID 116115 - Marli | Banho e Tosa
+  -> Novo Endereco: Vazio, Vazio, Farroupilha
+ID 116117 - Diego Rebelatto - Veterinário
+  -> Novo Endereco: Vazio, Vazio, Bento Gonçalves
+ID 116119 - Crb Drywall | Gesso acartonado em Bento Gonçalves
+  -> Novo Endereco: Arthur Ziegler, Licorsul, Bento Gonçalves
+ID 116121 - GenusMed | Clínica de Medicina no Trabalho
+  -> Novo Endereco: Carlos Fetter, Centro, Farroupilha
+ID 116127 - Restaurante Olivetto
+  -> Novo Endereco: Júlio de Castilhos, Lourdes, Caxias Do Sul
+ID 114986 - Consultas Espirituais | Pai Carlos de Ogum
+  -> Novo Endereco: Vazio, Vazio, Farroupilha
+ID 110801 - Kaneka Personalizações
+  -> Novo Endereco: Tiradentes, Centro, Farroupilha
+ID 48814 - Fernanda Neis - Quiropraxista
+  -> Novo Endereco: Pinheiro Machado, Centro, Farroupilha
+ID 60537 - Grupo A Arquitetura | Arquitetos
+  -> Novo Endereco: Pinheiro Machado, Centro, Farroupilha
+ID 115726 - Premium Óptica e Joalheria
+  -> Novo Endereco: Pinheiro Machado, Centro, Farroupilha
+ID 18633 - Rossler Diagnósticos por Imagem - CIDI (Matriz)
+  -> Novo Endereco: Rui Barbosa, Centro, Farroupilha
+ID 20612 - Monique Transportes
+  -> Novo Endereco: Ângelo Gardini, Volta Grande, Farroupilha
+ID 25211 - Gülden Adv.
+  -> Novo Endereco: Pinheiro Machado, Centro, Farroupilha
+ID 56898 - FarroupilhaCred - Empréstimos e Financiamentos
+  -> Novo Endereco: Coronel Pena de Moraes, Centro, Farroupilha
+ID 83806 - Ótica Lauro
+  -> Novo Endereco: Garibaldi, Centro, Caxias Do Sul
+ID 106706 - AGS Móveis Sob Medida
+  -> Novo Endereco: 21 de Abril, Centro, Carlos Barbosa
+ID 107037 - ConAmore Estética Animal
+  -> Novo Endereco: 13 de Maio, Centro, Farroupilha
+ID 107981 - Ana Paula Ozelame Cirurgiã Dentista
+  -> Novo Endereco: Marechal Deodoro, Centro, Bento Gonçalves
+ID 112825 - OdontoTop Hospital do Dente | Clínica Odontológica
+  -> Novo Endereco: Coronel Pena de Moraes, Centro, Farroupilha
+ID 60999 - Toca dos Bichos Veterinária | Pet Shop
+  -> Novo Endereco: Ângelo Antonello, Centro, Farroupilha
+ID 16673 - Serraria Rech 
+  -> Novo Endereco: Serraria, Nova Milano, Farroupilha
+ID 63231 - Meta Ferragens 
+  -> Novo Endereco: Mal. Deodoro da Fonseca, São Roque, Farroupilha
+ID 101328 - Clip Casa
+  -> Novo Endereco: Coronel Pena de Moraes, Centro, Farroupilha
+ID 107693 - Rádio Tamaran FM 
+  -> Novo Endereco: Hugo Specht , Centro, Salvador do Sul
+ID 74959 - D'Agostini Rauch & Toffoli Adv.
+  -> Novo Endereco: Garibaldi, Centro, Caxias Do Sul
+ID 75076 - Kury Adv. Associados
+  -> Novo Endereco: Sinimbú, Centro, Caxias Do Sul
+ID 75081 - Frederico Lenor Mazzochi - Advogado
+  -> Novo Endereco: BR 116, São Ciro, Caxias Do Sul
+ID 75330 - Perottoni Advogados
+  -> Novo Endereco: Carlos Giesen, Exposição, Caxias Do Sul
+ID 75337 - Odete Negri - Advogada
+  -> Novo Endereco: Júlio de Castilhos, N. Sra. de Lourdes, Caxias Do Sul
