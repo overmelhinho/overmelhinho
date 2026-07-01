@@ -165,6 +165,64 @@ class MigrateLegacyMedia extends Command
             }
         }
         $this->info("Total de Fotos de Galeria importadas: {$migradas_galeria}\n");
+
+        $this->info("-> Buscando Cardápios/Portfólios no legado...");
+        $cardapiosQuery = $legacyConn->table('clientes')->whereNotNull('cardapio')->where('cardapio', '!=', '');
+        if ($clientId) {
+            $cardapiosQuery->where('id', $clientId);
+        } elseif (!empty($clientIdsToMigrate)) {
+            $cardapiosQuery->whereIn('id', $clientIdsToMigrate);
+        }
+        $clientesComCardapio = $cardapiosQuery->get(['id', 'pj_nome_fantasia', 'cardapio', 'visualiza_cardapio', 'visualiza_catalogo']);
+
+        $migrados_cardapio = 0;
+        foreach ($clientesComCardapio as $legacyClient) {
+            $clienteLocal = Cliente::where('id', $legacyClient->id)->first();
+
+            if ($clienteLocal && empty($clienteLocal->portfolio_url)) {
+                $urlCardapio = trim($legacyClient->cardapio);
+                
+                // Determine the correct media type based on legacy settings
+                $tipoMidia = 'portfolio'; // fallback
+                if (isset($legacyClient->visualiza_catalogo) && $legacyClient->visualiza_catalogo === 'Sim') {
+                    $tipoMidia = 'catalogo';
+                } elseif (isset($legacyClient->visualiza_cardapio) && $legacyClient->visualiza_cardapio === 'Sim') {
+                    $tipoMidia = 'cardapio';
+                }
+
+                if (str_contains(strtolower($urlCardapio), 'overmelhinho.com.br') || str_contains(strtolower($urlCardapio), '.pdf')) {
+                    // Try to download PDF
+                    $fileContent = @file_get_contents($urlCardapio);
+                    if ($fileContent !== false) {
+                        $fileName = time() . '_' . basename(parse_url($urlCardapio, PHP_URL_PATH));
+                        if (empty($fileName) || $fileName == time().'_') {
+                            $fileName = time() . '_cardapio.pdf';
+                        }
+
+                        Storage::disk('public')->put('cardapios/' . $fileName, $fileContent);
+
+                        $clienteLocal->portfolio_url = 'cardapios/' . $fileName;
+                        $clienteLocal->tipo_arquivo_midia = $tipoMidia;
+                        $clienteLocal->timestamps = false;
+                        $clienteLocal->save();
+
+                        $this->line("  [CARDAPIO] PDF baixado para cliente {$clienteLocal->id} - {$clienteLocal->nome_fantasia}");
+                        $migrados_cardapio++;
+                    }
+                } else {
+                    // It's an external link
+                    $clienteLocal->portfolio_url = $urlCardapio;
+                    $clienteLocal->tipo_arquivo_midia = $tipoMidia;
+                    $clienteLocal->timestamps = false;
+                    $clienteLocal->save();
+
+                    $this->line("  [CARDAPIO] Link salvo para cliente {$clienteLocal->id} - {$clienteLocal->nome_fantasia}");
+                    $migrados_cardapio++;
+                }
+            }
+        }
+        $this->info("Total de Cardápios/Portfólios importados: {$migrados_cardapio}\n");
+
         $this->info("MIGRAÇÃO CONCLUÍDA!");
     }
 }
