@@ -36,7 +36,7 @@ export default function CommissionReportsTab() {
     const [tipoPublicidade, setTipoPublicidade] = useState("all");
     const [telefone, setTelefone] = useState("");
     const [ordem, setOrdem] = useState("numero");
-    const [direcao, setDirecao] = useState("desc");
+    const [direcao, setDirecao] = useState("asc");
 
     // Debounce state para buscas textuais (ao clicar em Pesquisar)
     const [searchCidade, setSearchCidade] = useState("");

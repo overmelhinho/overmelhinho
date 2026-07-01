@@ -479,8 +479,8 @@ class ReportController extends Controller
 
         $query = Autorizacao::with(['cliente.enderecos', 'cliente.contatos', 'vendedor']);
 
-        // Data filter (by data_inicio or created_at, legacy usually uses emissao/data_inicio)
-        $query->whereBetween('data_inicio', [$startDate, $endDate]);
+        // Data filter (by created_at, which represents emissao/data_cadastro)
+        $query->whereBetween(DB::raw('DATE(created_at)'), [$startDate, $endDate]);
 
         // Vendedor filter
         if ($request->filled('vendedor_id')) {
@@ -508,14 +508,17 @@ class ReportController extends Controller
 
         // Ordem
         $orderBy = $request->ordem ?? 'numero';
-        $direction = $request->direcao ?? 'desc';
+        if ($orderBy === 'data_inicio') {
+            $orderBy = 'created_at';
+        }
+        $direction = $request->direcao ?? 'asc';
         if ($orderBy === 'nome_fantasia') {
             $query->join('clientes', 'autorizacoes.cliente_id', '=', 'clientes.id')
                   ->orderBy('clientes.nome_fantasia', $direction)
                   ->select('autorizacoes.*');
         } elseif ($orderBy === 'numero') {
-            // Sort numerically if it's a number, otherwise as 0
-            $query->orderByRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END " . $direction);
+            // Sort numerically by extracting only the leading digits
+            $query->orderByRaw("CAST(NULLIF(SUBSTRING(numero FROM '^[0-9]+'), '') AS INTEGER) " . $direction);
         } else {
             $query->orderBy($orderBy, $direction);
         }
@@ -525,7 +528,7 @@ class ReportController extends Controller
         $data = $autorizacoes->map(function ($auth) {
             return [
                 'id' => $auth->id,
-                'emissao' => $auth->data_inicio ? $auth->data_inicio->format('d/m/Y') : null,
+                'emissao' => $auth->created_at ? $auth->created_at->format('d/m/Y') : null,
                 'cliente_nome' => $auth->cliente->nome_fantasia ?? $auth->cliente->razao_social ?? 'N/A',
                 'numero' => $auth->numero,
                 'tipo_publicidade' => mb_strtoupper($auth->tipo_publicidade),
