@@ -30,6 +30,7 @@ interface Quote {
     service_requested: string;
     urgency: 'pesquisa' | 'semana' | 'emergencia';
     status: 'new' | 'replied' | 'closed';
+    ai_draft_response?: string | null;
     notified_at?: string;
     created_at: string;
     cliente: {
@@ -61,6 +62,7 @@ export default function QuotesPage() {
     const [statusFilter, setStatusFilter] = useState("");
     const [period, setPeriod] = useState("all");
     const [customDates, setCustomDates] = useState({ start: "", end: "" });
+    const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
 
     const updateStatusMutation = useMutation({
         mutationFn: async (quoteId: number) => {
@@ -360,7 +362,15 @@ export default function QuotesPage() {
                                                 <User size={14} className="text-gray-400" />
                                                 <span className="text-sm font-bold text-gray-900">{quote.customer_name}</span>
                                             </div>
-                                            <span className="text-xs text-gray-500 line-clamp-1 mt-1 font-medium">{quote.service_requested}</span>
+                                            <div 
+                                                className="cursor-pointer group/msg mt-1 inline-block" 
+                                                onClick={() => setSelectedQuote(quote)}
+                                                title="Clique para ler a mensagem completa"
+                                            >
+                                                <span className="text-xs text-gray-500 line-clamp-1 font-medium group-hover/msg:text-gray-900 transition-colors border-b border-dashed border-transparent group-hover/msg:border-gray-300">
+                                                    {quote.service_requested}
+                                                </span>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-8 py-6">
@@ -450,6 +460,67 @@ export default function QuotesPage() {
                             ))}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Modal de Detalhes da Mensagem */}
+            {selectedQuote && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" onClick={() => setSelectedQuote(null)}>
+                    <div 
+                        className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <div>
+                                <h3 className="text-lg font-black text-gray-900">Detalhes da Solicitação</h3>
+                                <p className="text-xs text-gray-500 font-medium mt-1">Enviado por <strong className="text-gray-900">{selectedQuote.customer_name}</strong> • {selectedQuote.customer_whatsapp}</p>
+                            </div>
+                            <button 
+                                onClick={() => setSelectedQuote(null)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <div className="mb-6">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Mensagem do Cliente</label>
+                                <div className="p-4 bg-gray-50 rounded-[20px] text-sm text-gray-700 font-medium whitespace-pre-wrap border border-gray-100">
+                                    {selectedQuote.service_requested}
+                                </div>
+                            </div>
+                            
+                            {selectedQuote.ai_draft_response && (
+                                <div className="mb-6">
+                                    <label className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                        🤖 Sugestão da IA
+                                    </label>
+                                    <div className="p-4 bg-red-50/50 rounded-[20px] text-sm text-gray-700 font-medium whitespace-pre-wrap border border-red-100 italic">
+                                        "{selectedQuote.ai_draft_response}"
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedQuote.notified_at && (
+                                <div>
+                                    <label className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                        <CheckCircle2 size={12} /> Status de Notificação
+                                    </label>
+                                    <p className="text-xs text-gray-500">
+                                        E-mail automático disparado para a empresa em <strong className="text-gray-900">{format(new Date(selectedQuote.notified_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}</strong>.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+                            <button 
+                                onClick={() => setSelectedQuote(null)}
+                                className="px-8 py-3 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-colors shadow-xl shadow-gray-200"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </DashboardLayout>
