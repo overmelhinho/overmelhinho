@@ -507,12 +507,15 @@ class ReportController extends Controller
         }
 
         // Ordem
-        $orderBy = $request->ordem ?? 'data_inicio';
-        $direction = $request->direcao ?? 'asc';
+        $orderBy = $request->ordem ?? 'numero';
+        $direction = $request->direcao ?? 'desc';
         if ($orderBy === 'nome_fantasia') {
             $query->join('clientes', 'autorizacoes.cliente_id', '=', 'clientes.id')
                   ->orderBy('clientes.nome_fantasia', $direction)
                   ->select('autorizacoes.*');
+        } elseif ($orderBy === 'numero') {
+            // Sort numerically if it's a number, otherwise as 0
+            $query->orderByRaw("CASE WHEN numero ~ '^[0-9]+$' THEN CAST(numero AS INTEGER) ELSE 0 END " . $direction);
         } else {
             $query->orderBy($orderBy, $direction);
         }
