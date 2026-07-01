@@ -14,7 +14,7 @@ class MigrateLegacyMedia extends Command
      *
      * @var string
      */
-    protected $signature = 'legacy:migrate-media {--client= : Executa apenas para um ID de cliente específico} {--clientes= : Múltiplos IDs separados por vírgula} {--recent-pagantes : Executa para todos os clientes pagantes dos últimos 60 dias}';
+    protected $signature = 'legacy:migrate-media {--client= : Executa apenas para um ID de cliente específico} {--clientes= : Múltiplos IDs separados por vírgula} {--recent-pagantes : Executa para todos os clientes pagantes dos últimos 60 dias} {--only-portfolios : Pula logos e galerias, baixando apenas cardápios e portfólios}';
 
     /**
      * The console command description.
@@ -74,14 +74,17 @@ class MigrateLegacyMedia extends Command
         config(['database.connections.legacy' => $legacy_db]);
         $legacyConn = DB::connection('legacy');
 
-        $this->info("-> Buscando Logos no legado...");
-        $logosQuery = $legacyConn->table('clientes')->whereNotNull('pj_logotipo')->where('pj_logotipo', '!=', '');
-        if ($clientId) {
-            $logosQuery->where('id', $clientId);
-        } elseif (!empty($clientIdsToMigrate)) {
-            $logosQuery->whereIn('id', $clientIdsToMigrate);
-        }
-        $clientesComLogo = $logosQuery->get(['id', 'pj_logotipo', 'pj_nome_fantasia']);
+        $onlyPortfolios = $this->option('only-portfolios');
+
+        if (!$onlyPortfolios) {
+            $this->info("-> Buscando Logos no legado...");
+            $logosQuery = $legacyConn->table('clientes')->whereNotNull('pj_logotipo')->where('pj_logotipo', '!=', '');
+            if ($clientId) {
+                $logosQuery->where('id', $clientId);
+            } elseif (!empty($clientIdsToMigrate)) {
+                $logosQuery->whereIn('id', $clientIdsToMigrate);
+            }
+            $clientesComLogo = $logosQuery->get(['id', 'pj_logotipo', 'pj_nome_fantasia']);
 
         $migrados_logo = 0;
         foreach ($clientesComLogo as $legacyClient) {
@@ -108,11 +111,11 @@ class MigrateLegacyMedia extends Command
                     $migrados_logo++;
                 }
             }
-        }
-        $this->info("Total de Logos importadas: {$migrados_logo}\n");
+            }
+            $this->info("Total de Logos importadas: {$migrados_logo}\n");
 
-        $this->info("-> Buscando Galerias de Imagens...");
-        $galeriasQuery = $legacyConn->table('clientes_imagens');
+            $this->info("-> Buscando Galerias de Imagens...");
+            $galeriasQuery = $legacyConn->table('clientes_imagens');
         if ($clientId) {
             $galeriasQuery->where('id_cliente', $clientId);
         } elseif (!empty($clientIdsToMigrate)) {
@@ -163,8 +166,8 @@ class MigrateLegacyMedia extends Command
                     }
                 }
             }
+            $this->info("Total de Fotos de Galeria importadas: {$migradas_galeria}\n");
         }
-        $this->info("Total de Fotos de Galeria importadas: {$migradas_galeria}\n");
 
         $this->info("-> Buscando Cardápios/Portfólios no legado...");
         $cardapiosQuery = $legacyConn->table('clientes')->whereNotNull('cardapio')->where('cardapio', '!=', '');

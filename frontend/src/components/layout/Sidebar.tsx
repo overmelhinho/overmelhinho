@@ -40,7 +40,7 @@ export default function Sidebar() {
   const { data: auditCount } = useQuery({
     queryKey: ['audit-pending-count'],
     queryFn: async () => {
-      const resp = await api.get('/v1/audit/queue', { params: { per_page: 1, status: 'pending' } });
+      const resp = await api.get('/v1/audit/queue', { params: { per_page: 1, status: 'manual_review' } });
       return resp.data.meta?.total || 0;
     },
     refetchInterval: 1000 * 60 * 5 // 5 min
