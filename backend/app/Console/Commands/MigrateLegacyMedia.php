@@ -14,7 +14,7 @@ class MigrateLegacyMedia extends Command
      *
      * @var string
      */
-    protected $signature = 'legacy:migrate-media {--client= : Executa apenas para um ID de cliente específico} {--recent-pagantes : Executa para todos os clientes pagantes dos últimos 60 dias}';
+    protected $signature = 'legacy:migrate-media {--client= : Executa apenas para um ID de cliente específico} {--clientes= : Múltiplos IDs separados por vírgula} {--recent-pagantes : Executa para todos os clientes pagantes dos últimos 60 dias}';
 
     /**
      * The console command description.
@@ -29,19 +29,25 @@ class MigrateLegacyMedia extends Command
     public function handle()
     {
         $clientId = $this->option('client');
+        $clientesStr = $this->option('clientes');
         $recentPagantes = $this->option('recent-pagantes');
         
         $this->info("====================================");
         $this->info(" MIGRANDO MÍDIAS DO SISTEMA LEGADO  ");
         if ($clientId) {
             $this->info(" MODO DE TESTE: APENAS CLIENTE {$clientId} ");
+        } elseif ($clientesStr) {
+            $this->info(" MODO: MÚLTIPLOS CLIENTES ({$clientesStr}) ");
         } elseif ($recentPagantes) {
             $this->info(" MODO: CLIENTES PAGANTES DOS ÚLTIMOS 60 DIAS ");
         }
         $this->info("====================================");
 
         $clientIdsToMigrate = [];
-        if ($recentPagantes) {
+        if ($clientesStr) {
+            $clientIdsToMigrate = array_filter(array_map('trim', explode(',', $clientesStr)));
+            $this->info("Executando para " . count($clientIdsToMigrate) . " clientes específicos.");
+        } elseif ($recentPagantes) {
             $clientIdsToMigrate = \App\Models\Autorizacao::where('created_at', '>=', now()->subDays(60))
                 ->pluck('cliente_id')
                 ->filter()
@@ -72,7 +78,7 @@ class MigrateLegacyMedia extends Command
         $logosQuery = $legacyConn->table('clientes')->whereNotNull('pj_logotipo')->where('pj_logotipo', '!=', '');
         if ($clientId) {
             $logosQuery->where('id', $clientId);
-        } elseif ($recentPagantes) {
+        } elseif (!empty($clientIdsToMigrate)) {
             $logosQuery->whereIn('id', $clientIdsToMigrate);
         }
         $clientesComLogo = $logosQuery->get(['id', 'pj_logotipo', 'pj_nome_fantasia']);
@@ -109,7 +115,7 @@ class MigrateLegacyMedia extends Command
         $galeriasQuery = $legacyConn->table('clientes_imagens');
         if ($clientId) {
             $galeriasQuery->where('id_cliente', $clientId);
-        } elseif ($recentPagantes) {
+        } elseif (!empty($clientIdsToMigrate)) {
             $galeriasQuery->whereIn('id_cliente', $clientIdsToMigrate);
         }
         $todasImagensLegado = $galeriasQuery->get();
