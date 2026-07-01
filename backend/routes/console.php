@@ -20,3 +20,7 @@ Schedule::command('renewals:generate')->monthlyOn(1, '01:00');
 
 // Auditoria Inteligente: Varredura de dados na internet
 Schedule::command('audit:scan --limit=50')->dailyAt('02:00');
+
+// Relatório Diário de Orçamentos IA
+// Roda todos os dias às 06:00 (horário de Brasília) para enviar o resumo do dia anterior
+Schedule::command('app:send-daily-quotes-report')->timezone('America/Sao_Paulo')->dailyAt('06:00');
