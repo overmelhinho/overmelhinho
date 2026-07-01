@@ -217,7 +217,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/lead-intel/fetch', [LeadIntelController::class , 'fetch']);
 
-    Route::get('/comerciais', fn() => \App\Models\User::role(['Comercial', 'Administrador', 'Admin', 'Diretor'])->get(['id', 'name', 'email']));
+    Route::get('/comerciais', fn() => \App\Models\User::role(['Comercial', 'Administrador', 'Admin', 'Diretor', 'Operador Geral'])->get(['id', 'name', 'email']));
 
     Route::post('/segmentos', [SegmentoController::class , 'store']);
 
