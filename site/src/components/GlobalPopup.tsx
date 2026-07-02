@@ -30,6 +30,8 @@ export default function GlobalPopup() {
         if (lastShow !== today) {
             setAd(ads[0]); // Pega o primeiro popup ativo
             setIsOpen(true);
+            // Grava imediatamente para evitar que exiba de novo se o usuário sair sem fechar
+            localStorage.setItem('last_popup_show', today);
         }
     }, [ads]);
 

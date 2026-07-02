@@ -882,7 +882,7 @@ export default function ClientProfileClient() {
                                     className="space-y-10"
                                 >
                                     <section className="space-y-6">
-                                        <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Sobre a {client.nome_fantasia}</h2>
+                                        <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Sobre {client.nome_fantasia}</h2>
                                         <div>
                                             <p className={`text-gray-500 leading-relaxed text-sm md:text-lg font-medium whitespace-pre-line break-words ${!isDescriptionExpanded ? 'line-clamp-4 md:line-clamp-none' : ''}`}>
                                                 {client.descricao || `O ${client.nome_fantasia} oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.`}
