@@ -382,29 +382,21 @@ function SearchContent() {
         return null;
     }, [allResults, query]);
 
-    const qNorm = query ? query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
-
-    const exactMatches = allResults.filter((item: any, idx: number) => {
-        if (matchPerfeito && item.id === matchPerfeito.id) return false;
+    const blocks: { type: 'cards' | 'list', items: any[] }[] = [];
+    let currentBlock: { type: 'cards' | 'list', items: any[] } | null = null;
+    
+    allResults.forEach((item: any) => {
+        if (matchPerfeito && item.id === matchPerfeito.id) return;
+        
         const isPagante = item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura);
-        if (isPagante) return false;
+        const type = isPagante ? 'cards' : 'list';
         
-        const nNorm = item.nome_fantasia ? item.nome_fantasia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
-        const altNorm = item.nome_alternativo ? item.nome_alternativo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
-        const segNorm = item.segmentos && item.segmentos.length > 0 ? item.segmentos[0].nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
-        
-        return qNorm.length > 2 && (nNorm.includes(qNorm) || altNorm.includes(qNorm) || segNorm.includes(qNorm));
+        if (!currentBlock || currentBlock.type !== type) {
+            currentBlock = { type, items: [] };
+            blocks.push(currentBlock);
+        }
+        currentBlock.items.push(item);
     });
-
-    const destaques = allResults.filter((item: any, idx: number) => {
-        if (matchPerfeito && item.id === matchPerfeito.id) return false;
-        return item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura);
-    });
-    
-    const ignoreIds = new Set([...exactMatches.map((i: any) => i.id), ...destaques.map((i: any) => i.id)]);
-    if (matchPerfeito) ignoreIds.add(matchPerfeito.id);
-    
-    const outrosResultados = allResults.filter((item: any) => !ignoreIds.has(item.id));
 
     const selectedMapItem = useMemo(() => allResults.find((r: any) => r.id === selectedMapResult), [allResults, selectedMapResult]);
 
@@ -650,167 +642,130 @@ function SearchContent() {
 
 
 
-                        {/* 1.5 EXACT MATCHES (Gratuitos Altamente Relevantes) */}
-                        {!isLoading && exactMatches.length > 0 && (
-                            <section className="space-y-4 mb-8">
-                                <div className="bg-white rounded-[4rem] shadow-2xl border border-white overflow-hidden p-2">
-                                    {exactMatches.map((item: any, idx: number) => {
-                                        return (
+                        {/* HEADER DA BUSCA */}
+                        {!isLoading && allResults.length > 0 && (
+                            <div className="flex justify-between items-end px-2 mb-6">
+                                <h3 className="text-base md:text-xl font-black text-gray-900 tracking-tight font-serif flex flex-wrap items-center gap-1.5 md:gap-2 leading-relaxed">
+                                    <span>Encontramos</span>
+                                    <span className="text-brand-red bg-red-50/80 px-2.5 py-1 rounded-xl border border-red-100 text-xs md:text-sm font-black shadow-sm tracking-wide">
+                                        {allResults.length} {allResults.length === 1 ? 'resultado' : 'resultados'}
+                                    </span>
+                                    <span>em</span>
+                                    <button
+                                        onClick={() => setIsCityModalOpen(true)}
+                                        className="inline-flex items-center px-4 py-2 bg-brand-red text-white hover:bg-brand-red/90 rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all group cursor-pointer border-b-4 border-red-800"
+                                    >
+                                        <span>{cityName || 'Qualquer Cidade'}</span>
+                                        <ChevronDown size={14} className="ml-1.5 group-hover:translate-y-0.5 transition-transform duration-300" />
+                                    </button>
+                                    <span>para você</span>
+                                </h3>
+                            </div>
+                        )}
+
+                        {/* RENDERIZAÇÃO SEQUENCIAL DOS BLOCOS */}
+                        {!isLoading && blocks.map((block, blockIdx) => (
+                            block.type === 'cards' ? (
+                                <section key={`block-${blockIdx}`} className="space-y-8 mb-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {block.items.map((item: any) => (
                                             <div
                                                 key={item.id}
                                                 onClick={() => router.push(getClientLink(item))}
                                                 onMouseEnter={() => setHoveredResult(item.id)}
                                                 onMouseLeave={() => setHoveredResult(null)}
-                                                className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== exactMatches.length - 1 ? 'border-b border-gray-50' : ''}`}
+                                                className="bg-white rounded-[2rem] md:rounded-[2rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer flex flex-col"
                                             >
-                                                <div className="flex items-center space-x-4 md:space-x-6">
-                                                    <div className="space-y-0.5">
-                                                        <div className="flex items-center space-x-2">
-                                                            <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-base md:text-lg leading-tight">{item.nome_fantasia}</h5>
+                                                <div className="h-20 md:h-24 overflow-hidden relative flex-shrink-0">
+                                                    {item.banner_url || item.galeria?.[0]?.url ? (
+                                                        <img src={item.banner_url || item.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-brand-red/10 group-hover:scale-110 transition-transform duration-1000"></div>
+                                                    )}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                                                </div>
+                                                <div className="px-4 pb-6 md:px-5 md:pb-6 pt-1 relative flex-1 flex flex-col">
+                                                    {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
+                                                        <div className="absolute -top-10 md:-top-12 left-4 md:left-5 w-20 h-20 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500">
+                                                            <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1.3rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
                                                         </div>
-                                                        <p className="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
-                                                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                                                            <span className="flex items-center text-[9px] font-black text-brand-red bg-red-50/80 px-2 py-0.5 rounded-lg border border-red-100 uppercase tracking-wider">
-                                                                <MapPin size={10} className="mr-1" />
+                                                    )}
+                                                    <div className="pt-12 md:pt-14 space-y-2 flex-1 flex flex-col">
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <h4 className="text-base md:text-lg font-black text-gray-900 tracking-tight font-serif italic leading-tight break-words flex-1">{item.nome_fantasia}</h4>
+                                                            {isExpansionClient(item) && (
+                                                                <div className="flex flex-col items-end flex-shrink-0">
+                                                                    <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">✨ ATENDE AQUI</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
+                                                            <span className="flex items-center text-[9px] font-black text-brand-red bg-red-50/80 px-2.5 py-1 rounded-lg border border-red-100 uppercase tracking-wider shadow-sm">
+                                                                <MapPin size={11} className="mr-1" />
                                                                 {item.enderecos?.[0]?.cidade || 'Local'}
                                                             </span>
                                                             {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
-                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider">
+                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[100px]">
                                                                     {item.enderecos[0].bairro}
+                                                                </span>
+                                                            )}
+                                                            {getTodayStatus(item) && (
+                                                                <span className={`${getTodayStatus(item)?.open ? 'text-green-500 bg-green-50/80 border-green-100' : 'text-brand-red bg-red-50/80 border-red-100'} font-black flex items-center text-[9px] uppercase tracking-wider px-2 py-1 rounded-lg border`}>
+                                                                    <div className={`w-1 h-1 ${getTodayStatus(item)?.open ? 'bg-green-500' : 'bg-brand-red'} rounded-full mr-1 ${getTodayStatus(item)?.open ? 'animate-pulse' : ''}`}></div>
+                                                                    {getTodayStatus(item)?.label}
                                                                 </span>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            </section>
-                        )}
-
-                        {/* 2. RECOMENDADOS */}
-                        {!isLoading && destaques.length > 0 && (
-                            <section className="space-y-8">
-                                <div className="flex justify-between items-end px-2">
-                                    <h3 className="text-base md:text-xl font-black text-gray-900 tracking-tight font-serif flex flex-wrap items-center gap-1.5 md:gap-2 leading-relaxed">
-                                        <span>Encontramos</span>
-                                        <span className="text-brand-red bg-red-50/80 px-2.5 py-1 rounded-xl border border-red-100 text-xs md:text-sm font-black shadow-sm tracking-wide">
-                                            {allResults.length} {allResults.length === 1 ? 'resultado' : 'resultados'}
-                                        </span>
-                                        <span>em</span>
-                                        <button
-                                            onClick={() => setIsCityModalOpen(true)}
-                                            className="inline-flex items-center px-4 py-2 bg-brand-red text-white hover:bg-brand-red/90 rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all group cursor-pointer border-b-4 border-red-800"
-                                        >
-                                            <span>{cityName || 'Qualquer Cidade'}</span>
-                                            <ChevronDown size={14} className="ml-1.5 group-hover:translate-y-0.5 transition-transform duration-300" />
-                                        </button>
-                                        <span>para você</span>
-                                    </h3>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {destaques.map((item: any) => (
-                                        <div
-                                            key={item.id}
-                                            onClick={() => router.push(getClientLink(item))}
-                                            onMouseEnter={() => setHoveredResult(item.id)}
-                                            onMouseLeave={() => setHoveredResult(null)}
-                                            className="bg-white rounded-[2rem] md:rounded-[2rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer flex flex-col"
-                                        >
-                                            <div className="h-20 md:h-24 overflow-hidden relative flex-shrink-0">
-                                                {item.banner_url || item.galeria?.[0]?.url ? (
-                                                    <img src={item.banner_url || item.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
-                                                ) : (
-                                                    <div className="w-full h-full bg-brand-red/10 group-hover:scale-110 transition-transform duration-1000"></div>
-                                                )}
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                                            </div>
-                                            <div className="px-4 pb-6 md:px-5 md:pb-6 pt-1 relative flex-1 flex flex-col">
-                                                {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
-                                                    <div className="absolute -top-10 md:-top-12 left-4 md:left-5 w-20 h-20 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500">
-                                                        <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1.3rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                        ))}
+                                    </div>
+                                    
+                                    {/* Mostrar anúncio horizontal logo após o primeiro bloco de cards, se existir */}
+                                    {blockIdx === blocks.findIndex(b => b.type === 'cards') && listAd && listAd.id !== 101 && (
+                                        <div className="relative px-6 md:px-20 mt-12">
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.98 }}
+                                                whileInView={{ opacity: 1, scale: 1 }}
+                                                viewport={{ once: true }}
+                                                className={`relative rounded-[2rem] md:rounded-[3rem] overflow-hidden transition-all transform ${listAd.link ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'} w-full flex shadow-lg bg-gray-50`}
+                                                onClick={() => {
+                                                    if (listAd.link) {
+                                                        trackAd(listAd.id, 'click', 'SEGMENT_LISTING');
+                                                        window.open(listAd.link, listAd.link.startsWith('http') ? '_blank' : '_self');
+                                                    }
+                                                }}
+                                            >
+                                                <img 
+                                                    src={listAd.image} 
+                                                    className="w-full h-auto max-h-[220px] md:max-h-[260px] object-contain mx-auto" 
+                                                    alt={listAd.title} 
+                                                />
+                                                {listAd.link && (
+                                                    <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center transition-opacity border border-white/30">
+                                                        <ExternalLink size={14} className="text-white" />
                                                     </div>
                                                 )}
-                                                <div className="pt-12 md:pt-14 space-y-2 flex-1 flex flex-col">
-                                                    <div className="flex justify-between items-start gap-2">
-                                                        <h4 className="text-base md:text-lg font-black text-gray-900 tracking-tight font-serif italic leading-tight break-words flex-1">{item.nome_fantasia}</h4>
-                                                        {isExpansionClient(item) && (
-                                                            <div className="flex flex-col items-end flex-shrink-0">
-                                                                <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">✨ ATENDE AQUI</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
-                                                        <span className="flex items-center text-[9px] font-black text-brand-red bg-red-50/80 px-2.5 py-1 rounded-lg border border-red-100 uppercase tracking-wider shadow-sm">
-                                                            <MapPin size={11} className="mr-1" />
-                                                            {item.enderecos?.[0]?.cidade || 'Local'}
-                                                        </span>
-                                                        {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
-                                                            <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[100px]">
-                                                                {item.enderecos[0].bairro}
-                                                            </span>
-                                                        )}
-                                                        {getTodayStatus(item) && (
-                                                            <span className={`${getTodayStatus(item)?.open ? 'text-green-500 bg-green-50/80 border-green-100' : 'text-brand-red bg-red-50/80 border-red-100'} font-black flex items-center text-[9px] uppercase tracking-wider px-2 py-1 rounded-lg border`}>
-                                                                <div className={`w-1 h-1 ${getTodayStatus(item)?.open ? 'bg-green-500' : 'bg-brand-red'} rounded-full mr-1 ${getTodayStatus(item)?.open ? 'animate-pulse' : ''}`}></div>
-                                                                {getTodayStatus(item)?.label}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
-                        {/* AD BANNER (LISTAGEM) */}
-                        {listAd && listAd.id !== 101 && (
-                            <section className="relative px-6 md:px-20 mb-8 mt-4">
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.98 }}
-                                    whileInView={{ opacity: 1, scale: 1 }}
-                                    viewport={{ once: true }}
-                                    className={`relative rounded-[2rem] md:rounded-[3rem] overflow-hidden transition-all transform ${listAd.link ? 'cursor-pointer hover:scale-[1.01]' : 'cursor-default'} w-full flex shadow-lg bg-gray-50`}
-                                    onClick={() => {
-                                        if (listAd.link) {
-                                            trackAd(listAd.id, 'click', 'SEGMENT_LISTING');
-                                            window.open(listAd.link, listAd.link.startsWith('http') ? '_blank' : '_self');
-                                        }
-                                    }}
-                                >
-                                    <img 
-                                        src={listAd.image} 
-                                        className="w-full h-auto max-h-[220px] md:max-h-[260px] object-contain mx-auto" 
-                                        alt={listAd.title} 
-                                    />
-                                    {listAd.link && (
-                                        <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center transition-opacity border border-white/30">
-                                            <ExternalLink size={14} className="text-white" />
+                                            </motion.div>
                                         </div>
                                     )}
-                                </motion.div>
-                            </section>
-                        )}
+                                </section>
+                            ) : (
+                                <section key={`block-${blockIdx}`} className="space-y-4 mb-8">
+                                    <div className="bg-white rounded-[4rem] shadow-2xl border border-white overflow-hidden p-2">
+                                        {block.items.map((item: any, idx: number) => {
+                                            const showAd = idx >= 4 && (idx - 4) % 30 === 0 && interstitialAds.length > 0;
+                                            const adIndex = idx >= 4 ? Math.floor((idx - 4) / 30) : 0;
+                                            const ad = interstitialAds.length > 0 ? interstitialAds[adIndex % interstitialAds.length] : null;
 
-                        {/* 4. TODOS OS RESULTADOS + SCROLL INFINITO */}
-                        {!isLoading && outrosResultados.length > 0 && (
-                            <section className="space-y-8">
-                                <h3 className="text-xl font-black text-gray-900 tracking-tight font-serif px-2">Todos os Resultados</h3>
-                                <div className="bg-white rounded-[4rem] shadow-2xl border border-white overflow-hidden p-2">
-                                    {outrosResultados.map((item: any, idx: number) => {
-                                        const showAd = idx >= 4 && (idx - 4) % 30 === 0 && interstitialAds.length > 0;
-                                        const adIndex = idx >= 4 ? Math.floor((idx - 4) / 30) : 0;
-                                        const ad = interstitialAds.length > 0 ? interstitialAds[adIndex % interstitialAds.length] : null;
-
-                                        return (
-                                            <React.Fragment key={item.id}>
+                                            return (
+                                                <React.Fragment key={item.id}>
                                                     <div
                                                         onClick={() => router.push(getClientLink(item))}
                                                         onMouseEnter={() => setHoveredResult(item.id)}
                                                         onMouseLeave={() => setHoveredResult(null)}
-                                                        className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== outrosResultados.length - 1 ? 'border-b border-gray-50' : ''}`}
+                                                        className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== block.items.length - 1 ? 'border-b border-gray-50' : ''}`}
                                                     >
                                                         <div className="flex items-center space-x-4 md:space-x-6">
                                                             {item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura) && (
@@ -840,63 +795,64 @@ function SearchContent() {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    {item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura) && (
-                                                        <button 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleWhatsApp(item.id, item.contatos?.[0]?.celular || '');
-                                                            }}
-                                                            className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 text-[#25D366] flex items-center justify-center active:scale-90 transition-all hover:bg-[#25D366] hover:text-white group-hover:shadow-md"
-                                                        >
-                                                            <WhatsAppIcon size={20} />
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                        {item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura) && (
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleWhatsApp(item.id, item.contatos?.[0]?.celular || '');
+                                                                }}
+                                                                className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 text-[#25D366] flex items-center justify-center active:scale-90 transition-all hover:bg-[#25D366] hover:text-white group-hover:shadow-md"
+                                                            >
+                                                                <WhatsAppIcon size={20} />
+                                                            </button>
+                                                        )}
+                                                    </div>
 
-                                                {showAd && ad && (
-                                                    <div className="mx-4 my-8">
-                                                        <div 
-                                                            className={`relative ${ad.bgColor} rounded-[2rem] p-6 overflow-hidden group/ad cursor-pointer shadow-sm`}
-                                                            onClick={() => {
-                                                                if (ad.link) {
-                                                                    trackAd(ad.id, 'click', 'INTERSTITIAL');
-                                                                    window.open(ad.link, ad.link.startsWith('http') ? '_blank' : '_self');
-                                                                }
-                                                            }}
-                                                        >
-                                                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                                                                <div className="flex-1 space-y-1 text-center md:text-left">
-                                                                    <span className="text-[8px] font-black text-white/50 uppercase tracking-widest">Publicidade</span>
-                                                                    <h4 className="text-xl font-black text-white font-serif italic tracking-tight leading-none">
-                                                                        {ad.title}
-                                                                    </h4>
-                                                                    <p className="text-white/70 text-[10px] font-medium leading-relaxed">
-                                                                        {ad.description}
-                                                                    </p>
-                                                                    <div className="pt-2">
-                                                                        <button className="bg-white text-gray-900 px-5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-transform">
-                                                                            {ad.cta}
-                                                                        </button>
+                                                    {showAd && ad && (
+                                                        <div className="mx-4 my-8">
+                                                            <div 
+                                                                className={`relative ${ad.bgColor} rounded-[2rem] p-6 overflow-hidden group/ad cursor-pointer shadow-sm`}
+                                                                onClick={() => {
+                                                                    if (ad.link) {
+                                                                        trackAd(ad.id, 'click', 'INTERSTITIAL');
+                                                                        window.open(ad.link, ad.link.startsWith('http') ? '_blank' : '_self');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                                                                    <div className="flex-1 space-y-1 text-center md:text-left">
+                                                                        <span className="text-[8px] font-black text-white/50 uppercase tracking-widest">Publicidade</span>
+                                                                        <h4 className="text-xl font-black text-white font-serif italic tracking-tight leading-none">
+                                                                            {ad.title}
+                                                                        </h4>
+                                                                        <p className="text-white/70 text-[10px] font-medium leading-relaxed">
+                                                                            {ad.description}
+                                                                        </p>
+                                                                        <div className="pt-2">
+                                                                            <button className="bg-white text-gray-900 px-5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest active:scale-95 transition-transform">
+                                                                                {ad.cta}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl rotate-3 group-hover/ad:rotate-0 transition-transform duration-500 hidden sm:block">
+                                                                        <img
+                                                                            src={ad.image}
+                                                                            className="w-full h-full object-cover"
+                                                                            alt=""
+                                                                        />
                                                                     </div>
                                                                 </div>
-                                                                <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl rotate-3 group-hover/ad:rotate-0 transition-transform duration-500 hidden sm:block">
-                                                                    <img
-                                                                        src={ad.image}
-                                                                        className="w-full h-full object-cover"
-                                                                        alt=""
-                                                                    />
-                                                                </div>
+                                                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                                                             </div>
-                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </div>
-                            </section>
-                        )}
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </div>
+                                </section>
+                            )
+                        ))}
                         
                         {/* INFINITE SCROLL OBSERVER - DEVE FICAR FORA DO CONDICIONAL */}
                         {!isLoading && (
