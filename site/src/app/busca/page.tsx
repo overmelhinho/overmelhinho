@@ -382,19 +382,26 @@ function SearchContent() {
         return null;
     }, [allResults, query]);
 
-    // Destaques: o primeiro resultado (se não houver matchPerfeito) + TODOS os pagantes ativos
+    const qNorm = query ? query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
+
+    const exactMatches = allResults.filter((item: any, idx: number) => {
+        if (matchPerfeito && item.id === matchPerfeito.id) return false;
+        const isPagante = item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura);
+        if (isPagante) return false;
+        
+        const nNorm = item.nome_fantasia ? item.nome_fantasia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
+        return qNorm.length > 2 && nNorm.includes(qNorm);
+    });
+
     const destaques = allResults.filter((item: any, idx: number) => {
         if (matchPerfeito && item.id === matchPerfeito.id) return false;
-        
-        if (idx === 0 && !matchPerfeito) return true;
         return item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura);
     });
     
-    // Todos os Resultados: todos os que não entraram nos destaques E não são match perfeito
-    const destaquesIds = new Set(destaques.map((item: any) => item.id));
-    if (matchPerfeito) destaquesIds.add(matchPerfeito.id);
+    const ignoreIds = new Set([...exactMatches.map((i: any) => i.id), ...destaques.map((i: any) => i.id)]);
+    if (matchPerfeito) ignoreIds.add(matchPerfeito.id);
     
-    const outrosResultados = allResults.filter((item: any) => !destaquesIds.has(item.id));
+    const outrosResultados = allResults.filter((item: any) => !ignoreIds.has(item.id));
 
     const selectedMapItem = useMemo(() => allResults.find((r: any) => r.id === selectedMapResult), [allResults, selectedMapResult]);
 
@@ -639,6 +646,45 @@ function SearchContent() {
                         )}
 
 
+
+                        {/* 1.5 EXACT MATCHES (Gratuitos Altamente Relevantes) */}
+                        {!isLoading && exactMatches.length > 0 && (
+                            <section className="space-y-4 mb-8">
+                                <div className="bg-white rounded-[4rem] shadow-2xl border border-white overflow-hidden p-2">
+                                    {exactMatches.map((item: any, idx: number) => {
+                                        return (
+                                            <div
+                                                key={item.id}
+                                                onClick={() => router.push(getClientLink(item))}
+                                                onMouseEnter={() => setHoveredResult(item.id)}
+                                                onMouseLeave={() => setHoveredResult(null)}
+                                                className={`flex items-center justify-between p-4 md:p-5 hover:bg-gray-50/80 transition-all group cursor-pointer ${idx !== exactMatches.length - 1 ? 'border-b border-gray-50' : ''}`}
+                                            >
+                                                <div className="flex items-center space-x-4 md:space-x-6">
+                                                    <div className="space-y-0.5">
+                                                        <div className="flex items-center space-x-2">
+                                                            <h5 className="font-black text-gray-900 font-serif italic tracking-tight text-base md:text-lg leading-tight">{item.nome_fantasia}</h5>
+                                                        </div>
+                                                        <p className="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em]">{item.segmentos?.[0]?.nome || 'Negócio Parceiro'}</p>
+                                                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                            <span className="flex items-center text-[9px] font-black text-brand-red bg-red-50/80 px-2 py-0.5 rounded-lg border border-red-100 uppercase tracking-wider">
+                                                                <MapPin size={10} className="mr-1" />
+                                                                {item.enderecos?.[0]?.cidade || 'Local'}
+                                                            </span>
+                                                            {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
+                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider">
+                                                                    {item.enderecos[0].bairro}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        )}
 
                         {/* 2. RECOMENDADOS */}
                         {!isLoading && destaques.length > 0 && (
