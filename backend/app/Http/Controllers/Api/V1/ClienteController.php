@@ -262,41 +262,34 @@ class ClienteController extends Controller
             }
         }
 
-        $query->orderByRaw("
-            CASE 
-                -- 0.1. MATCH EXATO ABSOLUTO
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
-                
-                -- 0.2. COMEÇA COM A FRASE EXATA
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
-                
-                -- 0.3. NOME CONTÉM A FRASE EXATA
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 2
-                
-                -- 0.4. SEGMENTO CONTÉM A FRASE EXATA
-                WHEN EXISTS (
-                    SELECT 1 FROM cliente_segmento cs 
-                    JOIN segmentos s ON cs.segmento_id = s.id 
-                    WHERE cs.cliente_id = clientes.id 
-                    AND {$unaccentFunc}(s.nome) ilike {$unaccentFunc}(?)
-                ) THEN 3
-                
-                ELSE 4
-            END ASC
-        ", [
-            $q, $q, 
-            "{$q} %", "{$q} %", 
-            "%{$q}%", "%{$q}%", 
-            "%{$q}%"
-        ]);
+        // Condição de Match Exato (Ouro)
+        $ouroCondition = "
+            {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
+            {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) OR
+            {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
+            {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) OR
+            {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
+            EXISTS (
+                SELECT 1 FROM cliente_segmento cs 
+                JOIN segmentos s ON cs.segmento_id = s.id 
+                WHERE cs.cliente_id = clientes.id 
+                AND {$unaccentFunc}(s.nome) ilike {$unaccentFunc}(?)
+            )
+        ";
+
+        $ouroBindings = [$q, $q, "{$q} %", "{$q} %", "%{$q}%", "%{$q}%"];
+
+        // Mescla todos os bindings necessários
+        $allBindings = array_merge(
+            $ouroBindings, [$orderCityId, $orderCityId], // 0. Ouro Pagante Cidade
+            $ouroBindings, // 1. Ouro Pagante Geral
+            $ouroBindings  // 2. Ouro Gratuito
+        );
 
         $query->orderByRaw("
             CASE 
-                -- 1. Pagante Ativo na Cidade Buscada
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
+                -- NÍVEL 1 (OURO) + PAGANTE NA CIDADE
+                WHEN ($ouroCondition) AND tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
                     SELECT 1 FROM enderecos 
                     WHERE enderecos.cliente_id = clientes.id 
                     AND (
@@ -305,14 +298,21 @@ class ClienteController extends Controller
                     )
                 ) THEN 0
 
-                -- 2. Pagante Ativo Geral
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
+                -- NÍVEL 1 (OURO) + PAGANTE GERAL
+                WHEN ($ouroCondition) AND tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
 
-                -- 3. Gratuito
-                ELSE 2
+                -- NÍVEL 1 (OURO) + GRATUITO
+                WHEN ($ouroCondition) THEN 2
+
+                -- NÍVEL 2 (PRATA) - PAGANTES PARCIAIS
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 3
+
+                -- NÍVEL 3 (BRONZE) - GRATUITOS PARCIAIS
+                ELSE 4
             END ASC
-        ", [$orderCityId, $orderCityId]);
+        ", $allBindings);
 
+        // Desempate secundário (Dentro do mesmo Nível, prefere Match Absoluto > Começa Com > Contém)
         $query->orderByRaw("
             CASE 
                 -- A. Match Exato
