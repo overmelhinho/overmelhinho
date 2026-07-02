@@ -390,7 +390,10 @@ function SearchContent() {
         if (isPagante) return false;
         
         const nNorm = item.nome_fantasia ? item.nome_fantasia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
-        return qNorm.length > 2 && nNorm.includes(qNorm);
+        const altNorm = item.nome_alternativo ? item.nome_alternativo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
+        const segNorm = item.segmentos && item.segmentos.length > 0 ? item.segmentos[0].nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
+        
+        return qNorm.length > 2 && (nNorm.includes(qNorm) || altNorm.includes(qNorm) || segNorm.includes(qNorm));
     });
 
     const destaques = allResults.filter((item: any, idx: number) => {
