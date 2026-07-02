@@ -1173,7 +1173,7 @@ class FinancialController extends Controller
             return response()->json(['message' => 'Nenhuma fatura selecionada.'], 422);
         }
 
-        $invoices = Invoice::with(['client', 'plan'])
+        $invoices = Invoice::with(['client.enderecos', 'plan'])
             ->whereIn('id', $ids)
             ->get();
 
@@ -1207,13 +1207,27 @@ class FinancialController extends Controller
             $payableAmount = $invoice->payable_amount ?? $invoice->amount;
             $payableAmount_extenso = $this->valorPorExtenso($payableAmount);
 
+            $client = $invoice->client;
+            if ($client && $client->enderecos) {
+                $address = $client->enderecos->where('is_cobranca', true)->first() ?? $client->enderecos->first();
+                if ($address) {
+                    $tipo = $address->tipo_logradouro ? $address->tipo_logradouro . ' ' : '';
+                    $client->endereco = $tipo . $address->rua;
+                    $client->numero = $address->numero;
+                    $client->bairro = $address->bairro;
+                }
+            }
+
+            $acceptDate = request('date') ? \Carbon\Carbon::parse(request('date'))->format('d/m/Y') : \Carbon\Carbon::parse($invoice->action_date ?? now())->format('d/m/Y');
+
             $data = [
                 'invoice' => $invoice,
-                'client' => $invoice->client,
+                'client' => $client,
                 'authNumero' => $authNumero ? str_pad($authNumero, 5, '0', STR_PAD_LEFT) : null,
                 'generatedAt' => $generatedAt,
                 'payableAmount_extenso' => $payableAmount_extenso,
-                'logoBase64' => $logoBase64
+                'logoBase64' => $logoBase64,
+                'acceptDate' => $acceptDate
             ];
 
             $pdf = Pdf::loadView('reports.receipt', $data)
