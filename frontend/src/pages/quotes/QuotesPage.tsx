@@ -37,6 +37,8 @@ interface Quote {
         id: number;
         nome_fantasia: string;
         logo_url?: string | null;
+        tipo_cliente?: string;
+        status_assinatura?: string;
         contatos?: Array<{
             celular?: string;
             telefone_principal?: string;
@@ -384,12 +386,20 @@ export default function QuotesPage() {
                                     <td className="px-8 py-6 text-center">
                                          {quote.status === 'new' || quote.status === 'replied' ? (
                                             (() => {
+                                                const isPagante = ['pagante', 'anunciante'].includes(quote.cliente.tipo_cliente || '') && ['ativa', 'ativo', 'inadimplente'].includes(quote.cliente.status_assinatura || '');
+
+                                                if (!isPagante) {
+                                                    return (
+                                                        <div className="flex flex-col items-center gap-1 opacity-50">
+                                                            <CheckCircle2 size={16} className="text-gray-400" />
+                                                            <span className="text-[8px] font-black uppercase tracking-tighter text-gray-500">Envio Automático</span>
+                                                        </div>
+                                                    );
+                                                }
+
                                                 const contatos = quote.cliente.contatos || [];
                                                 const contactWithPhone = contatos.find(c => c.celular || c.telefone_principal);
                                                 const phone = contactWithPhone ? (contactWithPhone.celular || contactWithPhone.telefone_principal || "").replace(/\D/g, "") : "";
-
-                                                const contactWithEmail = contatos.find(c => c.email_principal && c.exibir_email);
-                                                const email = contactWithEmail ? contactWithEmail.email_principal : "";
 
                                                 if (phone) {
                                                     return (
@@ -403,22 +413,10 @@ export default function QuotesPage() {
                                                     );
                                                 }
 
-                                                if (email) {
-                                                    return (
-                                                        <button
-                                                            onClick={() => notifyLojista(quote)}
-                                                            className="h-12 px-6 rounded-[20px] text-[10px] font-black uppercase transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-lg bg-blue-600 text-white hover:bg-black shadow-blue-100"
-                                                        >
-                                                            <Mail size={16} />
-                                                            Enviar para Empresa
-                                                        </button>
-                                                    );
-                                                }
-
                                                 return (
                                                     <div className="flex flex-col items-center gap-1 opacity-30">
                                                         <AlertTriangle size={16} className="text-gray-400" />
-                                                        <span className="text-[8px] font-black uppercase tracking-tighter">Sem Contato</span>
+                                                        <span className="text-[8px] font-black uppercase tracking-tighter">Sem WhatsApp</span>
                                                     </div>
                                                 );
                                             })()

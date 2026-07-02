@@ -387,12 +387,16 @@ export default function ClientProfileClient() {
         !!contactInfo.telefone_outro
     ) : false;
 
-    const hasEmailContact = contactInfo ? (
-        !!contactInfo.email_principal && contactInfo.exibir_email !== false
-    ) : false;
+    // A regra para RECEBER e-mail de orçamento mudou: agora recebe mesmo que exibir_email seja falso
+    const canReceiveEmailQuote = contactInfo ? !!contactInfo.email_principal : false;
+    
+    // A regra para o WhatsApp (Fila de Foco) é: deve ser pagante e ter algum telefone
+    const canReceiveWhatsappQuote = isPagante && hasPhoneContact;
 
-    const isFormByEmail = !hasPhoneContact && hasEmailContact;
-    const showQuoteForm = client.quotes_enabled && (hasPhoneContact || hasEmailContact);
+    const isFormByEmail = !hasPhoneContact && canReceiveEmailQuote;
+    
+    // O formulário de orçamento SÓ aparece se houver como entregar (e-mail ou whats manual)
+    const showQuoteForm = client.quotes_enabled && (canReceiveEmailQuote || canReceiveWhatsappQuote);
 
     const handleScrollToQuoteForm = () => {
         const element = document.getElementById('quote-form');

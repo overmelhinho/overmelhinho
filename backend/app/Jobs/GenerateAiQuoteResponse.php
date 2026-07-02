@@ -48,17 +48,11 @@ class GenerateAiQuoteResponse implements ShouldQueue
 
         if (!$cliente) return;
 
-        $contatoCelular = $cliente->contatos->whereNotNull('celular')->first();
-        
-        // Se o lojista possui celular/WhatsApp cadastrado, o envio da notificação é feito
-        // manualmente pelo administrador no Painel de Orçamentos (via botão "Enviar para Empresa").
-        if ($contatoCelular) {
-            return;
-        }
+        $isPagante = in_array($cliente->tipo_cliente, ['pagante', 'anunciante']) && in_array($cliente->status_assinatura, ['ativa', 'ativo', 'inadimplente']);
 
-        // Se o lojista possuir apenas e-mail cadastrado (e ativo para exibição),
-        // enviamos a notificação por e-mail automaticamente em segundo plano.
-        $contatoEmail = $cliente->contatos->where('exibir_email', true)->whereNotNull('email_principal')->first();
+        // A regra do WhatsApp (Fila de Foco) só se aplica se for pagante e tiver celular.
+        // Mas independentemente disso, se tiver e-mail, envia o e-mail automático em segundo plano.
+        $contatoEmail = $cliente->contatos->whereNotNull('email_principal')->first();
 
         if ($contatoEmail) {
             $email = $contatoEmail->email_principal;
