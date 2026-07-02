@@ -1157,6 +1157,7 @@ public function historico(Request $request, int $id)
                 'logo_url' => 'nullable|string|max:255',
                 'banner_url' => 'nullable|string|max:255',
                 'horario_atendimento' => 'nullable',
+                'observacoes_horario' => 'nullable|string',
 
                 'generate_seo_keywords' => 'nullable|boolean',
                 'seo_keywords_text'     => 'nullable|string',
@@ -1199,6 +1200,9 @@ public function historico(Request $request, int $id)
 
             if (Schema::hasColumn('clientes', 'horario_atendimento')) {
                 $clienteData['horario_atendimento'] = $validated['horario_atendimento'] ?? null;
+            }
+            if (Schema::hasColumn('clientes', 'observacoes_horario')) {
+                $clienteData['observacoes_horario'] = $validated['observacoes_horario'] ?? null;
             }
 
             if (Schema::hasColumn('clientes', 'seo_keywords_source')) {
@@ -1623,6 +1627,7 @@ public function historico(Request $request, int $id)
                 'logo_url' => 'nullable|string|max:255',
                 'banner_url' => 'nullable|string|max:255',
                 'horario_atendimento' => 'nullable',
+                'observacoes_horario' => 'nullable|string',
 
                 'generate_seo_keywords' => 'nullable|boolean',
                 'seo_keywords_text'     => 'nullable|string',
@@ -1726,6 +1731,10 @@ public function historico(Request $request, int $id)
 
             if ($request->has('horario_atendimento')) {
                 $clienteData['horario_atendimento'] = $request->input('horario_atendimento');
+            }
+
+            if ($request->has('observacoes_horario')) {
+                $clienteData['observacoes_horario'] = $request->input('observacoes_horario');
             }
 
             if ($request->has('google_place_id')) {
