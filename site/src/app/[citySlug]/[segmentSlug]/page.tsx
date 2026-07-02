@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { MapPin, Phone, MessageCircle, Star } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import DynamicSeoText from '@/components/DynamicSeoText';
 
 const getApiUrl = () => {
     let API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
@@ -88,8 +89,35 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
 
     const clients = await fetchClients(city.id, segment.nome);
 
+    const schemaData = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": `${segment.nome} em ${city.nome}`,
+        "description": `As melhores opções de ${segment.nome} em ${city.nome}`,
+        "url": `https://overmelhinho.com.br/${params.citySlug}/${params.segmentSlug}`,
+        "itemListElement": clients.slice(0, 10).map((client: any, index: number) => ({
+            "@type": "ListItem",
+            "position": index + 1,
+            "item": {
+                "@type": "LocalBusiness",
+                "name": client.nome_fantasia,
+                "url": `https://overmelhinho.com.br/${params.citySlug}/${params.segmentSlug}/${client.slug || client.id}`,
+                "address": {
+                    "@type": "PostalAddress",
+                    "addressLocality": city.nome,
+                    "addressRegion": city.estado || "RS",
+                    "streetAddress": client.enderecos?.[0]?.rua || ""
+                }
+            }
+        }))
+    };
+
     return (
         <div className="min-h-screen font-sans bg-gray-50">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+            />
             <main className="pt-24 pb-20">
                 {/* Hero Section */}
                 <div className="bg-white border-b border-gray-100">
@@ -182,6 +210,8 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                         </div>
                     )}
                 </div>
+
+                <DynamicSeoText cityName={city.nome} segmentName={segment.nome} clientCount={clients.length} />
             </main>
         </div>
     );

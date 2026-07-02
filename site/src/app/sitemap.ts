@@ -1,68 +1,54 @@
-import { MetadataRoute } from 'next';
-import api from '@/services/api';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
+import { MetadataRoute } from 'next'
+import { slugify } from '@/utils/slugify'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    try {
-        // 1. Buscar os dados do sitemap no backend
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
-        const response = await fetch(`${baseUrl}/public/sitemap-data`, {
-            next: { revalidate: 3600 } // Cache de 1 hora para o sitemap
-        });
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://overmelhinho.com.br';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.overmelhinho.com.br/api/v1';
 
-        if (!response.ok) {
-            throw new Error('API request failed');
-        }
-        
-        const clients = await response.json();
-
-        // 2. Mapear os clientes para o formato do sitemap
-        const clientEntries = clients.map((client: any) => ({
-            url: `${SITE_URL}/cliente/${client.slug || client.id}`,
-            lastModified: client.updated_at ? new Date(client.updated_at) : new Date(),
-            changeFrequency: 'weekly' as const,
-            priority: 0.7,
-        }));
-
-        // 3. Páginas estáticas principais
-        const staticEntries: MetadataRoute.Sitemap = [
-            {
-                url: SITE_URL,
-                lastModified: new Date(),
-                changeFrequency: 'daily',
-                priority: 1,
-            },
-            {
-                url: `${SITE_URL}/busca`,
-                lastModified: new Date(),
-                changeFrequency: 'daily',
-                priority: 0.8,
-            },
-            {
-                url: `${SITE_URL}/anuncie`,
-                lastModified: new Date(),
-                changeFrequency: 'monthly',
-                priority: 0.9,
-            },
-            {
-                url: `${SITE_URL}/vagas`,
-                lastModified: new Date(),
-                changeFrequency: 'daily',
-                priority: 0.8,
-            },
-        ];
-
-        return [...staticEntries, ...clientEntries];
-    } catch (error) {
-        console.error('Erro ao gerar sitemap:', error);
-        return [
-            {
-                url: SITE_URL,
-                lastModified: new Date(),
-                changeFrequency: 'daily',
-                priority: 1,
-            },
-        ];
+  const sitemapData: MetadataRoute.Sitemap = [
+    {
+      url: baseUrl,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 1,
     }
+  ];
+
+  try {
+    // 1. Busca rotas regionais (Segmento + Cidade)
+    const combinationsRes = await fetch(`${apiUrl}/public/active-sitemap-combinations`, { next: { revalidate: 3600 } });
+    if (combinationsRes.ok) {
+      const combinations = await combinationsRes.json();
+      const combos = combinations.data || [];
+      combos.forEach((combo: { city_name: string, segment_name: string }) => {
+        const citySlug = slugify(combo.city_name);
+        const segSlug = slugify(combo.segment_name);
+        sitemapData.push({
+          url: `${baseUrl}/${citySlug}/${segSlug}`,
+          lastModified: new Date(),
+          changeFrequency: 'daily',
+          priority: 0.9,
+        });
+      });
+    }
+
+    // 2. Busca clientes ativos para suas páginas de perfil
+    const clientsRes = await fetch(`${apiUrl}/public/sitemap-data`, { next: { revalidate: 3600 } });
+    if (clientsRes.ok) {
+      const clients = await clientsRes.json();
+      clients.forEach((client: { id: string | number, slug: string | null, updated_at: string }) => {
+        const slug = client.slug || client.id;
+        sitemapData.push({
+          url: `${baseUrl}/cliente/${slug}`,
+          lastModified: new Date(client.updated_at),
+          changeFrequency: 'weekly',
+          priority: 0.7,
+        });
+      });
+    }
+  } catch (error) {
+    console.error("Error generating sitemap:", error);
+  }
+
+  return sitemapData;
 }
