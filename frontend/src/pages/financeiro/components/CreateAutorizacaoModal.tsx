@@ -274,6 +274,12 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
         setParcelasPreview(updated);
     };
 
+    const handleParcelaValorChange = (index: number, val: string) => {
+        const updated = [...parcelasPreview];
+        updated[index].valor = formatCurrency(val);
+        setParcelasPreview(updated);
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setForm(prev => {
@@ -321,6 +327,25 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
             return;
         }
 
+        const basePrice = valor;
+        const discountValue = parseFloat(form.desconto_valor) || 0;
+        const discountAmount = form.desconto_tipo === "fixed" ? discountValue : (basePrice * discountValue) / 100;
+        const priceAfterDiscount = Math.max(0, basePrice - discountAmount);
+        const taxa = parseFloat(form.taxa_cadastro) || 0;
+        const totalComTaxa = priceAfterDiscount + taxa;
+        const permuta = form.is_permuta ? parseFloat(parseCurrency(form.permuta_amount || "0")) : 0;
+        const finalPayable = Math.max(0, totalComTaxa - permuta);
+
+        const valParcelasSum = parcelasPreview.reduce((acc, p) => {
+            const num = parseFloat(parseCurrency(p.valor)) || 0;
+            return acc + num;
+        }, 0);
+
+        if (finalPayable > 0 && Math.abs(valParcelasSum - finalPayable) > 0.05) {
+            toast.error(`A soma das parcelas (R$ ${valParcelasSum.toLocaleString('pt-BR', {minimumFractionDigits: 2})}) difere do valor a pagar (R$ ${finalPayable.toLocaleString('pt-BR', {minimumFractionDigits: 2})}). Ajuste os valores.`);
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const payload = {
@@ -333,7 +358,10 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                 desconto_valor: parseFloat(form.desconto_valor || "0") || 0,
                 permuta_amount: parseFloat(parseCurrency(form.permuta_amount || "0")) || 0,
                 is_permuta: !!form.is_permuta,
-                parcelas: parcelasPreview.map(p => ({ vencimento: p.vencimento }))
+                parcelas: parcelasPreview.map(p => ({ 
+                    vencimento: p.vencimento,
+                    valor: parseFloat(parseCurrency(p.valor)) || 0 
+                }))
             };
 
             console.log("[CreateAutorizacaoModal] Enviando payload:", payload);
@@ -870,23 +898,33 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
                                         </Select>
                                     </div>
 
-                                    {/* Listagem Editável de Parcelas (apenas a partir da 2ª) */}
-                                    {parseInt(form.num_parcelas) > 1 && parcelasPreview.length > 1 && (
+                                    {/* Listagem Editável de Parcelas */}
+                                    {parseInt(form.num_parcelas) > 0 && parcelasPreview.length > 0 && (
                                         <div className="pt-4 border-t border-gray-50">
-                                            <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block">Próximos Vencimentos</Label>
+                                            <Label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3 block">Faturas e Vencimentos</Label>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                                {parcelasPreview.slice(1).map((p, idx) => (
+                                                {parcelasPreview.map((p, idx) => (
                                                     <div key={idx} className="bg-gray-50 p-2 rounded-xl border border-gray-100">
-                                                        <div className="flex justify-between items-center mb-1">
+                                                        <div className="flex justify-between items-center mb-2">
                                                             <span className="text-[9px] font-black text-gray-400 uppercase">{p.numero}ª Parcela</span>
-                                                            <span className="text-[9px] font-black text-red-600">R$ {p.valor}</span>
                                                         </div>
-                                                        <Input
-                                                            type="date"
-                                                            value={p.vencimento}
-                                                            onChange={(e) => handleParcelaDateChange(idx + 1, e.target.value)}
-                                                            className="h-8 text-xs font-bold border-gray-200 rounded-lg px-2"
-                                                        />
+                                                        <div className="space-y-2">
+                                                            <div className="relative">
+                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-[10px]">R$</span>
+                                                                <Input
+                                                                    type="text"
+                                                                    value={p.valor}
+                                                                    onChange={(e) => handleParcelaValorChange(idx, e.target.value)}
+                                                                    className="h-7 text-xs font-bold border-gray-200 rounded-lg pl-7 pr-2 focus:ring-red-500 transition-all"
+                                                                />
+                                                            </div>
+                                                            <Input
+                                                                type="date"
+                                                                value={p.vencimento}
+                                                                onChange={(e) => handleParcelaDateChange(idx, e.target.value)}
+                                                                className="h-7 text-xs font-bold border-gray-200 rounded-lg px-2 w-full focus:ring-red-500 transition-all"
+                                                            />
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>

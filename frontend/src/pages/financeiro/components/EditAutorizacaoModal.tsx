@@ -181,6 +181,21 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
         setForm(prev => ({ ...prev, [name]: formatCurrency(value) }));
     };
 
+    const handleParcelaDateChange = (index: number, newDate: string) => {
+        const updated = [...parcelasPreview];
+        const [y, m, d] = newDate.split("-").map(Number);
+        const date = new Date(y, m - 1, d);
+        updated[index].vencimento = newDate;
+        updated[index].label = format(date, "dd/MM/yyyy");
+        setParcelasPreview(updated);
+    };
+
+    const handleParcelaValorChange = (index: number, val: string) => {
+        const updated = [...parcelasPreview];
+        updated[index].valor = formatCurrency(val);
+        setParcelasPreview(updated);
+    };
+
     // Auto-update parcelas preview when financial values change
     useEffect(() => {
         try {
@@ -240,6 +255,30 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
             return;
         }
 
+        if (new Date(form.data_fim) <= new Date(form.data_inicio)) {
+            toast.error("A data de término deve ser posterior à data de início.");
+            return;
+        }
+
+        const basePrice = parseFloat(parseCurrency(form.valor_total)) || 0;
+        const discountValue = parseFloat(form.desconto_valor) || 0;
+        const discountAmount = form.desconto_tipo === "fixed" ? discountValue : (basePrice * discountValue) / 100;
+        const priceAfterDiscount = Math.max(0, basePrice - discountAmount);
+        const taxa = parseFloat(form.taxa_cadastro) || 0;
+        const totalComTaxa = priceAfterDiscount + taxa;
+        const permuta = form.is_permuta ? parseFloat(parseCurrency(form.permuta_amount || "0")) : 0;
+        const finalPayable = Math.max(0, totalComTaxa - permuta);
+
+        const valParcelasSum = parcelasPreview.reduce((acc, p) => {
+            const num = parseFloat(parseCurrency(p.valor)) || 0;
+            return acc + num;
+        }, 0);
+
+        if (finalPayable > 0 && Math.abs(valParcelasSum - finalPayable) > 0.05) {
+            toast.error(`A soma das parcelas (R$ ${valParcelasSum.toLocaleString('pt-BR', {minimumFractionDigits: 2})}) difere do valor a pagar (R$ ${finalPayable.toLocaleString('pt-BR', {minimumFractionDigits: 2})}). Ajuste os valores.`);
+            return;
+        }
+
         setIsSubmitting(true);
         const loadingToast = toast.loading("Salvando alterações...");
 
@@ -252,7 +291,10 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                 desconto_valor: parseFloat(form.desconto_valor || "0") || 0,
                 permuta_amount: parseFloat(parseCurrency(form.permuta_amount || "0")) || 0,
                 is_permuta: !!form.is_permuta,
-                parcelas: parcelasPreview.map(p => ({ vencimento: p.vencimento }))
+                parcelas: parcelasPreview.map(p => ({ 
+                    vencimento: p.vencimento,
+                    valor: parseFloat(parseCurrency(p.valor)) || 0 
+                }))
             };
 
             console.log("EditAutorizacaoModal: Payload pronto", payload);
@@ -609,15 +651,32 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                                 <div className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center font-black">
                                     <Landmark size={18} />
                                 </div>
-                                Cronograma de Pagamento
+                                Cronograma de Pagamento (Editável)
                             </h3>
                             
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                {parcelasPreview.map((p, i) => (
-                                    <div key={i} className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex flex-col gap-1 hover:border-blue-200 transition-colors group">
-                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-tight group-hover:text-blue-600 transition-colors">Parcela {p.numero}</span>
-                                        <span className="text-xs font-black text-gray-900">R$ {p.valor}</span>
-                                        <span className="text-[10px] font-bold text-gray-500">{p.label}</span>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {parseInt(form.num_parcelas) > 0 && parcelasPreview.length > 0 && parcelasPreview.map((p, idx) => (
+                                    <div key={idx} className="bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-[9px] font-black text-gray-400 uppercase">{p.numero}ª Parcela</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="relative">
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-[10px]">R$</span>
+                                                <Input
+                                                    type="text"
+                                                    value={p.valor}
+                                                    onChange={(e) => handleParcelaValorChange(idx, e.target.value)}
+                                                    className="h-7 text-xs font-bold border-gray-200 rounded-lg pl-7 pr-2 focus:ring-blue-500 transition-all"
+                                                />
+                                            </div>
+                                            <Input
+                                                type="date"
+                                                value={p.vencimento}
+                                                onChange={(e) => handleParcelaDateChange(idx, e.target.value)}
+                                                className="h-7 text-xs font-bold border-gray-200 rounded-lg px-2 w-full focus:ring-blue-500 transition-all"
+                                            />
+                                        </div>
                                     </div>
                                 ))}
                             </div>

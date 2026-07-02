@@ -117,6 +117,7 @@ class AutorizacaoController extends Controller
             'desconto_valor'          => 'nullable|numeric|min:0',
             'parcelas'                => 'nullable|array',
             'parcelas.*.vencimento'   => 'required|date',
+            'parcelas.*.valor'        => 'nullable|numeric|min:0',
             'responsavel_nome'        => 'nullable|string|max:255',
             'responsavel_preferencia' => 'nullable|string|max:255',
             'responsavel_turno'       => 'nullable|string|max:255',
@@ -241,6 +242,7 @@ class AutorizacaoController extends Controller
             'desconto_valor'          => 'nullable|numeric|min:0',
             'parcelas'                => 'nullable|array',
             'parcelas.*.vencimento'   => 'required|date',
+            'parcelas.*.valor'        => 'nullable|numeric|min:0',
             'responsavel_nome'        => 'nullable|string|max:255',
             'responsavel_preferencia' => 'nullable|string|max:255',
             'responsavel_turno'       => 'nullable|string|max:255',
@@ -823,6 +825,24 @@ class AutorizacaoController extends Controller
         // Se não for compatível, ignoramos e geramos o padrão.
         $hasCustomDates = count($customParcelas) === $numParcelas;
 
+        // Verifica se vieram com valor customizado (e se a soma bate com o total com taxa, margem 0.05)
+        $hasCustomValues = false;
+        if ($hasCustomDates) {
+            $sumValues = 0;
+            $allHaveValue = true;
+            foreach ($customParcelas as $p) {
+                if (isset($p['valor']) && is_numeric($p['valor'])) {
+                    $sumValues += (float) $p['valor'];
+                } else {
+                    $allHaveValue = false;
+                    break;
+                }
+            }
+            if ($allHaveValue && abs($sumValues - $totalComTaxa) <= 0.05) {
+                $hasCustomValues = true;
+            }
+        }
+
         // Parcelamento do valor Bruto (com taxa e após desconto)
         $valorParcelaBruta = round($totalComTaxa / $numParcelas, 2);
         $diferencaBruta    = round($totalComTaxa - ($valorParcelaBruta * $numParcelas), 2);
@@ -834,7 +854,12 @@ class AutorizacaoController extends Controller
         $primeiroVenc = Carbon::parse($autorizacao->data_primeira_parcela);
 
         for ($i = 1; $i <= $numParcelas; $i++) {
-            $vBruto   = $valorParcelaBruta + ($i === $numParcelas ? $diferencaBruta : 0);
+            if ($hasCustomValues) {
+                $vBruto = round((float) $customParcelas[$i-1]['valor'], 2);
+            } else {
+                $vBruto = $valorParcelaBruta + ($i === $numParcelas ? $diferencaBruta : 0);
+            }
+            
             $vPermuta = $valorParcelaPermuta + ($i === $numParcelas ? $diferencaPermuta : 0);
             $vPayable = max(0, $vBruto - $vPermuta);
             
