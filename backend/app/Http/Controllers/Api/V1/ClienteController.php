@@ -251,7 +251,7 @@ class ClienteController extends Controller
                 $segIdsStr = implode(',', $segIds);
                 $query->orderByRaw("
                     CASE 
-                        WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') AND EXISTS (
+                        WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
                             SELECT 1 FROM cliente_segmento cs 
                             WHERE cs.cliente_id = clientes.id 
                             AND cs.segmento_id IN ({$segIdsStr})
@@ -296,7 +296,7 @@ class ClienteController extends Controller
         $query->orderByRaw("
             CASE 
                 -- 1. Pagante Ativo na Cidade Buscada
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') AND EXISTS (
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
                     SELECT 1 FROM enderecos 
                     WHERE enderecos.cliente_id = clientes.id 
                     AND (
@@ -306,63 +306,32 @@ class ClienteController extends Controller
                 ) THEN 0
 
                 -- 2. Pagante Ativo Geral
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 1
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
 
                 -- 3. Gratuito
                 ELSE 2
             END ASC
         ", [$orderCityId, $orderCityId]);
 
-        $isSegmentSearch = false;
-        if (strlen($normalizedQ) >= 4) {
-            $isSegmentSearch = \App\Models\Segmento::whereRaw('unaccent(nome) ilike unaccent(?)', ["%{$normalizedQ}%"])->exists();
-        }
-
-        if ($isSegmentSearch) {
-            $query->orderByRaw("
-                CASE 
-                    -- Ignora match exato no nome para pagantes em busca de segmento (força ordem alfabética)
-                    WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 3
-                    
-                    -- Mantém ordenação por relevância para gratuitos
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
-                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
-                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
-                    ELSE 3
-                END ASC
-            ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
-        } else {
-            $query->orderByRaw("
-                CASE 
-                    -- A. Match Exato
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
-                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
-                    
-                    -- B. Começa com a palavra exata
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
-                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
-                    
-                    -- C. Contém a palavra em qualquer lugar
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
-                    ELSE 3
-                END ASC
-            ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
-        }
+        $query->orderByRaw("
+            CASE 
+                -- A. Match Exato
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
+                
+                -- B. Começa com a palavra exata
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
+                
+                -- C. Contém a palavra em qualquer lugar
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
+                ELSE 3
+            END ASC
+        ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
 
         // Desempate por similaridade fonética
         if ($canUseSimilarity) {
-            if ($isSegmentSearch) {
-                $query->orderByRaw("
-                    CASE 
-                        WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo') THEN 0
-                        ELSE similarity(nome_fantasia, ?)
-                    END DESC
-                ", [$normalizedQ]);
-            } else {
-                $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
-            }
+            $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
         }
         
         $query->orderBy('nome_fantasia');
