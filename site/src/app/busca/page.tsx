@@ -382,24 +382,12 @@ function SearchContent() {
         return null;
     }, [allResults, query]);
 
-    // Destaques: o primeiro resultado (se não houver matchPerfeito) + TODOS os pagantes ativos + Gratuitos Altamente Relevantes
+    // Destaques: o primeiro resultado (se não houver matchPerfeito) + TODOS os pagantes ativos
     const destaques = allResults.filter((item: any, idx: number) => {
         if (matchPerfeito && item.id === matchPerfeito.id) return false;
         
         if (idx === 0 && !matchPerfeito) return true;
-        
-        const isPagante = item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura);
-        
-        let isHighRelevance = false;
-        if (query && query.trim().length > 2) {
-            const qNorm = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            const nNorm = item.nome_fantasia ? item.nome_fantasia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
-            if (nNorm.includes(qNorm)) {
-                isHighRelevance = true;
-            }
-        }
-        
-        return isPagante || isHighRelevance;
+        return item.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(item.status_assinatura);
     });
     
     // Todos os Resultados: todos os que não entraram nos destaques E não são match perfeito
