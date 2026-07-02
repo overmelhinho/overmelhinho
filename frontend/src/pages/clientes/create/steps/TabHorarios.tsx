@@ -242,6 +242,20 @@ export default function TabHorarios() {
           </ul>
         </div>
       </div>
+
+      <div className="mt-6">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Observações de Horário (Opcional)
+        </label>
+        <textarea
+          name="observacoes_horario"
+          value={values.observacoes_horario || ""}
+          onChange={(e) => setFieldValue("observacoes_horario", e.target.value)}
+          placeholder="Ex: Atendimento somente com hora marcada. / Plantão aos domingos."
+          className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-[#B70F0A] min-h-[80px]"
+        />
+        <p className="text-xs text-gray-500 mt-1">Essa informação ficará visível no perfil do cliente, logo abaixo da lista de dias.</p>
+      </div>
     </div>
   );
 }

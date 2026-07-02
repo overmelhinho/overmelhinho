@@ -245,8 +245,11 @@ export default function ClienteEdit() {
         ? c.cidades_atendidas.map((x: any) => x.id ?? x)
         : [],
 
-      beneficios: Array.isArray(c?.beneficios) ? c.beneficios : [],
-      horario_atendimento: Array.isArray(c?.horario_atendimento) ? c.horario_atendimento : [],
+      beneficios: c?.beneficios || [],
+      horario_atendimento: Array.isArray(c?.horario_atendimento)
+        ? c.horario_atendimento
+        : [],
+      observacoes_horario: c?.observacoes_horario || "",
       data_fundacao: c?.data_fundacao ? c.data_fundacao.split("T")[0] : "",
       google_place_id: c?.google_place_id || "",
       exibir_data_fundacao: c?.exibir_data_fundacao === "true" || c?.exibir_data_fundacao === true ? true : false,
@@ -452,6 +455,7 @@ export default function ClienteEdit() {
               google_place_id: values.google_place_id || null,
               exibir_data_fundacao: values.exibir_data_fundacao,
               horario_atendimento: values.horario_atendimento || [],
+              observacoes_horario: values.observacoes_horario || null,
               reviews: values.reviews || [],
               beneficios: values.beneficios || [],
               tipo_arquivo_midia: values.tipo_arquivo_midia || "catalogo",

@@ -71,6 +71,7 @@ class Cliente extends Model
         'contract_ends_at',
         'beneficios',
         'horario_atendimento',
+        'observacoes_horario',
         'google_place_id',
         'data_fundacao',
         'tipo_arquivo_midia',
