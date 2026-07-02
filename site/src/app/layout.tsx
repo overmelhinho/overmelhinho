@@ -18,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://novo.overmelhinho.com.br"),
-  title: "O Vermelhinho - Guia Local",
-  description: "Encontre os melhores negócios na sua cidade",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.overmelhinho.com.br"),
+  title: "O Vermelhinho | Maior Guia de Empresas e Negócios da Serra Gaúcha",
+  description: "Encontre as melhores empresas, prestadores de serviços, profissionais de saúde e vagas de emprego em Farroupilha, Caxias do Sul e região. Busque no O Vermelhinho!",
 };
 
 export const viewport: Viewport = {
