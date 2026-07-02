@@ -91,9 +91,11 @@ class Invoice extends Model
                 $q->where(function ($inner) use ($search, $unaccentExists) {
                     if ($unaccentExists) {
                         $inner->whereRaw("unaccent(nome_fantasia) ilike unaccent(?)", ["%{$search}%"])
+                              ->orWhereRaw("unaccent(razao_social) ilike unaccent(?)", ["%{$search}%"])
                               ->orWhere('cpf_cnpj', 'like', "%{$search}%");
                     } else {
                         $inner->where('nome_fantasia', 'ilike', "%{$search}%")
+                              ->orWhere('razao_social', 'ilike', "%{$search}%")
                               ->orWhere('cpf_cnpj', 'like', "%{$search}%");
                     }
                 });
