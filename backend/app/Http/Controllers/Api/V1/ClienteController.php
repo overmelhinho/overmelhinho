@@ -264,11 +264,34 @@ class ClienteController extends Controller
 
         $query->orderByRaw("
             CASE 
-                -- 0.5. MATCH EXATO ABSOLUTO (Fura fila de assinaturas)
+                -- 0.1. MATCH EXATO ABSOLUTO
                 WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
-                ELSE 1
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
+                
+                -- 0.2. COMEÇA COM A FRASE EXATA
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
+                
+                -- 0.3. NOME CONTÉM A FRASE EXATA
+                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
+                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 2
+                
+                -- 0.4. SEGMENTO CONTÉM A FRASE EXATA
+                WHEN EXISTS (
+                    SELECT 1 FROM cliente_segmento cs 
+                    JOIN segmentos s ON cs.segmento_id = s.id 
+                    WHERE cs.cliente_id = clientes.id 
+                    AND {$unaccentFunc}(s.nome) ilike {$unaccentFunc}(?)
+                ) THEN 3
+                
+                ELSE 4
             END ASC
-        ", [$q]);
+        ", [
+            $q, $q, 
+            "{$q} %", "{$q} %", 
+            "%{$q}%", "%{$q}%", 
+            "%{$q}%"
+        ]);
 
         $query->orderByRaw("
             CASE 
