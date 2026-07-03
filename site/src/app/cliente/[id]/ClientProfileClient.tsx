@@ -788,7 +788,31 @@ export default function ClientProfileClient() {
 
                                 {/* Mobile Actions Row */}
                                 <div className="flex md:hidden flex-wrap items-center gap-3 mt-4">
-                                    {renderMaterialOrQuoteButton(true)}
+                                    <div className="w-full flex gap-3">
+                                        {client.enderecos?.[0] && !client.enderecos[0].exibir_apenas_cidade && isPagante && (
+                                            <>
+                                                <a
+                                                    href={`https://waze.com/ul?q=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}&navigate=yes`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 px-4 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center active:scale-95 transition-all hover:bg-blue-100"
+                                                >
+                                                    <MapPin size={16} className="mr-1.5" fill="currentColor" /> Waze
+                                                </a>
+                                                <a
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex-1 bg-gray-50 text-gray-600 border border-gray-100 px-4 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center active:scale-95 transition-all hover:bg-gray-100"
+                                                >
+                                                    <MapPin size={16} className="mr-1.5" fill="currentColor" /> Google Maps
+                                                </a>
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="w-full">
+                                        {renderMaterialOrQuoteButton(true)}
+                                    </div>
                                 </div>
                             </div>
 
@@ -812,16 +836,6 @@ export default function ClientProfileClient() {
                                 )}
                                 {client.enderecos?.[0] && !client.enderecos[0].exibir_apenas_cidade && isPagante && (
                                     <>
-                                        {/* Waze: Apenas Mobile */}
-                                        <a
-                                            href={`https://waze.com/ul?q=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}&navigate=yes`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="md:hidden bg-blue-50 text-blue-600 border border-blue-100 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-blue-100"
-                                        >
-                                            <MapPin size={20} className="mr-2" fill="currentColor" /> Waze
-                                        </a>
-
                                         {/* Google Maps: Apenas Desktop */}
                                         <a
                                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}`}
