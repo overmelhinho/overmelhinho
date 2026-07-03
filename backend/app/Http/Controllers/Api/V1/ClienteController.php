@@ -149,6 +149,12 @@ class ClienteController extends Controller
                         ->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$effectiveQ}%"]);
                 }
 
+                // 1.5 Busca Space-Blind (Ignora espaços no banco quando o usuário digita uma palavra única)
+                if (!str_contains(trim($q), ' ')) {
+                    $sub->orWhereRaw("replace(unaccent(nome_fantasia), ' ', '') ilike unaccent(?)", ["%{$q}%"])
+                        ->orWhereRaw("replace(unaccent(nome_alternativo), ' ', '') ilike unaccent(?)", ["%{$q}%"]);
+                }
+
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
                 if ($canUseSimilarity && !$hasMovelWord) {
                     // Threshold seguro (0.5) para evitar falsos positivos como 'Psicologia' e 'Odontologia' (que dividem o sufixo)
@@ -426,6 +432,11 @@ class ClienteController extends Controller
                     }
                 }
                 
+                // Busca Space-Blind
+                if (!str_contains(trim($q), ' ')) {
+                    $sub->orWhereRaw("replace(unaccent(nome_fantasia), ' ', '') ilike unaccent(?)", ["%{$q}%"]);
+                }
+                
                 // Similarity (pg_trgm) - Threshold baixo 0.1
                 if ($canUseSim && !$hasMovelWord) {
                     $sub->orWhereRaw("similarity(nome_fantasia, ?) > 0.1", [$normalizedQ]);
@@ -674,6 +685,17 @@ class ClienteController extends Controller
                                 ->orWhere('razao_social', 'ilike', "%{$q}%")
                                 ->orWhere('nome_alternativo', 'ilike', "%{$q}%")
                                 ->orWhere('responsavel', 'ilike', "%{$q}%");
+                        }
+                    }
+
+                    // Busca Space-Blind
+                    if (!str_contains(trim($q), ' ')) {
+                        if ($unaccentExists) {
+                            $sub->orWhereRaw("replace(unaccent(nome_fantasia), ' ', '') ilike unaccent(?)", ["%{$q}%"])
+                                ->orWhereRaw("replace(unaccent(razao_social), ' ', '') ilike unaccent(?)", ["%{$q}%"]);
+                        } else {
+                            $sub->orWhereRaw("replace(nome_fantasia, ' ', '') ilike ?", ["%{$q}%"])
+                                ->orWhereRaw("replace(razao_social, ' ', '') ilike ?", ["%{$q}%"]);
                         }
                     }
 
