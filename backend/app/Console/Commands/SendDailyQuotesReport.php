@@ -167,7 +167,7 @@ class SendDailyQuotesReport extends Command
                                     </table>
                                     
                                     <div style='margin-top: 40px; padding-top: 25px; border-top: 1px solid #f1f5f9; text-align: center;'>
-                                        <a href='https://dash.overmelhinho.com.br/dashboard/quotes' style='background-color: #C00000; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 25px; font-weight: 800; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; display: inline-block; box-shadow: 0 6px 20px rgba(192, 0, 0, 0.15);'>Acessar Painel de Controle</a>
+                                        <a href='https://dash.overmelhinho.com.br/orcamentos' style='background-color: #C00000; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 25px; font-weight: 800; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; display: inline-block; box-shadow: 0 6px 20px rgba(192, 0, 0, 0.15);'>Acessar Painel de Controle</a>
                                     </div>
                                 </td>
                             </tr>
