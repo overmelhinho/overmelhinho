@@ -704,9 +704,9 @@ export default function TabIdentificacao() {
             name="descricao"
             value={values.descricao || ""}
             onChange={handleChange}
-            rows={6}
+            rows={12}
             placeholder={`Exemplo:\nA Empresa X atua em Farroupilha/RS...\n\n- Serviço 1\n- Serviço 2\n- Serviço 3`}
-            className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] resize-none"
+            className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A] resize-y"
           />
 
           {showPreviewDescricao && (
