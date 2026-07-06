@@ -190,11 +190,10 @@ class SendDailyQuotesReport extends Command
         $subject = "📊 Relatório Diário de Orçamentos IA — {$dataReferencia}";
 
         try {
-            Mail::send([], [], function ($message) use ($recipient, $subject, $htmlContent) {
+            Mail::html($htmlContent, function ($message) use ($recipient, $subject) {
                 $message->to($recipient)
                     ->from('overmelhinho.seo@gmail.com', 'Relatórios - O Vermelhinho')
-                    ->subject($subject)
-                    ->html($htmlContent);
+                    ->subject($subject);
             });
 
             $this->info("✅ Relatório de orçamentos enviado com sucesso para {$recipient}!");
