@@ -29,8 +29,22 @@ export function middleware(request: NextRequest) {
   if (categoryMatch) {
     const catId = categoryMatch[2];
     const sp = new URLSearchParams();
-    sp.set('segmento', catId);
-    return getRedirect('/busca', sp);
+    sp.set('id_categoria', catId);
+    return getRedirect('/api/legacy-busca', sp);
+  }
+
+  // 2.5. Redirecionamento de busca que caiu direto no /busca com parâmetro segmento (numérico)
+  if (pathname === '/busca' && searchParams.has('segmento')) {
+    const segmento = searchParams.get('segmento');
+    if (segmento && /^\d+$/.test(segmento)) {
+      const sp = new URLSearchParams();
+      sp.set('id_categoria', segmento);
+      // Mantém a cidade caso exista
+      if (searchParams.has('city_id')) {
+        sp.set('id_cidade', searchParams.get('city_id')!);
+      }
+      return getRedirect('/api/legacy-busca', sp);
+    }
   }
 
   // 3. Redirecionamento de Vagas Legadas: /empregos/detalhes/{id}
