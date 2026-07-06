@@ -85,10 +85,9 @@ class GenerateAiQuoteResponse implements ShouldQueue
             ";
 
             try {
-                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($email, $subject, $htmlContent) {
+                \Illuminate\Support\Facades\Mail::html($htmlContent, function ($message) use ($email, $subject) {
                     $message->to($email)
-                        ->subject($subject)
-                        ->html($htmlContent);
+                        ->subject($subject);
                 });
 
                 $this->quote->update([

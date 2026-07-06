@@ -78,10 +78,9 @@ class ResendUnnotifiedQuotes extends Command
                 ";
 
                 try {
-                    Mail::send([], [], function ($message) use ($email, $subject, $htmlContent) {
+                    Mail::html($htmlContent, function ($message) use ($email, $subject) {
                         $message->to($email)
-                            ->subject($subject)
-                            ->html($htmlContent);
+                            ->subject($subject);
                     });
 
                     $quote->update(['notified_at' => now()]);
