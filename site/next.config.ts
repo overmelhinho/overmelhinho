@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/:slug*;cat:id(\\d+).php',
-        destination: '/busca',
+        destination: '/busca?q=:slug',
         permanent: true,
       },
       {
