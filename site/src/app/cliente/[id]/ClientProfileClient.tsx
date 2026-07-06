@@ -1066,7 +1066,7 @@ export default function ClientProfileClient() {
                                         );
                                     })()}
 
-                                    {client.video && (
+                                    {client.video && isPagante && (
                                         <section className="space-y-6">
                                             <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Apresentação</h2>
                                             <div className="w-full aspect-video rounded-[3rem] overflow-hidden bg-gray-100 relative shadow-inner border-4 border-white gummy-card">
