@@ -4,22 +4,22 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: '/:slug*;contato:id(\\d+).php',
+        source: '/:slug;contato:id(\\d+).php',
         destination: '/cliente/:id',
         permanent: true,
       },
       {
-        source: '/:slug*;cat:id(\\d+).php',
+        source: '/:slug;cat:id(\\d+).php',
         destination: '/busca?q=:slug',
         permanent: true,
       },
       {
-        source: '/:slug*;blog:id(\\d+).php',
+        source: '/:slug;blog:id(\\d+).php',
         destination: '/',
         permanent: true,
       },
       {
-        source: '/:slug*;post:id(\\d+).php',
+        source: '/:slug;post:id(\\d+).php',
         destination: '/',
         permanent: true,
       },

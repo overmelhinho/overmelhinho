@@ -828,7 +828,7 @@ class ClienteController extends Controller
             return response()->json(['message' => 'Cliente não encontrado'], 404);
         }
 
-        if ($cliente->exibir_no_site !== 'true') {
+        if (!in_array($cliente->exibir_no_site, ['true', true, 1, '1'], true)) {
             $citySlug = null;
             $segmentSlug = null;
             

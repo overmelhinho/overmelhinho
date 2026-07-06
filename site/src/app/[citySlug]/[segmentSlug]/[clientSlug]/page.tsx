@@ -1,7 +1,7 @@
 import api from '@/services/api';
 import { Metadata } from 'next';
 import ClientProfileClient from '@/app/cliente/[id]/ClientProfileClient';
-import { redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
 
@@ -36,10 +36,16 @@ async function getClient(slug: string) {
             next: { revalidate: 3600 } // Cache maior para landing pages
         });
 
-        if (!response.ok) return null;
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+            if (response.status === 404 && data?.redirect_suggestion) {
+                return { is_inactive_redirect: true, redirect_suggestion: data.redirect_suggestion };
+            }
+            return null;
+        }
         
-        const data = await response.json();
-        return data.data;
+        return data?.data || null;
     } catch (e) {
         return null;
     }
@@ -49,7 +55,7 @@ export async function generateMetadata({ params }: { params: Promise<{ citySlug:
     const { citySlug, segmentSlug, clientSlug } = await params;
     const client = await getClient(clientSlug);
     
-    if (!client) return { title: 'O Vermelhinho | Guia de Empresas' };
+    if (!client || client.is_inactive_redirect) return { title: 'O Vermelhinho | Guia de Empresas' };
 
     const address = client.enderecos?.[0] || {};
     const mainCityName = address.cidade || '';
@@ -99,7 +105,12 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
     const client = await getClient(clientSlug);
 
     if (!client) {
-        redirect('/');
+        notFound();
+    }
+
+    if (client.is_inactive_redirect) {
+        const { city_slug, segment_slug } = client.redirect_suggestion;
+        permanentRedirect(`/${city_slug}/${segment_slug}`);
     }
 
     const address = client.enderecos?.[0] || {};
