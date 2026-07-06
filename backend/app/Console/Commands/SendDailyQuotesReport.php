@@ -192,6 +192,7 @@ class SendDailyQuotesReport extends Command
         try {
             Mail::send([], [], function ($message) use ($recipient, $subject, $htmlContent) {
                 $message->to($recipient)
+                    ->from('overmelhinho.seo@gmail.com', 'Relatórios - O Vermelhinho')
                     ->subject($subject)
                     ->html($htmlContent);
             });
