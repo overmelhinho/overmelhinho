@@ -816,7 +816,7 @@ class ClienteController extends Controller
                           ->orWhere('expires_at', '>=', now());
                   });
             }
-        ])->where('exibir_no_site', 'true');
+        ]);
         
         if (is_numeric($id)) {
             $cliente = $query->find($id);
@@ -826,6 +826,26 @@ class ClienteController extends Controller
 
         if (!$cliente) {
             return response()->json(['message' => 'Cliente não encontrado'], 404);
+        }
+
+        if ($cliente->exibir_no_site !== 'true') {
+            $citySlug = null;
+            $segmentSlug = null;
+            
+            if ($cliente->enderecos->isNotEmpty() && !empty($cliente->enderecos[0]->cidade)) {
+                $citySlug = \Illuminate\Support\Str::slug($cliente->enderecos[0]->cidade);
+            }
+            if ($cliente->segmentos->isNotEmpty()) {
+                $segmentSlug = \Illuminate\Support\Str::slug($cliente->segmentos[0]->nome);
+            }
+
+            return response()->json([
+                'message' => 'Cliente inativo',
+                'redirect_suggestion' => ($citySlug && $segmentSlug) ? [
+                    'city_slug' => $citySlug,
+                    'segment_slug' => $segmentSlug
+                ] : null
+            ], 404);
         }
 
         return new ClienteResource($cliente);

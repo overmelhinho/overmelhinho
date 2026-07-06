@@ -68,8 +68,10 @@ async function fetchAds(cityId: number, segmentName: string) {
 
 export async function generateMetadata(props: { params: Promise<{ citySlug: string; segmentSlug: string }> }): Promise<Metadata> {
     const params = await props.params;
-    const city = await fetchCity(params.citySlug);
-    const segment = await fetchSegment(params.segmentSlug);
+    const cleanCitySlug = params.citySlug.replace(/-+$/, '');
+    const cleanSegmentSlug = params.segmentSlug.replace(/-+$/, '');
+    const city = await fetchCity(cleanCitySlug);
+    const segment = await fetchSegment(cleanSegmentSlug);
 
     if (!city || !segment) {
         return {
@@ -93,8 +95,10 @@ export async function generateMetadata(props: { params: Promise<{ citySlug: stri
 
 export default async function SegmentCityPage(props: { params: Promise<{ citySlug: string; segmentSlug: string }> }) {
     const params = await props.params;
-    const city = await fetchCity(params.citySlug);
-    const segment = await fetchSegment(params.segmentSlug);
+    const cleanCitySlug = params.citySlug.replace(/-+$/, '');
+    const cleanSegmentSlug = params.segmentSlug.replace(/-+$/, '');
+    const city = await fetchCity(cleanCitySlug);
+    const segment = await fetchSegment(cleanSegmentSlug);
 
     if (!city || !segment) {
         notFound();
