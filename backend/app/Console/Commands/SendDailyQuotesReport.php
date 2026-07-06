@@ -186,7 +186,7 @@ class SendDailyQuotesReport extends Command
         </html>
         ";
 
-        $recipient = 'angelica@overmelhinho.com.br';
+        $recipient = 'angelica.overmelhinho@gmail.com';
         $subject = "📊 Relatório Diário de Orçamentos IA — {$dataReferencia}";
 
         try {
