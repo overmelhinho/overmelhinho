@@ -55,9 +55,6 @@ class ResendQuotesCommand extends Command
                                 \"{$quote->ai_draft_response}\"
                             </p>
                         </div>
-                        <div style='text-align: center; margin-top: 25px;'>
-                            <a href='https://dash.overmelhinho.com.br/dashboard/foco' style='background-color: #C00000; color: white; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;'>👉 Acesse sua Fila de Foco para responder</a>
-                        </div>
                     </div>
                 ";
 
