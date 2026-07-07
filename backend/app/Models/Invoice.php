@@ -71,6 +71,7 @@ class Invoice extends Model
      */
     public function scopeSearch($query, $search)
     {
+        $search = trim((string)$search);
         if (empty($search)) {
             return $query;
         }
@@ -127,11 +128,18 @@ class Invoice extends Model
                 });
             });
 
-            // 2. Busca pelo número da autorização (se for numérico)
+            // 2. Busca pelo número da autorização (apenas exato numérico ou numérico-legado)
             if (is_numeric($search)) {
-                $authId = \App\Models\Autorizacao::where('numero', $search)->value('id');
-                if ($authId) {
-                    $subQuery->orWhere('group_id', 'autorizacao-' . $authId);
+                $authIds = \App\Models\Autorizacao::whereIn('numero', [$search, $search . '-legado'])->pluck('id');
+                if ($authIds->isNotEmpty()) {
+                    $groupIds = $authIds->map(fn($id) => 'autorizacao-' . $id)->toArray();
+                    $subQuery->orWhereIn('group_id', $groupIds);
+                }
+            } elseif (preg_match('/^[0-9]+-legado$/', $search)) {
+                $authIds = \App\Models\Autorizacao::where('numero', $search)->pluck('id');
+                if ($authIds->isNotEmpty()) {
+                    $groupIds = $authIds->map(fn($id) => 'autorizacao-' . $id)->toArray();
+                    $subQuery->orWhereIn('group_id', $groupIds);
                 }
             }
         });
