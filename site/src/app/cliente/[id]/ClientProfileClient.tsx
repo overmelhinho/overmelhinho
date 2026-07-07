@@ -1413,7 +1413,7 @@ export default function ClientProfileClient() {
                         {/* Hours Section (Real Data) */}
                         {isPagante && (<div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                             <h3 className="text-xl font-black font-serif italic text-gray-900">Funcionamento</h3>
-                            <div className="space-y-3 font-black text-[10px] uppercase tracking-widest">
+                            <div className="space-y-3 font-black text-[11px] md:text-xs uppercase tracking-widest">
                                 {schedule.length > 0 ? schedule.map((s: any) => (
                                     <div key={s.day} className={`flex justify-between items-center ${new Date().getDay() === (s.day === 7 ? 0 : s.day) ? 'text-brand-red' : 'text-gray-900'}`}>
                                         <span className="w-24">{daysMap[s.day]}</span>
@@ -1424,7 +1424,7 @@ export default function ClientProfileClient() {
                                             <div className="text-right flex flex-col items-end">
                                                 <span>{s.open} - {s.close}</span>
                                                 {s.open2 && s.close2 && (
-                                                    <span className="text-[8px] opacity-60 leading-tight">{s.open2} - {s.close2}</span>
+                                                    <span className="text-[10px] opacity-60 leading-tight">{s.open2} - {s.close2}</span>
                                                 )}
                                             </div>
                                         )}

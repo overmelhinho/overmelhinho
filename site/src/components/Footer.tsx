@@ -102,7 +102,7 @@ export default function Footer() {
                         <div className="bg-gray-50 rounded-[2.5rem] px-5 py-6 sm:p-8 space-y-6 border border-gray-100/50">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Suporte O Vermelhinho</h4>
                             <div className="space-y-4">
-                                {/* WhatsApp */}
+                                {/* WhatsApp - Oculto temporariamente
                                 <div className="flex items-start space-x-3 sm:space-x-4">
                                     <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-brand-red flex-shrink-0">
                                         <Phone size={18} />
@@ -119,6 +119,7 @@ export default function Footer() {
                                         </a>
                                     </div>
                                 </div>
+                                */}
                                 {/* E-mail */}
                                 <div className="flex items-start space-x-3 sm:space-x-4">
                                     <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-brand-red flex-shrink-0">
@@ -145,7 +146,16 @@ export default function Footer() {
                         <p>© {currentYear} O Vermelhinho Negócios Digitais Ltda</p>
                         <p>Rua Cel. Pena de Moraes, 513 - Sala 1004 - Centro</p>
                         <p>Farroupilha/RS.</p>
-                        <p className="pt-1">EP&amp;DG by Digital Intelligence</p>
+                        <p className="pt-1">
+                            <a 
+                                href="https://www.epdb.com.br/?utm_source=overmelhinho.com.br&utm_medium=referral&utm_campaign=footer" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="hover:text-brand-red transition-colors"
+                            >
+                                EP&amp;DG by Digital Intelligence
+                            </a>
+                        </p>
                     </div>
 
                     <div className="flex items-center space-x-6">

@@ -107,7 +107,9 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
     const clients = await fetchClients(city.id, segment.nome);
     const searchAds = await fetchAds(city.id, segment.nome);
 
-    const pagantes = clients.filter((c: any) => c.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(c.status_assinatura));
+    const pagantes = clients
+        .filter((c: any) => c.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(c.status_assinatura))
+        .sort((a: any, b: any) => a.nome_fantasia.localeCompare(b.nome_fantasia, 'pt-BR'));
     const gratuitos = clients.filter((c: any) => !(c.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(c.status_assinatura)));
 
     // Extract Hero Ad (topBanner)
