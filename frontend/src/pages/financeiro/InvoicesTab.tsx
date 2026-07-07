@@ -511,12 +511,14 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
         if (searchTerm) {
             const isNumeric = /^\d+$/.test(searchTerm.trim());
             
-            // 1. Busca por Autorização (match exato ou com padding de zeros)
+            // 1. Busca por Autorização (match exato ou com padding de zeros ou com sufixo legado)
             const padded = searchTerm.trim().padStart(5, '0');
             const authNumStr = invoice.autorizacao_numero ? String(invoice.autorizacao_numero).trim() : "";
             const matchesAutorizacao = 
                 authNumStr === searchTerm.trim() ||
-                authNumStr === padded;
+                authNumStr === padded ||
+                authNumStr === `${searchTerm.trim()}-legado` ||
+                authNumStr === `${padded}-legado`;
 
             // 2. Busca por CNPJ (se tiver 8+ dígitos)
             const cleanSearch = searchTerm.trim();
