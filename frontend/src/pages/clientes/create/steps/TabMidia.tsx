@@ -132,9 +132,10 @@ export default function TabMidia() {
       setFieldValue("arquivo_midia_path", uploaded.path || null);
       setFieldValue("arquivo_midia_mime", uploaded.mime || file.type || null);
       toast.success("Upload concluído!");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Falha ao enviar arquivo.");
+      const msg = error.response?.data?.message || error.message || "Falha ao enviar arquivo.";
+      toast.error(msg);
       setFieldValue("arquivo_midia", null);
     } finally {
       setUploading(false);

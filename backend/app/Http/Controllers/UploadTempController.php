@@ -11,10 +11,19 @@ class UploadTempController extends Controller
 {
     public function uploadTemp(Request $request)
     {
-        $request->validate([
-            'files' => 'required',
-            'files.*' => 'file|max:10240|mimes:jpg,jpeg,png,webp,pdf,gif',
-        ]);
+        try {
+            $request->validate([
+                'files' => 'required',
+                'files.*' => 'file|max:10240|mimes:jpg,jpeg,png,webp,pdf,gif|mimetypes:image/jpeg,image/png,image/webp,image/gif,application/pdf',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::error('UploadTemp Validation Failed: ' . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro de validação: ' . collect($e->errors())->flatten()->implode(' '),
+                'errors' => $e->errors()
+            ], 422);
+        }
 
         $supabaseUrl = rtrim(config('services.supabase.url', ''), '/');
         $supabaseKey = config('services.supabase.key'); // SERVICE_ROLE key
