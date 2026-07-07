@@ -500,7 +500,8 @@ export default function ClientProfileClient() {
         return null;
     };
 
-    const tabs = isPagante ? ['Sobre', 'Fotos'] : ['Sobre'];
+    const tabs = ['Sobre'];
+    if (client.galeria?.length > 0 && isPagante) tabs.push('Fotos');
     if (client.reviews?.length > 0 && isPagante) tabs.push('Avaliações');
     if (client.job_opportunities?.length > 0 && isPagante) tabs.push('Vagas');
     const daysMap: Record<number, string> = {
