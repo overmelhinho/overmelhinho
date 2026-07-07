@@ -186,13 +186,13 @@ class SendDailyQuotesReport extends Command
         </html>
         ";
 
-        $recipient = 'angelica.overmelhinho@gmail.com';
+        $recipient = 'angelica@overmelhinho.com.br';
         $subject = "📊 Relatório Diário de Orçamentos IA — {$dataReferencia}";
 
         try {
             Mail::html($htmlContent, function ($message) use ($recipient, $subject) {
                 $message->to($recipient)
-                    ->from('overmelhinho.seo@gmail.com', 'Relatórios - O Vermelhinho')
+                    ->from(config('mail.from.address', 'relatorios@overmelhinho.com.br'), 'Relatórios - O Vermelhinho')
                     ->subject($subject);
             });
 
