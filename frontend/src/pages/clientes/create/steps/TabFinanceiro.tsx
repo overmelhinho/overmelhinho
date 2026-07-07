@@ -37,7 +37,8 @@ import {
     Check,
     Undo2,
     PenTool,
-    User
+    User,
+    Barcode
 } from "lucide-react";
 import { useFormikContext } from "formik";
 import { cn } from "@/lib/utils";
@@ -1418,11 +1419,12 @@ export default function TabFinanceiro() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 
-                    <div className="grid grid-cols-3 gap-2 mt-6 px-2">
+                    <div className="grid grid-cols-4 gap-2 mt-6 px-2">
                         {[
                             { id: 'pix', label: 'Pix', icon: <Smartphone size={14} /> },
                             { id: 'dinheiro', label: 'Dinheiro', icon: <DollarSign size={14} /> },
-                            { id: 'cartao', label: 'Cartão', icon: <CreditCard size={14} /> }
+                            { id: 'cartao', label: 'Cartão', icon: <CreditCard size={14} /> },
+                            { id: 'boleto', label: 'Boleto', icon: <Barcode size={14} /> }
                         ].map(method => (
                             <button
                                 key={method.id}

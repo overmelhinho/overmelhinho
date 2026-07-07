@@ -1,0 +1,7 @@
+﻿<RULE[safe_git_push]>
+REGRA DE PUSH SEGURO (O Vermelhinho): Sempre que o usuário solicitar explicitamente 'suba para o github' ou 'deploy':
+1. Antes de realizar o commit, o agente DEVE revisar os arquivos que serão enviados (rodando 'git status') para garantir que não existem arquivos de dados (como backups .sql, logs, dumps ou pastas de scratch) que estejam aguardando upload.
+2. Se houver arquivos sensíveis ou grandes, adicione-os ao .gitignore antes de executar o 'git add .'.
+3. Lembre-se sempre que o GitHub tem limite estrito de 100MB por arquivo.
+</RULE[safe_git_push]>
+4. O comando 'git push' DEVE ser sempre executado sozinho (não encadeado com '&&' ou ';') e utilizando permissão 'unsandboxed'. Isso garante que o agente consiga utilizar as credenciais SSH/Windows do usuário para o GitHub sem travar o terminal aguardando senha.

@@ -35,18 +35,18 @@
         
         .info-table { margin-bottom: 10px; }
         .info-table td { padding: 5px 8px; border: 1px solid #F3F4F6; width: 50%; }
-        .info-table .label { display: block; font-size: 8.5px; font-weight: bold; color: #9CA3AF; text-transform: uppercase; margin-bottom: 2px; }
-        .info-table .value { display: block; font-size: 11.5px; font-weight: bold; color: #111827; }
-        .info-table .value-desc { font-size: 10.5px; font-weight: normal; color: #374151; }
+        .info-table .label { display: block; font-size: 10px; font-weight: bold; color: #9CA3AF; text-transform: uppercase; margin-bottom: 2px; }
+        .info-table .value { display: block; font-size: 13px; font-weight: bold; color: #111827; }
+        .info-table .value-desc { font-size: 11.5px; font-weight: normal; color: #374151; }
 
         /* ── PAYMENT & INSTALLMENTS ── */
         .pay-summary { margin-bottom: 8px; }
         .pay-summary td { border: 1px solid #E5E7EB; background: #F9FAFB; padding: 8px; text-align: center; width: 25%; }
-        .pay-summary .val { font-size: 12px; font-weight: bold; color: #111827; margin-top: 3px; }
+        .pay-summary .val { font-size: 14px; font-weight: bold; color: #111827; margin-top: 3px; }
         .pay-summary .val.red { color: #B70F0A; }
 
         .installments-table th { background: #F3F4F6; padding: 5px; font-size: 9px; color: #4B5563; text-transform: uppercase; border: 1px solid #E5E7EB; }
-        .installments-table td { padding: 5px; font-size: 10.5px; color: #111827; border: 1px solid #E5E7EB; text-align: center; font-weight: bold; }
+        .installments-table td { padding: 5px; font-size: 12px; color: #111827; border: 1px solid #E5E7EB; text-align: center; font-weight: bold; }
 
         /* ── OBS ── */
         .obs-box { border: 1px solid #F3F4F6; background: #FAFAFA; padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 9.5px; color: #374151; }
@@ -59,7 +59,7 @@
         .sign-line { border-top: 1px solid #6B7280; width: 90%; margin: 25px auto 4px auto; }
         .sign-label { font-size: 9.5px; font-weight: bold; color: #111827; text-transform: uppercase; }
         
-        .legal-footer { margin-top: 15px; padding-top: 8px; border-top: 1px solid #E5E7EB; font-size: 7.8px; color: #9CA3AF; text-align: justify; line-height: 1.25; page-break-inside: avoid; }
+        .legal-footer { margin-top: 15px; padding-top: 8px; border-top: 1px solid #E5E7EB; font-size: 9px; color: #9CA3AF; text-align: justify; line-height: 1.25; page-break-inside: avoid; }
     </style>
 </head>
 <body>
