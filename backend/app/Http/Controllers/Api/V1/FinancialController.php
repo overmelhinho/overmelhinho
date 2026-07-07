@@ -1168,6 +1168,9 @@ class FinancialController extends Controller
      */
     public function downloadReceiptsBatch(Request $request)
     {
+        set_time_limit(0);
+        ini_set('memory_limit', '-1');
+
         $ids = $request->input('ids');
         if (!$ids || !is_array($ids)) {
             return response()->json(['message' => 'Nenhuma fatura selecionada.'], 422);
@@ -1275,6 +1278,9 @@ class FinancialController extends Controller
      */
     public function printReceiptsBatch(Request $request)
     {
+        set_time_limit(0);
+        ini_set('memory_limit', '-1');
+
         $ids = $request->input('ids');
         if (!$ids || !is_array($ids)) {
             return response()->json(['message' => 'Nenhuma fatura selecionada.'], 422);
@@ -1332,11 +1338,7 @@ class FinancialController extends Controller
             ];
         }
 
-        $pdf = Pdf::loadView('reports.receipts_print', ['items' => $items])
-            ->setPaper('a4', 'portrait')
-            ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
-
-        return $pdf->stream('Recibos_Selecionados.pdf');
+        return view('reports.receipts_print', ['items' => $items]);
     }
 
     /**

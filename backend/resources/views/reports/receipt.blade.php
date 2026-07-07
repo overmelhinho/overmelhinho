@@ -31,17 +31,17 @@
 
         /* Dados do Sacado */
         .client-section { margin-bottom: 8pt; border-left: 2pt solid #B70F0A; padding-left: 6pt; }
-        .client-label { font-size: 6.5pt; color: #B70F0A; font-weight: bold; text-transform: uppercase; }
-        .client-data { font-size: 8.5pt; font-weight: bold; line-height: 1.2; }
-        .client-details { font-size: 7.5pt; color: #555; }
+        .client-label { font-size: 9.5pt; color: #B70F0A; font-weight: bold; text-transform: uppercase; }
+        .client-data { font-size: 11.5pt; font-weight: bold; line-height: 1.2; }
+        .client-details { font-size: 10.5pt; color: #555; }
 
         /* Texto Legal / Extenso */
-        .legal-text { font-size: 7pt; line-height: 1.3; text-align: justify; margin-bottom: 8pt; color: #444; }
+        .legal-text { font-size: 10pt; line-height: 1.3; text-align: justify; margin-bottom: 8pt; color: #444; }
         
         /* Rodapé com Assinaturas */
-        .signature-area { margin-top: 15pt; }
-        .sig-box { border-top: 0.5pt solid #000; font-size: 6.5pt; text-align: center; padding-top: 5pt; width: 45%; }
-        .date-box { font-size: 6.5pt; text-align: center; padding-top: 5pt; width: 45%; }
+        .signature-area { margin-top: 25pt; }
+        .sig-box { font-size: 9.5pt; text-align: center; width: 45%; vertical-align: bottom; }
+        .date-box { font-size: 9.5pt; text-align: center; width: 45%; vertical-align: bottom; }
 
         /* Canhoto Destacável (Bottom) */
         .canhoto { 
@@ -51,7 +51,8 @@
             right: 0; 
             border-top: 1pt dashed #ccc; 
             padding-top: 10pt; 
-            font-size: 7.5pt; 
+            padding-bottom: 5pt;
+            font-size: 10.5pt; 
         }
 
         .highlight { color: #B70F0A; font-weight: bold; }
@@ -77,8 +78,6 @@
                         CNPJ: 04.951.787/0001-28
                     </td>
                     <td align="right" style="font-size: 7pt; color: #999;">
-                        <strong>DATA EMISSÃO</strong><br>
-                        {{ \Carbon\Carbon::now()->format('d/m/Y') }}
                     </td>
                 </tr>
             </table>
@@ -122,18 +121,28 @@
         <table width="100%" class="signature-area">
             <tr>
                 <td class="date-box">
-                    <span style="font-size: 8pt; font-weight: bold;">{{ $acceptDate }}</span><br>
-                    Data do Aceite / Pagamento
+                    <span style="font-size: 11pt; font-weight: bold;"> ___/___/______ </span>
+                    <div style="padding-top: 5pt;">Data do Aceite / Pagamento</div>
                 </td>
                 <td width="10%"></td>
-                <td class="sig-box">Assinatura do Recebedor / O Vermelhinho</td>
+                <td class="sig-box">
+                    <div style="border-top: 0.5pt solid #000; padding-top: 5pt;">Assinatura do Recebedor / O Vermelhinho</div>
+                </td>
             </tr>
         </table>
 
         <!-- Canhoto / Recibo destacável -->
         <div class="canhoto">
-            Recebemos de <span class="highlight">{{ $client->razao_social ?: $client->nome_fantasia }}</span> a importância de <span style="text-transform: uppercase; font-weight: bold;">{{ $payableAmount_extenso }}</span> em <span class="highlight">{{ $acceptDate }}</span>.
-            <div style="float: right; border-top: 0.5pt solid #000; width: 120pt; text-align: center; margin-top: 10pt; font-size: 6pt;">Assinatura</div>
+            <table width="100%" style="margin: 0; padding: 0; border: none;">
+                <tr>
+                    <td style="vertical-align: bottom; padding-right: 15pt; text-align: justify; border: none;">
+                        Recebemos de <span class="highlight">{{ $client->razao_social ?: $client->nome_fantasia }}</span> a importância de <span style="text-transform: uppercase; font-weight: bold;">{{ $payableAmount_extenso }}</span> em <span class="highlight"> ___/___/______ </span>.
+                    </td>
+                    <td style="vertical-align: bottom; width: 150pt; border: none; padding-bottom: 2pt;">
+                        <div style="border-top: 0.5pt solid #000; text-align: center; padding-top: 2pt; font-size: 9pt;">Assinatura</div>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
 </body>
