@@ -933,7 +933,7 @@ export default function ClientProfileClient() {
                                                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 col-span-2">
                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
                                                     <div className="flex flex-wrap gap-1.5">
-                                                        {client.segmentos.map((seg: any) => (
+                                                        {[...client.segmentos].sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR')).map((seg: any) => (
                                                             <Link 
                                                                 key={seg.id} 
                                                                 href={`/busca?q=${encodeURIComponent(seg.nome)}`}
