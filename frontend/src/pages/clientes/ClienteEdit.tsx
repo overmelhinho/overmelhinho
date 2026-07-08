@@ -235,6 +235,8 @@ export default function ClienteEdit() {
         telefone: e?.telefone || "",
         link_maps: e?.link_maps || "",
         link_waze: e?.link_waze || "",
+        latitude: e?.latitude || "",
+        longitude: e?.longitude || "",
         exibir_apenas_cidade: e?.exibir_apenas_cidade === "false" || e?.exibir_apenas_cidade === false ? false : (e?.exibir_apenas_cidade ? true : false),
         is_cobranca: e?.is_cobranca === "false" || e?.is_cobranca === false ? false : (e?.is_cobranca === "true" || e?.is_cobranca === true ? true : (idx === 0)),
         endereco_compacto: e?.endereco_compacto || "",
