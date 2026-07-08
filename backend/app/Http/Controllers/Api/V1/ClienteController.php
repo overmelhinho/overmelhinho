@@ -318,26 +318,34 @@ class ClienteController extends Controller
             END ASC
         ", $allBindings);
 
-        // Desempate secundário (Dentro do mesmo Nível, prefere Match Absoluto > Começa Com > Contém)
-        $query->orderByRaw("
-            CASE 
-                -- A. Match Exato
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
-                
-                -- B. Começa com a palavra exata
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
-                WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
-                
-                -- C. Contém a palavra em qualquer lugar
-                WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
-                ELSE 3
-            END ASC
-        ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
+        // Verifica se a busca bate exatamente com algum segmento (para desativar desempate por nome e deixar alfabético)
+        $isSegmentQuery = false;
+        if ($q !== '') {
+            $isSegmentQuery = \App\Models\Segmento::where('nome', 'ilike', trim($q))->exists();
+        }
 
-        // Desempate por similaridade fonética
-        if ($canUseSimilarity) {
-            $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
+        if (!$isSegmentQuery) {
+            // Desempate secundário (Dentro do mesmo Nível, prefere Match Absoluto > Começa Com > Contém)
+            $query->orderByRaw("
+                CASE 
+                    -- A. Match Exato
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
+                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
+                    
+                    -- B. Começa com a palavra exata
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
+                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
+                    
+                    -- C. Contém a palavra em qualquer lugar
+                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
+                    ELSE 3
+                END ASC
+            ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
+
+            // Desempate por similaridade fonética
+            if ($canUseSimilarity) {
+                $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
+            }
         }
         
         $query->orderBy('nome_fantasia');
