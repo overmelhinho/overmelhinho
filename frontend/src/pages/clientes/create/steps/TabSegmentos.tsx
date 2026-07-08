@@ -51,14 +51,22 @@ export default function TabSegmentos() {
     },
   });
 
-  const options = (segmentos || []).map((s: any) => ({
-    value: s.id,
-    label: s.nome,
-  }));
+  const options = (segmentos || [])
+    .map((s: any) => ({
+      value: s.id,
+      label: s.nome,
+    }))
+    .sort((a: any, b: any) => a.label.localeCompare(b.label, 'pt-BR'));
 
   const selected = (values.segmentos || [])
     .map((id: number) => options.find((o: any) => o.value === id))
     .filter(Boolean);
+
+  if (selected.length > 1) {
+    const first = selected[0];
+    const rest = selected.slice(1).sort((a: any, b: any) => a.label.localeCompare(b.label, 'pt-BR'));
+    selected.splice(0, selected.length, first, ...rest);
+  }
 
   const handleCreate = async (inputValue: string) => {
     setIsCreating(true);
