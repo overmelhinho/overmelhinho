@@ -16,6 +16,14 @@ export default function TabEndereco() {
       return;
     }
     
+    // Tenta encontrar coordenadas cruas (ex: -29.175635, -51.3237126)
+    const rawCoordsMatch = url.match(/^(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)$/);
+    if (rawCoordsMatch) {
+      setFieldValue(`enderecos[${index}].latitude`, rawCoordsMatch[1]);
+      setFieldValue(`enderecos[${index}].longitude`, rawCoordsMatch[2]);
+      return;
+    }
+
     // Tenta encontrar o pino exato (!3d e !4d)
     const pinMatch = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
     if (pinMatch) {
@@ -369,7 +377,7 @@ export default function TabEndereco() {
 
                   <div className="md:col-span-3">
                     <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <Map className="w-4 h-4 text-emerald-600" /> Link do Google Maps (Opcional - Extrai as coordenadas)
+                      <Map className="w-4 h-4 text-emerald-600" /> Google Maps ou Coordenadas (Opcional - Ex: -29.175, -51.323)
                     </label>
                     <input
                       type="text"
@@ -377,7 +385,7 @@ export default function TabEndereco() {
                       value={endereco.link_maps || ""}
                       onChange={(e) => extractCoordinates(e.target.value, index)}
                       className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-emerald-500"
-                      placeholder="Cole aqui o link do Google Maps para obter latitude e longitude"
+                      placeholder="Cole aqui o link do Google Maps OU clique com o botão direito no mapa e cole as coordenadas"
                     />
                     {endereco.latitude && endereco.longitude && (
                       <p className="text-xs text-emerald-600 mt-1 font-medium">
