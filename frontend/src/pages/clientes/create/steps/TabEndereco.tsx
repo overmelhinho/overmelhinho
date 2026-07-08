@@ -126,7 +126,7 @@ export default function TabEndereco() {
                       className="accent-[#B70F0A] h-4 w-4 rounded border-gray-300"
                     />
                     <label htmlFor={`enderecos[${index}].exibir_apenas_cidade`} className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
-                      Apenas exibir cidade e estado no site
+                      Ocultar endereço no site
                     </label>
                   </div>
 

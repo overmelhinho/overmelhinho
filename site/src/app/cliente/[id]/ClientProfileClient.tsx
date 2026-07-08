@@ -768,12 +768,11 @@ export default function ClientProfileClient() {
                                             <span className="text-gray-300 md:block hidden">•</span>
                                         </>
                                     )}
-                                    <p className="text-gray-400 flex items-center">
-                                        <MapPin size={14} className="mr-1.5 text-brand-red" />
-                                        {client.enderecos?.[0]
-                                            ? (client.enderecos[0].exibir_apenas_cidade
-                                                ? `Atendimento em ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`
-                                                : (() => {
+                                    {(!client.enderecos?.[0] || !client.enderecos[0].exibir_apenas_cidade) && (
+                                        <p className="text-gray-400 flex items-center">
+                                            <MapPin size={14} className="mr-1.5 text-brand-red" />
+                                            {client.enderecos?.[0]
+                                                ? (() => {
                                                     const end = client.enderecos[0];
                                                     const ruaText = end.tipo_logradouro ? `${end.tipo_logradouro} ${end.rua}` : end.rua;
                                                     const parts = [];
@@ -782,9 +781,10 @@ export default function ClientProfileClient() {
                                                     if (end.complemento) parts.push(end.complemento);
                                                     if (end.bairro && end.bairro.trim() !== '' && end.bairro.toLowerCase() !== 'vazio') parts.push(end.bairro);
                                                     return `${parts.join(', ')} - ${end.cidade}${client.enderecos.length > 1 ? ` (+${client.enderecos.length - 1} filiais)` : ''}`;
-                                                })())
-                                            : 'Endereço não informado'}
-                                    </p>
+                                                })()
+                                                : 'Endereço não informado'}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Mobile Actions Row */}
