@@ -235,7 +235,7 @@ export const HeaderSearch = () => {
             {isOpen && query.length >= 2 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[1.5rem] border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[210]">
                     <div className="max-h-[60vh] overflow-y-auto no-scrollbar py-2">
-                        {suggestions.categories.length > 0 && (
+                        {suggestions.categories?.length > 0 && (
                             <div className="px-4 py-2 border-b border-gray-50">
                                 <div className="flex flex-wrap gap-1.5">
                                     {suggestions.categories.map(cat => (
@@ -252,7 +252,7 @@ export const HeaderSearch = () => {
                         )}
 
                         <div className="py-1">
-                            {suggestions.results.length > 0 ? (
+                            {suggestions.results?.length > 0 ? (
                                 suggestions.results.map(res => (
                                     <div
                                         key={res.id}

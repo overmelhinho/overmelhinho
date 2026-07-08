@@ -411,9 +411,7 @@ class ClienteController extends Controller
                 $q = preg_replace('/\s+/', ' ', $q);
             }
         }
-
-        if (strlen($q) < 2) return response()->json([]);
-
+        if (strlen($q) < 2) return response()->json(['results' => [], 'categories' => []]);
         // Busca Clientes (Lógica Inteligente: Aprendizado + Fuzzy)
         $normalizedQ = mb_strtolower(trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q)), 'UTF-8');
         

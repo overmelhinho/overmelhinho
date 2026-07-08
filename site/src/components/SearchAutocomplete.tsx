@@ -177,7 +177,7 @@ export const SearchAutocomplete = () => {
                     <div className="max-h-[60vh] overflow-y-auto no-scrollbar py-4">
 
                         {/* CATEGORIAS */}
-                        {suggestions.categories.length > 0 && (
+                        {suggestions.categories?.length > 0 && (
                             <div className="px-6 mb-6">
                                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Serviços e Categorias</h4>
                                 <div className="flex flex-wrap gap-2">
@@ -196,7 +196,7 @@ export const SearchAutocomplete = () => {
 
                         {/* RESULTADOS EMPRESAS */}
                         <div className="space-y-1">
-                            {suggestions.results.length > 0 ? (
+                            {suggestions.results?.length > 0 ? (
                                 <>
                                     <div className="px-6 py-2">
                                         <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Empresas e Parceiros</h4>
