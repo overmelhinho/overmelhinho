@@ -72,6 +72,17 @@ const CompanyLogo = ({ company, logo, className = '' }: { company: string, logo?
 };
 
 export default function ClientProfileClient() {
+    const getGoogleMapsLink = (endereco: any) => {
+        if (endereco?.link_maps) return endereco.link_maps;
+        if (endereco?.latitude && endereco?.longitude) return `https://www.google.com/maps/search/?api=1&query=${endereco.latitude},${endereco.longitude}`;
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(endereco?.tipo_logradouro ? endereco?.tipo_logradouro + ' ' : '') + endereco?.rua}, ${endereco?.numero}, ${endereco?.bairro}, ${endereco?.cidade} - ${endereco?.estado}`)}`;
+    };
+
+    const getWazeLink = (endereco: any) => {
+        if (endereco?.latitude && endereco?.longitude) return `https://waze.com/ul?ll=${endereco.latitude},${endereco.longitude}&navigate=yes`;
+        return `https://waze.com/ul?q=${encodeURIComponent(`${(endereco?.tipo_logradouro ? endereco?.tipo_logradouro + ' ' : '') + endereco?.rua}, ${endereco?.numero}, ${endereco?.bairro}, ${endereco?.cidade} - ${endereco?.estado}`)}&navigate=yes`;
+    };
+
     const params = useParams();
     const id = (params.id || params.clientSlug) as string;
     const router = useRouter();
@@ -793,7 +804,7 @@ export default function ClientProfileClient() {
                                         {client.enderecos?.[0] && !client.enderecos[0].exibir_apenas_cidade && isPagante && (
                                             <>
                                                 <a
-                                                    href={`https://waze.com/ul?q=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}&navigate=yes`}
+                                                    href={getWazeLink(client.enderecos[0])}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 px-4 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center active:scale-95 transition-all hover:bg-blue-100"
@@ -801,7 +812,7 @@ export default function ClientProfileClient() {
                                                     <MapPin size={16} className="mr-1.5" fill="currentColor" /> Waze
                                                 </a>
                                                 <a
-                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}`}
+                                                    href={getGoogleMapsLink(client.enderecos[0])}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="flex-1 bg-gray-50 text-gray-600 border border-gray-100 px-4 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center active:scale-95 transition-all hover:bg-gray-100"
@@ -839,7 +850,7 @@ export default function ClientProfileClient() {
                                     <>
                                         {/* Google Maps: Apenas Desktop */}
                                         <a
-                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}, ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade} - ${client.enderecos[0].estado}`)}`}
+                                            href={getGoogleMapsLink(client.enderecos[0])}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="hidden md:flex bg-gray-50 text-gray-600 border border-gray-100 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest items-center active:scale-95 transition-all hover:bg-gray-100"
@@ -1171,7 +1182,7 @@ export default function ClientProfileClient() {
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                                                         {!end.exibir_apenas_cidade && (
                                                             <a 
-                                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
+                                                                href={getGoogleMapsLink(end)}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
@@ -1181,7 +1192,7 @@ export default function ClientProfileClient() {
                                                         )}
                                                         {(!end.exibir_apenas_cidade && isPagante) && (
                                                             <a 
-                                                                href={`https://waze.com/ul?q=${encodeURIComponent(`${(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
+                                                                href={getWazeLink(end)}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="md:hidden bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
@@ -1578,15 +1589,10 @@ export default function ClientProfileClient() {
                                                                     </span>
                                                                 )}
                                                             </a>
-                                                        )
-                                                    ))}
-                                                </div>
-                                            )}
-
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                                                 {!end.exibir_apenas_cidade && (
                                                     <a 
-                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}`)}`}
+                                                        href={getGoogleMapsLink(end)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="bg-gray-50 hover:bg-gray-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-gray-600 text-center transition-all border border-gray-100"
@@ -1596,7 +1602,7 @@ export default function ClientProfileClient() {
                                                 )}
                                                 {(!end.exibir_apenas_cidade && isPagante) && (
                                                     <a 
-                                                        href={`https://waze.com/ul?q=${encodeURIComponent(`${(end.tipo_logradouro ? end.tipo_logradouro + ' ' : '') + end.rua}, ${end.numero}, ${end.bairro}, ${end.cidade} - ${end.estado}`)}&navigate=yes`}
+                                                        href={getWazeLink(end)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="md:hidden bg-blue-50 hover:bg-blue-100 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-blue-600 text-center transition-all border border-blue-100"
@@ -1909,7 +1915,7 @@ export default function ClientProfileClient() {
                     )}
                     {(!hasPhone && !hasWhatsApp && client.enderecos?.[0] && !client.enderecos[0].exibir_apenas_cidade && isPagante) && (
                         <a
-                            href={`https://waze.com/ul?q=${encodeURIComponent(`${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero} - ${client.enderecos[0].bairro}, ${client.enderecos[0].cidade}`)}`}
+                            href={getWazeLink(client.enderecos[0])}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 bg-blue-50 text-blue-600 border border-blue-100 py-4 rounded-full shadow-[0_8px_20px_-6px_rgba(37,136,211,0.2)] font-black text-sm flex items-center justify-center space-x-2 active:scale-95 transition-all overflow-hidden relative font-sans"

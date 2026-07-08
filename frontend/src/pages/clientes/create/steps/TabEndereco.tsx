@@ -8,6 +8,30 @@ export default function TabEndereco() {
   const { values, setFieldValue } = useFormikContext<any>();
   const [loadingCep, setLoadingCep] = useState<Record<number, boolean>>({});
 
+  const extractCoordinates = (url: string, index: number) => {
+    setFieldValue(`enderecos[${index}].link_maps`, url);
+    if (!url) {
+      setFieldValue(`enderecos[${index}].latitude`, "");
+      setFieldValue(`enderecos[${index}].longitude`, "");
+      return;
+    }
+    
+    // Tenta encontrar o pino exato (!3d e !4d)
+    const pinMatch = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    if (pinMatch) {
+      setFieldValue(`enderecos[${index}].latitude`, pinMatch[1]);
+      setFieldValue(`enderecos[${index}].longitude`, pinMatch[2]);
+      return;
+    }
+    
+    // Fallback: Centro da tela (@lat,lng)
+    const centerMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (centerMatch) {
+      setFieldValue(`enderecos[${index}].latitude`, centerMatch[1]);
+      setFieldValue(`enderecos[${index}].longitude`, centerMatch[2]);
+    }
+  };
+
   const buscarCEP = async (cep: string, index: number) => {
     const numericCep = cep.replace(/\D/g, "");
     if (numericCep.length === 8) {
@@ -341,6 +365,25 @@ export default function TabEndereco() {
                       onChange={(e) => setFieldValue(`enderecos[${index}].complemento`, e.target.value)}
                       className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
                     />
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                      <Map className="w-4 h-4 text-emerald-600" /> Link do Google Maps (Opcional - Extrai as coordenadas)
+                    </label>
+                    <input
+                      type="text"
+                      name={`enderecos[${index}].link_maps`}
+                      value={endereco.link_maps || ""}
+                      onChange={(e) => extractCoordinates(e.target.value, index)}
+                      className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Cole aqui o link do Google Maps para obter latitude e longitude"
+                    />
+                    {endereco.latitude && endereco.longitude && (
+                      <p className="text-xs text-emerald-600 mt-1 font-medium">
+                        ✓ Coordenadas extraídas com sucesso: {endereco.latitude}, {endereco.longitude}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

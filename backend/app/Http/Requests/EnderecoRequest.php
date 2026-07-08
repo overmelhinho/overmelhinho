@@ -20,9 +20,11 @@ class EnderecoRequest extends FormRequest
             'numero'       => 'required|string|max:20',
             'complemento'  => 'nullable|string|max:191',
             'caixa_postal' => 'nullable|string|max:20',
-            'link_maps'    => 'nullable|string|max:255',
+            'link_maps'    => 'nullable|string|max:2000',
             'link_waze'    => 'nullable|string|max:255',
             'iframe_maps'  => 'nullable|string',
+            'latitude'     => 'nullable|numeric',
+            'longitude'    => 'nullable|numeric',
         ];
     }
 }
