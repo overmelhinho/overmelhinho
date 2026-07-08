@@ -254,7 +254,7 @@ export default function CampanhaWizard({
         HOME_TOP: {
             label: "Banner Topo (Home)",
             desktop: "1280x480px",
-            mobile: "600x600px",
+            mobile: "800x500px",
             desc: "Exibido no topo da página inicial do portal."
         },
         POPUP_GLOBAL: {
@@ -266,13 +266,13 @@ export default function CampanhaWizard({
         SEARCH_RESULT: {
             label: "Banner de Busca",
             desktop: "1280x400px",
-            mobile: "600x600px",
+            mobile: "800x500px",
             desc: "Exibido no topo dos resultados de pesquisa."
         },
         SEGMENT_LISTING: {
             label: "Banner de Segmento",
             desktop: "1280x400px",
-            mobile: "600x600px",
+            mobile: "800x500px",
             desc: "Exibido na listagem de categorias."
         }
     };
