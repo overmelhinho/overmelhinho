@@ -14,8 +14,18 @@ class FixDuplicates25925 extends Command
     {
         $this->info("Buscando faturas duplicadas da autorização 25925...");
 
-        // Busca faturas da autorizacao 25925 que NÃO têm ID do Tiny ERP
-        $invoices = Invoice::where('group_id', 'autorizacao-25925')
+        // Primeiro, encontrar o ID interno da autorização cujo número visual é '25925'
+        $autorizacao = \App\Models\Autorizacao::where('numero', '25925')->first();
+
+        if (!$autorizacao) {
+            $this->error("Autorização com número 25925 não encontrada no banco de dados.");
+            return;
+        }
+
+        $this->info("ID interno da Autorização 25925 encontrado: {$autorizacao->id}");
+
+        // Busca faturas da autorizacao usando o ID interno que NÃO têm ID do Tiny ERP
+        $invoices = Invoice::where('group_id', 'autorizacao-' . $autorizacao->id)
             ->whereNull('tiny_account_id')
             ->get();
 
