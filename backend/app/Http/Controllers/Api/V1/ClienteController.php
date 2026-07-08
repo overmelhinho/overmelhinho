@@ -1862,6 +1862,8 @@ public function historico(Request $request, int $id)
                             'complemento'          => $end['complemento'] ?? null,
                             'link_maps'            => $end['link_maps'] ?? null,
                             'link_waze'            => $end['link_waze'] ?? null,
+                            'latitude'             => $end['latitude'] ?? null,
+                            'longitude'            => $end['longitude'] ?? null,
                             'exibir_apenas_cidade' => filter_var($end['exibir_apenas_cidade'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
                             'is_cobranca'          => filter_var($end['is_cobranca'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
                             'endereco_compacto'    => $end['endereco_compacto'] ?? null,
