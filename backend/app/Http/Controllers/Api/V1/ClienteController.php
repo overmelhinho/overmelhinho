@@ -157,12 +157,11 @@ class ClienteController extends Controller
 
                 // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
                 if ($canUseSimilarity && !$hasMovelWord) {
-                    // Threshold seguro (0.5) para evitar falsos positivos como 'Psicologia' e 'Odontologia' (que dividem o sufixo)
-                    // Utilizamos word_similarity para buscar o termo "q" DENTRO de frases maiores
+                    // Threshold seguro (0.5) para evitar falsos positivos
                     $sub->orWhereRaw("word_similarity(?, nome_fantasia) > 0.5", [$normalizedQ])
                         ->orWhereRaw("word_similarity(?, nome_alternativo) > 0.5", [$normalizedQ]);
                 } elseif (!$canUseSimilarity) {
-                    // Fallback agressivo por palavras
+                    // Fallback agressivo por palavras (OR) se não tiver similaridade
                     $words = explode(' ', $normalizedQ);
                     foreach ($words as $word) {
                         if (strlen($word) > 2) {
@@ -173,6 +172,22 @@ class ClienteController extends Controller
                             }
                         }
                     }
+                }
+
+                // 2.5 Busca Multi-Palavra Obrigatória (AND) - Resolve "evelize psicologa" para "Evelize Perottoni - Psicóloga"
+                if (str_contains(trim($normalizedQ), ' ')) {
+                    $words = explode(' ', trim($normalizedQ));
+                    $sub->orWhere(function ($multiWordSub) use ($words) {
+                        foreach ($words as $word) {
+                            if (strlen($word) > 2) {
+                                $multiWordSub->where(function ($wSub) use ($word) {
+                                    $wSub->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$word}%"])
+                                         ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$word}%"])
+                                         ->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$word}%"]);
+                                });
+                            }
+                        }
+                    });
                 }
 
                 // 3. Busca em Segmentos e Endereços
