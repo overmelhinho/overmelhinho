@@ -1589,6 +1589,11 @@ export default function ClientProfileClient() {
                                                                     </span>
                                                                 )}
                                                             </a>
+                                                        )
+                                                    ))}
+                                                </div>
+                                            )}
+
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                                                 {!end.exibir_apenas_cidade && (
                                                     <a 
