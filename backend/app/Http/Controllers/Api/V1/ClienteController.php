@@ -318,10 +318,14 @@ class ClienteController extends Controller
             END ASC
         ", $allBindings);
 
-        // Verifica se a busca bate exatamente com algum segmento (para desativar desempate por nome e deixar alfabético)
+        // Verifica se a busca bate exatamente com algum segmento (lidando com plurais simples)
         $isSegmentQuery = false;
         if ($q !== '') {
-            $isSegmentQuery = \App\Models\Segmento::where('nome', 'ilike', trim($q))->exists();
+            $cleanQ = trim($q);
+            $isSegmentQuery = \App\Models\Segmento::whereRaw("{$unaccentFunc}(nome) ilike {$unaccentFunc}(?)", [$cleanQ])
+                ->orWhereRaw("{$unaccentFunc}(nome) ilike {$unaccentFunc}(?)", [$cleanQ . 's'])
+                ->orWhereRaw("{$unaccentFunc}(nome) ilike {$unaccentFunc}(?)", [$cleanQ . 'es'])
+                ->exists();
         }
 
         if (!$isSegmentQuery) {
