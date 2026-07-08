@@ -80,6 +80,19 @@ export default function ClientProfileClient() {
 
     const getWazeLink = (endereco: any) => {
         if (endereco?.latitude && endereco?.longitude) return `https://waze.com/ul?ll=${endereco.latitude},${endereco.longitude}&navigate=yes`;
+        
+        if (endereco?.link_maps) {
+            const pinMatch = endereco.link_maps.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+            if (pinMatch) {
+                return `https://waze.com/ul?ll=${pinMatch[1]},${pinMatch[2]}&navigate=yes`;
+            }
+
+            const coordsMatch = endereco.link_maps.match(/(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/);
+            if (coordsMatch) {
+                return `https://waze.com/ul?ll=${coordsMatch[1]},${coordsMatch[2]}&navigate=yes`;
+            }
+        }
+
         return `https://waze.com/ul?q=${encodeURIComponent(`${(endereco?.tipo_logradouro ? endereco?.tipo_logradouro + ' ' : '') + endereco?.rua}, ${endereco?.numero}, ${endereco?.bairro}, ${endereco?.cidade} - ${endereco?.estado}`)}&navigate=yes`;
     };
 

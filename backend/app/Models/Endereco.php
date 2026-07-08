@@ -47,6 +47,20 @@ class Endereco extends Model
         parent::boot();
 
         static::saving(function ($endereco) {
+            // Tenta extrair a latitude e longitude diretamente do link do Google Maps
+            if (!empty($endereco->link_maps)) {
+                // Tenta primeiro as coordenadas exatas do pino (!3d e !4d)
+                if (preg_match('/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/', $endereco->link_maps, $matches)) {
+                    $endereco->latitude = $matches[1];
+                    $endereco->longitude = $matches[2];
+                } 
+                // Se não tiver o pino, usa as coordenadas da câmera/viewport (@lat,lng)
+                elseif (preg_match('/(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/', $endereco->link_maps, $matches)) {
+                    $endereco->latitude = $matches[1];
+                    $endereco->longitude = $matches[2];
+                }
+            }
+
             // Se a latitude estiver vazia e a gente tiver rua e cidade
             if (empty($endereco->latitude) && !empty($endereco->rua) && !empty($endereco->cidade)) {
                 $query = $endereco->rua;
