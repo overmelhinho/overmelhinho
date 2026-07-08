@@ -318,14 +318,21 @@ class ClienteController extends Controller
             END ASC
         ", $allBindings);
 
-        // Verifica se a busca bate exatamente com algum segmento (lidando com plurais simples)
+        // Verifica se a busca bate com algum segmento ou é uma palavra muito comum (genérica) para forçar ordem alfabética
         $isSegmentQuery = false;
-        if ($q !== '') {
-            $cleanQ = trim($q);
-            $isSegmentQuery = \App\Models\Segmento::whereRaw("{$unaccentFunc}(nome) ilike {$unaccentFunc}(?)", [$cleanQ])
-                ->orWhereRaw("{$unaccentFunc}(nome) ilike {$unaccentFunc}(?)", [$cleanQ . 's'])
-                ->orWhereRaw("{$unaccentFunc}(nome) ilike {$unaccentFunc}(?)", [$cleanQ . 'es'])
+        if ($q !== '' && strlen(trim($q)) >= 3) {
+            // 1. Tenta achar na tabela de segmentos
+            $isSegmentQuery = \Illuminate\Support\Facades\DB::table('segmentos')
+                ->whereRaw("{$unaccentFunc}(nome) ilike {$unaccentFunc}(?)", ["%" . trim($q) . "%"])
                 ->exists();
+                
+            // 2. Fallback: Se a palavra aparece no nome de 3+ clientes pagantes, é uma categoria/termo genérico
+            if (!$isSegmentQuery) {
+                $isSegmentQuery = \Illuminate\Support\Facades\DB::table('clientes')
+                    ->where('tipo_cliente', 'pagante')
+                    ->whereRaw("{$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?)", ["%" . trim($q) . "%"])
+                    ->count() >= 3;
+            }
         }
 
         if (!$isSegmentQuery) {
