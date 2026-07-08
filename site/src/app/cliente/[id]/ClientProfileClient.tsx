@@ -713,7 +713,7 @@ export default function ClientProfileClient() {
                 {client.banner_url && isPagante ? (
                     <img
                         src={client.banner_url}
-                        className="w-full h-full object-cover escala-focus-top"
+                        className="w-full h-full object-cover object-left md:object-center"
                         alt={client.nome_fantasia}
                     />
                 ) : (
