@@ -150,6 +150,118 @@ class TinyErpService
      * Método: pedido.incluir.php
      * Isso gera automaticamente a Conta a Receber no Tiny.
      */
+    public function createServiceOrderGroup($invoices, float $totalAmount = null): array
+    {
+        try {
+            $firstInvoice = $invoices->first();
+            if (empty($firstInvoice->client->tiny_id)) {
+                $tinyId = $this->syncClient($firstInvoice->client);
+            } else {
+                $tinyId = $firstInvoice->client->tiny_id;
+            }
+        } catch (\Exception $e) {
+            throw new \Exception("Erro ao sincronizar cliente no Tiny: " . $e->getMessage());
+        }
+
+        if (!$tinyId) {
+            throw new \Exception("Não foi possível obter o ID do cliente no Tiny.");
+        }
+
+        // Identifica número da autorização
+        $autorizacaoNumero = '';
+        if ($firstInvoice->group_id && str_starts_with($firstInvoice->group_id, 'autorizacao-')) {
+            $autId = str_replace('autorizacao-', '', $firstInvoice->group_id);
+            $aut = \App\Models\Autorizacao::find($autId);
+            if ($aut) {
+                $autorizacaoNumero = $aut->numero;
+            }
+        }
+
+        $obsBase = "Autorização: {$autorizacaoNumero}.";
+        $planName = $firstInvoice->plan ? $firstInvoice->plan->name : 'Plano Avulso';
+        $planCode = $firstInvoice->plan && $firstInvoice->plan->tiny_product_id ? $firstInvoice->plan->tiny_product_id : 'SRV-01';
+
+        $totalValue = 0;
+        $parcelasTiny = [];
+        
+        foreach ($invoices as $idx => $inv) {
+            $valorCobrado = $inv->payable_amount ?? $inv->amount;
+            $totalValue += $valorCobrado;
+            
+            $parcelasTiny[] = [
+                'parcela' => [
+                    'data' => $inv->due_date instanceof \Carbon\Carbon ? $inv->due_date->format('d/m/Y') : date('d/m/Y', strtotime($inv->due_date)),
+                    'valor' => number_format($valorCobrado, 2, '.', ''),
+                    'forma_pagamento' => $this->mapFormaPagamento($inv->payment_method),
+                    'meio_pagamento' => $this->mapPaymentMethod($inv->payment_method),
+                    'obs' => "Parcela {$inv->parcel_number}/{$inv->total_parcels}. Autorização: {$autorizacaoNumero}."
+                ]
+            ];
+        }
+
+        // Cliente
+        $endereco = $firstInvoice->client->enderecos()->first();
+
+        $pedido = [
+            'data_pedido' => now()->format('d/m/Y'),
+            'cliente' => [
+                'codigo' => (int)$tinyId,
+                'nome' => $firstInvoice->client->razao_social ?: $firstInvoice->client->nome_fantasia,
+                'cpf_cnpj' => preg_replace('/\D/', '', $firstInvoice->client->cpf_cnpj ?? ''),
+                'endereco' => $endereco->rua ?? '',
+                'numero' => $endereco->numero ?? '',
+                'bairro' => $endereco->bairro ?? '',
+                'cep' => preg_replace('/\D/', '', $endereco->cep ?? ''),
+                'cidade' => $endereco->cidade ?? '',
+                'uf' => $endereco->estado ?? '',
+            ],
+            'itens' => [
+                [
+                    'item' => [
+                        'codigo' => $planCode,
+                        'descricao' => $planName,
+                        'unidade' => 'UN',
+                        'quantidade' => 1,
+                        'valor_unitario' => number_format($totalValue, 2, '.', '')
+                    ]
+                ]
+            ],
+            'parcelas' => $parcelasTiny,
+            'obs_internas' => $obsBase,
+            'situacao' => 'aprovado'
+        ];
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::asForm()->post("{$this->baseUrl}/pedido.incluir.php", [
+                'token' => $this->token,
+                'formato' => 'json',
+                'pedido' => json_encode(['pedido' => $pedido]),
+            ]);
+
+            $json = $response->json();
+            \Illuminate\Support\Facades\Log::info('Resposta Tiny createServiceOrderGroup:', ['group_id' => $firstInvoice->group_id, 'response' => $json]);
+
+            if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
+                throw new \Exception("Erro Tiny: " . ($json['retorno']['erros'][0]['erro'] ?? 'Erro desconhecido'));
+            }
+
+            $tinyOrderId = $json['retorno']['registros'][0]['registro']['id']
+                ?? $json['retorno']['registros']['registro']['id']
+                ?? null;
+                
+            return [
+                'tiny_order_id' => $tinyOrderId,
+                'tiny_account_id' => null,
+                'payment_url' => null,
+            ];
+
+        }
+        catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Exceção ao criar pedido agrupado Tiny: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
     public function createServiceOrder(Invoice $invoice, float $amountOverride = null): array
     {
         try {
@@ -218,7 +330,6 @@ class TinyErpService
             'parcelas' => [
                 [
                     'parcela' => [
-                        'dias' => 0,
                         'data' => $invoice->due_date instanceof \Carbon\Carbon ? $invoice->due_date->format('d/m/Y') : date('d/m/Y', strtotime($invoice->due_date)),
                         'valor' => number_format($valorCobrado, 2, '.', ''),
                         'forma_pagamento' => $this->mapFormaPagamento($invoice->payment_method),
@@ -289,6 +400,70 @@ class TinyErpService
      * @param float  $amount         Valor efetivamente pago
      * @param float  $discount       Desconto a aplicar (diferença entre valor original e pago)
      */
+    public function createReceivableAccount($invoice): ?string
+    {
+        try {
+            if (empty($invoice->client->tiny_id)) {
+                $tinyId = $this->syncClient($invoice->client);
+            } else {
+                $tinyId = $invoice->client->tiny_id;
+            }
+
+            if (!$tinyId) {
+                throw new \Exception("Não foi possível obter o ID do cliente no Tiny para gerar conta a receber.");
+            }
+
+            $autorizacaoNumero = '';
+            if ($invoice->group_id && str_starts_with($invoice->group_id, 'autorizacao-')) {
+                $autId = str_replace('autorizacao-', '', $invoice->group_id);
+                $aut = \App\Models\Autorizacao::find($autId);
+                if ($aut) {
+                    $autorizacaoNumero = $aut->numero;
+                }
+            }
+
+            $valorCobrado = $invoice->payable_amount ?? $invoice->amount;
+            $dataVenc = $invoice->due_date instanceof \Carbon\Carbon ? $invoice->due_date->format('d/m/Y') : date('d/m/Y', strtotime($invoice->due_date));
+
+            $conta = [
+                'vencimento' => $dataVenc,
+                'data_emissao' => now()->format('d/m/Y'),
+                'valor' => number_format($valorCobrado, 2, '.', ''),
+                'historico' => "Parcela {$invoice->parcel_number}/{$invoice->total_parcels}. Autorização: {$autorizacaoNumero}.",
+                'cliente' => [
+                    'codigo' => (int)$tinyId,
+                    'nome' => $invoice->client->razao_social ?: $invoice->client->nome_fantasia
+                ],
+                'forma_pagamento' => $this->mapFormaPagamento($invoice->payment_method),
+                'meio_pagamento' => $this->mapPaymentMethod($invoice->payment_method)
+            ];
+
+            $response = \Illuminate\Support\Facades\Http::asForm()->post("{$this->baseUrl}/conta.receber.incluir.php", [
+                'token' => $this->token,
+                'formato' => 'json',
+                'conta' => json_encode(['conta' => $conta]),
+            ]);
+
+            $json = $response->json();
+            \Illuminate\Support\Facades\Log::info('Resposta Tiny conta.receber.incluir:', ['invoice_id' => $invoice->id, 'response' => $json]);
+
+            if ($response->failed() || ($json['retorno']['status'] ?? '') !== 'OK') {
+                \Illuminate\Support\Facades\Log::error('Erro ao criar conta a receber no Tiny', ['response' => $json]);
+                return null;
+            }
+
+            $tinyAccountId = $json['retorno']['registros'][0]['registro']['id']
+                ?? $json['retorno']['registros']['registro']['id']
+                ?? null;
+
+            return $tinyAccountId;
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Exceção ao criar conta a receber Tiny: ' . $e->getMessage());
+            return null;
+        }
+    }
+
     public function payReceivable(string $tinyAccountId, float $amount = null, float $discount = 0): bool
     {
         try {
@@ -298,11 +473,11 @@ class TinyErpService
             ];
 
             if ($amount !== null) {
-                $conta['valor'] = number_format($amount, 2, '.', '');
+                $conta['valorPago'] = number_format($amount, 2, '.', '');
             }
 
             if ($discount > 0) {
-                $conta['desconto'] = number_format($discount, 2, '.', '');
+                $conta['valorDesconto'] = number_format($discount, 2, '.', '');
             }
 
             Log::info("Baixando conta no Tiny: {$tinyAccountId}", $conta);

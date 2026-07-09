@@ -231,7 +231,7 @@ class AutorizacaoController extends Controller
             'modo_pagamento'        => 'sometimes|in:direto,parcelado',
             'num_parcelas'          => 'sometimes|integer|min:1|max:36',
             'data_primeira_parcela' => 'sometimes|date',
-            'payment_method'        => 'nullable|in:pix,boleto,cartao,dinheiro',
+            'payment_method'        => 'sometimes|required|in:pix,boleto,cartao,dinheiro',
             'observacoes_anuncio'   => 'nullable|string',
             'observacoes_financeiro'=> 'nullable|string',
             'plan_id'               => 'nullable|exists:plans,id',
@@ -255,80 +255,7 @@ class AutorizacaoController extends Controller
 
         $wasSigned = $autorizacao->status === 'assinado';
 
-        if ($wasSigned) {
-            // Verifica se a autorização antiga possuía faturas no Tiny ERP
-            $hasTinyInvoices = \App\Models\Invoice::where(function($q) use ($autorizacao) {
-                $q->where('group_id', 'autorizacao-' . $autorizacao->id)
-                  ->orWhere('group_id', (string)$autorizacao->id);
-            })->whereNotNull('tiny_account_id')->exists();
-
-            if ($hasTinyInvoices) {
-                $this->registerPendingCancellation($autorizacao);
-            }
-
-            // Regra: Contrato assinado que é editado é cancelado, criando um novo.
-            $autorizacao->update([
-                'status' => 'cancelado',
-                'tiny_needs_manual_cancellation' => $hasTinyInvoices ? 'true' : 'false'
-            ]);
-            
-            // Cancela as faturas locais vinculadas
-            \App\Models\Invoice::where(function($q) use ($autorizacao) {
-                $q->where('group_id', 'autorizacao-' . $autorizacao->id)
-                  ->orWhere('group_id', (string)$autorizacao->id);
-            })
-            ->where('status', '!=', 'paid') 
-            ->update(['status' => 'canceled']);
-            
-            // Prepara nova autorizacao herdando os dados, mas como nova e pendente
-            $newData = $autorizacao->toArray();
-            unset($newData['id'], $newData['created_at'], $newData['updated_at'], $newData['numero']); 
-            
-            $newData['status'] = 'assinado';
-            $newData['numero'] = Autorizacao::proximoNumero();
-            $newData['magic_link_token'] = \Illuminate\Support\Str::uuid();
-            $newData['pdf_path'] = null; // Só precisa gerar PDF novo, a assinatura é mantida.
-            $newData['parent_id'] = $autorizacao->id; // Mantém histórico
-            
-            // Fix boolean casts para o Postgres
-            if (isset($newData['is_permuta'])) $newData['is_permuta'] = $newData['is_permuta'] ? 'true' : 'false';
-            if (isset($newData['is_bonificacao'])) $newData['is_bonificacao'] = $newData['is_bonificacao'] ? 'true' : 'false';
-
-            $newData = array_merge($newData, $validated);
-            
-            $novaAutorizacao = Autorizacao::create($newData);
-            
-            // Sincroniza o cliente com os novos dados
-            $cliente = $novaAutorizacao->cliente;
-            if ($cliente) {
-                $updateClient = [];
-                if (isset($validated['responsavel_preferencia'])) $updateClient['contact_preference'] = $validated['responsavel_preferencia'];
-                if (isset($validated['responsavel_turno'])) $updateClient['best_contact_shift'] = $validated['responsavel_turno'];
-                if (isset($validated['responsavel_nome'])) $updateClient['responsavel'] = $validated['responsavel_nome'];
-                
-                if (!empty($updateClient)) {
-                    $cliente->update($updateClient);
-                }
-            }
-            
-            $this->gerarParcelas($novaAutorizacao->fresh(), $request->input('parcelas', []));
-            
-            // Como nasce assinada (herdando a assinatura), envia pro Tiny automaticamente
-            try {
-                $tinyService = app(\App\Services\TinyErpService::class);
-                $this->processInvoiceGeneration($novaAutorizacao->fresh(['parcelas', 'cliente']), $tinyService);
-            } catch (\Exception $e) {
-                \Log::error("Erro ao gerar faturas na edição da autorização #{$novaAutorizacao->id}: " . $e->getMessage());
-            }
-            
-            return response()->json([
-                'success' => true,
-                'data'    => $novaAutorizacao->load(['parcelas', 'cliente', 'vendedor']),
-                'message' => 'Autorização anterior cancelada. Nova autorização gerada e aguardando assinatura.'
-            ], 200);
-        }
-
-        // Fluxo normal para autorizações NÃO assinadas (rascunho / aguardando)
+        // Fluxo normalizado: Atualiza sempre a autorização atual em vez de recriar
         $autorizacao->update($validated);
 
         // ✅ Sincroniza com o mestre do Cliente
@@ -347,17 +274,41 @@ class AutorizacaoController extends Controller
         // Se mudar algo financeiro, regera as parcelas e limpa faturas antigas (preservando as pagas por segurança)
         if ($request->hasAny(['valor_total', 'taxa_cadastro', 'num_parcelas', 'is_permuta', 'permuta_amount', 'desconto_valor', 'desconto_tipo', 'data_primeira_parcela', 'parcelas'])) {
             
+            if ($wasSigned) {
+                // Se já estava assinado, provavelmente gerou faturas no Tiny. 
+                // Precisamos registrar as antigas para cancelamento manual antes de apagá-las localmente
+                $hasTinyInvoices = \App\Models\Invoice::where(function($q) use ($autorizacao) {
+                    $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+                      ->orWhere('group_id', (string)$autorizacao->id);
+                })->whereNotNull('tiny_account_id')->exists();
+
+                if ($hasTinyInvoices) {
+                    $this->registerPendingCancellation($autorizacao);
+                    // Atualiza flag no banco para alertar o usuário sobre cancelamento manual no Tiny
+                    $autorizacao->update(['tiny_needs_manual_cancellation' => 'true']);
+                }
+            }
+
             // Limpa faturas PENDENTES vinculadas a esta autorização
-            // Usamos patterns variados de group_id para garantir a limpeza
             \App\Models\Invoice::where(function($q) use ($autorizacao) {
                 $q->where('group_id', 'autorizacao-' . $autorizacao->id)
                   ->orWhere('group_id', (string)$autorizacao->id);
             })
-            ->where('status', '!=', 'paid') // Não deletamos o que já foi pago para não perder rastro financeiro
+            ->where('status', '!=', 'paid') // Não deletamos o que já foi pago
             ->delete();
             
             $autorizacao->parcelas()->delete();
             $this->gerarParcelas($autorizacao->fresh(), $request->input('parcelas', []));
+
+            if ($wasSigned) {
+                // Gera as novas faturas no Tiny automaticamente baseadas nas novas parcelas
+                try {
+                    $tinyService = app(\App\Services\TinyErpService::class);
+                    $this->processInvoiceGeneration($autorizacao->fresh(['parcelas', 'cliente']), $tinyService);
+                } catch (\Exception $e) {
+                    \Log::error("Erro ao gerar novas faturas na edição da autorização #{$autorizacao->id}: " . $e->getMessage());
+                }
+            }
         }
 
         return response()->json([

@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -18,21 +17,11 @@ class SyncInvoicesToTinyJob implements ShouldQueue
 
     protected $invoiceIds;
 
-    /**
-     * Create a new job instance.
-     *
-     * @return void
-     */
     public function __construct(array $invoiceIds)
     {
         $this->invoiceIds = $invoiceIds;
     }
 
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
     public function handle(TinyErpService $tinyService)
     {
         $invoices = Invoice::whereIn('id', $this->invoiceIds)
@@ -41,73 +30,89 @@ class SyncInvoicesToTinyJob implements ShouldQueue
 
         Log::info("[SyncInvoicesToTinyJob] Iniciando sincronização em background para {$invoices->count()} faturas.");
 
-        foreach ($invoices as $invoice) {
-            try {
-                $valorCobrado = $invoice->payable_amount ?? $invoice->amount;
+        // Agrupa por group_id
+        $groupedInvoices = $invoices->groupBy('group_id');
 
-                // Pula faturas de permuta total (valor 0)
-                if ($valorCobrado <= 0) {
-                    $invoice->update(['sync_status' => null]);
+        foreach ($groupedInvoices as $groupId => $group) {
+            try {
+                // Remove faturas de permuta (valor 0)
+                $validInvoices = $group->filter(function($inv) {
+                    $val = $inv->payable_amount ?? $inv->amount;
+                    if ($val <= 0) {
+                        $inv->update(['sync_status' => null]);
+                        return false;
+                    }
+                    return true;
+                });
+
+                if ($validInvoices->isEmpty()) {
                     continue;
                 }
 
-                // Se a fatura já possui um ID do Tiny, verifica se ele realmente existe
-                if (($invoice->tiny_account_id || $invoice->tiny_order_id) && $invoice->tiny_account_id !== 'syncing') {
+                // Verifica se já existe sync (usa a primeira fatura como referência)
+                $firstInvoice = $validInvoices->first();
+                if (($firstInvoice->tiny_account_id || $firstInvoice->tiny_order_id) && $firstInvoice->tiny_account_id !== 'syncing') {
                     $status = null;
-                    if ($invoice->tiny_account_id) {
-                        $status = $tinyService->getReceivableStatus($invoice->tiny_account_id);
+                    if ($firstInvoice->tiny_account_id) {
+                        $status = $tinyService->getReceivableStatus($firstInvoice->tiny_account_id);
                     }
                     if ($status && !isset($status['not_found'])) {
-                        Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} já existe no Tiny ERP. Pulando criação.");
-                        
-                        // Garante que o status do pagamento seja sincronizado caso já tenha sido paga localmente
-                        if ($invoice->status === 'paid' && $invoice->tiny_account_id) {
-                            $tinyService->payReceivable($invoice->tiny_account_id, $valorCobrado, 0);
+                        Log::info("[SyncInvoicesToTinyJob] Grupo {$groupId} já existe no Tiny ERP. Pulando criação.");
+                        foreach ($validInvoices as $inv) {
+                            $inv->update(['sync_status' => null]);
                         }
-                        
-                        $invoice->update(['sync_status' => null]);
                         continue;
                     }
                     
-                    // Se não foi localizada, limpa localmente para que possa ser recriada
-                    Log::warning("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} possui Tiny ID inválido/inexistente no Tiny. Limpando e recriando.");
-                    $invoice->update([
-                        'tiny_order_id'   => null,
-                        'tiny_account_id' => null,
-                        'payment_url'     => null,
-                    ]);
+                    if ($firstInvoice->tiny_account_id) {
+                        Log::warning("[SyncInvoicesToTinyJob] Grupo {$groupId} possui Tiny ID inválido. Limpando e recriando.");
+                        foreach ($validInvoices as $inv) {
+                            $inv->update([
+                                'tiny_order_id'   => null,
+                                'tiny_account_id' => null,
+                                'payment_url'     => null,
+                            ]);
+                        }
+                    }
                 }
 
-                $tinyData = $tinyService->createServiceOrder($invoice, $valorCobrado);
+                // Cria o pedido consolidado apenas se não tiver
+                $tinyData = ['tiny_order_id' => $firstInvoice->tiny_order_id, 'payment_url' => null];
+                if (!$tinyData['tiny_order_id']) {
+                    $tinyData = $tinyService->createServiceOrderGroup($validInvoices);
+                }
                 
-                $invoice->update([
-                    'tiny_order_id'   => $tinyData['tiny_order_id'] ?? null,
-                    'tiny_account_id' => $tinyData['tiny_account_id'] ?? null,
-                    'payment_url'     => $tinyData['payment_url'] ?? null,
-                    'sync_status'     => null,
-                ]);
+                foreach ($validInvoices as $invoice) {
+                    // Força a criação do Contas a Receber
+                    $tinyAccountId = $tinyService->createReceivableAccount($invoice);
 
-                Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} enviada ao Tiny com sucesso. Order ID: " . ($tinyData['tiny_order_id'] ?? 'null') . ", Account ID: " . ($tinyData['tiny_account_id'] ?? 'null'));
+                    $invoice->update([
+                        'tiny_order_id'   => $tinyData['tiny_order_id'] ?? null,
+                        'tiny_account_id' => $tinyAccountId,
+                        'payment_url'     => $tinyData['payment_url'] ?? null,
+                        'sync_status'     => null,
+                    ]);
+                    
+                    Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} (Grupo {$groupId}) vinculada ao Order ID: " . ($tinyData['tiny_order_id'] ?? 'null') . " e Account ID: {$tinyAccountId}");
 
-                // Se a fatura já estiver paga localmente, dar baixa imediatamente no Tiny
-                if ($invoice->status === 'paid' && !empty($tinyData['tiny_account_id'])) {
-                    $tinyService->payReceivable($tinyData['tiny_account_id'], $valorCobrado, 0);
-                    Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} já estava paga. Baixa retroativa realizada no Tiny com sucesso.");
+                    // Se a fatura já estiver paga localmente, o ideal seria dar baixa na conta a receber
+                    if ($invoice->status === 'paid' && $tinyAccountId) {
+                        $valorCobrado = $invoice->payable_amount ?? $invoice->amount;
+                        $tinyService->payReceivable($tinyAccountId, $valorCobrado, 0);
+                        Log::info("[SyncInvoicesToTinyJob] Fatura #{$invoice->id} já estava paga. Baixa retroativa realizada no Tiny com sucesso.");
+                    }
                 }
 
             } catch (\Exception $e) {
-                Log::error("[SyncInvoicesToTinyJob] Falha ao enviar fatura #{$invoice->id}: " . $e->getMessage());
-                try {
-                    $invoice->update(['sync_status' => $e->getMessage()]);
-                } catch (\Exception $updateEx) {
-                    Log::error("[SyncInvoicesToTinyJob] Erro ao salvar erro no sync_status da fatura #{$invoice->id}: " . $updateEx->getMessage());
+                Log::error("[SyncInvoicesToTinyJob] Falha ao enviar grupo {$groupId}: " . $e->getMessage());
+                foreach ($group as $invoice) {
+                    try {
+                        $invoice->update(['sync_status' => 'error']);
+                    } catch (\Exception $e2) {
+                        Log::error("[SyncInvoicesToTinyJob] Falha ao atualizar status de erro da fatura #{$invoice->id}: " . $e2->getMessage());
+                    }
                 }
             }
-
-            // Aguarda 1 segundo entre as requisições para evitar o erro "API Bloqueada" (Rate Limit do Tiny ERP)
-            sleep(1);
         }
-
-        Log::info("[SyncInvoicesToTinyJob] Sincronização finalizada.");
     }
 }

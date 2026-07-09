@@ -491,7 +491,8 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent className="rounded-2xl">
-                                                        <SelectItem value="pix">PIX / Dinheiro</SelectItem>
+                                                        <SelectItem value="pix">PIX</SelectItem>
+                                                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
                                                         <SelectItem value="boleto">Boleto Bancário</SelectItem>
                                                         <SelectItem value="cartao">Cartão de Crédito</SelectItem>
                                                     </SelectContent>
