@@ -364,7 +364,7 @@ const AuditDashboardPage: React.FC = () => {
         onSuccess: (res, clienteId) => {
             setForcingScanId(null);
             setForceScanResult(prev => ({ ...prev, [clienteId]: { status: res.data.status, message: res.data.message } }));
-            queryClient.invalidateQueries({ queryKey: ['auditQueue'] });
+            queryClient.invalidateQueries({ queryKey: ['audit-queue'] });
             setTimeout(() => setForceScanResult(prev => { const n = {...prev}; delete n[clienteId]; return n; }), 8000);
         },
         onError: (_err, clienteId) => {
@@ -439,6 +439,13 @@ const AuditDashboardPage: React.FC = () => {
                     const idx = payload.redes_sociais.findIndex((r: any) => r.tipo === 'instagram');
                     if (idx >= 0) payload.redes_sociais[idx].url = diffs.instagram.new;
                     else payload.redes_sociais.push({ tipo: 'instagram', url: diffs.instagram.new });
+                }
+                if (fieldId === 'nome') {
+                    payload.nome_fantasia = diffs.nome.new;
+                }
+                if (fieldId === 'email') {
+                    if (!payload.contatos[0]) payload.contatos[0] = {};
+                    payload.contatos[0].email_principal = diffs.email.new;
                 }
             }
         });
