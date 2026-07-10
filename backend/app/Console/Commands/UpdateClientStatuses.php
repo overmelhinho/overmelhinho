@@ -81,11 +81,14 @@ class UpdateClientStatuses extends Command
 
         $inadimplentesCount = DB::table('clientes')
             ->whereIn('id', $inadimplentesClientIds)
-            ->update(['status_assinatura' => 'inadimplente', 'updated_at' => now()]);
+            ->update([
+                'tipo_cliente' => 'gratuito', 
+                'status_assinatura' => 'inadimplente', 
+                'updated_at' => now()
+            ]);
 
-        // 4. Restaurar para ativa os inadimplentes que voltaram a ter menos de 2 parcelas vencidas
+        // 4. Restaurar para PAGANTE/ATIVA os inadimplentes que pagaram suas dívidas E ainda possuem contrato vigente
         $normalizadosCount = DB::table('clientes')
-            ->where('tipo_cliente', 'pagante')
             ->where('status_assinatura', 'inadimplente')
             ->whereNotIn('id', $inadimplentesClientIds)
             ->whereExists(function ($query) use ($today) {
@@ -95,14 +98,20 @@ class UpdateClientStatuses extends Command
                     ->where('autorizacoes.status', 'assinado')
                     ->where('autorizacoes.data_fim', '>=', $today);
             })
-            ->update(['status_assinatura' => 'ativa', 'updated_at' => now()]);
+            ->update(['tipo_cliente' => 'pagante', 'status_assinatura' => 'ativa', 'updated_at' => now()]);
 
-        // 5. Restaurar para cancelada os inadimplentes gratuitos que pagaram suas dividas
+        // 5. Restaurar para GRATUITO/CANCELADA os inadimplentes que pagaram suas dívidas MAS NÃO possuem contrato vigente
         $normalizadosGratuitosCount = DB::table('clientes')
-            ->where('tipo_cliente', 'gratuito')
             ->where('status_assinatura', 'inadimplente')
             ->whereNotIn('id', $inadimplentesClientIds)
-            ->update(['status_assinatura' => 'cancelada', 'updated_at' => now()]);
+            ->whereNotExists(function ($query) use ($today) {
+                $query->select(DB::raw(1))
+                    ->from('autorizacoes')
+                    ->whereColumn('autorizacoes.cliente_id', 'clientes.id')
+                    ->where('autorizacoes.status', 'assinado')
+                    ->where('autorizacoes.data_fim', '>=', $today);
+            })
+            ->update(['tipo_cliente' => 'gratuito', 'status_assinatura' => 'cancelada', 'updated_at' => now()]);
         
         $this->info("Processo concluído!");
         $this->line("Clientes marcados como GRATUITO/CANCELADA (Sem autorização): {$vencidosCount}");
