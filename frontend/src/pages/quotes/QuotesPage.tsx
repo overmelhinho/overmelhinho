@@ -167,9 +167,9 @@ export default function QuotesPage() {
         const msgText = `Olá, Aqui é do O Vermelhinho e recebemos uma solicitação de orçamento/contato de um possível cliente para você. Segue abaixo:\n\n"${quote.service_requested}"\n- ${quote.customer_name}\n\nPara entrar em contato diretamente com o cliente, clique no link abaixo:\n${directContactLink}`;
 
         if (phone) {
-            const url = `https://web.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msgText)}`;
+            const url = `https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msgText)}`;
             window.open(url, "_blank");
-            toast.success(`WhatsApp Web aberto para enviar à empresa ${lojistaNome}`);
+            toast.success(`WhatsApp aberto para enviar à empresa ${lojistaNome}`);
             updateStatusMutation.mutate(quote.id);
         } else if (email) {
             const subject = encodeURIComponent("Novo Orçamento Recebido - O Vermelhinho");
@@ -197,7 +197,7 @@ export default function QuotesPage() {
 
             toast.success("Mensagem gerada! Abrindo WhatsApp...", { id: toastId });
             
-            const url = `https://web.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(message)}`;
+            const url = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(message)}`;
             window.open(url, "_blank");
             
             updateStatusMutation.mutate(quote.id);
