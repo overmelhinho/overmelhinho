@@ -102,8 +102,16 @@ const fieldLabels: Record<string, string> = {
 const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: any }) => {
     const [expanded, setExpanded] = useState(false);
     
-    // Filter out internal timestamp fields
-    const changes = log.field_changes ? Object.entries(log.field_changes).filter(([k]) => !['updated_at', 'last_audit_at', 'seo_keywords_updated_at'].includes(k)) : [];
+    // Filter out internal timestamp fields and system-only fields
+    const INTERNAL_FIELDS = ['updated_at', 'last_audit_at', 'seo_keywords_updated_at', 'audit_status', 'audit_differences', 'seo_keywords', 'seo_keywords_source', 'tiny_id', 'responsavel'];
+    const changes = log.field_changes 
+        ? Object.entries(log.field_changes).filter(([k, v]: [string, any]) => {
+            if (INTERNAL_FIELDS.includes(k)) return false;
+            if (!v || typeof v !== 'object') return false;
+            // Só exibe se tiver estrutura {from, to} e os valores forem diferentes
+            return 'from' in v && 'to' in v && String(v.from) !== String(v.to);
+          }) 
+        : [];
     const hasRealChanges = changes.length > 0;
 
     return (

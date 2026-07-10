@@ -121,3 +121,7 @@ restore_42175.js
 simulate.js
 simulate_downgrade.js
 simulate_nanico.js
+
+check_112031.js
+debug_maquinas.js
+test_audit_history.js

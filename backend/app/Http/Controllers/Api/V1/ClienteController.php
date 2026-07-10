@@ -2743,8 +2743,8 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             $qDigits = preg_replace('/\D/', '', $q);
 
             $query->where(function($sub) use ($q, $qDigits) {
-                $sub->where('nome_fantasia', 'ilike', "%{$q}%")
-                    ->orWhere('razao_social', 'ilike', "%{$q}%")
+                $sub->whereRaw("unaccent(nome_fantasia) ILIKE unaccent(?)", ["%{$q}%"])
+                    ->orWhereRaw("unaccent(razao_social) ILIKE unaccent(?)", ["%{$q}%"])
                     ->orWhereHas('contatos', function($cq) use ($q, $qDigits) {
                         $cq->where('telefone_principal', 'ilike', "%{$q}%")
                            ->orWhere('telefone_secundario', 'ilike', "%{$q}%")
@@ -2752,16 +2752,16 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
                            ->orWhere('telefone_outro', 'ilike', "%{$q}%");
                         
                         if ($qDigits !== '') {
-                            $cq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_principal, '\D', '', 'g')"), 'like', "%{$qDigits}%")
-                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_secundario, '\D', '', 'g')"), 'like', "%{$qDigits}%")
-                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(celular, '\D', '', 'g')"), 'like', "%{$qDigits}%")
-                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_outro, '\D', '', 'g')"), 'like', "%{$qDigits}%");
+                            $cq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_principal, '\\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_secundario, '\\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(celular, '\\D', '', 'g')"), 'like', "%{$qDigits}%")
+                               ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_outro, '\\D', '', 'g')"), 'like', "%{$qDigits}%");
                         }
                     })
                     ->orWhereHas('enderecos', function($eq) use ($q, $qDigits) {
                         $eq->where('telefone', 'ilike', "%{$q}%");
                         if ($qDigits !== '') {
-                            $eq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone, '\D', '', 'g')"), 'like', "%{$qDigits}%");
+                            $eq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone, '\\D', '', 'g')"), 'like', "%{$qDigits}%");
                         }
                     });
             });
@@ -2827,7 +2827,18 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         ];
 
         $innerQuery = \App\Models\AuditLog::selectRaw('DISTINCT ON (actor_user_id, cliente_id, DATE(created_at)) audit_logs.*')
-            ->where('action', 'ilike', '%audit%')
+            ->where(function($q) {
+                // ✅ Logs gravados explicitamente pelo fluxo de auditoria (audit_save, audit_update, etc.)
+                $q->where('action', 'ilike', '%audit%')
+                  // ✅ Logs de 'update' gerados pelo Observer do model que contêm audit_status (também são revisões de auditoria)
+                  ->orWhere(function($q2) {
+                      $q2->where('action', 'update')
+                         ->whereNotNull('actor_user_id')
+                         ->whereRaw("jsonb_exists(field_changes::jsonb, 'audit_status')")
+                         // Só logs com formato {from, to} completo (gerados pelo Observer do model)
+                         ->whereRaw("EXISTS (SELECT 1 FROM jsonb_each(field_changes::jsonb) AS kv(k,v) WHERE jsonb_typeof(v) = 'object' AND jsonb_exists(v, 'from') AND jsonb_exists(v, 'to'))");
+                  });
+            })
             ->whereHas('cliente', function($q) use ($cidadesPermitidas) {
                 $q->where(function($sub) use ($cidadesPermitidas) {
                     $sub->whereHas('enderecos', function($end) use ($cidadesPermitidas) {
