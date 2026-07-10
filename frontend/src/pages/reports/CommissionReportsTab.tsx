@@ -280,6 +280,11 @@ export default function CommissionReportsTab() {
                                         <span className="text-xs font-black text-gray-900 bg-gray-50 px-2 py-1 rounded-md">
                                             {formatNumero(item.numero)}
                                         </span>
+                                        {item.status === 'cancelado' && (
+                                            <span className="ml-2 text-[9px] font-black uppercase text-red-600 bg-red-50 px-1.5 py-0.5 rounded-md">
+                                                Cancelado
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">
@@ -287,7 +292,7 @@ export default function CommissionReportsTab() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <span className={`text-sm font-black tracking-tight ${item.valor_total === 0 ? 'text-gray-400' : 'text-gray-900'}`}>
+                                        <span className={`text-sm font-black tracking-tight ${item.valor_total === 0 ? 'text-gray-400' : 'text-gray-900'} ${item.status === 'cancelado' ? 'line-through text-gray-400' : ''}`}>
                                             {formatCurrency(item.valor_total)}
                                         </span>
                                     </td>

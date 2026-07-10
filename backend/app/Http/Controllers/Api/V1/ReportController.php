@@ -528,6 +528,7 @@ class ReportController extends Controller
         $data = $autorizacoes->map(function ($auth) {
             return [
                 'id' => $auth->id,
+                'status' => $auth->status,
                 'emissao' => $auth->created_at ? $auth->created_at->format('d/m/Y') : null,
                 'cliente_nome' => $auth->cliente->nome_fantasia ?? $auth->cliente->razao_social ?? 'N/A',
                 'numero' => $auth->numero,
@@ -541,8 +542,8 @@ class ReportController extends Controller
         // Calculando totais para o dashboard
         $summary = [
             'total_titulos' => $data->count(),
-            'total_valor' => $data->sum('valor_total'),
-            'total_comissao' => $data->sum('valor_total') * 0.10, // Exemplo de 10%
+            'total_valor' => $data->where('status', '!=', 'cancelado')->sum('valor_total'),
+            'total_comissao' => $data->where('status', '!=', 'cancelado')->sum('valor_total') * 0.10, // Exemplo de 10%
         ];
 
         return response()->json([
