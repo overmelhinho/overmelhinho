@@ -1569,6 +1569,7 @@ public function historico(Request $request, int $id)
                 }
             }
 
+            $hasRedesSociais = $request->has('redes_sociais');
             if (empty($redesNormalized)) {
                 $map = [
                     'facebook' => 'facebook',
@@ -1580,6 +1581,9 @@ public function historico(Request $request, int $id)
                 ];
 
                 foreach ($map as $k => $tipo) {
+                    if ($request->has($k)) {
+                        $hasRedesSociais = true;
+                    }
                     $url = trim((string) $request->input($k, ''));
                     if ($url !== '') {
                         $redesNormalized[] = ['tipo' => $tipo, 'url' => $url];
@@ -1587,7 +1591,9 @@ public function historico(Request $request, int $id)
                 }
             }
 
-            $request->merge(['redes_sociais' => $redesNormalized]);
+            if ($hasRedesSociais) {
+                $request->merge(['redes_sociais' => $redesNormalized]);
+            }
 
             $validated = $request->validate([
                 'nome_fantasia' => 'required|string|max:255',
@@ -2722,7 +2728,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         ];
 
         $query = Cliente::query()
-            ->with(['enderecos', 'contatos'])
+            ->with(['enderecos', 'contatos', 'redesSociais'])
             ->where(function($q) use ($cidadesPermitidas) {
                 $q->whereHas('enderecos', function($sub) use ($cidadesPermitidas) {
                     $sub->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidade)'), $cidadesPermitidas);
