@@ -16,11 +16,18 @@ import {
     Timer,
     Zap,
     Calendar,
-    Mail
+    Mail,
+    Loader2
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import toast from "react-hot-toast";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
 
 interface Quote {
     id: number;
@@ -65,6 +72,7 @@ export default function QuotesPage() {
     const [period, setPeriod] = useState("all");
     const [customDates, setCustomDates] = useState({ start: "", end: "" });
     const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+    const [isProspectingId, setIsProspectingId] = useState<number | null>(null);
 
     const updateStatusMutation = useMutation({
         mutationFn: async (quoteId: number) => {
@@ -170,6 +178,34 @@ export default function QuotesPage() {
             window.open(url, "_self");
             toast.success(`E-mail aberto para enviar à empresa ${lojistaNome}`);
             updateStatusMutation.mutate(quote.id);
+        }
+    };
+
+    const handleProspect = async (quote: Quote, phone: string) => {
+        const cleanPhone = phone.replace(/\D/g, "");
+        if (!cleanPhone) {
+            toast.error("Telefone inválido.");
+            return;
+        }
+
+        setIsProspectingId(quote.id);
+        const toastId = toast.loading("Gerando mensagem de prospecção com IA...");
+
+        try {
+            const res = await axios.post(`/v1/quotes/${quote.id}/prospect-message`);
+            const message = res.data.message;
+
+            toast.success("Mensagem gerada! Abrindo WhatsApp...", { id: toastId });
+            
+            const url = `https://web.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(message)}`;
+            window.open(url, "_blank");
+            
+            updateStatusMutation.mutate(quote.id);
+        } catch (error) {
+            console.error("Erro ao gerar prospecção", error);
+            toast.error("Falha ao gerar mensagem com a IA.", { id: toastId });
+        } finally {
+            setIsProspectingId(null);
         }
     };
 
@@ -389,10 +425,61 @@ export default function QuotesPage() {
                                                 const isPagante = ['pagante', 'anunciante'].includes(quote.cliente.tipo_cliente || '') && ['ativa', 'ativo', 'inadimplente'].includes(quote.cliente.status_assinatura || '');
 
                                                 if (!isPagante) {
+                                                    const contatos = quote.cliente.contatos || [];
+                                                    const availablePhones = contatos.flatMap(c => {
+                                                        const p = [];
+                                                        if (c.telefone_principal) p.push({ label: 'Principal', number: c.telefone_principal });
+                                                        if (c.celular) p.push({ label: 'Celular', number: c.celular });
+                                                        if (c.telefone_secundario) p.push({ label: 'Secundário', number: c.telefone_secundario });
+                                                        if (c.outro_telefone) p.push({ label: 'Outro', number: c.outro_telefone });
+                                                        return p;
+                                                    }).filter(p => p.number);
+
+                                                    if (availablePhones.length > 0) {
+                                                        return (
+                                                            <div className="flex flex-col items-center gap-2">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <button 
+                                                                            disabled={isProspectingId === quote.id}
+                                                                            className="h-12 px-6 rounded-[20px] text-[10px] font-black uppercase transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200 disabled:opacity-70"
+                                                                        >
+                                                                            {isProspectingId === quote.id ? <Loader2 size={16} className="animate-spin" /> : <Smartphone size={16} />}
+                                                                            Prospectar Cliente
+                                                                        </button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="center" className="w-64 rounded-3xl p-3 bg-white border border-gray-100 shadow-2xl">
+                                                                        <div className="px-3 py-2 mb-2 border-b border-gray-50">
+                                                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Selecione o número</span>
+                                                                            <span className="text-xs font-bold text-gray-900">Iniciar Prospecção IA</span>
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            {availablePhones.map((phone, idx) => (
+                                                                                <DropdownMenuItem 
+                                                                                    key={idx} 
+                                                                                    className="text-xs font-bold cursor-pointer rounded-2xl flex flex-col items-start gap-0.5 p-3 hover:bg-indigo-50 focus:bg-indigo-50 text-gray-700 focus:text-indigo-700 transition-colors"
+                                                                                    onClick={() => handleProspect(quote, phone.number)}
+                                                                                >
+                                                                                    <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500 mb-1">{phone.label}</span>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <Smartphone size={14} className="text-indigo-400" />
+                                                                                        {phone.number}
+                                                                                    </div>
+                                                                                </DropdownMenuItem>
+                                                                            ))}
+                                                                        </div>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                                <span className="text-[9px] font-black uppercase tracking-tighter text-gray-400 flex items-center gap-1 mt-1 opacity-70" title="A lead original foi enviada para o e-mail do cliente (Plano Gratuito)"><Mail size={10} /> Auto-Notificado E-mail</span>
+                                                            </div>
+                                                        );
+                                                    }
+
                                                     return (
                                                         <div className="flex flex-col items-center gap-1 opacity-50">
                                                             <CheckCircle2 size={16} className="text-gray-400" />
                                                             <span className="text-[8px] font-black uppercase tracking-tighter text-gray-500">Envio Automático</span>
+                                                            <span className="text-[8px] font-black uppercase tracking-tighter text-red-400 mt-1">Sem telefone</span>
                                                         </div>
                                                     );
                                                 }

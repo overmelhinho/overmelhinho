@@ -284,6 +284,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/quotes', [\App\Http\Controllers\Api\V1\QuoteController::class, 'index']);
     Route::get('/clients/{id}/quotes-focus', [\App\Http\Controllers\Api\V1\QuoteController::class, 'indexFocus']);
     Route::patch('/quotes/{id}/status', [\App\Http\Controllers\Api\V1\QuoteController::class, 'updateStatus']);
+    Route::post('/quotes/{id}/prospect-message', [\App\Http\Controllers\Api\V1\QuoteController::class, 'generateProspectMessage']);
 
     // Dashboards e Relatórios
     Route::get('/clients/{id}/reports/dashboard', [ReportController::class, 'clientDashboard']);

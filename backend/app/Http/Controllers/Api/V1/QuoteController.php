@@ -125,4 +125,24 @@ class QuoteController extends Controller
 
         return response()->json($quote);
     }
+
+    /**
+     * Gera mensagem de prospecção via IA para clientes gratuitos
+     */
+    public function generateProspectMessage(Request $request, $id, \App\Services\AiQuoteService $aiService)
+    {
+        $quote = Quote::with('cliente')->findOrFail($id);
+        
+        $message = $aiService->generateProspectingMessage($quote);
+        
+        if (!$message) {
+            return response()->json([
+                'message' => 'Não foi possível gerar a mensagem de prospecção no momento. Tente novamente.'
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => $message
+        ]);
+    }
 }

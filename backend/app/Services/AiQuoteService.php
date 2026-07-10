@@ -65,4 +65,50 @@ class AiQuoteService
             return null;
         }
     }
+
+    /**
+     * Gera uma mensagem de prospecção via WhatsApp para clientes gratuitos.
+     */
+    public function generateProspectingMessage(Quote $quote)
+    {
+        if (!$this->apiKey) {
+            Log::error("AiQuoteService: OPENAI_API_KEY não configurada.");
+            return null;
+        }
+
+        $cliente = $quote->cliente;
+        
+        $prompt = "Você é um assistente comercial da plataforma 'O Vermelhinho'. " .
+                  "O objetivo é abordar a empresa {$cliente->nome_fantasia} via WhatsApp para prospecção. " .
+                  "Esta empresa está no plano Gratuito e acabou de receber um pedido de orçamento (Lead) para: '{$quote->service_requested}'. " .
+                  "Escreva uma mensagem curta, direta e com tom consultivo e amigável. " .
+                  "A mensagem deve informar que captamos esse pedido de orçamento para eles e que os dados do cliente foram enviados para o e-mail deles (pois eles são do plano gratuito). " .
+                  "Em seguida, argumente brevemente que, ao anunciar na plataforma (plano pago), eles receberiam esse contato diretamente no WhatsApp em tempo real e teriam muito mais visibilidade. " .
+                  "Finalize perguntando se eles têm interesse em conhecer os planos.";
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer {$this->apiKey}",
+                'Content-Type' => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4',
+                'messages' => [
+                    ['role' => 'system', 'content' => $prompt],
+                ],
+                'temperature' => 0.7,
+            ]);
+
+            if ($response->successful()) {
+                $content = $response->json('choices.0.message.content');
+                return trim($content);
+            }
+
+            Log::error("AiQuoteService API Error (Prospecting): " . $response->body());
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error("AiQuoteService Exception (Prospecting): " . $e->getMessage());
+            return null;
+        }
+    }
 }
