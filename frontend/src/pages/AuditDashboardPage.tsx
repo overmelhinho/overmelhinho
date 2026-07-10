@@ -175,6 +175,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     {changes.map(([key, vals]: [string, any]) => {
+                                        if (!vals) return null;
                                         const label = fieldLabels[key] || key;
                                         const from = vals.from === null || vals.from === '' ? 'Vazio' : String(vals.from);
                                         const to = vals.to === null || vals.to === '' ? 'Vazio' : String(vals.to);

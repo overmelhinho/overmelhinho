@@ -189,6 +189,7 @@ export default function TabAuditoria() {
                                                 </h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                                     {Object.entries(log.field_changes).map(([field, change]: [string, any]) => {
+                                                        if (!change) return null;
                                                         const oldVal = change.old !== undefined ? change.old : change.from;
                                                         const newVal = change.new !== undefined ? change.new : change.to;
 
