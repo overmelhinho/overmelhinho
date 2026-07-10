@@ -836,24 +836,6 @@ class ClienteController extends Controller
         return new ClienteResource($cliente);
     }
 
-    public function fixItaliani()
-    {
-        $c = Cliente::find(103859);
-        if ($c) {
-            $c->update([
-                'logo_url' => 'https://spefwgjaltjryxcizype.supabase.co/storage/v1/object/public/clientes_logos/logo-103859-1720371458.png',
-                'banner_url' => 'https://spefwgjaltjryxcizype.supabase.co/storage/v1/object/public/clientes_banners/banner-103859-1720371458.png',
-                'descricao' => 'ITALIANI CORRETORA DE SEGUROS A Italiani Corretora de Seguros, oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.',
-                'observacoes' => 'Conferido em 01/12/2020 ANDRÉ // conferido por ligação 04/11 morga',
-                'razao_social' => 'Italiani Corretora de Seguros Ltda | Italiani Seguros | Italeani Seguros',
-                'tipo_cliente' => 'pagante',
-                'status_assinatura' => 'ativa'
-            ]);
-            return response()->json(['status' => 'fixed', 'cliente' => $c]);
-        }
-        return response()->json(['status' => 'not_found'], 404);
-    }
-
     public function showPublic($id)
     {
         $query = Cliente::with([

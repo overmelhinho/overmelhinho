@@ -334,7 +334,7 @@ Route::get('/v1/public/search/suggestions', [\App\Http\Controllers\Api\V1\Client
 Route::get('/v1/public/clientes/{id}', [\App\Http\Controllers\Api\V1\ClienteController::class, 'showPublic']);
 Route::get('/v1/public/clientes/{id}/recommendations', [\App\Http\Controllers\Api\V1\ClienteController::class, 'recommendations']);
 
-Route::get('/v1/public/fix-italiani', [\App\Http\Controllers\Api\V1\ClienteController::class, 'fixItaliani']);
+
 
 // ✅ Rotas de leads
 Route::post('/v1/public/leads', [LeadController::class, 'store']);
