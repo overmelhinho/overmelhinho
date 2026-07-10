@@ -190,6 +190,9 @@ export default function QuotesPage() {
 
         setIsProspectingId(quote.id);
         const toastId = toast.loading("Gerando mensagem de prospecção com IA...");
+        
+        // Abre a aba antes do await para evitar bloqueador de pop-ups do navegador
+        const newWindow = window.open('about:blank', '_blank');
 
         try {
             const res = await axios.post(`/v1/quotes/${quote.id}/prospect-message`);
@@ -198,11 +201,16 @@ export default function QuotesPage() {
             toast.success("Mensagem gerada! Abrindo WhatsApp...", { id: toastId });
             
             const url = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(message)}`;
-            window.open(url, "_blank");
+            if (newWindow) {
+                newWindow.location.href = url;
+            } else {
+                window.location.href = url; // Fallback se o navegador ainda assim bloquear
+            }
             
             updateStatusMutation.mutate(quote.id);
         } catch (error) {
             console.error("Erro ao gerar prospecção", error);
+            if (newWindow) newWindow.close();
             toast.error("Falha ao gerar mensagem com a IA.", { id: toastId });
         } finally {
             setIsProspectingId(null);
