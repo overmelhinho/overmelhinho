@@ -1748,7 +1748,7 @@ public function historico(Request $request, int $id)
                 'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', $cliente->exibir_data_fundacao ?? true) ? 'true' : 'false',
                 'possui_publicidade'    => $request->boolean('possui_publicidade', $cliente->possui_publicidade ?? false) ? 'true' : 'false',
                 'audit_status'          => $validated['audit_status'] ?? $cliente->audit_status,
-                'audit_differences'     => $validated['audit_differences'] ?? $cliente->audit_differences,
+                'audit_differences'     => array_key_exists('audit_differences', $validated) ? $validated['audit_differences'] : $cliente->audit_differences,
                 'contact_preference'    => $validated['contact_preference'] ?? $cliente->contact_preference,
                 'best_contact_shift'    => $validated['best_contact_shift'] ?? $cliente->best_contact_shift,
             ];
