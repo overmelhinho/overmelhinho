@@ -250,8 +250,7 @@ const AuditDashboardPage: React.FC = () => {
 
     const handleInlineSave = (client: any, overrideStatus?: string) => {
         const payload: any = {
-            nome_fantasia: client.nome_fantasia,
-            cpf_cnpj: client.cpf_cnpj,
+            ...client,
             contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
             enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
             redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
@@ -309,8 +308,7 @@ const AuditDashboardPage: React.FC = () => {
 
     const confirmAllCurrent = (client: any) => {
         const payload: any = {
-            nome_fantasia: client.nome_fantasia,
-            cpf_cnpj: client.cpf_cnpj,
+            ...client,
             contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
             enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
             redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
@@ -329,8 +327,7 @@ const AuditDashboardPage: React.FC = () => {
 
     const markManualReview = (client: any) => {
         const payload: any = {
-            nome_fantasia: client.nome_fantasia,
-            cpf_cnpj: client.cpf_cnpj,
+            ...client,
             contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
             enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
             redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],

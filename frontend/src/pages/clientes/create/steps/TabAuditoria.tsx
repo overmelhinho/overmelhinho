@@ -180,39 +180,101 @@ export default function TabAuditoria() {
                                         )}
 
                                         {log.field_changes && Object.keys(log.field_changes).length > 0 && (
-                                            <div className="mt-4 space-y-2">
-                                                {Object.entries(log.field_changes).map(([field, change]: [string, any]) => (
-                                                    <div key={field} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
-                                                        <span className="font-bold text-gray-500 uppercase text-[10px] tracking-wider min-w-[150px]">
-                                                            {field.replace(/_/g, ' ')}
-                                                        </span>
-                                                        <div className="flex items-center gap-3 flex-1 sm:justify-end text-[13px]">
-                                                            {/* Valor Antigo */}
-                                                            <div className="flex-1 sm:flex-none text-right">
-                                                                {change.old ? (
-                                                                    <span className="text-gray-400 max-w-[200px] truncate block line-through decoration-gray-300">
-                                                                        {String(change.old)}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">vazio</span>
-                                                                )}
+                                            <div className="mt-4 space-y-3">
+                                                {Object.entries(log.field_changes).map(([field, change]: [string, any]) => {
+                                                    // O banco retorna { from: ..., to: ... }
+                                                    const oldVal = change.old !== undefined ? change.old : change.from;
+                                                    const newVal = change.new !== undefined ? change.new : change.to;
+
+                                                    // Ocultar campos sistêmicos
+                                                    if (['seo_keywords_updated_at', 'updated_at', 'created_at', 'last_audit_at', 'audit_action', 'audit_differences'].includes(field)) {
+                                                        return null;
+                                                    }
+
+                                                    // Dicionário amigável
+                                                    const fieldLabels: Record<string, string> = {
+                                                        horario_atendimento: 'Horários de Atendimento',
+                                                        logo_url: 'Logotipo',
+                                                        banner_url: 'Banner',
+                                                        video: 'Vídeo / Apresentação',
+                                                        descricao: 'Descrição Completa',
+                                                        seo_keywords: 'Palavras-Chave (SEO)',
+                                                        redes_sociais: 'Redes Sociais',
+                                                        enderecos: 'Endereço',
+                                                        contatos: 'Contatos',
+                                                        exibir_no_site: 'Visibilidade no Site',
+                                                        possui_publicidade: 'Possui Publicidade',
+                                                        exibir_data_fundacao: 'Exibir Data de Fundação',
+                                                        razao_social: 'Razão Social',
+                                                        nome_fantasia: 'Nome Fantasia',
+                                                        audit_status: 'Status da Auditoria',
+                                                        responsavel: 'Responsável',
+                                                    };
+
+                                                    const label = fieldLabels[field] || field.replace(/_/g, ' ');
+
+                                                    const formatValue = (val: any) => {
+                                                        if (val === null || val === undefined || val === '') return null;
+                                                        if (typeof val === 'boolean' || val === 'true' || val === 'false') {
+                                                            return String(val) === 'true' ? 'Sim' : 'Não';
+                                                        }
+                                                        if (Array.isArray(val)) {
+                                                            return val.length === 0 ? 'Vazio' : `${val.length} item(s)`;
+                                                        }
+                                                        if (typeof val === 'object') {
+                                                            return 'Dados Atualizados';
+                                                        }
+                                                        if (typeof val === 'string' && val.length > 80) {
+                                                            return val.substring(0, 80) + '...';
+                                                        }
+                                                        return String(val);
+                                                    };
+
+                                                    const oldFormatted = formatValue(oldVal);
+                                                    const newFormatted = formatValue(newVal);
+
+                                                    // Se não teve alteração real, não exibe
+                                                    if (oldFormatted === newFormatted && oldFormatted !== null) return null;
+
+                                                    return (
+                                                        <div key={field} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider bg-white px-2 py-1 rounded-md shadow-sm border border-slate-100">
+                                                                    {label}
+                                                                </span>
                                                             </div>
+                                                            <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-full">
+                                                                <div className="flex-1 bg-red-50/50 p-2.5 rounded-lg border border-red-100/50 relative overflow-hidden group">
+                                                                    <span className="text-[9px] font-black text-red-400 uppercase mb-1 block">Removido / Antigo</span>
+                                                                    {oldFormatted ? (
+                                                                        <span className="text-sm font-semibold text-slate-500 line-through decoration-red-300 break-words">
+                                                                            {oldFormatted}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-xs text-slate-400 italic">Vazio</span>
+                                                                    )}
+                                                                </div>
+                                                                
+                                                                <div className="flex justify-center -my-2 sm:my-0 sm:-mx-2 z-10">
+                                                                    <div className="bg-white p-1.5 rounded-full shadow-sm border border-slate-100">
+                                                                        <ArrowRight size={14} className="text-slate-300 transform rotate-90 sm:rotate-0" />
+                                                                    </div>
+                                                                </div>
 
-                                                            <ArrowRight size={14} className="text-gray-300 shrink-0" />
-
-                                                            {/* Valor Novo */}
-                                                            <div className="flex-1 sm:flex-none">
-                                                                {change.new ? (
-                                                                    <span className="text-gray-900 font-bold max-w-[200px] truncate block">
-                                                                        {String(change.new)}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">vazio</span>
-                                                                )}
+                                                                <div className="flex-1 bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100/50">
+                                                                    <span className="text-[9px] font-black text-emerald-500 uppercase mb-1 block">Adicionado / Novo</span>
+                                                                    {newFormatted ? (
+                                                                        <span className="text-sm font-bold text-slate-700 break-words">
+                                                                            {newFormatted}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-xs text-slate-400 italic">Vazio</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
@@ -220,9 +282,9 @@ export default function TabAuditoria() {
                             );
                         })
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
-                            <Activity size={48} strokeWidth={1} className="mb-2 opacity-20" />
-                            <p className="text-sm font-medium">Nenhuma atividade registrada ainda.</p>
+                        <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
+                            <Activity size={48} strokeWidth={1} className="mb-4 text-slate-300" />
+                            <p className="text-sm font-bold text-slate-500">Nenhuma atividade registrada no histórico.</p>
                         </div>
                     )}
                 </div>
