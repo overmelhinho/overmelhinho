@@ -69,6 +69,148 @@ const formatPhone = (phoneStr: string) => {
     return phoneStr;
 };
 
+const fieldLabels: Record<string, string> = {
+    'nome_fantasia': 'Nome Fantasia',
+    'razao_social': 'Razão Social',
+    'cpf_cnpj': 'CPF / CNPJ',
+    'exibir_no_site': 'Exibir no Site',
+    'possui_publicidade': 'Plano Destaque',
+    'exibir_data_fundacao': 'Exibir Fundação',
+    'telefone': 'Telefone Principal',
+    'website': 'Site',
+    'observacoes': 'Observações Internas',
+    'horario_atendimento': 'Horários de Atendimento',
+    'observacoes_horario': 'Obs. de Horários',
+    'beneficios': 'Benefícios',
+    'google_place_id': 'ID do Google Maps',
+    'cep': 'CEP',
+    'logradouro': 'Logradouro',
+    'numero': 'Número',
+    'bairro': 'Bairro',
+    'cidade': 'Cidade',
+    'estado': 'Estado',
+    'complemento': 'Complemento',
+    'latitude': 'Latitude',
+    'longitude': 'Longitude',
+    'logo_url': 'Logotipo',
+    'banner_url': 'Banner',
+    'seo_keywords': 'Palavras-chave SEO',
+    'seo_description': 'Descrição SEO',
+    'seo_title': 'Título SEO'
+};
+
+const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: any }) => {
+    const [expanded, setExpanded] = useState(false);
+    
+    // Filter out internal timestamp fields
+    const changes = log.field_changes ? Object.entries(log.field_changes).filter(([k]) => !['updated_at', 'last_audit_at', 'seo_keywords_updated_at'].includes(k)) : [];
+    const hasRealChanges = changes.length > 0;
+
+    return (
+        <>
+            <motion.tr
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.03 }}
+                className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                onClick={() => hasRealChanges && setExpanded(!expanded)}
+            >
+                <td className="px-8 py-6">
+                    <span className="text-sm font-bold text-slate-600 flex items-center gap-2">
+                        {hasRealChanges && (
+                            <button className="text-slate-400 group-hover:text-[#B70F0A] transition-colors">
+                                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                        )}
+                        {format(new Date(log.created_at), "dd/MM/yy '•' HH:mm", { locale: ptBR })}
+                    </span>
+                </td>
+                <td className="px-8 py-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-black ring-4 ring-slate-100">
+                            {log.actor?.name?.charAt(0) || 'S'}
+                        </div>
+                        <span className="text-sm font-bold text-slate-700">{log.actor?.name || 'Sistema IA'}</span>
+                    </div>
+                </td>
+                <td className="px-8 py-6">
+                    <span className="text-sm font-bold text-[#B70F0A]">{log.cliente?.nome_fantasia || '---'}</span>
+                </td>
+                <td className="px-8 py-6">
+                    {hasRealChanges ? (
+                        <span className="text-[10px] bg-emerald-50 text-emerald-700 font-black px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5 w-fit uppercase">
+                            <CheckCircle2 className="w-3 h-3" />
+                            {changes.length} Alterações
+                        </span>
+                    ) : (
+                        <span className="text-[10px] bg-slate-50 text-slate-500 font-black px-2.5 py-1 rounded-lg border border-slate-100 flex items-center gap-1.5 w-fit uppercase">
+                            <Info className="w-3 h-3" />
+                            Nenhuma Alteração
+                        </span>
+                    )}
+                </td>
+                <td className="px-8 py-6 text-right">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); navigate(`/clientes/${log.cliente_id}/hub`); }}
+                        className="p-2.5 hover:bg-white hover:shadow-md rounded-xl transition-all text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-100"
+                    >
+                        <ArrowUpRight className="w-5 h-5" />
+                    </button>
+                </td>
+            </motion.tr>
+            
+            <AnimatePresence>
+                {expanded && hasRealChanges && (
+                    <motion.tr
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-slate-50/30 overflow-hidden"
+                    >
+                        <td colSpan={5} className="px-8 py-6">
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                                <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
+                                    <History className="w-4 h-4 text-[#B70F0A]" />
+                                    Detalhes da Atualização
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    {changes.map(([key, vals]: [string, any]) => {
+                                        const label = fieldLabels[key] || key;
+                                        const from = vals.from === null || vals.from === '' ? 'Vazio' : String(vals.from);
+                                        const to = vals.to === null || vals.to === '' ? 'Vazio' : String(vals.to);
+                                        
+                                        return (
+                                            <div key={key} className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
+                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                                    {label}
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="mt-0.5 text-slate-300"><X className="w-3.5 h-3.5" /></span>
+                                                        <span className="text-sm text-slate-500 font-medium line-through decoration-slate-300 break-words line-clamp-2">
+                                                            {from === 'true' ? 'Sim' : from === 'false' ? 'Não' : from}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="mt-0.5 text-emerald-500"><Check className="w-3.5 h-3.5" /></span>
+                                                        <span className="text-sm text-emerald-700 font-bold break-words line-clamp-3">
+                                                            {to === 'true' ? 'Sim' : to === 'false' ? 'Não' : to}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </td>
+                    </motion.tr>
+                )}
+            </AnimatePresence>
+        </>
+    );
+};
+
 const AuditDashboardPage: React.FC = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -1308,58 +1450,9 @@ const AuditDashboardPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {historyData?.data?.length > 0 ? historyData.data.map((log: any, idx: number) => {
-                                        // Lógica para determinar se foi corrigido ou mantido
-                                        const hasRealChanges = log.field_changes && Object.keys(log.field_changes).some(k => k !== 'last_audit_at' && k !== 'updated_at');
-                                        
-                                        return (
-                                            <motion.tr
-                                                key={log.id}
-                                                initial={{ opacity: 0, y: 5 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: idx * 0.03 }}
-                                                className="hover:bg-slate-50/50 transition-colors"
-                                            >
-                                                <td className="px-8 py-6">
-                                                    <span className="text-sm font-bold text-slate-600">
-                                                        {format(new Date(log.created_at), "dd/MM/yy '•' HH:mm", { locale: ptBR })}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-black ring-4 ring-slate-100">
-                                                            {log.actor?.name?.charAt(0) || 'S'}
-                                                        </div>
-                                                        <span className="text-sm font-bold text-slate-700">{log.actor?.name || 'Sistema IA'}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <span className="text-sm font-bold text-[#B70F0A]">{log.cliente?.nome_fantasia || '---'}</span>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    {hasRealChanges ? (
-                                                        <span className="text-[10px] bg-emerald-50 text-emerald-700 font-black px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5 w-fit uppercase">
-                                                            <CheckCircle2 className="w-3 h-3" />
-                                                            Dados Corrigidos
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[10px] bg-slate-50 text-slate-500 font-black px-2.5 py-1 rounded-lg border border-slate-100 flex items-center gap-1.5 w-fit uppercase">
-                                                            <Check className="w-3 h-3" />
-                                                            Mantido Sistema
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    <button
-                                                        onClick={() => navigate(`/clientes/${log.cliente_id}/hub`)}
-                                                        className="p-2.5 hover:bg-white hover:shadow-md rounded-xl transition-all text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-100"
-                                                    >
-                                                        <ArrowUpRight className="w-5 h-5" />
-                                                    </button>
-                                                </td>
-                                            </motion.tr>
-                                        );
-                                    }) : (
+                                    {historyData?.data?.length > 0 ? historyData.data.map((log: any, idx: number) => (
+                                        <HistoryRow key={log.id} log={log} idx={idx} navigate={navigate} />
+                                    )) : (
                                         <tr>
                                             <td colSpan={5} className="py-32 text-center text-slate-300">
                                                 Nenhum histórico registrado no período.

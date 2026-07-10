@@ -10,7 +10,9 @@ import {
     Calendar,
     ArrowRight,
     CircleDot,
-    MessageCircle
+    MessageCircle,
+    X,
+    Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -180,101 +182,106 @@ export default function TabAuditoria() {
                                         )}
 
                                         {log.field_changes && Object.keys(log.field_changes).length > 0 && (
-                                            <div className="mt-4 space-y-3">
-                                                {Object.entries(log.field_changes).map(([field, change]: [string, any]) => {
-                                                    // O banco retorna { from: ..., to: ... }
-                                                    const oldVal = change.old !== undefined ? change.old : change.from;
-                                                    const newVal = change.new !== undefined ? change.new : change.to;
+                                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                                <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
+                                                    <History className="w-4 h-4 text-[#B70F0A]" />
+                                                    Detalhes da Atualização
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                                    {Object.entries(log.field_changes).map(([field, change]: [string, any]) => {
+                                                        const oldVal = change.old !== undefined ? change.old : change.from;
+                                                        const newVal = change.new !== undefined ? change.new : change.to;
 
-                                                    // Ocultar campos sistêmicos
-                                                    if (['seo_keywords_updated_at', 'updated_at', 'created_at', 'last_audit_at', 'audit_action', 'audit_differences'].includes(field)) {
-                                                        return null;
-                                                    }
-
-                                                    // Dicionário amigável
-                                                    const fieldLabels: Record<string, string> = {
-                                                        horario_atendimento: 'Horários de Atendimento',
-                                                        logo_url: 'Logotipo',
-                                                        banner_url: 'Banner',
-                                                        video: 'Vídeo / Apresentação',
-                                                        descricao: 'Descrição Completa',
-                                                        seo_keywords: 'Palavras-Chave (SEO)',
-                                                        redes_sociais: 'Redes Sociais',
-                                                        enderecos: 'Endereço',
-                                                        contatos: 'Contatos',
-                                                        exibir_no_site: 'Visibilidade no Site',
-                                                        possui_publicidade: 'Possui Publicidade',
-                                                        exibir_data_fundacao: 'Exibir Data de Fundação',
-                                                        razao_social: 'Razão Social',
-                                                        nome_fantasia: 'Nome Fantasia',
-                                                        audit_status: 'Status da Auditoria',
-                                                        responsavel: 'Responsável',
-                                                    };
-
-                                                    const label = fieldLabels[field] || field.replace(/_/g, ' ');
-
-                                                    const formatValue = (val: any) => {
-                                                        if (val === null || val === undefined || val === '') return null;
-                                                        if (typeof val === 'boolean' || val === 'true' || val === 'false') {
-                                                            return String(val) === 'true' ? 'Sim' : 'Não';
+                                                        if (['seo_keywords_updated_at', 'updated_at', 'created_at', 'last_audit_at', 'audit_action', 'audit_differences'].includes(field)) {
+                                                            return null;
                                                         }
-                                                        if (Array.isArray(val)) {
-                                                            return val.length === 0 ? 'Vazio' : `${val.length} item(s)`;
-                                                        }
-                                                        if (typeof val === 'object') {
-                                                            return 'Dados Atualizados';
-                                                        }
-                                                        if (typeof val === 'string' && val.length > 80) {
-                                                            return val.substring(0, 80) + '...';
-                                                        }
-                                                        return String(val);
-                                                    };
 
-                                                    const oldFormatted = formatValue(oldVal);
-                                                    const newFormatted = formatValue(newVal);
+                                                        const fieldLabels: Record<string, string> = {
+                                                            horario_atendimento: 'Horários de Atendimento',
+                                                            logo_url: 'Logotipo',
+                                                            banner_url: 'Banner',
+                                                            video: 'Vídeo / Apresentação',
+                                                            descricao: 'Descrição Completa',
+                                                            seo_keywords: 'Palavras-Chave (SEO)',
+                                                            redes_sociais: 'Redes Sociais',
+                                                            enderecos: 'Endereço',
+                                                            contatos: 'Contatos',
+                                                            exibir_no_site: 'Visibilidade no Site',
+                                                            possui_publicidade: 'Possui Publicidade',
+                                                            exibir_data_fundacao: 'Exibir Data de Fundação',
+                                                            razao_social: 'Razão Social',
+                                                            nome_fantasia: 'Nome Fantasia',
+                                                            audit_status: 'Status da Auditoria',
+                                                            responsavel: 'Responsável',
+                                                            telefone: 'Telefone Principal',
+                                                            website: 'Site',
+                                                            observacoes: 'Observações Internas',
+                                                            observacoes_horario: 'Obs. de Horários',
+                                                            beneficios: 'Benefícios',
+                                                            google_place_id: 'ID do Google Maps',
+                                                            cep: 'CEP',
+                                                            logradouro: 'Logradouro',
+                                                            numero: 'Número',
+                                                            bairro: 'Bairro',
+                                                            cidade: 'Cidade',
+                                                            estado: 'Estado',
+                                                            complemento: 'Complemento',
+                                                            latitude: 'Latitude',
+                                                            longitude: 'Longitude',
+                                                            seo_description: 'Descrição SEO',
+                                                            seo_title: 'Título SEO'
+                                                        };
 
-                                                    // Se não teve alteração real, não exibe
-                                                    if (oldFormatted === newFormatted && oldFormatted !== null) return null;
+                                                        const label = fieldLabels[field] || field.replace(/_/g, ' ');
 
-                                                    return (
-                                                        <div key={field} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider bg-white px-2 py-1 rounded-md shadow-sm border border-slate-100">
+                                                        const formatValue = (val: any) => {
+                                                            if (val === null || val === undefined || val === '') return null;
+                                                            if (typeof val === 'boolean' || val === 'true' || val === 'false') {
+                                                                return String(val) === 'true' ? 'Sim' : 'Não';
+                                                            }
+                                                            if (Array.isArray(val)) {
+                                                                return val.length === 0 ? 'Vazio' : `${val.length} item(s)`;
+                                                            }
+                                                            if (typeof val === 'object') {
+                                                                return 'Dados Atualizados';
+                                                            }
+                                                            if (typeof val === 'string' && val.length > 80) {
+                                                                return val.substring(0, 80) + '...';
+                                                            }
+                                                            return String(val);
+                                                        };
+
+                                                        const oldFormatted = formatValue(oldVal);
+                                                        const newFormatted = formatValue(newVal);
+
+                                                        if (oldFormatted === newFormatted && oldFormatted !== null) return null;
+
+                                                        const from = oldFormatted === null ? 'Vazio' : oldFormatted;
+                                                        const to = newFormatted === null ? 'Vazio' : newFormatted;
+
+                                                        return (
+                                                            <div key={field} className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
+                                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
                                                                     {label}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-full">
-                                                                <div className="flex-1 bg-red-50/50 p-2.5 rounded-lg border border-red-100/50 relative overflow-hidden group">
-                                                                    <span className="text-[9px] font-black text-red-400 uppercase mb-1 block">Removido / Antigo</span>
-                                                                    {oldFormatted ? (
-                                                                        <span className="text-sm font-semibold text-slate-500 line-through decoration-red-300 break-words">
-                                                                            {oldFormatted}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="text-xs text-slate-400 italic">Vazio</span>
-                                                                    )}
                                                                 </div>
-                                                                
-                                                                <div className="flex justify-center -my-2 sm:my-0 sm:-mx-2 z-10">
-                                                                    <div className="bg-white p-1.5 rounded-full shadow-sm border border-slate-100">
-                                                                        <ArrowRight size={14} className="text-slate-300 transform rotate-90 sm:rotate-0" />
+                                                                <div className="flex flex-col gap-2">
+                                                                    <div className="flex items-start gap-2">
+                                                                        <span className="mt-0.5 text-slate-300"><X className="w-3.5 h-3.5" /></span>
+                                                                        <span className="text-sm text-slate-500 font-medium line-through decoration-slate-300 break-words line-clamp-2">
+                                                                            {from}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-start gap-2">
+                                                                        <span className="mt-0.5 text-emerald-500"><Check className="w-3.5 h-3.5" /></span>
+                                                                        <span className="text-sm text-emerald-700 font-bold break-words line-clamp-3">
+                                                                            {to}
+                                                                        </span>
                                                                     </div>
                                                                 </div>
-
-                                                                <div className="flex-1 bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100/50">
-                                                                    <span className="text-[9px] font-black text-emerald-500 uppercase mb-1 block">Adicionado / Novo</span>
-                                                                    {newFormatted ? (
-                                                                        <span className="text-sm font-bold text-slate-700 break-words">
-                                                                            {newFormatted}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="text-xs text-slate-400 italic">Vazio</span>
-                                                                    )}
-                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
