@@ -2800,8 +2800,17 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             });
         }
 
-        $query->orderByRaw("CASE WHEN tipo_cliente = 'pagante' THEN 0 ELSE 1 END")
-              ->orderBy('last_audit_at', 'desc');
+        $query->orderByRaw("
+            COALESCE((
+                CASE WHEN (audit_differences->>'telefone') IS NOT NULL THEN 3 ELSE 0 END +
+                CASE WHEN (audit_differences->>'endereco') IS NOT NULL THEN 3 ELSE 0 END +
+                CASE WHEN (audit_differences->>'nome') IS NOT NULL THEN 2 ELSE 0 END +
+                CASE WHEN (audit_differences->>'email') IS NOT NULL THEN 2 ELSE 0 END +
+                CASE WHEN (audit_differences->>'website') IS NOT NULL THEN 1 ELSE 0 END +
+                CASE WHEN (audit_differences->>'instagram') IS NOT NULL THEN 1 ELSE 0 END +
+                CASE WHEN (audit_differences->>'horarios') IS NOT NULL THEN 1 ELSE 0 END
+            ), 0) DESC
+        ")->orderBy('last_audit_at', 'desc');
 
         return ClienteResource::collection($query->paginate($request->input('per_page', 15)));
     }

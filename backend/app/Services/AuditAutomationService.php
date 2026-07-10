@@ -91,13 +91,69 @@ class AuditAutomationService
         $isPagante = ($cliente->tipo_cliente ?? 'gratuito') === 'pagante';
 
         // 1. Telefone (todos os clientes)
-        $telAtual = $this->limparTelefone($contato?->telefone_principal);
         $telNovo = $this->limparTelefone($novos['telefone'] ?? '');
-        if ($telNovo && $telAtual !== $telNovo) {
-            $dif['telefone'] = [
-                'current' => $telAtual, 
-                'new' => $telNovo,
-                'source' => $novos['sources']['telefone'] ?? 'Google Places / Web'
+        if ($telNovo) {
+            $telsAtuais = [];
+            if ($contato) {
+                $telsAtuais = array_filter([
+                    $this->limparTelefone($contato->telefone_principal),
+                    $this->limparTelefone($contato->telefone_secundario),
+                    $this->limparTelefone($contato->celular),
+                    $this->limparTelefone($contato->telefone_outro),
+                ]);
+            }
+
+            // Só é divergência se o telefone novo não estiver em NENHUM dos telefones cadastrados
+            if (!in_array($telNovo, $telsAtuais)) {
+                $dif['telefone'] = [
+                    'current' => $contato ? $this->limparTelefone($contato->telefone_principal) : '', 
+                    'new' => $telNovo,
+                    'source' => $novos['sources']['telefone'] ?? 'Google Places / Web'
+                ];
+            }
+        }
+
+        // 2. Endereço estruturado (todos os clientes)
+        $parts = $novos['endereco_parts'] ?? [];
+        $ruaNova = $parts['rua'] ?? '';
+        $ruaAtual = $endereco?->rua ?? '';
+
+        if (!empty($ruaNova) && mb_strtolower(trim($ruaNova)) !== mb_strtolower(trim($ruaAtual))) {
+            // Preserva o complemento atual se o novo não trouxer
+            if (empty($parts['complemento']) && !empty($endereco?->complemento)) {
+                $parts['complemento'] = $endereco->complemento;
+            }
+            // Endereço formatado para exibição no frontend
+            $endAtual = $ruaAtual ? "{$ruaAtual}, {$endereco->numero}" : '';
+            $endNovo  = "{$parts['rua']}, {$parts['numero']}";
+
+            $dif['endereco'] = [
+                'current' => $endAtual,
+                'new'     => $endNovo,
+                'parts'   => $parts,    // campos estruturados para salvar no banco
+                'source'  => $novos['sources']['endereco'] ?? 'Google Places / Web'
+            ];
+        }
+
+        // 3. Nome (todos os clientes)
+        $nomeAtual = trim($cliente->nome_fantasia ?: $cliente->razao_social);
+        $nomeNovo = trim($novos['nome_fantasia'] ?? ($novos['razao_social'] ?? ''));
+        if (!empty($nomeNovo) && mb_strtolower($nomeAtual) !== mb_strtolower($nomeNovo)) {
+            $dif['nome'] = [
+                'current' => $nomeAtual,
+                'new'     => $nomeNovo,
+                'source'  => $novos['sources']['nome_fantasia'] ?? ($novos['sources']['razao_social'] ?? 'Google Places / Web')
+            ];
+        }
+
+        // 4. E-mail (todos os clientes)
+        $emailAtual = mb_strtolower(trim($contato?->email_principal ?? ''));
+        $emailNovo = mb_strtolower(trim($novos['email'] ?? ''));
+        if (!empty($emailNovo) && $emailAtual !== $emailNovo) {
+            $dif['email'] = [
+                'current' => $emailAtual,
+                'new'     => $emailNovo,
+                'source'  => $novos['sources']['email'] ?? 'Google Places / Web'
             ];
         }
 
@@ -134,28 +190,6 @@ class AuditAutomationService
                 'current' => $instaAtual, 
                 'new' => $instaNovo,
                 'source' => $novos['sources']['instagram'] ?? 'Google Places / Web'
-            ];
-        }
-
-        // 4. Endereço estruturado (usa address_components do Google)
-        $parts = $novos['endereco_parts'] ?? [];
-        $ruaNova = $parts['rua'] ?? '';
-        $ruaAtual = $endereco?->rua ?? '';
-
-        if (!empty($ruaNova) && mb_strtolower(trim($ruaNova)) !== mb_strtolower(trim($ruaAtual))) {
-            // Preserva o complemento atual se o novo não trouxer
-            if (empty($parts['complemento']) && !empty($endereco?->complemento)) {
-                $parts['complemento'] = $endereco->complemento;
-            }
-            // Endereço formatado para exibição no frontend
-            $endAtual = $ruaAtual ? "{$ruaAtual}, {$endereco->numero}" : '';
-            $endNovo  = "{$parts['rua']}, {$parts['numero']}";
-
-            $dif['endereco'] = [
-                'current' => $endAtual,
-                'new'     => $endNovo,
-                'parts'   => $parts,    // campos estruturados para salvar no banco
-                'source'  => $novos['sources']['endereco'] ?? 'Google Places / Web'
             ];
         }
 

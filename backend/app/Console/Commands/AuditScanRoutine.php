@@ -39,13 +39,13 @@ class AuditScanRoutine extends Command
         $limit = $this->option('limit');
         $this->info("🔍 Iniciando rotina de auditoria externa (Limite: {$limit})...");
 
-        // 1. Prioridade: Pagantes que não foram auditados há mais de 6 meses
-        // 2. Secundário: Gratuitos que não foram auditados há mais de 6 meses
+        // 1. Prioridade: Gratuitos que não foram auditados há mais de 6 meses
+        // 2. Secundário: Pagantes que não foram auditados há mais de 6 meses
         $clientes = Cliente::where(function($q) {
                 $q->whereNull('last_audit_at')
                   ->orWhere('last_audit_at', '<', now()->subMonths(6));
             })
-            ->orderByRaw("CASE WHEN tipo_cliente = 'pagante' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN tipo_cliente = 'gratuito' THEN 0 ELSE 1 END")
             ->orderBy('last_audit_at', 'asc')
             ->limit($limit)
             ->get();

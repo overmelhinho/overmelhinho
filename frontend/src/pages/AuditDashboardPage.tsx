@@ -230,14 +230,14 @@ const AuditDashboardPage: React.FC = () => {
     const tab = (searchParams.get('tab') as 'queue' | 'history' | 'cities') || 'queue';
     const page = parseInt(searchParams.get('page') || '1');
     const filterCity = searchParams.get('cidade') || '';
-    const filterType = searchParams.get('tipo') || '';
+    const filterType = searchParams.get('tipo') || 'gratuito';
     const filterUser = searchParams.get('user_id') || '';
     const filterDateStart = searchParams.get('date_start') || '';
     const filterDateEnd = searchParams.get('date_end') || '';
     const filterVisibilidade = searchParams.get('visibilidade') || '';
     const filterSegmento = searchParams.get('segmento_id') || '';
     const filterResult = searchParams.get('result') || ''; // 'all' | 'corrected' | 'kept'
-    const filterStatus = searchParams.get('status') || 'manual_review'; // pending | manual_review | ok | all | any
+    const filterStatus = searchParams.get('status') || 'pending'; // pending | manual_review | ok | all | any
     const searchTerm = searchParams.get('q') || '';
 
     const updateFilter = (params: Record<string, string | number | null>) => {
@@ -364,6 +364,7 @@ const AuditDashboardPage: React.FC = () => {
         onSuccess: (res, clienteId) => {
             setForcingScanId(null);
             setForceScanResult(prev => ({ ...prev, [clienteId]: { status: res.data.status, message: res.data.message } }));
+            queryClient.invalidateQueries({ queryKey: ['auditQueue'] });
             setTimeout(() => setForceScanResult(prev => { const n = {...prev}; delete n[clienteId]; return n; }), 8000);
         },
         onError: (_err, clienteId) => {
@@ -1004,7 +1005,21 @@ const AuditDashboardPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {queueData?.data?.length > 0 ? queueData.data.map((c: any, idx: number) => {
+                                    {(() => {
+                                        if (!queueData?.data || queueData.data.length === 0) return null;
+                                        const getSeverityScore = (diffs: any) => {
+                                            if (!diffs) return 0;
+                                            let score = 0;
+                                            const keys = Object.keys(diffs);
+                                            if (keys.includes('telefone') || keys.includes('endereco')) score += 3;
+                                            if (keys.includes('nome') || keys.includes('email')) score += 2;
+                                            if (keys.includes('website') || keys.includes('instagram') || keys.includes('horarios')) score += 1;
+                                            return score;
+                                        };
+                                        const sortedData = [...queueData.data].sort((a: any, b: any) => {
+                                            return getSeverityScore(b.audit_differences) - getSeverityScore(a.audit_differences);
+                                        });
+                                        return sortedData.map((c: any, idx: number) => {
                                         const isExpanded = expandedClientId === c.id;
                                         return (
                                             <React.Fragment key={c.id}>
@@ -1288,7 +1303,7 @@ const AuditDashboardPage: React.FC = () => {
                                                                                         if (diff.source === 'Receita Federal (CNPJ)') {
                                                                                             const cleanCnpj = c.cpf_cnpj ? c.cpf_cnpj.replace(/\D/g, '') : '';
                                                                                             diffUrl = cleanCnpj ? `https://cnpj.biz/${cleanCnpj}` : `https://www.google.com/search?q=${encodeURIComponent(c.nome_fantasia + ' CNPJ')}`;
-                                                                                        } else if (key === 'telefone' || key === 'endereco') {
+                                                                                        } else if (key === 'telefone' || key === 'endereco' || key === 'nome') {
                                                                                             if (c.google_place_id) {
                                                                                                 diffUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.nome_fantasia)}&query_place_id=${c.google_place_id}`;
                                                                                             } else {
@@ -1299,6 +1314,8 @@ const AuditDashboardPage: React.FC = () => {
                                                                                         } else if (key === 'instagram') {
                                                                                             const handle = newVal.replace('@', '').trim();
                                                                                             diffUrl = handle.startsWith('http') ? handle : `https://instagram.com/${handle}`;
+                                                                                        } else if (key === 'email') {
+                                                                                            diffUrl = `mailto:${newVal}`;
                                                                                         } else {
                                                                                             diffUrl = newVal.startsWith('http') ? newVal : `https://${newVal}`;
                                                                                         }
@@ -1343,17 +1360,17 @@ const AuditDashboardPage: React.FC = () => {
                                                                                             <div className="flex gap-2">
                                                                                                 <button
                                                                                                     type="button"
-                                                                                                    onClick={(e) => { e.stopPropagation(); setInlineStatus(prev => ({ ...prev, [key]: 'accepted' })); }}
-                                                                                                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isFieldAccepted ? 'bg-[#B70F0A] text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
-                                                                                                >
-                                                                                                    Usar dado da Web
-                                                                                                </button>
-                                                                                                <button
-                                                                                                    type="button"
                                                                                                     onClick={(e) => { e.stopPropagation(); setInlineStatus(prev => ({ ...prev, [key]: 'rejected' })); }}
                                                                                                     className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isFieldRejected ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
                                                                                                 >
                                                                                                     Manter Atual
+                                                                                                </button>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={(e) => { e.stopPropagation(); setInlineStatus(prev => ({ ...prev, [key]: 'accepted' })); }}
+                                                                                                    className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isFieldAccepted ? 'bg-[#B70F0A] text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+                                                                                                >
+                                                                                                    Usar dado da Web
                                                                                                 </button>
                                                                                             </div>
                                                                                         </div>
@@ -1422,7 +1439,9 @@ const AuditDashboardPage: React.FC = () => {
                                                 </AnimatePresence>
                                             </React.Fragment>
                                         );
-                                    }) : (
+                                    });
+                                    })()}
+                                    {(!queueData?.data || queueData.data.length === 0) && (
                                         <tr>
                                             <td colSpan={6} className="py-32 text-center">
                                                 <div className="flex flex-col items-center gap-4 text-slate-300">
