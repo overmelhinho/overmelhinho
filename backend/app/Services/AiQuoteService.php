@@ -71,44 +71,22 @@ class AiQuoteService
      */
     public function generateProspectingMessage(Quote $quote)
     {
-        if (!$this->apiKey) {
-            Log::error("AiQuoteService: OPENAI_API_KEY não configurada.");
-            return null;
-        }
-
         $cliente = $quote->cliente;
+        $cliente->loadMissing('contatos');
         
-        $prompt = "Você é um assistente comercial da plataforma 'O Vermelhinho'. " .
-                  "O objetivo é abordar a empresa {$cliente->nome_fantasia} via WhatsApp para prospecção. " .
-                  "Esta empresa está no plano Gratuito e acabou de receber um pedido de orçamento (Lead) para: '{$quote->service_requested}'. " .
-                  "Escreva uma mensagem curta, direta e com tom consultivo e amigável. " .
-                  "A mensagem deve informar que captamos esse pedido de orçamento para eles e que os dados do cliente foram enviados para o e-mail deles (pois eles são do plano gratuito). " .
-                  "Em seguida, argumente brevemente que, ao anunciar na plataforma (plano pago), eles receberiam esse contato diretamente no WhatsApp em tempo real e teriam muito mais visibilidade. " .
-                  "Finalize perguntando se eles têm interesse em conhecer os planos.";
+        $contatoEmail = $cliente->contatos->whereNotNull('email_principal')->first();
+        $emailEmpresa = $contatoEmail ? $contatoEmail->email_principal : 'cadastrado no sistema';
+        
+        $nomeEmpresa = trim($cliente->nome_fantasia ?: 'Parceiro');
+        $mensagemServico = trim($quote->service_requested);
 
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => "Bearer {$this->apiKey}",
-                'Content-Type' => 'application/json',
-            ])->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4',
-                'messages' => [
-                    ['role' => 'system', 'content' => $prompt],
-                ],
-                'temperature' => 0.7,
-            ]);
+        $template = "Olá, equipe da {$nomeEmpresa} ! 😊\n\n"
+                  . "Espero que estejam bem. Sou do comercial aqui do O Vermelhinho.\n\n"
+                  . "Acabamos de captar um pedido de orçamento para vocês: um cliente está buscando um '{$mensagemServico}'. Enviamos todos os detalhes e dados do cliente para o e-mail {$emailEmpresa} cadastrado em nosso sistema.\n\n"
+                  . "Porém, gostaria de compartilhar uma oportunidade com vocês. Se optarem por anunciar na nossa plataforma através de um de nossos planos pagos, receberiam esses contatos diretamente no WhatsApp, em tempo real, além de contar com uma visibilidade muito maior para a {$nomeEmpresa}.\n\n"
+                  . "Que tal conhecer melhor nossos planos e verificar como podemos ajudar ainda mais no crescimento das suas vendas? Aguardo seu retorno.\n\n"
+                  . "Um grande abraço!🙂";
 
-            if ($response->successful()) {
-                $content = $response->json('choices.0.message.content');
-                return trim($content);
-            }
-
-            Log::error("AiQuoteService API Error (Prospecting): " . $response->body());
-            return null;
-
-        } catch (\Exception $e) {
-            Log::error("AiQuoteService Exception (Prospecting): " . $e->getMessage());
-            return null;
-        }
+        return $template;
     }
 }
