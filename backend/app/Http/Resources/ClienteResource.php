@@ -28,7 +28,7 @@ class ClienteResource extends JsonResource
         $logoUrl = $this->logo_url;
         
         // ✅ Clientes Gratuitos NÃO exibem logotipo no site frontend
-        if ($tipoCliente === 'gratuito') {
+        if (!$isDashboard && $tipoCliente === 'gratuito') {
             $logoUrl = null;
         } elseif ($logoUrl && !Str::startsWith($logoUrl, ['http://', 'https://'])) {
             $logoUrl = asset('storage/' . $logoUrl);
