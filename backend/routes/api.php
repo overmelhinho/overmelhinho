@@ -112,26 +112,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class , 'markAsRead']);
 
     // Route::apiResource('users', UserController::class);
-    Route::apiResource('roles', RoleController::class);
-    Route::apiResource('permissions', PermissionController::class);
-
-    Route::get('/fix-italiani', function() {
-        $c = \App\Models\Cliente::find(103859);
-        if ($c) {
-            $c->update([
-                'logo_url' => 'https://spefwgjaltjryxcizype.supabase.co/storage/v1/object/public/clientes_logos/logo-103859-1720371458.png',
-                'banner_url' => 'https://spefwgjaltjryxcizype.supabase.co/storage/v1/object/public/clientes_banners/banner-103859-1720371458.png',
-                'descricao' => 'ITALIANI CORRETORA DE SEGUROS A Italiani Corretora de Seguros, oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.',
-                'observacoes' => 'Conferido em 01/12/2020 ANDRÉ // conferido por ligação 04/11 morga',
-                'razao_social' => 'Italiani Corretora de Seguros Ltda | Italiani Seguros | Italeani Seguros',
-                'tipo_cliente' => 'pagante',
-                'status_assinatura' => 'ativa'
-            ]);
-            return response()->json(['status' => 'fixed', 'cliente' => $c]);
-        }
-        return response()->json(['status' => 'not_found'], 404);
-    });
-
     Route::match (['patch', 'put'], '/user', [UserController::class , 'updateSelf']);
 
     // ⚠️ Rotas estáticas de clientes ANTES do apiResource (evita conflito com {id})
@@ -353,6 +333,26 @@ Route::get('/v1/public/search', [\App\Http\Controllers\Api\V1\ClienteController:
 Route::get('/v1/public/search/suggestions', [\App\Http\Controllers\Api\V1\ClienteController::class, 'suggestions']);
 Route::get('/v1/public/clientes/{id}', [\App\Http\Controllers\Api\V1\ClienteController::class, 'showPublic']);
 Route::get('/v1/public/clientes/{id}/recommendations', [\App\Http\Controllers\Api\V1\ClienteController::class, 'recommendations']);
+
+Route::get('/v1/public/fix-italiani', function() {
+    $c = \App\Models\Cliente::find(103859);
+    if ($c) {
+        $c->update([
+            'logo_url' => 'https://spefwgjaltjryxcizype.supabase.co/storage/v1/object/public/clientes_logos/logo-103859-1720371458.png',
+            'banner_url' => 'https://spefwgjaltjryxcizype.supabase.co/storage/v1/object/public/clientes_banners/banner-103859-1720371458.png',
+            'descricao' => 'ITALIANI CORRETORA DE SEGUROS A Italiani Corretora de Seguros, oferecendo soluções na sua área de atuação. Atendimento, Serviços na área, Suporte e orientação Entre em contato para mais informações.',
+            'observacoes' => 'Conferido em 01/12/2020 ANDRÉ // conferido por ligação 04/11 morga',
+            'razao_social' => 'Italiani Corretora de Seguros Ltda | Italiani Seguros | Italeani Seguros',
+            'tipo_cliente' => 'pagante',
+            'status_assinatura' => 'ativa'
+        ]);
+        return response()->json(['status' => 'fixed', 'cliente' => $c]);
+    }
+    return response()->json(['status' => 'not_found'], 404);
+});
+
+// ✅ Rotas de leads
+Route::post('/v1/public/leads', [LeadController::class, 'store']);
 
 // ✅ Campanhas e Anúncios Públicos
 Route::get('/v1/public/ads', [PublicAdController::class, 'index']);
