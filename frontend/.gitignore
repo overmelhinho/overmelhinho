@@ -112,3 +112,12 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Scripts temporarios de manutencao
+check_42175.js
+force_update_statuses.js
+list_158.js
+restore_42175.js
+simulate.js
+simulate_downgrade.js
+simulate_nanico.js

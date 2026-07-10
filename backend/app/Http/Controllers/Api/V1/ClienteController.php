@@ -1737,16 +1737,16 @@ public function historico(Request $request, int $id)
             $clienteData = [
                 'nome_fantasia' => $validated['nome_fantasia'],
                 'cpf_cnpj'      => $validated['cpf_cnpj'],
-                'razao_social'          => $validated['razao_social'] ?? null,
-                'nome_alternativo'      => $validated['nome_alternativo'] ?? null,
-                'inscricao_estadual'    => $validated['inscricao_estadual'] ?? null,
-                'inscricao_municipal'   => $validated['inscricao_municipal'] ?? null,
-                'registro_profissional' => $validated['registro_profissional'] ?? null,
-                'descricao'             => $validated['descricao'] ?? null,
-                'observacoes'           => $validated['observacoes'] ?? null,
-                'exibir_no_site'        => $request->boolean('exibir_no_site', $cliente->exibir_no_site ?? true) ? 'true' : 'false',
-                'exibir_data_fundacao'  => $request->boolean('exibir_data_fundacao', $cliente->exibir_data_fundacao ?? true) ? 'true' : 'false',
-                'possui_publicidade'    => $request->boolean('possui_publicidade', $cliente->possui_publicidade ?? false) ? 'true' : 'false',
+                'razao_social'          => $request->has('razao_social') ? ($validated['razao_social'] ?? null) : $cliente->razao_social,
+                'nome_alternativo'      => $request->has('nome_alternativo') ? ($validated['nome_alternativo'] ?? null) : $cliente->nome_alternativo,
+                'inscricao_estadual'    => $request->has('inscricao_estadual') ? ($validated['inscricao_estadual'] ?? null) : $cliente->inscricao_estadual,
+                'inscricao_municipal'   => $request->has('inscricao_municipal') ? ($validated['inscricao_municipal'] ?? null) : $cliente->inscricao_municipal,
+                'registro_profissional' => $request->has('registro_profissional') ? ($validated['registro_profissional'] ?? null) : $cliente->registro_profissional,
+                'descricao'             => $request->has('descricao') ? ($validated['descricao'] ?? null) : $cliente->descricao,
+                'observacoes'           => $request->has('observacoes') ? ($validated['observacoes'] ?? null) : $cliente->observacoes,
+                'exibir_no_site'        => $request->has('exibir_no_site') ? ($request->boolean('exibir_no_site') ? 'true' : 'false') : ($cliente->exibir_no_site ?? 'true'),
+                'exibir_data_fundacao'  => $request->has('exibir_data_fundacao') ? ($request->boolean('exibir_data_fundacao') ? 'true' : 'false') : ($cliente->exibir_data_fundacao ?? 'true'),
+                'possui_publicidade'    => $request->has('possui_publicidade') ? ($request->boolean('possui_publicidade') ? 'true' : 'false') : ($cliente->possui_publicidade ?? 'false'),
                 'audit_status'          => $validated['audit_status'] ?? $cliente->audit_status,
                 'audit_differences'     => array_key_exists('audit_differences', $validated) ? $validated['audit_differences'] : $cliente->audit_differences,
                 'contact_preference'    => $validated['contact_preference'] ?? $cliente->contact_preference,
@@ -1761,8 +1761,8 @@ public function historico(Request $request, int $id)
                 $clienteData['responsavel'] = $request->user()->name;
             }
 
-            if (Schema::hasColumn('clientes', 'horario_atendimento')) {
-                $clienteData['horario_atendimento'] = $validated['horario_atendimento'] ?? null;
+            if (Schema::hasColumn('clientes', 'horario_atendimento') && !$request->has('horario_atendimento')) {
+                // horario_atendimento já é tratado com $request->has() abaixo — não sobrescrever aqui
             }
 
             if (Schema::hasColumn('clientes', 'seo_keywords_source')) {
@@ -1770,23 +1770,23 @@ public function historico(Request $request, int $id)
             }
 
             if (Schema::hasColumn('clientes', 'logo_url')) {
-                $clienteData['logo_url'] = $validated['logo_url'] ?? null;
+                $clienteData['logo_url'] = $request->has('logo_url') ? ($validated['logo_url'] ?? null) : $cliente->logo_url;
             }
 
             if (Schema::hasColumn('clientes', 'banner_url')) {
-                $clienteData['banner_url'] = $validated['banner_url'] ?? null;
+                $clienteData['banner_url'] = $request->has('banner_url') ? ($validated['banner_url'] ?? null) : $cliente->banner_url;
             }
 
             if (Schema::hasColumn('clientes', 'video')) {
-                $clienteData['video'] = $validated['video'] ?? null;
+                $clienteData['video'] = $request->has('video') ? ($validated['video'] ?? null) : $cliente->video;
             }
 
             if (Schema::hasColumn('clientes', 'portfolio_url')) {
-                $clienteData['portfolio_url'] = $validated['portfolio_url'] ?? null;
+                $clienteData['portfolio_url'] = $request->has('portfolio_url') ? ($validated['portfolio_url'] ?? null) : $cliente->portfolio_url;
             }
 
             if (Schema::hasColumn('clientes', 'tipo_arquivo_midia')) {
-                $clienteData['tipo_arquivo_midia'] = $validated['tipo_arquivo_midia'] ?? 'catalogo';
+                $clienteData['tipo_arquivo_midia'] = $request->has('tipo_arquivo_midia') ? ($validated['tipo_arquivo_midia'] ?? $cliente->tipo_arquivo_midia) : $cliente->tipo_arquivo_midia;
             }
 
             if (Schema::hasColumn('clientes', 'tipo_cliente')) {
@@ -1798,7 +1798,7 @@ public function historico(Request $request, int $id)
             }
 
             if (Schema::hasColumn('clientes', 'data_fundacao')) {
-                $clienteData['data_fundacao'] = $validated['data_fundacao'] ?? null;
+                $clienteData['data_fundacao'] = $request->has('data_fundacao') ? ($validated['data_fundacao'] ?? null) : $cliente->data_fundacao;
             }
 
             if ($request->has('horario_atendimento')) {
