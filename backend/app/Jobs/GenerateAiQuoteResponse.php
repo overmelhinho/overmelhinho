@@ -29,16 +29,8 @@ class GenerateAiQuoteResponse implements ShouldQueue
      */
     public function handle(AiQuoteService $aiService, \App\Services\ZApiService $zapiService): void
     {
-        $draft = $aiService->generateDraftResponse($this->quote);
-
-        if ($draft) {
-            $this->quote->update([
-                'ai_draft_response' => $draft
-            ]);
-
-            // Enviar notificação via WhatsApp para o lojista
-            $this->notifyLojista($zapiService);
-        }
+        // Enviar notificação via e-mail (e WhatsApp se aplicável) para o lojista
+        $this->notifyLojista($zapiService);
     }
 
     protected function notifyLojista(\App\Services\ZApiService $zapiService): void
@@ -69,14 +61,8 @@ class GenerateAiQuoteResponse implements ShouldQueue
                     <p>O cliente <strong>{$this->quote->customer_name}</strong> solicitou um orçamento pelo seu site:</p>
                     <div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #C00000; margin: 15px 0;'>
                         <p style='margin: 5px 0;'><strong>📋 Pedido:</strong> {$this->quote->service_requested}</p>
-                        <p style='margin: 5px 0;'><strong>⏱ Urgência:</strong> {$urgencyLabel}</p>
+                        <p style='margin: 5px 0;'><strong>⏳ Urgência:</strong> {$urgencyLabel}</p>
                         <p style='margin: 5px 0;'><strong>{$contactLabel}:</strong> {$this->quote->customer_whatsapp}</p>
-                    </div>
-                    <div style='margin: 20px 0;'>
-                        <h4 style='margin-bottom: 5px; color: #333;'>🤖 Rascunho IA sugerido:</h4>
-                        <p style='font-style: italic; color: #555; background-color: #f5f5f5; padding: 10px; border-radius: 4px; white-space: pre-wrap;'>
-                            \"{$this->quote->ai_draft_response}\"
-                        </p>
                     </div>
                 </div>
             ";

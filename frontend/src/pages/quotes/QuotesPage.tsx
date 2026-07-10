@@ -583,16 +583,6 @@ export default function QuotesPage() {
                                 </div>
                             </div>
                             
-                            {selectedQuote.ai_draft_response && (
-                                <div className="mb-6">
-                                    <label className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2 flex items-center gap-1">
-                                        🤖 Sugestão da IA
-                                    </label>
-                                    <div className="p-4 bg-red-50/50 rounded-[20px] text-sm text-gray-700 font-medium whitespace-pre-wrap border border-red-100 italic">
-                                        "{selectedQuote.ai_draft_response}"
-                                    </div>
-                                </div>
-                            )}
 
                             {selectedQuote.notified_at && (
                                 <div>
