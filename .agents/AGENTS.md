@@ -5,3 +5,9 @@ REGRA DE PUSH SEGURO (O Vermelhinho): Sempre que o usuário solicitar explicitam
 3. Lembre-se sempre que o GitHub tem limite estrito de 100MB por arquivo.
 </RULE[safe_git_push]>
 4. O comando 'git push' DEVE ser sempre executado sozinho (não encadeado com '&&' ou ';') e utilizando permissão 'unsandboxed'. Isso garante que o agente consiga utilizar as credenciais SSH/Windows do usuário para o GitHub sem travar o terminal aguardando senha.
+
+<RULE[strict_no_auto_deploy]>
+**BLOQUEIO DE VERSIONAMENTO E DEPLOY**: O agente está terminantemente PROIBIDO de executar git commit, git push, ou qualquer script de deploy (ex: deploy.ps1, deploy-auto.sh) por iniciativa própria, **mesmo em situações de emergência ou para tentar "corrigir a produção"**.
+Essas ações só podem ser executadas se, e somente se, a mensagem atual do usuário contiver EXPLICITAMENTE a frase "suba para o github" ou "deploy". Sem isso, o agente deve se limitar a alterar arquivos localmente e orientar o usuário.
+</RULE[strict_no_auto_deploy]>
+
