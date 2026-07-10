@@ -373,10 +373,9 @@ const AuditDashboardPage: React.FC = () => {
         },
     });
 
-    // 7. Mutation: Salva as alterações do cliente e registra a auditoria
     const updateClientMutation = useMutation({
         mutationFn: async ({ id, payload }: { id: number; payload: any }) => {
-            return api.put(`/v1/clientes/${id}`, payload);
+            return api.post(`/v1/clientes/${id}/audit/save`, payload);
         },
         onSuccess: () => {
             toast.success('Auditoria salva e cadastro atualizado!');

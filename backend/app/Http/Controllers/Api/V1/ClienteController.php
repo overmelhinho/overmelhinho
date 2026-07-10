@@ -3097,6 +3097,64 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         ]);
     }
 
+    public function auditSave(Request $request, $id)
+    {
+        $cliente = Cliente::findOrFail($id);
+        $payload = [];
+
+        if ($request->has('nome_fantasia')) {
+            $payload['nome_fantasia'] = $request->input('nome_fantasia');
+        }
+        if ($request->has('exibir_no_site')) {
+            $payload['exibir_no_site'] = $request->boolean('exibir_no_site') ? 'true' : 'false';
+        }
+        if ($request->has('exibir_data_fundacao')) {
+            $payload['exibir_data_fundacao'] = $request->boolean('exibir_data_fundacao') ? 'true' : 'false';
+        }
+        if ($request->has('observacoes')) {
+            $payload['observacoes'] = $request->input('observacoes');
+        }
+        if ($request->has('audit_status')) {
+            $payload['audit_status'] = $request->input('audit_status');
+        }
+        if ($request->has('audit_differences')) {
+            $payload['audit_differences'] = $request->input('audit_differences');
+        }
+
+        $payload['last_audit_at'] = now();
+        $cliente->update($payload);
+
+        // Update relationships if provided
+        if ($request->has('contatos') && is_array($request->input('contatos'))) {
+            $cliente->contatos()->delete();
+            $cliente->contatos()->createMany($request->input('contatos'));
+        }
+
+        if ($request->has('enderecos') && is_array($request->input('enderecos'))) {
+            $cliente->enderecos()->delete();
+            $cliente->enderecos()->createMany($request->input('enderecos'));
+        }
+
+        if ($request->has('redes_sociais') && is_array($request->input('redes_sociais'))) {
+            $cliente->redesSociais()->delete();
+            $cliente->redesSociais()->createMany($request->input('redes_sociais'));
+        }
+
+        // Register Audit Log
+        $this->audit(
+            action: 'update',
+            entityType: 'cliente_audit_inline',
+            entityId: $cliente->id,
+            fieldChanges: $payload,
+            clienteId: $cliente->id
+        );
+
+        return response()->json([
+            'success' => true,
+            'cliente' => $cliente->fresh(['enderecos', 'contatos', 'redesSociais'])
+        ]);
+    }
+
     /**
      * ✅ Sugestões Inteligentes de Keywords para Campanhas
      * Pega keywords do SEO, nomes de segmentos e buscas populares relacionadas.

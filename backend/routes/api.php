@@ -128,6 +128,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/clientes/{id}/google-reviews', [ClienteController::class, 'saveGoogleReviews']);
 
     Route::get('/clientes/{id}/historico', [ClienteController::class , 'historico']);
+    Route::post('/clientes/{id}/audit/save', [ClienteController::class, 'auditSave']);
     Route::get('/clientes/{id}/seo-rankings', [SeoRankingController::class , 'getClientRankings']);
     Route::post('/clientes/{id}/seo-rankings/sync', [SeoRankingController::class , 'syncClientRankings']);
     Route::get('/clientes/{id}/suggest-keywords', [ClienteController::class , 'keywordSuggestions']);
