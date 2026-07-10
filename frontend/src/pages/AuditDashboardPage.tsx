@@ -251,13 +251,14 @@ const AuditDashboardPage: React.FC = () => {
     const handleInlineSave = (client: any, overrideStatus?: string) => {
         const payload: any = {
             ...client,
-            contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
-            enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
-            redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
             exibir_no_site: client.exibir_no_site,
             exibir_data_fundacao: client.exibir_data_fundacao,
             observacoes: editingObservations,
         };
+
+        if (client.contatos) payload.contatos = JSON.parse(JSON.stringify(client.contatos));
+        if (client.enderecos) payload.enderecos = JSON.parse(JSON.stringify(client.enderecos));
+        if (client.redes_sociais) payload.redes_sociais = JSON.parse(JSON.stringify(client.redes_sociais));
 
         const diffs = client.audit_differences || {};
 
@@ -309,13 +310,14 @@ const AuditDashboardPage: React.FC = () => {
     const confirmAllCurrent = (client: any) => {
         const payload: any = {
             ...client,
-            contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
-            enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
-            redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
             exibir_no_site: client.exibir_no_site,
             exibir_data_fundacao: client.exibir_data_fundacao,
             observacoes: editingObservations,
         };
+
+        if (client.contatos) payload.contatos = JSON.parse(JSON.stringify(client.contatos));
+        if (client.enderecos) payload.enderecos = JSON.parse(JSON.stringify(client.enderecos));
+        if (client.redes_sociais) payload.redes_sociais = JSON.parse(JSON.stringify(client.redes_sociais));
 
         payload.audit_status = 'ok';
         payload.last_audit_at = new Date().toISOString();
@@ -328,13 +330,14 @@ const AuditDashboardPage: React.FC = () => {
     const markManualReview = (client: any) => {
         const payload: any = {
             ...client,
-            contatos: client.contatos ? JSON.parse(JSON.stringify(client.contatos)) : [],
-            enderecos: client.enderecos ? JSON.parse(JSON.stringify(client.enderecos)) : [],
-            redes_sociais: client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [],
             exibir_no_site: client.exibir_no_site,
             exibir_data_fundacao: client.exibir_data_fundacao,
             observacoes: editingObservations,
         };
+
+        if (client.contatos) payload.contatos = JSON.parse(JSON.stringify(client.contatos));
+        if (client.enderecos) payload.enderecos = JSON.parse(JSON.stringify(client.enderecos));
+        if (client.redes_sociais) payload.redes_sociais = JSON.parse(JSON.stringify(client.redes_sociais));
 
         payload.audit_status = 'manual_review';
         payload.last_audit_at = new Date().toISOString();
