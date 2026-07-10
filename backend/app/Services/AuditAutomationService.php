@@ -107,7 +107,16 @@ class AuditAutomationService
         }
 
         // 2. Website
-        $webAtual = $this->limparUrl($contato?->site);
+        $webAtual = '';
+        foreach ($cliente->redesSociais ?? [] as $rede) {
+            if ($rede->tipo === 'website') {
+                $webAtual = $this->limparUrl($rede->url);
+                break;
+            }
+        }
+        if (!$webAtual && $contato?->site) {
+            $webAtual = $this->limparUrl($contato?->site);
+        }
         $webNovo = $this->limparUrl($novos['website'] ?? '');
         if ($webNovo && $webAtual !== $webNovo) {
             $dif['website'] = [

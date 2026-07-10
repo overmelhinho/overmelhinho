@@ -412,8 +412,9 @@ const AuditDashboardPage: React.FC = () => {
                     payload.contatos[0].telefone_principal = diffs.telefone.new;
                 }
                 if (fieldId === 'website') {
-                    if (!payload.contatos[0]) payload.contatos[0] = {};
-                    payload.contatos[0].site = diffs.website.new;
+                    const idx = payload.redes_sociais.findIndex((r: any) => r.tipo === 'website');
+                    if (idx >= 0) payload.redes_sociais[idx].url = diffs.website.new;
+                    else payload.redes_sociais.push({ tipo: 'website', url: diffs.website.new });
                 }
                 if (fieldId === 'endereco') {
                     const parts = diffs.endereco?.parts;

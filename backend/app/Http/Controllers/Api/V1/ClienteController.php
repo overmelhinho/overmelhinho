@@ -3058,7 +3058,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
      */
     public function auditForceScan($clienteId)
     {
-        $cliente = Cliente::with(['enderecos', 'contatos'])->findOrFail($clienteId);
+        $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais'])->findOrFail($clienteId);
 
         // Reseta o last_audit_at para forçar o scan mesmo se foi recente
         $cliente->update(['last_audit_at' => null]);
@@ -3066,7 +3066,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         \Log::info("🔄 [AuditForce] Re-auditoria forçada para: {$cliente->nome_fantasia} (ID: {$clienteId})");
 
         $auditService = app(\App\Services\AuditAutomationService::class);
-        $result = $auditService->scan($cliente->fresh(['enderecos', 'contatos']));
+        $result = $auditService->scan($cliente->fresh(['enderecos', 'contatos', 'redesSociais']));
 
         $statusLabels = [
             'no_changes'     => 'Dados conferidos — nenhuma divergência encontrada.',
