@@ -37,20 +37,15 @@ export default function ClienteExpress() {
     
     setLoading(true);
     try {
-      // Criação rápida apenas com dados vitais
-      await api.post("/v1/clientes", {
-        nome_fantasia: form.nome_fantasia,
-        razao_social: form.nome_fantasia, // fallback
-        tipo_cliente: "gratuito", // Por padrão cai como gratuito até o escritório resolver
-        contatos: [{
-          nome: "Contato Principal",
-          telefone_principal: form.telefone,
-        }],
-        observacoes: "CADASTRADO VIA APP EXPRESS NA RUA."
+      // Criação rápida no Kanban de Leads
+      await api.post("/v1/leads", {
+        nome: form.nome_fantasia,
+        telefone: form.telefone,
+        origem: "App Mobile (Vendedor na Rua)",
       });
       
       setSuccess(true);
-      setTimeout(() => navigate("/clientes"), 2000);
+      setTimeout(() => navigate("/leads-kanban"), 2000);
     } catch (error) {
       console.error(error);
       alert("Erro ao salvar o cliente.");
