@@ -31,6 +31,7 @@ import ClientHubPage from "@/pages/clientes/ClientHubPage";
 import ClienteCreateFromLead from "@/pages/clientes/ClienteCreateFromLead";
 import ClienteEdit from "@/pages/clientes/ClienteEdit";
 import SalesWizard from "@/pages/clientes/SalesWizard";
+import ClientesList from "@/pages/clientes/ClientesList";
 
 
 // Usuários
