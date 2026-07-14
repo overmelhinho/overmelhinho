@@ -7,6 +7,7 @@ import DashboardAdmin from "./dashboard/DashboardAdmin";
 // @ts-expect-error jsx component
 import DashboardDefault from "./dashboard/DashboardDefault";
 import FocusDashboard from "./dashboard/FocusDashboard";
+import DashboardComercial from "./dashboard/DashboardComercial";
 import CommandCenterKPIs from "./dashboard/CommandCenterKPIs";
 import { Loader } from "lucide-react";
 import axios from "@/services/api";
@@ -24,7 +25,7 @@ const dashboards: Record<string, React.FC<{ user: User }>> = {
   administrador: CommandCenterKPIs,
   diretoria: CommandCenterKPIs,
   diretor: CommandCenterKPIs,
-  comercial: FocusDashboard,
+  comercial: DashboardComercial,
   marketing: FocusDashboard,
   operacional: FocusDashboard,
   default: DashboardDefault,

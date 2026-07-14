@@ -850,6 +850,15 @@ export default function ClientesList() {
                   />
 
                   <ActionButton
+                    label="Modo Venda"
+                    icon={<ClipboardCheck className="w-4 h-4 text-amber-600" />}
+                    onClick={() => {
+                      if (!selected) return;
+                      navigate(`/clientes/${selected.id}/venda`);
+                    }}
+                  />
+
+                  <ActionButton
                     label="Conferência"
                     icon={<ClipboardCheck className="w-4 h-4" />}
                     onClick={() => {

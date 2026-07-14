@@ -24,12 +24,13 @@ import ProtectedRoute from "./ProtectedRoute";
 // Layout
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
-// Clientes
+// Páginas de Clientes
+import ClientesPage from "@/pages/clientes/ClientesPage";
+import ClienteCadastroForm from "@/pages/clientes/ClienteCadastroForm";
+import ClientHubPage from "@/pages/clientes/ClientHubPage";
 import ClienteCreateFromLead from "@/pages/clientes/ClienteCreateFromLead";
 import ClienteEdit from "@/pages/clientes/ClienteEdit";
-import ClienteCadastroForm from "@/pages/clientes/ClienteCadastroForm";
-import ClientesList from "@/pages/clientes/ClientesList";
-import ClientHubPage from "@/pages/clientes/ClientHubPage";
+import SalesWizard from "@/pages/clientes/SalesWizard";
 
 
 // Usuários
@@ -266,7 +267,15 @@ const router = createBrowserRouter([
   },
 
   {
-    path: "/clientes/:id/hub",
+    path: "/clientes/:id/venda",
+    element: (
+      <ProtectedRoute perms={["edit_cliente"]}>
+        <SalesWizard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/clientes/hub/:id",
     element: (
       <ProtectedRoute perms={["view_client"]}>
         <DashboardLayout>

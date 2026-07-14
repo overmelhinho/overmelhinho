@@ -61,7 +61,7 @@ export default function GlobalWarnings() {
 
   return (
     <>
-      <div className="bg-red-600 text-white px-4 py-2 flex items-center justify-center gap-4 text-sm font-medium z-50">
+      <div className="hidden lg:flex bg-red-600 text-white px-4 py-2 items-center justify-center gap-4 text-sm font-medium z-50">
         <span>
           ⚠️ ATENÇÃO: Você possui {pendings.length} autorização(ões) cancelada(s) que precisam ter suas faturas excluídas MANUALMENTE no Tiny ERP!
         </span>
