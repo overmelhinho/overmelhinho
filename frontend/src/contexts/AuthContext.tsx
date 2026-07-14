@@ -123,6 +123,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .notification((notification: any) => {
               window.dispatchEvent(new CustomEvent('app-notification', { detail: notification }));
             });
+
+          // 📢 FASE 5: Delta Sync / WebSockets Real-time
+          echo.private('clientes')
+            .listen('ClienteUpdated', (e: any) => {
+              // Hidratação silenciosa do cache do React Query!
+              // O evento envia o cliente atualizado na propriedade 'cliente' (ou direto se ajustamos no broadcast)
+              // Em nosso ClienteUpdated.php nós retornamos direto os campos no broadcastWith, 
+              // mas o Laravel envolve num objeto com o nome do evento, ou não? 
+              // A convenção do Echo é passar o próprio array do broadcastWith como payload.
+              import('@/contexts/ReactQueryProvider').then(({ queryClient }) => {
+                const cliente = e.cliente || e;
+                
+                // 1. Atualizar listagens Lite
+                queryClient.setQueriesData({ queryKey: ['clientesLite'] }, (oldData: any) => {
+                  if (!oldData || !oldData.rows) return oldData;
+                  const newRows = oldData.rows.map((row: any) => 
+                    row.id === cliente.id ? { ...row, ...cliente } : row
+                  );
+                  return { ...oldData, rows: newRows };
+                });
+                
+                // 2. Atualizar visão de detalhes se estiver aberta
+                queryClient.setQueriesData({ queryKey: ['cliente', String(cliente.id)] }, (oldData: any) => {
+                  if (!oldData) return oldData;
+                  return { ...oldData, ...cliente };
+                });
+              });
+            });
         }
       });
     }

@@ -584,8 +584,14 @@ class ClienteController extends Controller
         $statusAss = trim((string) ($request->input('status_assinatura') ?? ''));
         $possuiAds = $request->has('possui_publicidade') ? $request->boolean('possui_publicidade') : null;
         $visibilidade = trim((string) ($request->input('visibilidade') ?? 'all'));
+        
+        $lastSync = trim((string) $request->input('last_sync')); // ✅ FASE 5: Delta Sync
 
         $query = Cliente::query();
+        
+        if ($lastSync) {
+            $query->where('updated_at', '>=', \Carbon\Carbon::parse($lastSync));
+        }
 
         // ✅ Lite = listagem otimizada (não traz galeria inteira)
         if ($lite) {
@@ -1434,6 +1440,13 @@ public function historico(Request $request, int $id)
 
             DB::commit();
 
+            // 📢 FASE 5: Sincronização em Tempo Real (WebSockets)
+            try {
+                broadcast(new \App\Events\ClienteUpdated($cliente));
+            } catch (\Exception $e) {
+                Log::warning('Erro ao disparar evento de Broadcast no Store: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => new ClienteResource($cliente->load(['enderecos', 'contatos', 'segmentos', 'cidadesAtendidas', 'redesSociais', 'galeriaImagens', 'reviews'])),
@@ -2007,6 +2020,13 @@ public function historico(Request $request, int $id)
             }
 
             DB::commit();
+
+            // 📢 FASE 5: Sincronização em Tempo Real (WebSockets)
+            try {
+                broadcast(new \App\Events\ClienteUpdated($cliente));
+            } catch (\Exception $e) {
+                Log::warning('Erro ao disparar evento de Broadcast no Update: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'success' => true,

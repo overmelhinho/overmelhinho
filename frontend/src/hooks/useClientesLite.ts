@@ -19,6 +19,8 @@ export type ClientesLiteResponse = {
   meta: any;
 };
 
+import { queryClient } from "@/contexts/ReactQueryProvider";
+
 export function useClientesLite(params?: {
   page?: number;
   per_page?: number;
@@ -60,11 +62,9 @@ export function useClientesLite(params?: {
     ],
 
     staleTime: 1000 * 60 * 2,
-
-    // ✅ React Query v4
     keepPreviousData: true,
 
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       const reqParams: Record<string, any> = {
         page,
         per_page,
@@ -81,29 +81,55 @@ export function useClientesLite(params?: {
         reqParams.possui_publicidade = possui_publicidade;
       }
 
-      const { data } = await api.get("/v1/clientes", { params: reqParams });
-
-      // Formato padrão Laravel Resource:
-      // { data: [...], meta: {...}, links: {...} }
-
-      if (Array.isArray(data?.data)) {
-        return {
-          rows: data.data as ClienteLiteOption[],
-          meta: data?.meta ?? null,
-        };
+      // 🔒 FASE 5: Delta Sync
+      // Se estamos na página 1 e não temos nenhum filtro de busca ativo (apenas listagem padrão)
+      const isDefaultList = page === 1 && !query && !tipo_cliente && !status_assinatura && typeof possui_publicidade !== "boolean";
+      const syncKeyGlobal = 'last_sync_clientes';
+      
+      const previousData = queryClient.getQueryData<ClientesLiteResponse>(queryKey);
+      const hasLocalData = previousData && previousData.rows.length > 0;
+      
+      if (isDefaultList && hasLocalData) {
+        const lastSync = localStorage.getItem(syncKeyGlobal);
+        if (lastSync) {
+          reqParams.last_sync = lastSync;
+        }
       }
 
-      // fallback defensivo
-      if (data?.data && Array.isArray(data.data.data)) {
+      const { data } = await api.get("/v1/clientes", { params: reqParams });
+
+      // Atualiza o horário da última sincronização se for a listagem padrão
+      if (isDefaultList) {
+        localStorage.setItem(syncKeyGlobal, new Date().toISOString());
+      }
+
+      let newRows: ClienteLiteOption[] = [];
+      let newMeta = data?.meta ?? null;
+
+      if (Array.isArray(data?.data)) {
+        newRows = data.data;
+      } else if (data?.data && Array.isArray(data.data.data)) {
+        newRows = data.data.data;
+        newMeta = data.data?.meta ?? data?.meta ?? null;
+      }
+
+      // 🔒 FASE 5: Merge (Fusão) dos dados do Delta com o Cache local
+      if (reqParams.last_sync && hasLocalData) {
+        const oldRows = previousData.rows;
+        // Substitui os antigos pelos novos que vieram (ou adiciona no topo)
+        const newIds = new Set(newRows.map(r => r.id));
+        const keptOldRows = oldRows.filter(r => !newIds.has(r.id));
+        
+        // Os recém atualizados vão para o topo
         return {
-          rows: data.data.data as ClienteLiteOption[],
-          meta: data.data?.meta ?? data?.meta ?? null,
+          rows: [...newRows, ...keptOldRows],
+          meta: newMeta || previousData.meta, // mantém o meta antigo se não veio um novo completo
         };
       }
 
       return {
-        rows: [],
-        meta: data?.meta ?? null,
+        rows: newRows,
+        meta: newMeta,
       };
     },
   });
