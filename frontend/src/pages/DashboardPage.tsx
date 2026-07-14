@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Layout from "@/components/layout/Layout";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 // @ts-expect-error jsx component
 import DashboardDiretoria from "./dashboard/DashboardDiretoria";
 // @ts-expect-error jsx component
@@ -53,11 +53,11 @@ export default function DashboardPage() {
 
   if (loading || !user) {
     return (
-      <Layout>
+      <DashboardLayout>
         <div className="flex items-center justify-center h-[60vh]">
           <Loader className="animate-spin text-primary w-12 h-12" />
         </div>
-      </Layout>
+      </DashboardLayout>
     );
   }
 
@@ -66,13 +66,12 @@ export default function DashboardPage() {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  console.log("roles do usuário:", user.roles, "| roleKey:", roleKey);
 
   const DashboardComponent = dashboards[roleKey] || dashboards.default;
 
   return (
-    <Layout>
+    <DashboardLayout>
       <DashboardComponent user={user} />
-    </Layout>
+    </DashboardLayout>
   );
 }
