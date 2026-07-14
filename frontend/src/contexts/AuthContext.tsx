@@ -37,12 +37,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Busca dados do usuário logado, incluindo roles/perms
   async function fetchUser() {
     setIsLoading(true);
+
+    // 🔒 FASE 2 — Se offline, usa dados em cache para manter acesso
+    if (!navigator.onLine) {
+      const cached = localStorage.getItem('ov_cached_user');
+      if (cached && localStorage.getItem('token')) {
+        try {
+          setUser(JSON.parse(cached));
+          setIsLoading(false);
+          return;
+        } catch {}
+      }
+      // Offline sem cache nem token → segue para o catch abaixo
+    }
+
     try {
       const { data } = await api.get("/v1/user");
       setUser(data);
-    } catch (err) {
+      // 🔒 FASE 2 — Salva cache do usuário para acesso offline futuro
+      localStorage.setItem('ov_cached_user', JSON.stringify(data));
+    } catch (err: any) {
+      const isNetworkError = !err.response; // sem response = offline / timeout
+
+      if (isNetworkError) {
+        // Erro de rede — tenta usar cache para não deslogar offline
+        const cached = localStorage.getItem('ov_cached_user');
+        if (cached && localStorage.getItem('token')) {
+          try {
+            setUser(JSON.parse(cached));
+            setIsLoading(false);
+            return;
+          } catch {}
+        }
+      }
+
+      // 401 ou sem cache: desloga de verdade
       setUser(null);
-      localStorage.removeItem("token");
+      localStorage.removeItem('token');
+      localStorage.removeItem('ov_cached_user');
       if (echoInstance) {
         echoInstance.disconnect();
         setEchoInstance(null);
@@ -52,9 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Logout global
+  // 🔒 FASE 2 — Logout seguro: apaga token E todos os dados locais cacheados
   function logout() {
-    localStorage.removeItem("token");
+    localStorage.removeItem('token');
+    localStorage.removeItem('ov_cached_user');
+    // TODO Fase 3: clearIndexedDB() aqui quando IndexedDB for implementado
     setUser(null);
     setIsLoading(false);
     if (echoInstance) {

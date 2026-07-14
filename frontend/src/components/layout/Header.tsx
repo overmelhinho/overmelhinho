@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogOut, User, ChevronDown, Bell, Check, ExternalLink, Sparkles } from "lucide-react";
+import { LogOut, User, ChevronDown, Bell, Check, ExternalLink, Sparkles, Download } from "lucide-react";
 import { useNotifications, useMarkNotificationAsRead, useMarkAllNotificationsAsRead } from "@/hooks/useNotifications";
+import { useInstallPWA } from "@/hooks/useInstallPWA";
 
 export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [openNotif, setOpenNotif] = useState(false);
+  const { canInstall, install } = useInstallPWA();
 
   const { data, refetch } = useNotifications();
   const markAsRead = useMarkNotificationAsRead();
@@ -90,6 +92,18 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
             <Sparkles size={16} className="animate-pulse" />
             <span className="hidden md:block">Ajude-me</span>
           </button>
+
+          {/* 📱 Botão Instalar App (PWA) — só aparece se o Chrome ainda não instalou */}
+          {canInstall && (
+            <button
+              onClick={install}
+              className="group flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-white border border-red-700 hover:bg-red-700 transition-all font-bold text-xs shadow-sm"
+              title="Instalar o app no seu celular"
+            >
+              <Download size={15} className="group-hover:animate-bounce" />
+              <span className="hidden md:block">Instalar App</span>
+            </button>
+          )}
 
           {/* Menu de Notificações */}
           <div className="relative" ref={notifRef}>
