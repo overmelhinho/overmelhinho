@@ -20,11 +20,11 @@ Este é o guia de tarefas prático para transformarmos o atual painel web em um 
 - [x] **Sinalizador Visual de Status:** Adicionar um ícone/badge na barra superior avisando o status da rede (🟢 Online / 🔴 Offline).
 
 ## Fase 4: Fila de Sincronização (Ações Offline)
-- [ ] **Criar Estrutura da `Outbox` (Fila):** Criar tabela local no IndexedDB dedicada a armazenar ações de POST/PUT pendentes.
-- [ ] **Configurar Interceptador de API (Axios):**
+- [x] **Criar Estrutura da `Outbox` (Fila):** Criar tabela local no IndexedDB dedicada a armazenar ações de POST/PUT pendentes.
+- [x] **Configurar Interceptador de API (Axios):**
   - Se offline, transformar o payload da requisição num objeto e salvá-lo na Fila (`Outbox`).
   - Retornar uma resposta "falsa" de sucesso (Mock) para o Frontend não quebrar.
-- [ ] **Implementar Mutações Otimistas:** Adaptar telas para que a interface reflita o dado novo instantaneamente (ex: mostrar a autorização gerada antes mesmo de ir para o Laravel).
+- [x] **Implementar Mutações Otimistas:** Adaptar telas para que a interface reflita o dado novo instantaneamente (ex: mostrar a autorização gerada antes mesmo de ir para o Laravel).
 
 ## Fase 5: O Mecanismo de Sincronização Automática
 - [ ] **Processador da Fila (Sync Engine):**
