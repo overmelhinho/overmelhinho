@@ -3,15 +3,15 @@
 Este é o guia de tarefas prático para transformarmos o atual painel web em um aplicativo instalável com capacidade de funcionar offline, utilizando React Query, IndexedDB e a nossa API Laravel.
 
 ## Fase 1: Infraestrutura e PWA Básico
-- [ ] **Instalar Dependências PWA:** Adicionar `vite-plugin-pwa` no frontend.
-- [ ] **Configurar Manifesto PWA:** Criar e configurar o `manifest.json` com ícones, cores da marca (Vermelhinho), e `display: standalone` para que instale como um app nativo.
-- [ ] **Configurar Service Worker Inicial:** Ativar o cache de arquivos estáticos (JS, CSS, Imagens) para que a interface carregue sem internet.
-- [ ] **Prompt de Atualização do App:** Adicionar um aviso na tela "Nova versão disponível" sempre que publicarmos alterações no código (para que o app da vendedora não fique defasado preso no cache offline).
+- [x] **Instalar Dependências PWA:** Adicionar `vite-plugin-pwa` no frontend.
+- [x] **Configurar Manifesto PWA:** Criar e configurar o `manifest.json` com ícones, cores da marca (Vermelhinho), e `display: standalone` para que instale como um app nativo.
+- [x] **Configurar Service Worker Inicial:** Ativar o cache de arquivos estáticos (JS, CSS, Imagens) para que a interface carregue sem internet.
+- [x] **Prompt de Atualização do App:** Adicionar um aviso na tela "Nova versão disponível" sempre que publicarmos alterações no código (para que o app da vendedora não fique defasado preso no cache offline).
 
 ## Fase 2: Segurança e Autenticação Offline
-- [ ] **Validação de Sessão Local:** Permitir acesso ao painel (sem internet) apenas se existir um Token de Sessão válido armazenado no aparelho.
-- [ ] **Rotina de Logout Seguro:** Garantir que o botão "Sair" apague imediatamente o Token e destrua todo o banco de dados local (IndexedDB), prevenindo vazamento de dados caso o aparelho seja furtado.
-- [ ] **Retenção de Fila em Erro 401:** Se a vendedora sincronizar a fila e o token tiver expirado, o sistema deve pausar a fila, redirecioná-la para o Login, e só voltar a enviar os dados após a autenticação bem-sucedida.
+- [x] **Validação de Sessão Local:** Permitir acesso ao painel (sem internet) apenas se existir um Token de Sessão válido armazenado no aparelho.
+- [x] **Rotina de Logout Seguro:** Garantir que o botão "Sair" apague imediatamente o Token e destrua todo o banco de dados local (IndexedDB), prevenindo vazamento de dados caso o aparelho seja furtado.
+- [x] **Retenção de Fila em Erro 401:** Se a vendedora sincronizar a fila e o token tiver expirado, o sistema deve pausar a fila, redirecioná-la para o Login, e só voltar a enviar os dados após a autenticação bem-sucedida.
 
 ## Fase 3: Cache de Leitura (IndexedDB)
 - [ ] **Instalar Dependências de Banco Local:** Adicionar biblioteca para IndexedDB (ex: `localforage` ou `idb-keyval`).
