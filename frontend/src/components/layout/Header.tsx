@@ -125,11 +125,11 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
           {canInstall && (
             <button
               onClick={install}
-              className="group flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-white border border-red-700 hover:bg-red-700 transition-all font-bold text-xs shadow-sm"
+              className="group md:hidden flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-white border border-red-700 hover:bg-red-700 transition-all font-bold text-xs shadow-sm"
               title="Instalar o app no seu celular"
             >
               <Download size={15} className="group-hover:animate-bounce" />
-              <span className="hidden md:block">Instalar App</span>
+              <span>Instalar App</span>
             </button>
           )}
 

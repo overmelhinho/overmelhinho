@@ -599,7 +599,8 @@ export default function ClientesList() {
         {clientes.length === 0 ? (
           <div className="p-10 text-center text-gray-500">Nenhum cliente encontrado.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-gray-600">
                 <tr>
@@ -702,7 +703,7 @@ export default function ClientesList() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
-                            className="px-2 py-1.5 rounded-lg border text-[10px] bg-red-600 border-red-700 text-white hover:bg-red-700 transition font-bold flex items-center gap-1 shadow-sm"
+                            className="px-2 py-1.5 rounded-lg border text-[10px] bg-red-600 border-red-700 text-white hover:bg-red-700 transition font-bold flex items-center gap-1 shadow-sm md:hidden"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/clientes/${c.id}/venda`);
@@ -763,7 +764,60 @@ export default function ClientesList() {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-gray-100 flex flex-col">
+              {clientes.map((c) => {
+                const cidadeUF = getCidadeUF(c);
+                const telefone = c?.contatos?.[0]?.telefone_principal || "";
+                
+                return (
+                  <div key={clienteRowKey(c) + '_mob'} className="p-4 bg-white flex flex-col gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-xl border bg-gray-50 flex items-center justify-center shrink-0 overflow-hidden">
+                        {c.logo_url ? (
+                          <img src={c.logo_url} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[12px] text-gray-400 font-bold">LOGO</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0" onClick={() => openDrawer(c)}>
+                        <h3 className="font-bold text-gray-900 truncate text-base">{c.nome_fantasia}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{cidadeUF || "Sem endereço"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      {telefone ? (
+                        <a
+                          href={`https://wa.me/55${telefone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 bg-green-500 text-white font-bold text-sm py-2.5 rounded-xl text-center shadow-sm flex justify-center items-center gap-1.5"
+                        >
+                          <Phone size={16} /> WhatsApp
+                        </a>
+                      ) : (
+                        <button disabled className="flex-1 bg-gray-100 text-gray-400 font-bold text-sm py-2.5 rounded-xl text-center flex justify-center items-center gap-1.5 cursor-not-allowed">
+                          <Phone size={16} /> Sem Whats
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/clientes/${c.id}/venda`);
+                        }}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold text-sm py-2.5 rounded-xl text-center shadow-sm flex justify-center items-center gap-1.5"
+                      >
+                        <ClipboardCheck size={16} /> Modo Venda
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {meta?.last_page ? (

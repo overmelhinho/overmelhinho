@@ -33,7 +33,7 @@ export default function DashboardComercial({ user }: { user: any }) {
 
         {/* Ação 2: Novo Cliente */}
         <button
-          onClick={() => navigate("/clientes/create")}
+          onClick={() => navigate("/clientes/express")}
           className="group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[2rem] bg-white p-8 text-center shadow-lg border border-slate-100 transition-all hover:scale-[1.02] hover:shadow-xl active:scale-95"
         >
           <div className="rounded-full bg-slate-50 p-5 ring-4 ring-slate-100 transition-transform group-hover:scale-110">

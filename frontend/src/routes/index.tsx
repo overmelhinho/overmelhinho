@@ -32,6 +32,7 @@ import ClienteCreateFromLead from "@/pages/clientes/ClienteCreateFromLead";
 import ClienteEdit from "@/pages/clientes/ClienteEdit";
 import SalesWizard from "@/pages/clientes/SalesWizard";
 import ClientesList from "@/pages/clientes/ClientesList";
+import ClienteExpress from "@/pages/clientes/ClienteExpress";
 
 
 // Usuários
@@ -241,6 +242,16 @@ const router = createBrowserRouter([
         <DashboardLayout>
           <ClienteCreateFromLead />
         </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ✅ CLIENTES (EXPRESS - MOBILE)
+  {
+    path: "/clientes/express",
+    element: (
+      <ProtectedRoute perms={["create_cliente"]}>
+        <ClienteExpress />
       </ProtectedRoute>
     ),
   },
