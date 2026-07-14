@@ -73,13 +73,27 @@ module.exports = {
       },
 
 
-animation: {
+    animation: {
       "fade-in": "fadeIn 0.25s ease-in-out",
+      "fade-in-up": "fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+      "shimmer": "shimmer 3s infinite",
+      "glow-pulse": "glowPulse 3s infinite",
     },
     keyframes: {
       fadeIn: {
         "0%": { opacity: 0, transform: "translateY(10px)" },
         "100%": { opacity: 1, transform: "translateY(0)" },
+      },
+      fadeInUp: {
+        "0%": { opacity: 0, transform: "translateY(20px)" },
+        "100%": { opacity: 1, transform: "translateY(0)" },
+      },
+      shimmer: {
+        "100%": { transform: "translateX(100%)" },
+      },
+      glowPulse: {
+        "0%, 100%": { boxShadow: "0 0 15px 0px rgba(183, 15, 10, 0.3)" },
+        "50%": { boxShadow: "0 0 30px 5px rgba(183, 15, 10, 0.6)" },
       },
     },
 

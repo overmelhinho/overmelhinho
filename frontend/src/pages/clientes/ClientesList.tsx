@@ -283,6 +283,7 @@ export default function ClientesList() {
   }, [search, searchDebounced, tipo, visibilidade, statusFilter, sort, page]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<ClienteLite | null>(null);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -444,8 +445,8 @@ export default function ClientesList() {
       </div>
 
       {/* Cards rápidos */}
-      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
-        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+      <div className="flex md:grid md:grid-cols-7 gap-3 overflow-x-auto pb-2 snap-x hide-scrollbar">
+        <div className="border rounded-2xl p-4 bg-white shadow-sm min-w-[140px] md:min-w-0 snap-start shrink-0">
           <div className="text-xs font-semibold text-gray-500">Total</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">
             {meta?.total ?? stats.totalPagina}
@@ -453,37 +454,37 @@ export default function ClientesList() {
           <div className="text-xs text-gray-400 mt-1">Sistema</div>
         </div>
 
-        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+        <div className="border rounded-2xl p-4 bg-white shadow-sm min-w-[140px] md:min-w-0 snap-start shrink-0">
           <div className="text-xs font-semibold text-gray-500">Ativas</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">{stats.ativa}</div>
           <div className="text-xs text-gray-400 mt-1">Página atual</div>
         </div>
 
-        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+        <div className="border rounded-2xl p-4 bg-white shadow-sm min-w-[140px] md:min-w-0 snap-start shrink-0">
           <div className="text-xs font-semibold text-gray-500">Pendentes</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">{stats.pendente}</div>
           <div className="text-xs text-gray-400 mt-1">Página atual</div>
         </div>
 
-        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+        <div className="border rounded-2xl p-4 bg-white shadow-sm min-w-[140px] md:min-w-0 snap-start shrink-0">
           <div className="text-xs font-semibold text-gray-500">Atrasadas</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">{stats.atrasada}</div>
           <div className="text-xs text-gray-400 mt-1">Página atual</div>
         </div>
 
-        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+        <div className="border rounded-2xl p-4 bg-white shadow-sm min-w-[140px] md:min-w-0 snap-start shrink-0">
           <div className="text-xs font-semibold text-gray-500">Suspensas</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">{stats.suspensa}</div>
           <div className="text-xs text-gray-400 mt-1">Página atual</div>
         </div>
 
-        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+        <div className="border rounded-2xl p-4 bg-white shadow-sm min-w-[140px] md:min-w-0 snap-start shrink-0">
           <div className="text-xs font-semibold text-gray-500">Inadimplentes</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">{stats.inadimplente}</div>
           <div className="text-xs text-gray-400 mt-1">Página atual</div>
         </div>
 
-        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+        <div className="border rounded-2xl p-4 bg-white shadow-sm min-w-[140px] md:min-w-0 snap-start shrink-0">
           <div className="text-xs font-semibold text-gray-500">Canceladas</div>
           <div className="text-lg font-semibold text-gray-900 mt-1">{stats.cancelada}</div>
           <div className="text-xs text-gray-400 mt-1">Página atual</div>
@@ -491,24 +492,32 @@ export default function ClientesList() {
       </div>
 
       {/* Search + Filters */}
-      <div className="bg-white border rounded-2xl p-4 shadow-sm">
+      <div className="bg-white border rounded-2xl p-4 shadow-sm sticky top-4 z-20">
         <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <div className="flex-1 relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Digite e aperte Enter para buscar..."
-              className="w-full border rounded-xl pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-[#B70F0A] outline-none"
-            />
+          <div className="flex items-center gap-2 w-full flex-1">
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Pesquisar..."
+                className="w-full border rounded-xl pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-[#B70F0A] outline-none"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="md:hidden p-2.5 border rounded-xl bg-gray-50 text-gray-600 active:scale-95 transition-transform"
+            >
+              <Filter className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
+          <div className={`flex items-center gap-2 flex-wrap ${showFilters ? 'flex' : 'hidden md:flex'}`}>
+            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white w-full md:w-auto">
               <Filter className="w-4 h-4 text-gray-500" />
               <Select value={tipo || "all"} onValueChange={(val: any) => setTipo(val)}>
-                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-[130px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
+                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-full md:w-[130px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
                   <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -519,10 +528,10 @@ export default function ClientesList() {
               </Select>
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white w-full md:w-auto">
               <Filter className="w-4 h-4 text-gray-500" />
               <Select value={statusFilter || "all"} onValueChange={(val: any) => setStatusFilter(val)}>
-                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-[140px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
+                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-full md:w-[140px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
                   <SelectValue placeholder="Qualquer Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -533,10 +542,10 @@ export default function ClientesList() {
               </Select>
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white w-full md:w-auto">
               <Eye className="w-4 h-4 text-gray-500" />
               <Select value={visibilidade || "all"} onValueChange={(val: any) => setVisibilidade(val)}>
-                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-[170px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
+                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm outline-none w-full md:w-[170px] focus:ring-0 [&>svg]:opacity-50 font-medium text-slate-700 bg-transparent">
                   <SelectValue placeholder="Qualquer Visibilidade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -547,9 +556,9 @@ export default function ClientesList() {
               </Select>
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-2 border rounded-xl bg-white w-full md:w-auto">
               <Select value={sort} onValueChange={(val) => setSort(val)}>
-                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm font-medium w-[170px] outline-none focus:ring-0 [&>svg]:opacity-50 text-slate-700 bg-transparent">
+                <SelectTrigger className="h-auto border-0 p-0 shadow-none text-sm font-medium w-full md:w-[170px] outline-none focus:ring-0 [&>svg]:opacity-50 text-slate-700 bg-transparent">
                   <SelectValue placeholder="Ordernar por" />
                 </SelectTrigger>
                 <SelectContent>
@@ -562,7 +571,7 @@ export default function ClientesList() {
             </div>
 
             <button
-              className="px-3 py-2 border rounded-xl text-sm hover:bg-gray-50 transition"
+              className="px-3 py-2.5 border rounded-xl text-sm bg-gray-50 font-bold hover:bg-gray-100 transition w-full md:w-auto"
               onClick={() => {
                 setSearch("");
                 setSearchDebounced("");
@@ -573,9 +582,10 @@ export default function ClientesList() {
                 setPage(1);
                 setTimeout(() => refetch(), 0);
                 toast.success("Filtros limpos.");
+                setShowFilters(false);
               }}
             >
-              Limpar
+              Limpar Filtros
             </button>
           </div>
         </div>
@@ -787,31 +797,25 @@ export default function ClientesList() {
                         <p className="text-xs text-gray-500 mt-0.5">{cidadeUF || "Sem endereço"}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        onClick={() => navigate(`/clientes/${c.id}/venda`)}
+                        className="flex-1 bg-red-600 text-white font-bold text-sm h-11 rounded-[14px] shadow-sm flex justify-center items-center gap-2 active:scale-95 transition-transform"
+                      >
+                        Modo Venda
+                      </button>
                       {telefone ? (
                         <a
                           href={`https://wa.me/55${telefone.replace(/\D/g, "")}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex-1 bg-green-500 text-white font-bold text-sm py-2.5 rounded-xl text-center shadow-sm flex justify-center items-center gap-1.5"
+                          className="w-11 h-11 bg-green-500 text-white rounded-[14px] shadow-sm flex justify-center items-center shrink-0 active:scale-95 transition-transform"
                         >
-                          <Phone size={16} /> WhatsApp
+                          <Phone size={18} fill="currentColor" />
                         </a>
                       ) : (
-                        <button disabled className="flex-1 bg-gray-100 text-gray-400 font-bold text-sm py-2.5 rounded-xl text-center flex justify-center items-center gap-1.5 cursor-not-allowed">
-                          <Phone size={16} /> Sem Whats
-                        </button>
+                        <div className="w-11 h-11 bg-gray-100 rounded-[14px] shrink-0" />
                       )}
-                      
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/clientes/${c.id}/venda`);
-                        }}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold text-sm py-2.5 rounded-xl text-center shadow-sm flex justify-center items-center gap-1.5"
-                      >
-                        <ClipboardCheck size={16} /> Modo Venda
-                      </button>
                     </div>
                   </div>
                 );

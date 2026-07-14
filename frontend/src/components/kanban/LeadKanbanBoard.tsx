@@ -51,17 +51,17 @@ export default function LeadKanbanBoard() {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-3 mb-4">
         <h1 className="text-2xl font-bold text-[#B70F0A]">Leads por Etapa</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto">
           <Button
             onClick={() => window.location.href = '/leads?status=perdido'}
             variant="outline"
-            className="border-[#B70F0A] text-[#B70F0A] rounded-2xl px-4 py-2"
+            className="border-[#B70F0A] text-[#B70F0A] rounded-2xl px-4 py-2 flex-1 md:flex-none"
           >
-            Ver Leads Perdidos ({leads.filter(l => l.status === 'perdido').length})
+            Ver Perdidos ({leads.filter(l => l.status === 'perdido').length})
           </Button>
-          <Button onClick={() => setOpen(true)} className="bg-[#B70F0A] text-white rounded-2xl px-4 py-2 shadow">
+          <Button onClick={() => setOpen(true)} className="bg-[#B70F0A] text-white rounded-2xl px-4 py-2 shadow flex-1 md:flex-none">
             Novo Lead
           </Button>
         </div>

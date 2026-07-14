@@ -57,10 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 🔒 FASE 2 — Salva cache do usuário para acesso offline futuro
       localStorage.setItem('ov_cached_user', JSON.stringify(data));
     } catch (err: any) {
-      const isNetworkError = !err.response; // sem response = offline / timeout
+      // É erro de rede se não houver response (offline) OU se for erro de servidor (5xx)
+      const isNetworkError = !err.response || err.response.status >= 500;
 
       if (isNetworkError) {
-        // Erro de rede — tenta usar cache para não deslogar offline
+        // Erro de rede/servidor — tenta usar cache para não deslogar offline
         const cached = localStorage.getItem('ov_cached_user');
         if (cached && localStorage.getItem('token')) {
           try {
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // 401 ou sem cache: desloga de verdade
+      // 401, 403 ou sem cache: desloga de verdade
       setUser(null);
       localStorage.removeItem('token');
       localStorage.removeItem('ov_cached_user');

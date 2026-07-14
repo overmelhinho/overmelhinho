@@ -18,12 +18,16 @@ export default function DashboardComercial({ user }: { user: any }) {
         {/* Ação 1: Renovação e Autorização */}
         <button
           onClick={() => navigate("/clientes")}
-          className="group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-red-600 to-red-800 p-8 text-center text-white shadow-xl transition-all hover:scale-[1.02] hover:shadow-2xl active:scale-95"
+          style={{ animationDelay: '0.1s', opacity: 0 }}
+          className="animate-fade-in-up group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-red-600 to-red-800 p-8 text-center text-white shadow-xl transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl active:scale-[0.97]"
         >
-          <div className="rounded-full bg-white/20 p-5 ring-4 ring-white/10 backdrop-blur-sm transition-transform group-hover:scale-110">
+          {/* Efeito Shimmer */}
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_3s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          
+          <div className="relative rounded-full bg-white/20 p-5 ring-4 ring-white/10 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110">
             <Users className="h-10 w-10 text-white" />
           </div>
-          <div>
+          <div className="relative">
             <h2 className="text-xl font-black tracking-tight">Autorização &<br/>Renovação</h2>
             <p className="mt-2 text-sm text-red-100 font-medium">Visitar clientes da carteira</p>
           </div>
@@ -34,9 +38,10 @@ export default function DashboardComercial({ user }: { user: any }) {
         {/* Ação 2: Novo Cliente */}
         <button
           onClick={() => navigate("/clientes/express")}
-          className="group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[2rem] bg-white p-8 text-center shadow-lg border border-slate-100 transition-all hover:scale-[1.02] hover:shadow-xl active:scale-95"
+          style={{ animationDelay: '0.2s', opacity: 0 }}
+          className="animate-fade-in-up animate-glow-pulse group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[2rem] bg-white p-8 text-center shadow-lg border border-slate-100 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl active:scale-[0.97]"
         >
-          <div className="rounded-full bg-slate-50 p-5 ring-4 ring-slate-100 transition-transform group-hover:scale-110">
+          <div className="rounded-full bg-slate-50 p-5 ring-4 ring-slate-100 transition-transform duration-300 group-hover:scale-110">
             <UserPlus className="h-10 w-10 text-red-600" />
           </div>
           <div>
