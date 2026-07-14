@@ -33,8 +33,14 @@ function hasAnyPerm(userPerms: string[], perms?: string[]) {
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/services/api";
+import MobileMenuDrawer from "./MobileMenuDrawer";
 
-export default function Sidebar() {
+type SidebarProps = {
+  isMobileMenuOpen?: boolean;
+  onCloseMobileMenu?: () => void;
+};
+
+export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: SidebarProps) {
   const { user } = useAuth();
 
   const { data: auditCount } = useQuery({
@@ -158,36 +164,84 @@ export default function Sidebar() {
 
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#B70F0A] to-[#8A0B07] text-white lg:flex flex-col">
-      <div className="px-6 py-6 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
-            <span className="text-lg font-black">V</span>
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-base font-extrabold tracking-tight">
-              O Vermelhinho
+    <>
+      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#B70F0A] to-[#8A0B07] text-white lg:flex flex-col">
+        <div className="px-6 py-6 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+              <span className="text-lg font-black">V</span>
             </div>
-            <div className="text-xs text-white/70">Admin • SaaS</div>
+            <div className="min-w-0">
+              <div className="truncate text-base font-extrabold tracking-tight">
+                O Vermelhinho
+              </div>
+              <div className="text-xs text-white/70">Admin • SaaS</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex-1 sidebar-scroll px-4">
-        <nav>
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
-            Operação
-          </div>
-          <div className="space-y-1">{itemsTop.map(renderItem)}</div>
-        </nav>
+        <div className="flex-1 sidebar-scroll px-4">
+          <nav>
+            <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
+              Operação
+            </div>
+            <div className="space-y-1">{itemsTop.map((it) => renderItem(it))}</div>
+          </nav>
 
-        <div className="mt-8 pt-4 pb-10">
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
-            Administração
+          <div className="mt-8 pt-4 pb-10">
+            <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
+              Administração
+            </div>
+            <div className="space-y-1">{itemsBottom.map((it) => renderItem(it))}</div>
           </div>
-          <div className="space-y-1">{itemsBottom.map(renderItem)}</div>
         </div>
-      </div>
-    </aside>
+      </aside>
+
+      {/* FASE 5 UI: Menu Mobile Nativo */}
+      {isMobileMenuOpen !== undefined && onCloseMobileMenu !== undefined && (
+        <MobileMenuDrawer
+          isOpen={isMobileMenuOpen}
+          onClose={onCloseMobileMenu}
+          itemsTop={itemsTop}
+          itemsBottom={itemsBottom}
+          renderItem={(it, onClick) => {
+            const allowed = isAdmin || hasAnyPerm(userPermissions, it.perms);
+            if (!allowed) return null;
+
+            const hasAuditBadge = it.to === '/auditoria' && auditCount > 0;
+
+            return (
+              <NavLink key={it.to} to={it.to} className="block" onClick={onClick}>
+                {({ isActive }) => (
+                  <div
+                    className={[
+                      "group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition",
+                      isActive
+                        ? "bg-red-50 text-red-700"
+                        : "text-slate-700 hover:bg-slate-100",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "shrink-0 rounded-lg p-1.5 transition",
+                        isActive ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500",
+                      ].join(" ")}
+                    >
+                      {it.icon}
+                    </span>
+                    <span className="truncate flex-1">{it.label}</span>
+                    {hasAuditBadge && (
+                      <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {auditCount}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </NavLink>
+            );
+          }}
+        />
+      )}
+    </>
   );
 }
