@@ -479,6 +479,8 @@ class ClienteController extends Controller
             ->where('exibir_no_site', 'true')
             ->where(fn($sub) => $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido', 'inadimplente'])->orWhere('tipo_cliente', 'gratuito'))
             ->with(['segmentos', 'enderecos', 'cidadesAtendidas'])
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
             ->when($cityId, function($sq) use ($cityId) {
                 $sq->where(function($sub) use ($cityId) {
                     $sub->whereHas('cidadesAtendidas', fn($c) => $c->where('cidades.id', $cityId))
@@ -556,7 +558,8 @@ class ClienteController extends Controller
                     'priority' => $isPagante,
                     'seo_url' => $seoUrl ?: ("/cliente/" . ($c->slug ?: $c->id)),
                     'street' => $c->enderecos->first() ? $c->enderecos->first()->rua : null,
-                    'city' => $c->enderecos->first() ? $c->enderecos->first()->cidade : null
+                    'city' => $c->enderecos->first() ? $c->enderecos->first()->cidade : null,
+                    'rating' => $c->reviews_count > 0 ? round((float)$c->reviews_avg_rating, 1) : null
                 ];
             }),
             'categories' => $segmentos->map(fn($s) => [

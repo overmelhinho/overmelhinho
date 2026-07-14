@@ -1324,7 +1324,9 @@ export default function ClientProfileClient() {
                                                     {[...Array(rev.rating || 5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                                                 </div>
                                             </div>
-                                            <p className="text-sm text-gray-500 font-medium leading-relaxed italic" dangerouslySetInnerHTML={{ __html: `"${rev.text}"` }} />
+                                            {rev.text && rev.text.trim() !== '' && (
+                                                <p className="text-sm text-gray-500 font-medium leading-relaxed italic" dangerouslySetInnerHTML={{ __html: `"${rev.text}"` }} />
+                                            )}
                                         </div>
                                     )) : (
                                         <p className="text-center py-10 text-gray-400 font-bold italic">Seja o primeiro a avaliar!</p>

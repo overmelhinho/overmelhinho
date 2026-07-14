@@ -16,6 +16,7 @@ interface Suggestion {
     seo_url?: string;
     street?: string;
     city?: string;
+    rating?: number | null;
 }
 
 const formatStreetName = (street: string | null | undefined) => {
@@ -280,10 +281,14 @@ export const HeaderSearch = () => {
                                             <div>
                                                 <h5 className="font-black text-gray-900 text-sm leading-tight">{res.title}</h5>
                                                 <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                                                    <Star size={10} className="mr-1 fill-yellow-400 text-yellow-400" /> 4.9
+                                                    {res.rating ? (
+                                                        <>
+                                                            <Star size={10} className="mr-1 fill-yellow-400 text-yellow-400" /> {res.rating.toFixed(1)}
+                                                        </>
+                                                    ) : null}
                                                     {res.city && (
                                                         <>
-                                                            <span className="mx-1.5">•</span>
+                                                            {res.rating && <span className="mx-1.5">•</span>}
                                                             <span>{res.city}</span>
                                                         </>
                                                     )}
