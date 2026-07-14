@@ -108,3 +108,8 @@ export async function processOutbox() {
 window.addEventListener('online', () => {
   processOutbox();
 });
+
+// E também tenta processar ao carregar a aplicação, caso tenha sobrado itens
+if (typeof navigator !== 'undefined' && navigator.onLine) {
+  setTimeout(() => processOutbox(), 1000); // Aguarda a app inicializar
+}

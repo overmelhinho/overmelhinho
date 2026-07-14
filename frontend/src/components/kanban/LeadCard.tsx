@@ -35,7 +35,8 @@ export function LeadCard({ lead }) {
           <div className="flex items-center gap-2">
             {lead.foto_fachada && (
               <div 
-                className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 shrink-0 cursor-pointer"
+                className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 shrink-0 cursor-pointer relative z-10"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); setOpenImage(true); }}
               >
                 <img src={lead.foto_fachada} alt="Fachada" className="w-full h-full object-cover" />

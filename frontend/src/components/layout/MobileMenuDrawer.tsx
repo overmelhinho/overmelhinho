@@ -96,6 +96,26 @@ export default function MobileMenuDrawer({
             {renderItem({ to: "/leads-kanban", label: "Leads", icon: <User size={18} /> }, onClose)}
           </div>
 
+          <div className="mt-8 mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Sistema
+          </div>
+          <div className="space-y-1">
+            <button
+              onClick={async () => { 
+                const { processOutbox } = await import('@/services/SyncEngine');
+                await processOutbox();
+                onClose(); 
+                window.location.reload(); 
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-blue-700 hover:bg-blue-50"
+            >
+              <span className="shrink-0 rounded-lg p-1.5 bg-blue-50">
+                <RefreshCw size={18} />
+              </span>
+              Forçar Sincronização
+            </button>
+          </div>
+
           <div className="my-8 border-t border-slate-200"></div>
 
           <div className="space-y-1">
