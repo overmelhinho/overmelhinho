@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Target, Menu, Ticket } from "lucide-react";
+import { LayoutDashboard, Users, Target, Menu, Ticket, UserPlus } from "lucide-react";
 
 type BottomNavProps = {
   onOpenMenu: () => void;
@@ -44,35 +44,17 @@ export default function BottomNav({ onOpenMenu }: BottomNavProps) {
         )}
       </NavLink>
 
-      {/* Botão de Ação Central (Radar / Prospecção) */}
+      {/* Botão de Ação Central (+ Lead) */}
       <NavLink
-        to="/dashboard/foco"
+        to="/clientes/express"
         className={({ isActive }) =>
           `relative -top-5 flex flex-col items-center justify-center w-16 gap-1 transition-transform active:scale-95`
         }
       >
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg shadow-red-600/30 ring-4 ring-slate-50">
-          <Target size={26} />
+          <UserPlus size={26} />
         </div>
-        <span className="text-[10px] font-bold text-slate-700">Foco</span>
-      </NavLink>
-
-      <NavLink
-        to="/tickets"
-        className={({ isActive }) =>
-          `flex flex-col items-center justify-center w-16 gap-1 rounded-xl p-1 transition-colors ${
-            isActive ? "text-red-600" : "text-slate-400 hover:text-slate-600"
-          }`
-        }
-      >
-        {({ isActive }) => (
-          <>
-            <div className={`p-1 rounded-full ${isActive ? 'bg-red-50' : ''}`}>
-              <Ticket size={22} className={isActive ? "fill-red-100" : ""} />
-            </div>
-            <span className="text-[10px] font-semibold">Tickets</span>
-          </>
-        )}
+        <span className="text-[10px] font-bold text-slate-700">+ Lead</span>
       </NavLink>
 
       <button

@@ -72,7 +72,15 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <DashboardComponent user={user} />
+      {/* Visualização DESKTOP: Baseada na função do usuário (Ex: Admin vê Centro de Comando) */}
+      <div className="hidden md:block">
+        <DashboardComponent user={user} />
+      </div>
+
+      {/* Visualização MOBILE/APP: Sempre mostra a Ferramenta de Vendas na Rua */}
+      <div className="block md:hidden">
+        <DashboardComercial user={user} />
+      </div>
     </DashboardLayout>
   );
 }

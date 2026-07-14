@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { X, LogOut, User } from "lucide-react";
+import { X, LogOut, User, Target, Sparkles, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -41,6 +41,9 @@ export default function MobileMenuDrawer({
     onClose();
     navigate("/minha-conta");
   }
+
+  const userRoles = Array.isArray(user?.roles) ? user!.roles : [];
+  const isComercial = userRoles.includes("comercial") && !userRoles.includes("admin") && !userRoles.includes("diretoria");
 
   return (
     <>
@@ -84,15 +87,44 @@ export default function MobileMenuDrawer({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6">
-          <div className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Operação
-          </div>
-          <div className="space-y-1">{itemsTop.map((it) => renderItem(it, onClose))}</div>
+          {isComercial ? (
+            <>
+              <div className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Ações de Venda
+              </div>
+              <div className="space-y-1">
+                {renderItem({ to: "/dashboard", label: "Minhas Metas", icon: <Target size={18} /> }, onClose)}
+                {renderItem({ to: "/criativo", label: "Materiais de Apoio", icon: <Sparkles size={18} /> }, onClose)}
+              </div>
 
-          <div className="mt-8 mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Administração
-          </div>
-          <div className="space-y-1">{itemsBottom.map((it) => renderItem(it, onClose))}</div>
+              <div className="mt-8 mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Sistema
+              </div>
+              <div className="space-y-1">
+                <button
+                  onClick={() => { onClose(); window.location.reload(); }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-blue-700 hover:bg-blue-50"
+                >
+                  <span className="shrink-0 rounded-lg p-1.5 bg-blue-50">
+                    <RefreshCw size={18} />
+                  </span>
+                  Forçar Sincronização
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Operação
+              </div>
+              <div className="space-y-1">{itemsTop.map((it) => renderItem(it, onClose))}</div>
+
+              <div className="mt-8 mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Administração
+              </div>
+              <div className="space-y-1">{itemsBottom.map((it) => renderItem(it, onClose))}</div>
+            </>
+          )}
 
           <div className="my-8 border-t border-slate-200"></div>
 
