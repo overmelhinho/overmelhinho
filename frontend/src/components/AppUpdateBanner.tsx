@@ -1,4 +1,4 @@
-import { RefreshCw, X } from 'lucide-react';
+import { RefreshCw, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useAppUpdate } from '@/hooks/useAppUpdate';
 
@@ -10,8 +10,14 @@ import { useAppUpdate } from '@/hooks/useAppUpdate';
 export function AppUpdateBanner() {
   const { needRefresh, applyUpdate } = useAppUpdate();
   const [dismissed, setDismissed] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   if (!needRefresh || dismissed) return null;
+
+  const handleUpdate = () => {
+    setIsUpdating(true);
+    applyUpdate();
+  };
 
   return (
     <div
@@ -24,18 +30,27 @@ export function AppUpdateBanner() {
       </div>
       <div className="flex items-center gap-2">
         <button
-          onClick={applyUpdate}
-          className="rounded bg-white px-3 py-1 text-xs font-black text-red-700 hover:bg-red-50 transition-colors"
+          onClick={handleUpdate}
+          disabled={isUpdating}
+          className="flex items-center gap-1 rounded bg-white px-3 py-1 text-xs font-black text-red-700 hover:bg-red-50 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
         >
-          Atualizar agora
+          {isUpdating ? (
+            <>
+              <Loader2 size={12} className="animate-spin" /> Atualizando...
+            </>
+          ) : (
+            'Atualizar agora'
+          )}
         </button>
-        <button
-          onClick={() => setDismissed(true)}
-          className="rounded p-1 hover:bg-red-700 transition-colors"
-          aria-label="Fechar"
-        >
-          <X size={14} />
-        </button>
+        {!isUpdating && (
+          <button
+            onClick={() => setDismissed(true)}
+            className="rounded p-1 hover:bg-red-700 transition-colors"
+            aria-label="Fechar"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
     </div>
   );
