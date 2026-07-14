@@ -15,7 +15,19 @@ interface Suggestion {
     type: 'client' | 'category';
     priority?: boolean;
     seo_url?: string;
+    street?: string;
+    city?: string;
 }
+
+const formatStreetName = (street: string | null | undefined) => {
+    if (!street || street.toLowerCase() === 'não informado' || street.toLowerCase() === 'vazio') return null;
+    const s = street.trim();
+    const lower = s.toLowerCase();
+    if (!lower.startsWith('rua') && !lower.startsWith('av') && !lower.startsWith('avenida') && !lower.startsWith('rod') && !lower.startsWith('br') && !lower.startsWith('rs') && !lower.startsWith('estrada') && !lower.startsWith('travessa') && !lower.startsWith('praça') && !lower.startsWith('praca')) {
+        return `Rua ${s}`;
+    }
+    return s;
+};
 
 export const SearchAutocomplete = () => {
     const [query, setQuery] = useState('');
@@ -220,8 +232,20 @@ export const SearchAutocomplete = () => {
                                                             <div className="bg-brand-red/10 px-2 py-0.5 rounded text-[8px] font-black text-brand-red uppercase tracking-widest">Premium</div>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                        <Star size={10} className="mr-1 fill-yellow-400 text-yellow-400" /> 4.9 • Aberto Agora
+                                                    <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+                                                        <Star size={10} className="mr-1 fill-yellow-400 text-yellow-400" /> 4.9
+                                                        {res.city && (
+                                                            <>
+                                                                <span className="mx-1.5">•</span>
+                                                                <span>{res.city}</span>
+                                                            </>
+                                                        )}
+                                                        {formatStreetName(res.street) && (
+                                                            <>
+                                                                <span className="mx-1.5">•</span>
+                                                                <span className="truncate max-w-[120px]">{formatStreetName(res.street)}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

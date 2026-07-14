@@ -554,7 +554,9 @@ class ClienteController extends Controller
                     'image' => $isPagante && $c->logo_url ? (\Illuminate\Support\Str::startsWith($c->logo_url, ['http://', 'https://']) ? $c->logo_url : asset('storage/' . $c->logo_url)) : null,
                     'type' => 'client',
                     'priority' => $isPagante,
-                    'seo_url' => $seoUrl ?: ("/cliente/" . ($c->slug ?: $c->id))
+                    'seo_url' => $seoUrl ?: ("/cliente/" . ($c->slug ?: $c->id)),
+                    'street' => $c->enderecos->first() ? $c->enderecos->first()->rua : null,
+                    'city' => $c->enderecos->first() ? $c->enderecos->first()->cidade : null
                 ];
             }),
             'categories' => $segmentos->map(fn($s) => [

@@ -117,6 +117,17 @@ const getTodayStatus = (client: any) => {
     return { open: false, label: 'Fechado' };
 };
 
+const formatStreetName = (street: string | null | undefined) => {
+    if (!street || street.toLowerCase() === 'não informado' || street.toLowerCase() === 'vazio') return null;
+    const s = street.trim();
+    const lower = s.toLowerCase();
+    if (!lower.startsWith('rua') && !lower.startsWith('av') && !lower.startsWith('avenida') && !lower.startsWith('rod') && !lower.startsWith('br') && !lower.startsWith('rs') && !lower.startsWith('estrada') && !lower.startsWith('travessa') && !lower.startsWith('praça') && !lower.startsWith('praca')) {
+        return `Rua ${s}`;
+    }
+    return s;
+};
+
+
 function SearchContent() {
     const [hoveredResult, setHoveredResult] = useState<number | null>(null);
     const [selectedMapResult, setSelectedMapResult] = useState<number | null>(null);
@@ -612,6 +623,11 @@ function SearchContent() {
                                                         {matchPerfeito.enderecos[0].bairro}
                                                     </span>
                                                 )}
+                                                {formatStreetName(matchPerfeito.enderecos?.[0]?.rua) && (
+                                                    <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 truncate max-w-[150px]" title={formatStreetName(matchPerfeito.enderecos[0].rua) || ''}>
+                                                        {formatStreetName(matchPerfeito.enderecos[0].rua)}
+                                                    </span>
+                                                )}
                                                 {getTodayStatus(matchPerfeito) && (
                                                     <span className={`${getTodayStatus(matchPerfeito)?.open ? 'text-green-500 bg-green-50 border-green-100' : 'text-brand-red bg-red-50 border-red-100'} font-black flex items-center text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-xl border`}>
                                                         <div className={`w-1.5 h-1.5 ${getTodayStatus(matchPerfeito)?.open ? 'bg-green-500' : 'bg-brand-red'} rounded-full mr-1.5 ${getTodayStatus(matchPerfeito)?.open ? 'animate-pulse' : ''}`}></div>
@@ -705,8 +721,13 @@ function SearchContent() {
                                                                 {item.enderecos?.[0]?.cidade || 'Local'}
                                                             </span>
                                                             {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
-                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[100px]">
+                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[100px]" title={item.enderecos[0].bairro}>
                                                                     {item.enderecos[0].bairro}
+                                                                </span>
+                                                            )}
+                                                            {formatStreetName(item.enderecos?.[0]?.rua) && (
+                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua) || ''}>
+                                                                    {formatStreetName(item.enderecos[0].rua)}
                                                                 </span>
                                                             )}
                                                             {getTodayStatus(item) && (
@@ -790,6 +811,11 @@ function SearchContent() {
                                                                     {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
                                                                         <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider">
                                                                             {item.enderecos[0].bairro}
+                                                                        </span>
+                                                                    )}
+                                                                    {formatStreetName(item.enderecos?.[0]?.rua) && (
+                                                                        <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua) || ''}>
+                                                                            {formatStreetName(item.enderecos[0].rua)}
                                                                         </span>
                                                                     )}
                                                                 </div>
