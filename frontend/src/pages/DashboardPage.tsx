@@ -21,10 +21,10 @@ type User = {
 };
 
 const dashboards: Record<string, React.FC<{ user: User }>> = {
-  admin: CommandCenterKPIs,
-  administrador: CommandCenterKPIs,
-  diretoria: CommandCenterKPIs,
-  diretor: CommandCenterKPIs,
+  admin: DashboardComercial,
+  administrador: DashboardComercial,
+  diretoria: DashboardComercial,
+  diretor: DashboardComercial,
   comercial: DashboardComercial,
   marketing: FocusDashboard,
   operacional: FocusDashboard,
