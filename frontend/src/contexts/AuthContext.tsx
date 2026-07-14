@@ -88,7 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('ov_cached_user');
-    // TODO Fase 3: clearIndexedDB() aqui quando IndexedDB for implementado
+    // FASE 3: Limpar o cache offline do React Query guardado no IndexedDB
+    import('idb-keyval').then(({ clear }) => {
+      clear().catch(console.error);
+    });
     setUser(null);
     setIsLoading(false);
     if (echoInstance) {

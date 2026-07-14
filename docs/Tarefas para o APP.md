@@ -14,10 +14,10 @@ Este é o guia de tarefas prático para transformarmos o atual painel web em um 
 - [x] **Retenção de Fila em Erro 401:** Se a vendedora sincronizar a fila e o token tiver expirado, o sistema deve pausar a fila, redirecioná-la para o Login, e só voltar a enviar os dados após a autenticação bem-sucedida.
 
 ## Fase 3: Cache de Leitura (IndexedDB)
-- [ ] **Instalar Dependências de Banco Local:** Adicionar biblioteca para IndexedDB (ex: `localforage` ou `idb-keyval`).
-- [ ] **Configurar `persistQueryClient`:** Acoplar o IndexedDB ao `QueryClient` do React Query.
-- [ ] **Ajustar Tempos de Cache (`staleTime`):** Garantir que a carteira de clientes completa da vendedora fique em cache agressivo para estar disponível offline. (Nota: Buscas muito complexas ficarão limitadas apenas aos clientes já cacheados localmente).
-- [ ] **Sinalizador Visual de Status:** Adicionar um ícone/badge na barra superior avisando o status da rede (🟢 Online / 🔴 Offline).
+- [x] **Instalar Dependências de Banco Local:** Adicionar biblioteca para IndexedDB (ex: `localforage` ou `idb-keyval`).
+- [x] **Configurar `persistQueryClient`:** Acoplar o IndexedDB ao `QueryClient` do React Query.
+- [x] **Ajustar Tempos de Cache (`staleTime`):** Garantir que a carteira de clientes completa da vendedora fique em cache agressivo para estar disponível offline. (Nota: Buscas muito complexas ficarão limitadas apenas aos clientes já cacheados localmente).
+- [x] **Sinalizador Visual de Status:** Adicionar um ícone/badge na barra superior avisando o status da rede (🟢 Online / 🔴 Offline).
 
 ## Fase 4: Fila de Sincronização (Ações Offline)
 - [ ] **Criar Estrutura da `Outbox` (Fila):** Criar tabela local no IndexedDB dedicada a armazenar ações de POST/PUT pendentes.
