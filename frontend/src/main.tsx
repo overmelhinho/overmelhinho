@@ -9,6 +9,7 @@ import ReactQueryProvider from "@/contexts/ReactQueryProvider";
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
 import { initGA } from "@/lib/analytics";
+import { AppUpdateBanner } from "@/components/AppUpdateBanner";
 
 // 🔍 Debug global para capturar o erro real mesmo no build minificado
 window.onerror = function (message, source, lineno, colno, error) {
@@ -43,6 +44,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ReactQueryProvider>
       <AuthProvider>
         <RouterProvider router={router} />
+
+        {/* ✅ Banner de atualização do PWA — aparece apenas após novo deploy */}
+        <AppUpdateBanner />
 
         {/* ✅ Toaster global (necessário para aparecer toast.success/toast.error) */}
         <Toaster
