@@ -11,6 +11,9 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
   const [open, setOpen] = useState(false);
   const [openNotif, setOpenNotif] = useState(false);
   const { canInstall, install } = useInstallPWA();
+  
+  // 🔒 FASE 4 — Indicador de Fila Offline
+  const [outboxCount, setOutboxCount] = useState(0);
 
   const { data, refetch } = useNotifications();
   const markAsRead = useMarkNotificationAsRead();
@@ -26,8 +29,22 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
       // Atualiza a lista via query client stale invalidate já lidado, mas podemos forçar:
       refetch();
     }
+    
+    function handleOutboxUpdate(e: any) {
+      setOutboxCount(e.detail || 0);
+    }
+    
+    // Inicia buscando a contagem real
+    import('@/services/SyncEngine').then(({ getOutboxCount }) => {
+      getOutboxCount().then(setOutboxCount).catch(() => {});
+    });
+
     window.addEventListener("app-notification", handleNewNotif);
-    return () => window.removeEventListener("app-notification", handleNewNotif);
+    window.addEventListener("outbox-updated", handleOutboxUpdate);
+    return () => {
+      window.removeEventListener("app-notification", handleNewNotif);
+      window.removeEventListener("outbox-updated", handleOutboxUpdate);
+    };
   }, [refetch]);
 
   useEffect(() => {
@@ -83,13 +100,24 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
 
         <div className="flex items-center gap-4">
           
+          {/* 🔒 FASE 4 — Indicador de Fila Offline (Outbox) */}
+          {outboxCount > 0 && (
+            <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-amber-700 border border-amber-200 text-xs font-bold animate-pulse" title={`${outboxCount} ações aguardando rede para sincronizar`}>
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+              </span>
+              Sincronizando ({outboxCount})
+            </div>
+          )}
+
           {/* Botão Help Me - Estilo Moderno SaaS */}
           <button
             onClick={onToggleHelp}
             className="group relative flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-orange-600 border border-orange-100 hover:bg-orange-100 transition-all font-bold text-xs"
             title="Ajuda Inteligente"
           >
-            <Sparkles size={16} className="animate-pulse" />
+            <Sparkles size={16} className="group-hover:animate-pulse" />
             <span className="hidden md:block">Ajude-me</span>
           </button>
 

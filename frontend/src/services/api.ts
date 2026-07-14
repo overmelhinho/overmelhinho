@@ -10,19 +10,57 @@ const api = axios.create({
 });
 
 // Adiciona o token JWT nas requisições, se existir
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // 🔒 FASE 4 — Intercepta Mutações Offline
+  // Se não tem rede E é uma mutação E não é uma requisição da própria Outbox
+  if (
+    !navigator.onLine &&
+    config.method &&
+    ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase()) &&
+    !config.headers['X-From-Outbox']
+  ) {
+    // Importa o SyncEngine dinamicamente para evitar ciclo de dependência
+    const { addToOutbox } = await import('./SyncEngine');
+    
+    await addToOutbox({
+      method: config.method.toUpperCase() as any,
+      url: config.url || '',
+      data: config.data,
+      headers: config.headers,
+    });
+
+    // Cancela a requisição real disparando um erro customizado,
+    // mas que o nosso response interceptor vai transformar em "Sucesso Fake".
+    return Promise.reject({
+      isOfflineMock: true,
+      config,
+    });
+  }
+
   return config;
 });
 
-// 🔒 FASE 2 — Interceptor de resposta: trata 401 (token inválido/expirado)
+// 🔒 FASE 2/4 — Interceptor de resposta: trata 401 e mocks offline
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Só limpa e redireciona se: (1) é erro 401 E (2) o dispositivo está online
+    // FASE 4: Se for um erro falso gerado pelo interceptor offline, fingimos sucesso (Optimistic UI)
+    if (error.isOfflineMock) {
+      return Promise.resolve({
+        data: { success: true, message: 'Salvo offline com sucesso.' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: error.config,
+      });
+    }
+
+    // FASE 2: Só limpa e redireciona se: (1) é erro 401 E (2) o dispositivo está online
     // Offline: não toca no token — o acesso via cache continua válido
     if (error.response?.status === 401 && navigator.onLine) {
       localStorage.removeItem("token");
