@@ -50,6 +50,7 @@ class Lead extends Model
         'endereco',
         'interesse',
         'cidade',
+        'foto_fachada',
     ];
 
     protected $casts = [

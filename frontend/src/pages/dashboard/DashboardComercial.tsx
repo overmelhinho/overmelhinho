@@ -40,37 +40,11 @@ export default function DashboardComercial({ user }: { user: any }) {
             <UserPlus className="h-10 w-10 text-red-600" />
           </div>
           <div>
-            <h2 className="text-xl font-black tracking-tight text-slate-900">Novo Cliente</h2>
-            <p className="mt-2 text-sm text-slate-500 font-medium">Cadastrar empresa pagante ou gratuita</p>
+            <h2 className="text-xl font-black tracking-tight text-slate-900">Novo Lead</h2>
+            <p className="mt-2 text-sm text-slate-500 font-medium">Cadastrar uma loja ou prospecto rápido</p>
           </div>
         </button>
 
-        {/* Info Card (Optional) */}
-        <div className="rounded-[2rem] bg-white p-6 shadow-sm border border-slate-100 flex flex-col justify-center">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-50 text-green-600 rounded-xl">
-              <TrendingUp size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sua Meta</p>
-              <p className="text-xl font-black text-slate-900">Em andamento</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Ferramentas Card */}
-        <button
-          onClick={() => navigate("/tickets")}
-          className="group flex flex-col items-start justify-between rounded-[2rem] bg-slate-900 p-6 text-white shadow-lg transition-all hover:bg-slate-800"
-        >
-          <div className="p-3 bg-white/10 rounded-xl">
-            <Briefcase size={24} />
-          </div>
-          <div className="text-left mt-4">
-            <h3 className="font-bold">Tickets & Suporte</h3>
-            <p className="text-xs text-slate-400 mt-1">Acionar equipe interna</p>
-          </div>
-        </button>
       </div>
     </div>
   );

@@ -71,7 +71,7 @@ export default function ClienteExpress() {
   };
 
   const handleSave = async () => {
-    if (!form.nome_fantasia || !form.telefone) return;
+    if (!form.nome_fantasia) return;
     
     setLoading(true);
     try {
@@ -130,7 +130,7 @@ export default function ClienteExpress() {
 
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-              <Phone size={18} className="text-red-500" /> WhatsApp / Telefone
+              <Phone size={18} className="text-red-500" /> WhatsApp / Telefone (Opcional)
             </label>
             <input
               type="tel"
@@ -180,7 +180,7 @@ export default function ClienteExpress() {
 
         <button
           onClick={handleSave}
-          disabled={!form.nome_fantasia || !form.telefone || loading}
+          disabled={!form.nome_fantasia || loading}
           className="w-full mt-8 bg-red-600 disabled:bg-slate-300 text-white font-black text-lg py-5 rounded-3xl shadow-xl hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:shadow-none"
         >
           {loading ? (

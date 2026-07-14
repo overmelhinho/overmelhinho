@@ -31,6 +31,7 @@ class LeadResource extends JsonResource
                 'referencia'    => $this->referencia,
                 'interesse'     => $this->interesse,
                 'cidade'        => $this->cidade,
+                'foto_fachada'  => $this->foto_fachada,
                 'created_at'    => optional($this->created_at)->toDateTimeString(),
                 'updated_at'    => optional($this->updated_at)->toDateTimeString(),
             ];

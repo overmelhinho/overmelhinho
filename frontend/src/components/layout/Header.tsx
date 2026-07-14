@@ -89,12 +89,18 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <div className="min-w-0">
+        <div className="min-w-0 md:flex-none flex-1 flex md:block items-center justify-center">
           <div className="hidden sm:block text-xs font-medium text-slate-500">
             Plataforma administrativa <span className="ml-2 inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">v1.0.1 (DEV)</span>
           </div>
-          <div className="truncate text-lg font-semibold text-slate-900">
+          
+          <div className="truncate text-lg font-semibold text-slate-900 hidden md:block">
             O Vermelhinho
+          </div>
+          
+          {/* Logo Centralizado Mobile */}
+          <div className="md:hidden flex justify-center w-full relative left-6">
+             <img src="/logo-overmelhinho.png" alt="O Vermelhinho" className="h-8 object-contain" />
           </div>
         </div>
 
@@ -114,7 +120,7 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
           {/* Botão Help Me - Estilo Moderno SaaS */}
           <button
             onClick={onToggleHelp}
-            className="group relative flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-orange-600 border border-orange-100 hover:bg-orange-100 transition-all font-bold text-xs"
+            className="group relative hidden md:flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-orange-600 border border-orange-100 hover:bg-orange-100 transition-all font-bold text-xs"
             title="Ajuda Inteligente"
           >
             <Sparkles size={16} className="group-hover:animate-pulse" />
@@ -134,7 +140,7 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
           )}
 
           {/* Menu de Notificações */}
-          <div className="relative" ref={notifRef}>
+          <div className="relative hidden md:block" ref={notifRef}>
             <button
               className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors"
               title="Notificações"
