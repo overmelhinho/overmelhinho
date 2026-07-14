@@ -702,6 +702,17 @@ export default function ClientesList() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
+                            className="px-2 py-1.5 rounded-lg border text-[10px] bg-red-600 border-red-700 text-white hover:bg-red-700 transition font-bold flex items-center gap-1 shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/clientes/${c.id}/venda`);
+                            }}
+                          >
+                            <span className="hidden sm:inline">Modo Venda</span>
+                            <span className="sm:hidden">Venda</span>
+                          </button>
+                          <button
+                            type="button"
                             className="px-2 py-1.5 rounded-lg border text-[10px] bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 transition font-bold flex items-center gap-1"
                             onClick={(e) => {
                               e.stopPropagation();
