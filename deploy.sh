@@ -90,7 +90,7 @@ rollback() {
   if $frontend_changed; then
     log "Rollback frontend: rebuild"
     cd "$APP_DIR/frontend"
-    command -v nvm > /dev/null && nvm use 20
+    export PATH="/root/.nvm/versions/node/v20.20.0/bin:$PATH"
     npm ci || true
     npm run build || true
   fi
@@ -149,7 +149,7 @@ if $frontend_changed; then
   cd "$APP_DIR/frontend"
 
   log "npm ci..."
-  command -v nvm > /dev/null && nvm use 20
+  export PATH="/root/.nvm/versions/node/v20.20.0/bin:$PATH"
   npm ci
 
   log "npm run build (atômico)..."
