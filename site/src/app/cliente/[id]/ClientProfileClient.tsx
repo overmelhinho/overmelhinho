@@ -443,8 +443,22 @@ export default function ClientProfileClient() {
                 label = 'Ver Cardápio';
                 IconComponent = Utensils;
             }
+
+            const isImg = isImage(client.portfolio_url!);
             
             if (isMobile) {
+                if (!isImg) {
+                    return (
+                        <a
+                            href={client.portfolio_url!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-brand-red/5 text-brand-red border border-brand-red/10 px-6 py-4 rounded-[2rem] font-black text-xs uppercase tracking-wider flex items-center active:scale-95 transition-all hover:bg-brand-red/10"
+                        >
+                            <IconComponent size={16} className="mr-1.5" /> {label}
+                        </a>
+                    );
+                }
                 return (
                     <button
                         onClick={() => setIsMaterialModalOpen(true)}
@@ -454,6 +468,18 @@ export default function ClientProfileClient() {
                     </button>
                 );
             } else {
+                if (!isImg) {
+                    return (
+                        <a
+                            href={client.portfolio_url!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-brand-red/5 text-brand-red border border-brand-red/10 px-8 py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center active:scale-95 transition-all hover:bg-brand-red/10"
+                        >
+                            <IconComponent size={20} className="mr-2" /> {label}
+                        </a>
+                    );
+                }
                 return (
                     <button
                         onClick={() => setIsMaterialModalOpen(true)}
@@ -499,6 +525,20 @@ export default function ClientProfileClient() {
                 label = 'Ver Portfólio';
             } else if (client.tipo_arquivo_midia === 'cardapio') {
                 label = 'Ver Cardápio';
+            }
+            const isImg = isImage(client.portfolio_url!);
+            
+            if (!isImg) {
+                return (
+                    <a
+                        href={client.portfolio_url!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-brand-red/5 hover:bg-brand-red/10 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-brand-red text-center transition-all border border-brand-red/10 flex items-center justify-center gap-1.5"
+                    >
+                        {label}
+                    </a>
+                );
             }
             return (
                 <button
