@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
-import { X, LogOut, User, Target, Sparkles, RefreshCw } from "lucide-react";
+import { X, LogOut, User, Target, Sparkles, RefreshCw, Database } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function MobileMenuDrawer({
   isOpen,
@@ -19,11 +19,34 @@ export default function MobileMenuDrawer({
 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [offlineStats, setOfflineStats] = useState({ count: 0, lastSync: 'Nunca', size: '0 MB' });
 
   // Bloqueia scroll do body quando aberto
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      
+      // Carrega estatísticas offline
+      import('idb-keyval').then(async ({ get }) => {
+        try {
+          const dbKey = 'offline_clientes_db';
+          const existingDb = (await get<any[]>(dbKey)) || [];
+          const lastSyncRaw = localStorage.getItem('last_sync_clientes');
+          
+          let lastSync = 'Nunca';
+          if (lastSyncRaw) {
+            lastSync = new Date(lastSyncRaw).toLocaleString('pt-BR', {
+              day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+          }
+
+          const sizeBytes = new Blob([JSON.stringify(existingDb)]).size;
+          const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2) + ' MB';
+
+          setOfflineStats({ count: existingDb.length, lastSync, size: sizeMB });
+        } catch(e) {}
+      });
+      
     } else {
       document.body.style.overflow = "";
     }
@@ -97,22 +120,47 @@ export default function MobileMenuDrawer({
           </div>
 
           <div className="mt-8 mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Sistema
+            Sistema Offline
           </div>
+          <div className="mb-3 rounded-xl bg-white p-3 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+              <Database size={16} className="text-emerald-600" />
+              <span className="text-sm font-semibold text-slate-800">Cofre de Dados (PWA)</span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500">Última Sincronização</span>
+                <span className="font-medium text-slate-700">{offlineStats.lastSync}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500">Clientes Baixados</span>
+                <span className="font-medium text-slate-700">{offlineStats.count} contatos</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500">Tamanho Ocupado</span>
+                <span className="font-medium text-slate-700">{offlineStats.size}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-1">
             <button
               onClick={async () => { 
-                const { processOutbox } = await import('@/services/SyncEngine');
+                const { processOutbox, syncOfflineDatabase } = await import('@/services/SyncEngine');
                 await processOutbox();
+                
+                // Limpa o lastSync para forçar um download visual com porcentagem
+                localStorage.removeItem('last_sync_clientes');
+                await syncOfflineDatabase();
+                
                 onClose(); 
-                window.location.reload(); 
               }}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-blue-700 hover:bg-blue-50"
             >
               <span className="shrink-0 rounded-lg p-1.5 bg-blue-50">
                 <RefreshCw size={18} />
               </span>
-              Forçar Sincronização
+              Forçar Sincronização Total
             </button>
           </div>
 
