@@ -13,9 +13,19 @@ export function useAppUpdate() {
   } = useRegisterSW({
     onRegistered(r) {
       console.log('✅ Service Worker registrado:', r);
-    },
-    onRegisterError(error) {
-      console.error('❌ Erro ao registrar Service Worker:', error);
+      if (r) {
+        // Verifica atualizações a cada 1 hora, caso o app fique aberto
+        setInterval(() => {
+          r.update();
+        }, 60 * 60 * 1000);
+
+        // Verifica IMEDIATAMENTE sempre que o usuário voltar/abrir o aplicativo
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            r.update();
+          }
+        });
+      }
     },
   });
 
