@@ -618,19 +618,18 @@ class ClienteController extends Controller
                 'clientes.updated_at',
             ]);
             
-            $query->selectRaw("(SELECT MAX(data_fim) FROM autorizacoes WHERE autorizacoes.cliente_id = clientes.id AND autorizacoes.status IN ('assinado', 'aguardando_assinatura')) as computed_expiration_date");
+            // ✅ OTIMIZAÇÃO CRÍTICA PARA SYNC OFFLINE (LITE):
+            // Removemos selectRaw e withCount que geravam subqueries correlacionadas.
+            // Em paginações com OFFSET alto (ex: página 20), o MySQL executava essas subqueries 
+            // milhares de vezes antes de descartar os resultados, estourando os 60 segundos do PHP.
 
-            // Relações mínimas p/ tabela + drawer
+            // Relações mínimas p/ tabela + drawer (Removido o limit(1) que causava bug no Eloquent)
             $query->with([
                 'enderecos' => function ($q) {
-                    $q->select(['id', 'cliente_id', 'cidade', 'estado', 'bairro', 'rua', 'numero'])
-                      ->orderBy('id', 'asc')
-                      ->limit(1);
+                    $q->select(['id', 'cliente_id', 'cidade', 'estado', 'bairro', 'rua', 'numero']);
                 },
                 'contatos' => function ($q) {
-                    $q->select(['id', 'cliente_id', 'email_principal', 'telefone_principal', 'celular', 'nome_contato'])
-                      ->orderBy('id', 'asc')
-                      ->limit(1);
+                    $q->select(['id', 'cliente_id', 'email_principal', 'telefone_principal', 'celular', 'nome_contato']);
                 },
                 'segmentos' => function ($q) {
                     $q->select(['segmentos.id', 'segmentos.nome']);
@@ -639,9 +638,6 @@ class ClienteController extends Controller
                     $q->select(['cidades.id', 'cidades.nome']);
                 },
             ]);
-
-            // Contagem para "Sem galeria"
-            $query->withCount(['galeriaImagens']);
         } else {
             // Completo (mantém o comportamento atual)
             $query->with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens']);
