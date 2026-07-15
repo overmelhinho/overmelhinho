@@ -127,10 +127,17 @@ export async function syncOfflineDatabase() {
   const syncKeyGlobal = 'last_sync_clientes';
   const lastSync = localStorage.getItem(syncKeyGlobal);
   
+  let toastId: string | number | undefined;
+
   try {
     const params: any = { lite: true, per_page: 10000 };
     if (lastSync) {
       params.last_sync = lastSync;
+    } else {
+      // Primeiro download (sincronização total) - mostra status
+      import('sonner').then(({ toast }) => {
+        toastId = toast.loading('Sincronizando banco offline...', { duration: 10000 });
+      });
     }
 
     const { data } = await api.get('/v1/clientes', { params });
@@ -155,12 +162,27 @@ export async function syncOfflineDatabase() {
       } else {
         // Full sync: Substitui o banco inteiro
         await set(dbKey, fetchedRows);
+        
+        // Finaliza o status visual no primeiro download
+        import('sonner').then(({ toast }) => {
+          if (toastId) toast.dismiss(toastId);
+          toast.success(`Banco sincronizado (${fetchedRows.length} clientes prontos para acesso offline)`, {
+            duration: 4000
+          });
+        });
       }
       
       localStorage.setItem(syncKeyGlobal, new Date().toISOString());
+    } else if (toastId) {
+      import('sonner').then(({ toast }) => toast.dismiss(toastId!));
     }
   } catch (err) {
     console.error("Falha ao sincronizar banco offline:", err);
+    if (toastId) {
+      import('sonner').then(({ toast }) => {
+        toast.dismiss(toastId!);
+      });
+    }
   }
 }
 
