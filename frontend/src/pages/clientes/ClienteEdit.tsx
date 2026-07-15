@@ -794,20 +794,20 @@ export default function ClienteEdit() {
                   initial={{ y: 100, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 100, opacity: 0 }}
-                  className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-2xl"
+                  className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[60] w-[92%] max-w-2xl"
                 >
-                  <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-2xl p-4 shadow-2xl flex items-center justify-between gap-6">
-                    <div className="flex items-center gap-4 text-white pl-2">
-                      <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-500">
+                  <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-3 md:p-4 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6">
+                    <div className="flex items-center gap-3 text-white pl-1 w-full md:w-auto">
+                      <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-500 shrink-0">
                         <AlertTriangle className="w-5 h-5" />
                       </div>
-                      <div>
-                        <div className="text-sm font-bold">Alterações não salvas</div>
-                        <div className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Você modificou este cliente</div>
+                      <div className="flex-1">
+                        <div className="text-sm font-bold">Alterações pendentes</div>
+                        <div className="text-[10px] text-slate-400 uppercase tracking-widest font-black hidden sm:block">Você modificou este cliente</div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 w-full md:w-auto mt-1 md:mt-0">
                       <button
                         type="button"
                         onClick={() => {
@@ -816,9 +816,9 @@ export default function ClienteEdit() {
                           }
                         }}
                         disabled={saving}
-                        className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+                        className="flex-1 md:flex-none flex justify-center items-center gap-2 px-3 py-3 md:py-2 text-slate-300 hover:bg-slate-800 rounded-xl transition-colors text-[10px] sm:text-xs font-bold uppercase tracking-widest disabled:opacity-50"
                       >
-                        <RotateCcw className="w-4 h-4" />
+                        <RotateCcw className="w-3.5 h-3.5" />
                         Descartar
                       </button>
 
@@ -826,7 +826,7 @@ export default function ClienteEdit() {
                         type="button"
                         onClick={handleSave}
                         disabled={saving}
-                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-red-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-[2] md:flex-none flex justify-center items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 md:px-6 py-3 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-lg shadow-red-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {saving ? (
                           <>
