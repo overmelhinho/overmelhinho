@@ -859,55 +859,57 @@ export default function ClientesList() {
         <DialogContent className="sm:max-w-[860px] p-0 overflow-hidden flex flex-col max-h-[90vh]">
           <div className="p-5 border-b bg-white shrink-0">
             <DialogHeader>
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-2xl border bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
-                  {selected?.logo_url ? (
-                    <img src={selected.logo_url} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xs text-gray-400">SEM LOGO</span>
-                  )}
-                </div>
+              <div className="flex flex-col md:flex-row md:items-start gap-4">
+                <div className="flex items-start gap-4 flex-1 w-full">
+                  <div className="w-16 h-16 rounded-2xl border bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
+                    {selected?.logo_url ? (
+                      <img src={selected.logo_url} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-gray-400">SEM LOGO</span>
+                    )}
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <DialogTitle className="text-lg">
-                    <span className="truncate inline-block max-w-full">
-                      {selected?.nome_fantasia || "Cliente"}
-                    </span>
-                  </DialogTitle>
-
-                  <DialogDescription className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 text-gray-600">
-                      <MapPin className="w-4 h-4" />
-                      {selected ? getCidadeUF(selected) || "—" : "—"}
-                    </span>
-
-                    {selected ? (
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs ${tipoChipClass(
-                          selected
-                        )}`}
-                      >
-                        <BadgeCheck className="w-3.5 h-3.5" />
-                        {tipoLabel(selected)}
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="text-lg">
+                      <span className="truncate inline-block max-w-full">
+                        {selected?.nome_fantasia || "Cliente"}
                       </span>
-                    ) : null}
+                    </DialogTitle>
 
-                    {selected?.cpf_cnpj ? (
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-full border bg-gray-50 text-gray-700 hover:bg-gray-100 transition"
-                        onClick={() => copyToClipboard(selected.cpf_cnpj || "", "CNPJ copiado!")}
-                        title="Copiar CNPJ"
-                      >
-                        <span className="font-medium">CNPJ:</span>
-                        <span>{selected.cpf_cnpj}</span>
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                    ) : null}
-                  </DialogDescription>
+                    <DialogDescription className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        {selected ? getCidadeUF(selected) || "—" : "—"}
+                      </span>
+
+                      {selected ? (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs ${tipoChipClass(
+                            selected
+                          )}`}
+                        >
+                          <BadgeCheck className="w-3.5 h-3.5" />
+                          {tipoLabel(selected)}
+                        </span>
+                      ) : null}
+
+                      {selected?.cpf_cnpj ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-full border bg-gray-50 text-gray-700 hover:bg-gray-100 transition"
+                          onClick={() => copyToClipboard(selected.cpf_cnpj || "", "CNPJ copiado!")}
+                          title="Copiar CNPJ"
+                        >
+                          <span className="font-medium">CNPJ:</span>
+                          <span>{selected.cpf_cnpj}</span>
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      ) : null}
+                    </DialogDescription>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap md:flex-nowrap items-center gap-2 w-full md:w-auto">
                   <ActionButton
                     label="Editar"
                     icon={<Pencil className="w-4 h-4" />}

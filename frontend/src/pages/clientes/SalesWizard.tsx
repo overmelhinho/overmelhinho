@@ -257,7 +257,7 @@ export default function SalesWizard() {
               <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-sm border border-slate-100">
                 <h3 className="text-lg font-black text-slate-900 mb-6">Condições da Autorização</h3>
                 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Plano (Ciclo)</label>
                     <select 

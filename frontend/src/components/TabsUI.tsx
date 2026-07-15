@@ -32,8 +32,7 @@ export default function TabsUI({ tabs, currentStep, setCurrentStep }: TabsUIProp
         />
       </div>
 
-<div className="flex flex-wrap justify-center md:justify-start gap-2 overflow-x-auto scrollbar-hide">
-
+      <div className="flex flex-nowrap md:flex-wrap justify-start gap-2 overflow-x-auto scrollbar-hide pb-2">
         {tabs.map((tab, index) => {
           const active = index === currentStep;
           const completed = index < currentStep;
@@ -43,7 +42,7 @@ export default function TabsUI({ tabs, currentStep, setCurrentStep }: TabsUIProp
               key={tab.id}
               onClick={() => setCurrentStep(index)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full border transition-all text-sm font-medium",
+                "flex items-center gap-2 px-4 py-2 rounded-full border transition-all text-sm font-medium shrink-0",
                 active
                   ? "bg-[#B70F0A] text-white border-[#B70F0A]"
                   : completed
