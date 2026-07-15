@@ -22,8 +22,14 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
 
   const save = () => {
     if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
-      const dataUrl = sigCanvas.current.getTrimmedCanvas().toDataURL("image/png");
-      onSave(dataUrl);
+      try {
+        // Usar getCanvas direto é mais seguro no mobile para evitar erros de CORS/Limites no getTrimmedCanvas
+        const dataUrl = sigCanvas.current.getCanvas().toDataURL("image/png");
+        onSave(dataUrl);
+      } catch (e) {
+        console.error("Erro ao gerar imagem da assinatura", e);
+        alert("Ocorreu um erro ao salvar a assinatura. Tente novamente.");
+      }
     }
   };
 

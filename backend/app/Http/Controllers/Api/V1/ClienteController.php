@@ -596,23 +596,26 @@ class ClienteController extends Controller
         // ✅ Lite = listagem otimizada (não traz galeria inteira)
         if ($lite) {
             $query->select([
-                'id',
-                'slug',
-                'nome_fantasia',
-                'cpf_cnpj',
-                'logo_url',
-                'tipo_cliente',
-                'status_assinatura',
-                'possui_publicidade',
-                'exibir_no_site',
-                'audit_differences',
-                'seo_keywords',
-                'observacoes',
-                'portfolio_url',
-                'video',
-                'created_at',
-                'updated_at',
+                'clientes.id',
+                'clientes.slug',
+                'clientes.nome_fantasia',
+                'clientes.cpf_cnpj',
+                'clientes.logo_url',
+                'clientes.tipo_cliente',
+                'clientes.status_assinatura',
+                'clientes.possui_publicidade',
+                'clientes.exibir_no_site',
+                'clientes.audit_differences',
+                'clientes.seo_keywords',
+                'clientes.observacoes',
+                'clientes.portfolio_url',
+                'clientes.video',
+                'clientes.contract_ends_at',
+                'clientes.created_at',
+                'clientes.updated_at',
             ]);
+            
+            $query->selectRaw("(SELECT MAX(data_fim) FROM autorizacoes WHERE autorizacoes.cliente_id = clientes.id AND autorizacoes.status IN ('assinado', 'aguardando_assinatura')) as computed_expiration_date");
 
             // Relações mínimas p/ tabela + drawer
             $query->with([
@@ -822,6 +825,16 @@ class ClienteController extends Controller
             $query->orderBy('created_at', 'asc');
         } elseif ($sort === 'nome' || $sort === 'name') {
             $query->orderBy('nome_fantasia', 'asc');
+        } elseif ($sort === 'expiring') {
+            // Apenas considerar clientes que possuem autorização assinada que vences de hoje em diante
+            $query->whereHas('autorizacoes', function($q) {
+                $q->whereIn('status', ['assinado', 'aguardando_assinatura'])
+                  ->where('data_fim', '>=', \Carbon\Carbon::today());
+            });
+
+            $query->orderByRaw("
+                (SELECT MAX(data_fim) FROM autorizacoes WHERE autorizacoes.cliente_id = clientes.id AND autorizacoes.status IN ('assinado', 'aguardando_assinatura')) ASC
+            ");
         } else {
             // ✅ Default: Ordenação SaaS (Rank de pagamento) + updated_at
             $query->orderByRaw("

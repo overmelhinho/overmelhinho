@@ -69,6 +69,52 @@ class LeadController extends Controller
 
         $lead = Lead::create($data)->fresh();
 
+        // Envia notificação para a Angélica caso seja um Lead do App
+        if (str_contains($lead->origem, 'App Mobile')) {
+            $htmlContent = "
+            <html>
+            <body style='font-family: Arial, sans-serif; background-color: #f1f5f9; padding: 20px;'>
+                <div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                    <div style='background-color: #C00000; padding: 20px; text-align: center; color: #ffffff;'>
+                        <h2 style='margin: 0;'>🚨 Novo Lead Captado via App</h2>
+                    </div>
+                    <div style='padding: 30px;'>
+                        <p style='font-size: 16px; color: #333;'>Olá Angélica,</p>
+                        <p style='font-size: 16px; color: #333;'>Um novo lead acabou de ser cadastrado no sistema pelo aplicativo móvel (na rua).</p>
+                        <table style='width: 100%; margin-top: 20px; border-collapse: collapse;'>
+                            <tr>
+                                <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; width: 120px;'>Empresa:</td>
+                                <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$lead->nome}</td>
+                            </tr>
+                            <tr>
+                                <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Telefone:</td>
+                                <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$lead->telefone}</td>
+                            </tr>
+                            <tr>
+                                <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Origem:</td>
+                                <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$lead->origem}</td>
+                            </tr>
+                        </table>
+                        <div style='margin-top: 30px; text-align: center;'>
+                            <a href='https://dash.overmelhinho.com.br/leads-kanban' style='background-color: #C00000; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;'>Acessar Painel de Leads</a>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            ";
+
+            try {
+                \Illuminate\Support\Facades\Mail::html($htmlContent, function ($message) {
+                    $message->to('angelica@overmelhinho.com.br')
+                        ->from(config('mail.from.address', 'relatorios@overmelhinho.com.br'), 'App - O Vermelhinho')
+                        ->subject('🚨 Novo Lead Captado via App');
+                });
+            } catch (\Exception $e) {
+                \Log::error('[LEAD][EMAIL_ERROR] Erro ao notificar Angélica: ' . $e->getMessage());
+            }
+        }
+
         return (new LeadResource($lead))->response()->setStatusCode(201);
     }
 

@@ -99,6 +99,8 @@ class ClienteResource extends JsonResource
             'contact_preference' => $this->contact_preference,
             'best_contact_shift' => $this->best_contact_shift,
             'responsavel' => $this->responsavel,
+            'contract_ends_at' => $this->contract_ends_at,
+            'computed_expiration_date' => $this->computed_expiration_date ?? null,
         ];
     }
 }

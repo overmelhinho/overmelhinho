@@ -22,6 +22,7 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
+import { FaWaze } from "react-icons/fa";
 
 import {
   Dialog,
@@ -782,6 +783,15 @@ export default function ClientesList() {
                 const cidadeUF = getCidadeUF(c);
                 const telefone = c?.contatos?.[0]?.telefone_principal || "";
                 
+                // Monta o endereço para o Waze
+                const end = c.enderecos?.[0];
+                const wazeParts = [c.nome_fantasia];
+                if (end?.rua) wazeParts.push(end.rua);
+                if (end?.numero) wazeParts.push(end.numero);
+                if (end?.cidade || cidadeUF) wazeParts.push(end?.cidade || cidadeUF);
+                const wazeQuery = encodeURIComponent(wazeParts.join(", "));
+                const wazeUrl = `https://waze.com/ul?q=${wazeQuery}`;
+
                 return (
                   <div key={clienteRowKey(c) + '_mob'} className="p-4 bg-white flex flex-col gap-3">
                     <div className="flex items-start gap-3">
@@ -792,7 +802,7 @@ export default function ClientesList() {
                           <span className="text-[12px] text-gray-400 font-bold">LOGO</span>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0" onClick={() => openDrawer(c)}>
+                      <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-gray-900 truncate text-base">{c.nome_fantasia}</h3>
                         <p className="text-xs text-gray-500 mt-0.5">{cidadeUF || "Sem endereço"}</p>
                       </div>
@@ -804,12 +814,25 @@ export default function ClientesList() {
                       >
                         Modo Venda
                       </button>
+                      
+                      {/* Waze Button */}
+                      <a
+                        href={wazeUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-11 h-11 bg-blue-500 text-white rounded-[14px] shadow-sm flex justify-center items-center shrink-0 active:scale-95 transition-transform"
+                        title="Abrir no Waze"
+                      >
+                        <FaWaze size={22} fill="currentColor" />
+                      </a>
+
                       {telefone ? (
                         <a
                           href={`https://wa.me/55${telefone.replace(/\D/g, "")}`}
                           target="_blank"
                           rel="noreferrer"
                           className="w-11 h-11 bg-green-500 text-white rounded-[14px] shadow-sm flex justify-center items-center shrink-0 active:scale-95 transition-transform"
+                          title="Abrir no WhatsApp"
                         >
                           <Phone size={18} fill="currentColor" />
                         </a>

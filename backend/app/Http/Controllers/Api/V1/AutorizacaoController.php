@@ -499,6 +499,54 @@ class AutorizacaoController extends Controller
         return response()->json(['success' => true, 'data' => $autorizacao]);
     }
 
+    // ─── Rota Privada: Upload de Assinatura Mobile ────────────────────────────
+
+    public function processSignature(Request $request, $id)
+    {
+        $autorizacao = Autorizacao::findOrFail($id);
+
+        $request->validate([
+            'assinatura_base64' => 'required|string',
+        ]);
+
+        $autorizacao->update([
+            'status'           => 'assinado',
+            'assinado_em'      => now(),
+            'assinatura_ip'    => $request->ip(),
+            'assinatura_base64'=> $request->assinatura_base64,
+        ]);
+
+        // Gera PDF final com assinatura e salva
+        try {
+            $autorizacaoFull = $autorizacao->fresh()->load(['cliente.enderecos', 'cliente.contatos', 'vendedor', 'parcelas']);
+            $pdf = Pdf::loadView('pdf.autorizacao', ['autorizacao' => $autorizacaoFull])
+                ->setPaper('a4', 'portrait')
+                ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
+            $filename = "autorizacoes/autorizacao-{$autorizacao->numero}-assinada.pdf";
+            Storage::disk('public')->put($filename, $pdf->output());
+            $autorizacao->update(['pdf_path' => $filename]);
+        } catch (\Exception $e) {
+            Log::error('Erro ao gerar PDF pós-assinatura via app: ' . $e->getMessage());
+        }
+
+        Log::info("Autorização #{$autorizacao->numero} assinada via App Mobile.", [
+            'ip' => $request->ip(),
+        ]);
+
+        // Automação: Gerar faturas no Tiny
+        try {
+            $tinyService = app(TinyErpService::class);
+            $this->processInvoiceGeneration($autorizacao->fresh(['parcelas', 'cliente']), $tinyService);
+        } catch (\Exception $e) {
+            Log::error("Erro na automação pós-assinatura via app #{$autorizacao->id}: " . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Assinatura enviada com sucesso.',
+        ]);
+    }
+
     // ─── Rota Pública: Aceitar / Assinar ─────────────────────────────────────
 
     public function sign(Request $request, $token)

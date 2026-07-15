@@ -164,4 +164,9 @@ class Cliente extends Model
     {
         return $this->hasMany(JobOpportunity::class, 'client_id');
     }
+
+    public function autorizacoes()
+    {
+        return $this->hasMany(Autorizacao::class, 'cliente_id');
+    }
 }

@@ -11,6 +11,9 @@ import { Save, RotateCcw, AlertTriangle, ExternalLink } from "lucide-react";
 import axios from "@/services/api";
 import Skeleton from "@/components/ui/skeleton";
 import TabsUI from "@/components/TabsUI";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 
 import TabIdentificacao from "./create/steps/TabIdentificacao";
 import TabEndereco from "./create/steps/TabEndereco";
@@ -83,6 +86,8 @@ export default function ClienteEdit() {
   const formikRef = useRef<any>(null);
   const allowSubmitRef = useRef(false);
   const [saving, setSaving] = useState(false);
+  const isMobile = useIsMobile();
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["cliente", clienteId],
@@ -625,12 +630,23 @@ export default function ClienteEdit() {
             }}
           >
             <div className="mb-4 flex justify-between items-start">
-              <div>
-                <div className="text-lg font-semibold text-gray-900">
-                  {values.nome_fantasia || "Editar cliente"}
-                </div>
-                <div className="text-sm text-gray-500">
-                  Editar cadastro do cliente
+              <div className="flex flex-col gap-2">
+                {isMobile && (
+                  <button 
+                    type="button" 
+                    onClick={() => navigate(`/clientes/${clienteId}/venda`)}
+                    className="flex items-center gap-1 text-xs font-bold text-red-600 mb-2 uppercase tracking-widest"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Modo Venda
+                  </button>
+                )}
+                <div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {values.nome_fantasia || "Editar cliente"}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Editar cadastro do cliente
+                  </div>
                 </div>
               </div>
 
@@ -666,51 +682,110 @@ export default function ClienteEdit() {
               </select>
             </div>
 
-            <TabsUI tabs={tabs} currentStep={step} setCurrentStep={setStep} />
+            {!isMobile ? (
+              <>
+                <TabsUI tabs={tabs} currentStep={step} setCurrentStep={setStep} />
 
-            <div className="mt-2 p-6 bg-white shadow rounded-xl border min-h-[420px]">
-              {tabs[step]?.label === "Identificação" && <TabIdentificacao />}
-              {tabs[step]?.label === "Endereço" && <TabEndereco />}
-              {tabs[step]?.label === "Contato" && <TabContato />}
-              {tabs[step]?.label === "Cidades" && <TabCidadesAtendidas />}
-              {tabs[step]?.label === "Redes Sociais" && <TabRedesSociais />}
-              {tabs[step]?.label === "Segmentos" && <TabSegmentos />}
-              {tabs[step]?.label === "Benefícios" && <TabBeneficios />}
-              {tabs[step]?.label === "Horário" && <TabHorarios />}
-              {tabs[step]?.label === "Logotipo" && <TabLogotipo />}
-              {tabs[step]?.label === "Mídia" && <TabMidia />}
-              {tabs[step]?.label === "Galeria" && <TabGaleria />}
-              {tabs[step]?.label === "Google Reviews" && <TabGoogleReviews />}
-              {tabs[step]?.label === "Financeiro" && <TabFinanceiro />}
-              {tabs[step]?.label === "Performance" && <SeoPerformanceWidget clientId={clienteId} />}
-              {tabs[step]?.label === "Histórico" && <TabAuditoria />}
-            </div>
+                <div className="mt-2 p-6 bg-white shadow rounded-xl border min-h-[420px]">
+                  {tabs[step]?.label === "Identificação" && <TabIdentificacao />}
+                  {tabs[step]?.label === "Endereço" && <TabEndereco />}
+                  {tabs[step]?.label === "Contato" && <TabContato />}
+                  {tabs[step]?.label === "Cidades" && <TabCidadesAtendidas />}
+                  {tabs[step]?.label === "Redes Sociais" && <TabRedesSociais />}
+                  {tabs[step]?.label === "Segmentos" && <TabSegmentos />}
+                  {tabs[step]?.label === "Benefícios" && <TabBeneficios />}
+                  {tabs[step]?.label === "Horário" && <TabHorarios />}
+                  {tabs[step]?.label === "Logotipo" && <TabLogotipo />}
+                  {tabs[step]?.label === "Mídia" && <TabMidia />}
+                  {tabs[step]?.label === "Galeria" && <TabGaleria />}
+                  {tabs[step]?.label === "Google Reviews" && <TabGoogleReviews />}
+                  {tabs[step]?.label === "Financeiro" && <TabFinanceiro />}
+                  {tabs[step]?.label === "Performance" && <SeoPerformanceWidget clientId={clienteId} />}
+                  {tabs[step]?.label === "Histórico" && <TabAuditoria />}
+                </div>
 
-            <div className="flex justify-between">
-              <button type="button" onClick={handlePrev} className="px-4 py-2 border rounded">
-                Voltar
-              </button>
+                <div className="flex justify-between mt-6">
+                  <button type="button" onClick={handlePrev} className="px-4 py-2 border rounded">
+                    Voltar
+                  </button>
 
-              {!isLastStep ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="px-4 py-2 bg-red-600 text-white rounded"
-                >
-                  Avançar
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className={`px-6 py-2 rounded text-white ${saving ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
-                    }`}
-                >
-                  {saving ? "Salvando..." : "Salvar alterações"}
-                </button>
-              )}
-            </div>
+                  {!isLastStep ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="px-4 py-2 bg-red-600 text-white rounded"
+                    >
+                      Avançar
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className={`px-6 py-2 rounded text-white ${saving ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+                        }`}
+                    >
+                      {saving ? "Salvando..." : "Salvar alterações"}
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="mt-6 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden divide-y divide-slate-100">
+                {tabs.map((tab, idx) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setStep(idx);
+                      setMobileDrawerOpen(true);
+                    }}
+                    className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition active:bg-slate-100 text-left"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-800 text-base">{tab.label}</span>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-400" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Dialog/Drawer for Mobile */}
+            <Dialog open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
+              <DialogContent className="sm:max-w-md w-full max-h-[90vh] overflow-y-auto p-0 flex flex-col rounded-t-[24px] rounded-b-none bottom-0 top-auto translate-y-0 absolute mt-auto md:rounded-2xl md:relative md:top-1/2 md:-translate-y-1/2 md:bottom-auto md:mt-0 transition-transform">
+                <div className="sticky top-0 bg-white z-10 border-b border-slate-100 px-6 py-4 flex justify-between items-center shadow-sm">
+                  <DialogTitle className="text-xl font-black text-slate-900">{tabs[step]?.label}</DialogTitle>
+                </div>
+                <div className="p-6 bg-slate-50/50 flex-1">
+                  {tabs[step]?.label === "Identificação" && <TabIdentificacao />}
+                  {tabs[step]?.label === "Endereço" && <TabEndereco />}
+                  {tabs[step]?.label === "Contato" && <TabContato />}
+                  {tabs[step]?.label === "Cidades" && <TabCidadesAtendidas />}
+                  {tabs[step]?.label === "Redes Sociais" && <TabRedesSociais />}
+                  {tabs[step]?.label === "Segmentos" && <TabSegmentos />}
+                  {tabs[step]?.label === "Benefícios" && <TabBeneficios />}
+                  {tabs[step]?.label === "Horário" && <TabHorarios />}
+                  {tabs[step]?.label === "Logotipo" && <TabLogotipo />}
+                  {tabs[step]?.label === "Mídia" && <TabMidia />}
+                  {tabs[step]?.label === "Galeria" && <TabGaleria />}
+                  {tabs[step]?.label === "Google Reviews" && <TabGoogleReviews />}
+                  {tabs[step]?.label === "Financeiro" && <TabFinanceiro />}
+                  {tabs[step]?.label === "Performance" && <SeoPerformanceWidget clientId={clienteId} />}
+                  {tabs[step]?.label === "Histórico" && <TabAuditoria />}
+                  
+                  <div className="mt-8 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setMobileDrawerOpen(false)}
+                      className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-slate-800 transition active:scale-95"
+                    >
+                      Concluído
+                    </button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Floating Save Bar */}
             <AnimatePresence>

@@ -52,6 +52,20 @@ export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: Sidebar
     refetchInterval: 1000 * 60 * 5 // 5 min
   });
 
+  const { data: leadsStats } = useQuery({
+    queryKey: ['leads-stats-sidebar'],
+    queryFn: async () => {
+      try {
+        const resp = await api.get('/v1/leads/stats');
+        return resp.data;
+      } catch (e) {
+        return null;
+      }
+    },
+    refetchInterval: 1000 * 60 * 5 // 5 min
+  });
+  const novoLeadsCount = leadsStats?.novo || 0;
+
   const userPermissions: string[] = Array.isArray(user?.permissions)
     ? user!.permissions
     : [];
@@ -129,6 +143,7 @@ export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: Sidebar
     if (!allowed) return null;
 
     const hasAuditBadge = it.to === '/auditoria' && auditCount > 0;
+    const hasLeadsBadge = it.to === '/leads-kanban' && novoLeadsCount > 0;
 
     return (
       <NavLink key={it.to} to={it.to} className="block">
@@ -152,8 +167,13 @@ export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: Sidebar
             </span>
             <span className="truncate flex-1">{it.label}</span>
             {hasAuditBadge && (
-              <span className="bg-white text-[#B70F0A] text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-[#B70F0A]/20">
+              <span className="bg-white text-[#B70F0A] text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-[#B70F0A]/20 shadow-sm">
                 {auditCount}
+              </span>
+            )}
+            {hasLeadsBadge && (
+              <span className="bg-white text-[#B70F0A] text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-[#B70F0A]/20 shadow-sm">
+                {novoLeadsCount}
               </span>
             )}
           </div>
