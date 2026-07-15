@@ -40,10 +40,11 @@ export default function MobileMenuDrawer({
             });
           }
 
-          const sizeBytes = new Blob([JSON.stringify(existingDb)]).size;
-          const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2) + ' MB';
+          // [FIX OOM] Estimate size instead of using JSON.stringify() which crashes low-end tablets
+          // Assume ~600 bytes per lite client row
+          const estimatedSizeMB = ((existingDb.length * 600) / (1024 * 1024)).toFixed(2) + ' MB';
 
-          setOfflineStats({ count: existingDb.length, lastSync, size: sizeMB });
+          setOfflineStats({ count: existingDb.length, lastSync, size: estimatedSizeMB });
         } catch(e) {}
       });
       
