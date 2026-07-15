@@ -57,11 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 🔒 FASE 2 — Salva cache do usuário para acesso offline futuro
       localStorage.setItem('ov_cached_user', JSON.stringify(data));
     } catch (err: any) {
-      // É erro de rede se não houver response (offline) OU se for erro de servidor (5xx)
-      const isNetworkError = !err.response || err.response.status >= 500;
+      // 🔒 Se o erro FOR EXPLICITAMENTE 401 (Não autorizado), significa que o token expirou ou foi revogado.
+      const isAuthError = err.response && (err.response.status === 401 || err.response.status === 403);
 
-      if (isNetworkError) {
-        // Erro de rede/servidor — tenta usar cache para não deslogar offline
+      if (!isAuthError) {
+        // Para QUALQUER OUTRO ERRO (rede, timeout, erro 500, etc), tentamos manter o usuário logado usando o cache
         const cached = localStorage.getItem('ov_cached_user');
         if (cached && localStorage.getItem('token')) {
           try {
