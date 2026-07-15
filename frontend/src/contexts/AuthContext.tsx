@@ -101,44 +101,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Ao carregar, se houver token, restaura o cache imediatamente para evitar
-  // o flash da tela de login, e depois valida o token com o servidor em background.
+  // ─── STARTUP: Restaura sessão do localStorage ──────────────────────────────
+  // Regra: token + cache = usuário logado. Ponto final.
+  // Só vamos ao servidor se temos o token mas NÃO temos cache (ex: primeiro uso
+  // após instalação do PWA ou cache apagado manualmente).
+  // Isso garante que fechar/abrir o app nunca peça login novamente.
   useEffect(() => {
     const token = localStorage.getItem("token");
+    
     if (!token) {
+      // Sem token: não há sessão → vai para Login
       setIsLoading(false);
       return;
     }
 
-    // Passo 1: restaura o usuário do cache IMEDIATAMENTE (sem esperar a rede)
     const cached = localStorage.getItem('ov_cached_user');
+    
     if (cached) {
+      // Tem token + cache: restaura imediatamente, sem chamar o servidor
       try {
         setUser(JSON.parse(cached));
-        setIsLoading(false); // Libera o app imediatamente com o cache
-      } catch {}
+      } catch {
+        // Cache corrompido: limpa e pede login
+        localStorage.removeItem('ov_cached_user');
+        localStorage.removeItem('token');
+      }
+      setIsLoading(false);
+      return;
     }
 
-    // Passo 2: valida o token com o servidor em segundo plano (sem bloquear a UI)
+    // Tem token mas SEM cache: valida com o servidor uma vez
     api.get("/v1/user")
       .then(({ data }) => {
         setUser(data);
         localStorage.setItem('ov_cached_user', JSON.stringify(data));
       })
-      .catch((err: any) => {
-        // Só desloga se o servidor retornar explicitamente 401/403
-        // (token inválido/revogado). Erros de rede são ignorados.
-        const isAuthError = err.response && (err.response.status === 401 || err.response.status === 403);
-        if (isAuthError) {
-          setUser(null);
-          setIsLoading(false);
-          localStorage.removeItem('token');
-          localStorage.removeItem('ov_cached_user');
-        }
-        // Se não tinha cache (primeiro acesso sem rede), não tem como manter logado
-        if (!cached && !isAuthError) {
-          setIsLoading(false);
-        }
+      .catch(() => {
+        // Qualquer falha aqui: limpa o token e pede login
+        setUser(null);
+        localStorage.removeItem('token');
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   }, []);
 
