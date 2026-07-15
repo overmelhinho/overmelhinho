@@ -151,19 +151,33 @@ export async function syncOfflineDatabase() {
       const { data } = await api.get('/v1/clientes', { params });
       
       let fetchedRows = [];
-      if (Array.isArray(data?.data)) {
+      
+      // O formato do Laravel Paginator retornado via response()->json($paginator) é:
+      // { current_page: 1, data: [...], total: 3800, last_page: 2 }
+      if (data && typeof data.total !== 'undefined' && typeof data.last_page !== 'undefined' && Array.isArray(data.data)) {
         fetchedRows = data.data;
-        isFinished = true; // Se for array direto, não tem paginação
-      } else if (data?.data && Array.isArray(data.data.data)) {
-        fetchedRows = data.data.data;
-        totalItems = data.data.total || 0;
+        totalItems = data.total || 0;
         
         // Verifica se chegamos na última página
-        if (currentPage >= (data.data.last_page || 1)) {
+        if (currentPage >= (data.last_page || 1)) {
           isFinished = true;
         }
+      } 
+      // Formato de API Resource: { data: { data: [...], meta: { total: 3800 } } }
+      else if (data?.data && Array.isArray(data.data.data)) {
+        fetchedRows = data.data.data;
+        totalItems = data.data.total || data.meta?.total || 0;
+        
+        if (currentPage >= (data.data.last_page || data.meta?.last_page || 1)) {
+          isFinished = true;
+        }
+      } 
+      // Array puro
+      else if (Array.isArray(data?.data)) {
+        fetchedRows = data.data;
+        isFinished = true;
       } else {
-        isFinished = true; // Formato desconhecido, aborta o loop
+        isFinished = true; // Formato desconhecido
       }
 
       allFetchedRows = [...allFetchedRows, ...fetchedRows];
