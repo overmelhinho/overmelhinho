@@ -126,61 +126,97 @@ export async function syncOfflineDatabase() {
   
   const syncKeyGlobal = 'last_sync_clientes';
   const lastSync = localStorage.getItem(syncKeyGlobal);
-  
-  let toastId: string | number | undefined;
+  const toastId = 'offline-sync-toast';
 
   try {
-    const params: any = { lite: true, per_page: 10000 };
-    if (lastSync) {
-      params.last_sync = lastSync;
-    } else {
-      // Primeiro download (sincronização total) - mostra status
+    const perPage = 2500;
+    let currentPage = 1;
+    let totalItems = 0;
+    let allFetchedRows: any[] = [];
+    let isFinished = false;
+
+    // Apenas mostra o toast se não for um Delta Sync (ou seja, é o primeiro download gigante)
+    if (!lastSync) {
       import('sonner').then(({ toast }) => {
-        toastId = toast.loading('Sincronizando banco offline...', { duration: 10000 });
+        toast.loading('Sincronizando banco offline (0%)...', { id: toastId, duration: Infinity });
       });
     }
 
-    const { data } = await api.get('/v1/clientes', { params });
-    
-    let fetchedRows = [];
-    if (Array.isArray(data?.data)) {
-      fetchedRows = data.data;
-    } else if (data?.data && Array.isArray(data.data.data)) {
-      fetchedRows = data.data.data;
+    while (!isFinished) {
+      const params: any = { lite: true, per_page: perPage, page: currentPage };
+      if (lastSync) {
+        params.last_sync = lastSync;
+      }
+
+      const { data } = await api.get('/v1/clientes', { params });
+      
+      let fetchedRows = [];
+      if (Array.isArray(data?.data)) {
+        fetchedRows = data.data;
+        isFinished = true; // Se for array direto, não tem paginação
+      } else if (data?.data && Array.isArray(data.data.data)) {
+        fetchedRows = data.data.data;
+        totalItems = data.data.total || 0;
+        
+        // Verifica se chegamos na última página
+        if (currentPage >= (data.data.last_page || 1)) {
+          isFinished = true;
+        }
+      } else {
+        isFinished = true; // Formato desconhecido, aborta o loop
+      }
+
+      allFetchedRows = [...allFetchedRows, ...fetchedRows];
+
+      // Atualiza o progresso visual (apenas se for o download total)
+      if (!lastSync && totalItems > 0 && !isFinished) {
+        const percentage = Math.min(99, Math.round((allFetchedRows.length / totalItems) * 100));
+        import('sonner').then(({ toast }) => {
+          toast.loading(`Sincronizando banco offline (${percentage}%)...`, { id: toastId });
+        });
+      }
+
+      currentPage++;
     }
 
-    if (fetchedRows.length > 0) {
+    if (allFetchedRows.length > 0) {
       const dbKey = 'offline_clientes_db';
       const existingDb = (await get<any[]>(dbKey)) || [];
       
       if (lastSync && existingDb.length > 0) {
         // Delta sync: Atualiza os registros existentes com as novidades
-        const newIds = new Set(fetchedRows.map((r: any) => r.id));
+        const newIds = new Set(allFetchedRows.map((r: any) => r.id));
         const keptOldRows = existingDb.filter((r: any) => !newIds.has(r.id));
-        const mergedDb = [...fetchedRows, ...keptOldRows];
+        const mergedDb = [...allFetchedRows, ...keptOldRows];
         await set(dbKey, mergedDb);
       } else {
         // Full sync: Substitui o banco inteiro
-        await set(dbKey, fetchedRows);
+        await set(dbKey, allFetchedRows);
         
         // Finaliza o status visual no primeiro download
         import('sonner').then(({ toast }) => {
-          if (toastId) toast.dismiss(toastId);
-          toast.success(`Banco sincronizado (${fetchedRows.length} clientes prontos para acesso offline)`, {
-            duration: 4000
+          toast.success(`Banco sincronizado (${allFetchedRows.length} clientes offline)`, {
+            id: toastId,
+            duration: 5000
           });
         });
       }
       
+      // Salva a data do último sync
       localStorage.setItem(syncKeyGlobal, new Date().toISOString());
-    } else if (toastId) {
-      import('sonner').then(({ toast }) => toast.dismiss(toastId!));
+    } else {
+      // Nenhum dado novo baixado
+      if (!lastSync) {
+        import('sonner').then(({ toast }) => {
+          toast.dismiss(toastId);
+        });
+      }
     }
   } catch (err) {
     console.error("Falha ao sincronizar banco offline:", err);
-    if (toastId) {
+    if (!lastSync) {
       import('sonner').then(({ toast }) => {
-        toast.dismiss(toastId!);
+        toast.error("Falha ao sincronizar banco offline.", { id: toastId, duration: 4000 });
       });
     }
   }
