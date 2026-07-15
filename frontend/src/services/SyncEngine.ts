@@ -72,8 +72,10 @@ export async function processOutbox() {
           url: item.url,
           data: item.data,
           headers: {
-            ...item.headers,
-            'X-From-Outbox': 'true', // Flag para o interceptor não re-enfileirar
+            // Não enviamos ...item.headers porque o objeto AxiosHeaders perde o prototype 
+            // no IndexedDB e causa um TypeError interno no Axios 1.x ao ser restaurado!
+            // O próprio interceptor de request (api.ts) vai adicionar o Token JWT fresco.
+            'X-From-Outbox': 'true', 
           }
         });
         
