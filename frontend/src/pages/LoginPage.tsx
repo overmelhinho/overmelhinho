@@ -1,20 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "@/services/api";
-import { useAuth } from "@/contexts/AuthContext"; // IMPORTANTE: importa o contexto
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
-  const { fetchUser } = useAuth(); // pega o método do contexto
+  const { user, isLoading, fetchUser } = useAuth();
   const [error, setError] = useState("");
   const [rateLimited, setRateLimited] = useState(false);
   const navigate = useNavigate();
+
+  // ─── PWA FIX: Se já estiver logado, sai da tela de login ──────────────────
+  // O PWA sempre abre na raiz ("/"). Se o AuthContext restaurou o usuário,
+  // precisamos redirecionar para o dashboard automaticamente.
+  useEffect(() => {
+    if (user && !isLoading) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, isLoading, navigate]);
 
   const loginSchema = Yup.object().shape({
     email: Yup.string().email("E-mail inválido").required("Campo obrigatório"),
     password: Yup.string().required("Campo obrigatório"),
   });
+
+  // Evita "piscar" a tela de login enquanto o AuthContext verifica o localStorage
+  // ou enquanto o redirecionamento está sendo processado.
+  if (isLoading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
