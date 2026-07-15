@@ -107,9 +107,60 @@ export async function processOutbox() {
 // Inicia automaticamente o processamento quando a rede volta
 window.addEventListener('online', () => {
   processOutbox();
+  syncOfflineDatabase();
 });
 
 // E também tenta processar ao carregar a aplicação, caso tenha sobrado itens
 if (typeof navigator !== 'undefined' && navigator.onLine) {
-  setTimeout(() => processOutbox(), 1000); // Aguarda a app inicializar
+  setTimeout(() => {
+    processOutbox();
+    syncOfflineDatabase();
+  }, 1000); // Aguarda a app inicializar
 }
+
+/**
+ * Baixa o banco de dados Lite completo para uso offline 
+ */
+export async function syncOfflineDatabase() {
+  if (!navigator.onLine) return;
+  
+  const syncKeyGlobal = 'last_sync_clientes';
+  const lastSync = localStorage.getItem(syncKeyGlobal);
+  
+  try {
+    const params: any = { lite: true, per_page: 10000 };
+    if (lastSync) {
+      params.last_sync = lastSync;
+    }
+
+    const { data } = await api.get('/v1/clientes', { params });
+    
+    let fetchedRows = [];
+    if (Array.isArray(data?.data)) {
+      fetchedRows = data.data;
+    } else if (data?.data && Array.isArray(data.data.data)) {
+      fetchedRows = data.data.data;
+    }
+
+    if (fetchedRows.length > 0) {
+      const dbKey = 'offline_clientes_db';
+      const existingDb = (await get<any[]>(dbKey)) || [];
+      
+      if (lastSync && existingDb.length > 0) {
+        // Delta sync: Atualiza os registros existentes com as novidades
+        const newIds = new Set(fetchedRows.map((r: any) => r.id));
+        const keptOldRows = existingDb.filter((r: any) => !newIds.has(r.id));
+        const mergedDb = [...fetchedRows, ...keptOldRows];
+        await set(dbKey, mergedDb);
+      } else {
+        // Full sync: Substitui o banco inteiro
+        await set(dbKey, fetchedRows);
+      }
+      
+      localStorage.setItem(syncKeyGlobal, new Date().toISOString());
+    }
+  } catch (err) {
+    console.error("Falha ao sincronizar banco offline:", err);
+  }
+}
+

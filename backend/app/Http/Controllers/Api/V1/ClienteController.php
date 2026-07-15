@@ -577,7 +577,10 @@ class ClienteController extends Controller
 
         $perPage = (int) ($request->input('per_page') ?? $request->input('perPage') ?? 15);
         if ($perPage <= 0) $perPage = 15;
-        if ($perPage > 50) $perPage = 50;
+        
+        // Se for requisição Lite (geralmente PWA baixando banco offline), permitimos até 10.000 registros
+        $maxPerPage = $lite ? 10000 : 50;
+        if ($perPage > $maxPerPage) $perPage = $maxPerPage;
 
         $q = trim((string) ($request->input('q') ?? $request->input('search') ?? ''));
         $tipo = trim((string) ($request->input('tipo_cliente') ?? $request->input('tipo') ?? ''));

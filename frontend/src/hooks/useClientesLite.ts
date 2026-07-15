@@ -81,8 +81,57 @@ export function useClientesLite(params?: {
         reqParams.possui_publicidade = possui_publicidade;
       }
 
-      // 🔒 FASE 5: Delta Sync
-      // Se estamos na página 1 e não temos nenhum filtro de busca ativo (apenas listagem padrão)
+      // 🔒 OFFLINE-FIRST: Interceptar se sem internet
+      if (!navigator.onLine) {
+        try {
+          const { get } = await import('idb-keyval');
+          const offlineDb = (await get<ClienteLiteOption[]>('offline_clientes_db')) || [];
+          
+          // 1. Filtragem local
+          let filteredRows = offlineDb;
+          
+          if (query) {
+            const qLower = query.toLowerCase();
+            filteredRows = filteredRows.filter(r => 
+              (r.nome_fantasia?.toLowerCase() || "").includes(qLower) ||
+              (r.razao_social?.toLowerCase() || "").includes(qLower) ||
+              (r.cpf_cnpj || "").includes(qLower)
+            );
+          }
+          if (tipo_cliente) {
+            filteredRows = filteredRows.filter(r => r.tipo_cliente === tipo_cliente);
+          }
+          if (status_assinatura) {
+            filteredRows = filteredRows.filter(r => r.status_assinatura === status_assinatura);
+          }
+          if (typeof possui_publicidade === "boolean") {
+            filteredRows = filteredRows.filter(r => r.possui_publicidade === possui_publicidade);
+          }
+          
+          // 2. Ordenação padrão (por ex. pelo nome, id)
+          filteredRows.sort((a, b) => (a.nome_fantasia || "").localeCompare(b.nome_fantasia || ""));
+          
+          // 3. Paginação local
+          const total = filteredRows.length;
+          const startIndex = (page - 1) * per_page;
+          const paginatedRows = filteredRows.slice(startIndex, startIndex + per_page);
+          
+          return {
+            rows: paginatedRows,
+            meta: {
+              current_page: page,
+              per_page: per_page,
+              total: total,
+              last_page: Math.ceil(total / per_page),
+            }
+          };
+        } catch (err) {
+          console.error("Falha ao ler banco offline local:", err);
+          return { rows: [], meta: null };
+        }
+      }
+
+      // 🔒 FASE 5: Delta Sync (Online)
       const isDefaultList = page === 1 && !query && !tipo_cliente && !status_assinatura && typeof possui_publicidade !== "boolean";
       const syncKeyGlobal = 'last_sync_clientes';
       
@@ -98,8 +147,8 @@ export function useClientesLite(params?: {
 
       const { data } = await api.get("/v1/clientes", { params: reqParams });
 
-      // Atualiza o horário da última sincronização se for a listagem padrão
-      if (isDefaultList) {
+      // Atualiza o horário da última sincronização se for a listagem padrão (obsoleto pelo novo SyncEngine, mas mantido p/ redundância)
+      if (isDefaultList && !reqParams.last_sync) {
         localStorage.setItem(syncKeyGlobal, new Date().toISOString());
       }
 
@@ -116,14 +165,12 @@ export function useClientesLite(params?: {
       // 🔒 FASE 5: Merge (Fusão) dos dados do Delta com o Cache local
       if (reqParams.last_sync && hasLocalData) {
         const oldRows = previousData.rows;
-        // Substitui os antigos pelos novos que vieram (ou adiciona no topo)
         const newIds = new Set(newRows.map(r => r.id));
         const keptOldRows = oldRows.filter(r => !newIds.has(r.id));
         
-        // Os recém atualizados vão para o topo
         return {
           rows: [...newRows, ...keptOldRows],
-          meta: newMeta || previousData.meta, // mantém o meta antigo se não veio um novo completo
+          meta: newMeta || previousData.meta,
         };
       }
 
