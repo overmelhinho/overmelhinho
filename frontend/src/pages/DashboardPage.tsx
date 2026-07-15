@@ -31,28 +31,13 @@ const dashboards: Record<string, React.FC<{ user: User }>> = {
   default: DashboardDefault,
 };
 
+import { useAuth } from "@/contexts/AuthContext";
+
 export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const { data } = await axios.get("/v1/user");
-        setUser(data);
-      } catch (err) {
-        localStorage.removeItem("token");
-        navigate("/login");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, [navigate]);
-
-  if (loading || !user) {
+  if (isLoading || !user) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-[60vh]">

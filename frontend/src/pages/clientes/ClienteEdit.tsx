@@ -791,10 +791,10 @@ export default function ClienteEdit() {
             <AnimatePresence>
               {(dirty || saving) && (
                 <motion.div
-                  initial={{ y: 100, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 100, opacity: 0 }}
-                  className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[60] w-[92%] max-w-2xl"
+                  initial={{ y: 100, x: "-50%", opacity: 0 }}
+                  animate={{ y: 0, x: "-50%", opacity: 1 }}
+                  exit={{ y: 100, x: "-50%", opacity: 0 }}
+                  className="fixed bottom-24 md:bottom-8 left-1/2 z-[60] w-[92%] max-w-2xl"
                 >
                   <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-3 md:p-4 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6">
                     <div className="flex items-center gap-3 text-white pl-1 w-full md:w-auto">
