@@ -101,14 +101,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Ao carregar, se houver token, busca user; caso contrário finaliza o loading
+  // Ao carregar, se houver token, restaura o cache imediatamente para evitar
+  // o flash da tela de login, e depois valida o token com o servidor em background.
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      fetchUser();
-    } else {
+    if (!token) {
       setIsLoading(false);
+      return;
     }
+
+    // Passo 1: restaura o usuário do cache IMEDIATAMENTE (sem esperar a rede)
+    const cached = localStorage.getItem('ov_cached_user');
+    if (cached) {
+      try {
+        setUser(JSON.parse(cached));
+        setIsLoading(false); // Libera o app imediatamente com o cache
+      } catch {}
+    }
+
+    // Passo 2: valida o token com o servidor em segundo plano (sem bloquear a UI)
+    api.get("/v1/user")
+      .then(({ data }) => {
+        setUser(data);
+        localStorage.setItem('ov_cached_user', JSON.stringify(data));
+      })
+      .catch((err: any) => {
+        // Só desloga se o servidor retornar explicitamente 401/403
+        // (token inválido/revogado). Erros de rede são ignorados.
+        const isAuthError = err.response && (err.response.status === 401 || err.response.status === 403);
+        if (isAuthError) {
+          setUser(null);
+          setIsLoading(false);
+          localStorage.removeItem('token');
+          localStorage.removeItem('ov_cached_user');
+        }
+        // Se não tinha cache (primeiro acesso sem rede), não tem como manter logado
+        if (!cached && !isAuthError) {
+          setIsLoading(false);
+        }
+      });
   }, []);
 
   // Iniciar Echo dinamicamente após user carregar

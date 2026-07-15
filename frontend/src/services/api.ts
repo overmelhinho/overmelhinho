@@ -64,9 +64,12 @@ api.interceptors.response.use(
       });
     }
 
-    // FASE 2: Só limpa e redireciona se: (1) é erro 401 E (2) o dispositivo está online
-    // Offline: não toca no token — o acesso via cache continua válido
-    if (error.response?.status === 401 && navigator.onLine) {
+    // FASE 2: Trata 401 — MAS NUNCA para /v1/user (o AuthContext é o dono dessa rota)
+    // Para todas as outras rotas: se 401 e online, limpa tudo e redireciona.
+    const requestUrl = error.config?.url || '';
+    const isUserRoute = requestUrl.includes('/v1/user') || requestUrl.endsWith('/user');
+    
+    if (error.response?.status === 401 && navigator.onLine && !isUserRoute) {
       localStorage.removeItem("token");
       localStorage.removeItem("ov_cached_user");
       // Redireciona apenas se não estiver já na tela de login
