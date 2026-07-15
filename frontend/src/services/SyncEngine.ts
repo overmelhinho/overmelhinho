@@ -129,10 +129,10 @@ export async function syncOfflineDatabase() {
   const toastId = 'offline-sync-toast';
 
   try {
-    const perPage = 1000; // Reduzido de 2500 para 1000 para evitar timeout do Axios e do Nginx/Servidor
+    const perPage = 250; // Reduzido para 250 para evitar sobrecarga de memória no servidor e no client
     let currentPage = 1;
     let totalItems = 0;
-    let allFetchedRows: any[] = [];
+    const allFetchedRows: any[] = [];
     let isFinished = false;
 
     // Apenas mostra o toast se não for um Delta Sync (ou seja, é o primeiro download gigante)
@@ -148,7 +148,20 @@ export async function syncOfflineDatabase() {
         params.last_sync = lastSync;
       }
 
-      const { data } = await api.get('/v1/clientes', { params });
+      let data: any = null;
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          const response = await api.get('/v1/clientes', { params });
+          data = response.data;
+          break; // Sucesso, sai do loop de retentativas
+        } catch (error) {
+          retries--;
+          if (retries === 0) throw error; // Se falhou 3 vezes, desiste de vez
+          // Espera 2 segundos antes de tentar de novo
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
       
       let fetchedRows: any[] = [];
 
@@ -181,7 +194,10 @@ export async function syncOfflineDatabase() {
         isFinished = true;
       }
 
-      allFetchedRows = [...allFetchedRows, ...fetchedRows];
+      // O(N^2) memory fix: em vez de criar um novo array gigantesco a cada página, mutamos o original.
+      for (const row of fetchedRows) {
+        allFetchedRows.push(row);
+      }
 
       // Atualiza o progresso visual (apenas se for o download total)
       if (!lastSync && totalItems > 0 && !isFinished) {
