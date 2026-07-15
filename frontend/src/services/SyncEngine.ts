@@ -150,34 +150,35 @@ export async function syncOfflineDatabase() {
 
       const { data } = await api.get('/v1/clientes', { params });
       
-      let fetchedRows = [];
-      
-      // O formato do Laravel Paginator retornado via response()->json($paginator) é:
-      // { current_page: 1, data: [...], total: 3800, last_page: 2 }
-      if (data && typeof data.total !== 'undefined' && typeof data.last_page !== 'undefined' && Array.isArray(data.data)) {
+      let fetchedRows: any[] = [];
+
+      // Laravel ClienteResource::collection($paginator) retorna:
+      // { "data": [...], "links": {...}, "meta": { "current_page": 1, "last_page": 16, "total": 39000 } }
+      if (data && data.meta && typeof data.meta.last_page !== 'undefined' && Array.isArray(data.data)) {
+        fetchedRows = data.data;
+        totalItems = data.meta.total || 0;
+        
+        if (currentPage >= (data.meta.last_page || 1)) {
+          isFinished = true;
+        }
+      }
+      // Fallback: Laravel response()->json($paginator) retorna:
+      // { "data": [...], "total": 39000, "last_page": 16, "current_page": 1 }
+      else if (data && typeof data.total !== 'undefined' && typeof data.last_page !== 'undefined' && Array.isArray(data.data)) {
         fetchedRows = data.data;
         totalItems = data.total || 0;
         
-        // Verifica se chegamos na última página
         if (currentPage >= (data.last_page || 1)) {
           isFinished = true;
         }
-      } 
-      // Formato de API Resource: { data: { data: [...], meta: { total: 3800 } } }
-      else if (data?.data && Array.isArray(data.data.data)) {
-        fetchedRows = data.data.data;
-        totalItems = data.data.total || data.meta?.total || 0;
-        
-        if (currentPage >= (data.data.last_page || data.meta?.last_page || 1)) {
-          isFinished = true;
-        }
-      } 
-      // Array puro
+      }
+      // Array puro (sem paginação)
       else if (Array.isArray(data?.data)) {
         fetchedRows = data.data;
         isFinished = true;
       } else {
-        isFinished = true; // Formato desconhecido
+        console.warn('[SyncEngine] Formato de resposta desconhecido:', JSON.stringify(data).slice(0, 200));
+        isFinished = true;
       }
 
       allFetchedRows = [...allFetchedRows, ...fetchedRows];
