@@ -883,12 +883,12 @@ export default function TabFinanceiro() {
                                         className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
                                     />
                                 </th>
-                                <th className="px-6 py-4">Fatura</th>
-                                <th className="px-6 py-4">Vencimento</th>
-                                <th className="px-6 py-4">Valor</th>
-                                <th className="px-6 py-4">Método</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-center">Ações</th>
+                                <th className="px-4 py-4">Fatura</th>
+                                <th className="hidden md:table-cell px-6 py-4">Vencimento</th>
+                                <th className="px-4 py-4">Valor</th>
+                                <th className="hidden md:table-cell px-6 py-4">Método</th>
+                                <th className="hidden md:table-cell px-6 py-4">Status</th>
+                                <th className="px-4 py-4 text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -918,7 +918,7 @@ export default function TabFinanceiro() {
                                                 className="rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer h-4 w-4"
                                             />
                                         </td>
-                                        <td className="px-6 py-4 font-medium text-gray-900">
+                                        <td className="px-4 py-4 font-medium text-gray-900">
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-xs font-bold">
@@ -935,18 +935,24 @@ export default function TabFinanceiro() {
                                                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
                                                     {invoice.plan?.name || "Avulso"}
                                                 </span>
+                                                <div className="md:hidden mt-2 text-[10px] text-gray-500 font-medium">
+                                                    Venc: {format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                                                </div>
+                                                <div className="md:hidden mt-1">
+                                                    {getStatusBadge(invoice.status, invoice.due_date)}
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-600">
+                                        <td className="hidden md:table-cell px-6 py-4 text-gray-600">
                                             {format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-4">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-semibold text-gray-900">
                                                     R$ {Number(invoice.payable_amount ?? invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </span>
                                                 {invoice.amount !== undefined && invoice.payable_amount !== undefined && Number(invoice.payable_amount) < Number(invoice.amount) && Number(invoice.payable_amount) > 0 && (
-                                                    <span className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                                    <span className="text-[10px] text-gray-500 font-medium mt-0.5 max-w-[120px] leading-tight">
                                                         (Total: R$ {Number(invoice.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Pago: R$ {(Number(invoice.amount) - Number(invoice.payable_amount)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
                                                     </span>
                                                 )}
@@ -957,15 +963,15 @@ export default function TabFinanceiro() {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="hidden md:table-cell px-6 py-4">
                                             <span className="text-[10px] font-bold text-gray-500 uppercase">
                                                 {invoice.payment_method || 'boleto'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="hidden md:table-cell px-6 py-4">
                                             {getStatusBadge(invoice.status, invoice.due_date)}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-4">
                                             <div className="flex justify-center gap-1.5">
                                                 {invoice.status === 'pending' && (
                                                     <>

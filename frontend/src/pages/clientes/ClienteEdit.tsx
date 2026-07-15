@@ -753,11 +753,11 @@ export default function ClienteEdit() {
 
             {/* Dialog/Drawer for Mobile */}
             <Dialog open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
-              <DialogContent className="sm:max-w-md w-full max-h-[90vh] overflow-y-auto p-0 flex flex-col rounded-t-[24px] rounded-b-none bottom-0 top-auto translate-y-0 absolute mt-auto md:rounded-2xl md:relative md:top-1/2 md:-translate-y-1/2 md:bottom-auto md:mt-0 transition-transform">
-                <div className="sticky top-0 bg-white z-10 border-b border-slate-100 px-6 py-4 flex justify-between items-center shadow-sm">
+              <DialogContent className="sm:max-w-md w-full h-[90vh] md:h-auto md:max-h-[90vh] overflow-hidden p-0 flex flex-col rounded-t-[24px] rounded-b-none bottom-0 top-auto translate-y-0 fixed mt-auto md:rounded-2xl md:relative md:top-1/2 md:-translate-y-1/2 md:bottom-auto md:mt-0 transition-transform bg-white">
+                <div className="sticky top-0 bg-white z-10 border-b border-slate-100 px-6 py-4 flex justify-between items-center shadow-sm shrink-0">
                   <DialogTitle className="text-xl font-black text-slate-900">{tabs[step]?.label}</DialogTitle>
                 </div>
-                <div className="p-6 bg-slate-50/50 flex-1">
+                <div className="p-6 bg-slate-50/50 flex-1 overflow-y-auto">
                   {tabs[step]?.label === "Identificação" && <TabIdentificacao />}
                   {tabs[step]?.label === "Endereço" && <TabEndereco />}
                   {tabs[step]?.label === "Contato" && <TabContato />}
