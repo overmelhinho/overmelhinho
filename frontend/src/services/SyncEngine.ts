@@ -129,7 +129,7 @@ export async function syncOfflineDatabase() {
   const toastId = 'offline-sync-toast';
 
   try {
-    const perPage = 2500;
+    const perPage = 1000; // Reduzido de 2500 para 1000 para evitar timeout do Axios e do Nginx/Servidor
     let currentPage = 1;
     let totalItems = 0;
     let allFetchedRows: any[] = [];
