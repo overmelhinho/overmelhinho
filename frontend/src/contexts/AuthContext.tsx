@@ -43,10 +43,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(() => {
-    // Já carregado se tiver token+cache. Precisa de loading apenas se não tiver.
+    // Só precisamos mostrar a tela de "carregando" inicial (spinner) 
+    // se o usuário TIVER um token salvo, mas ainda NÃO TIVER o cache.
+    // Se ele não tem token nenhum, ele com certeza está deslogado, então loading é false.
     const token = localStorage.getItem('token');
     const cached = localStorage.getItem('ov_cached_user');
-    return !(token && cached);
+    return !!(token && !cached);
   });
 
   // Instância do Echo para ouvir sockets realtime
