@@ -151,9 +151,9 @@ export default function MobileMenuDrawer({
                 
                 // Limpa o lastSync para forçar um download visual com porcentagem
                 localStorage.removeItem('last_sync_clientes');
-                await syncOfflineDatabase();
                 
-                onClose(); 
+                onClose(); // Fecha o drawer imediatamente para o usuário ver o toast
+                await syncOfflineDatabase();
               }}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-blue-700 hover:bg-blue-50"
             >
