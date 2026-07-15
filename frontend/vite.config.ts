@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', '*.png', 'icons/*.png'],
       manifest: false, // Usamos o manifest.json do /public diretamente
       workbox: {

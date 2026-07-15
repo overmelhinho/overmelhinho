@@ -27,9 +27,27 @@ export const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserType | null>(null);
-  // ✅ CORRIGIDO: estado explícito de carregamento, separado de user = null
-  const [isLoading, setIsLoading] = useState(true);
+
+  // ── INICIALIZAÇÃO SÍNCRONA ─────────────────────────────────────────────────
+  // Lê o localStorage ANTES do primeiro render. Isso garante que ProtectedRoute
+  // nunca veja user=null+isLoading=false quando há uma sessão válida.
+  const [user, setUser] = useState<UserType | null>(() => {
+    try {
+      const token = localStorage.getItem('token');
+      const cached = localStorage.getItem('ov_cached_user');
+      if (token && cached) {
+        return JSON.parse(cached) as UserType;
+      }
+    } catch {}
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    // Já carregado se tiver token+cache. Precisa de loading apenas se não tiver.
+    const token = localStorage.getItem('token');
+    const cached = localStorage.getItem('ov_cached_user');
+    return !(token && cached);
+  });
 
   // Instância do Echo para ouvir sockets realtime
   const [echoInstance, setEchoInstance] = useState<any>(null);
@@ -101,49 +119,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // ─── STARTUP: Restaura sessão do localStorage ──────────────────────────────
-  // Regra: token + cache = usuário logado. Ponto final.
-  // Só vamos ao servidor se temos o token mas NÃO temos cache (ex: primeiro uso
-  // após instalação do PWA ou cache apagado manualmente).
-  // Isso garante que fechar/abrir o app nunca peça login novamente.
+  // ─── STARTUP: Apenas para o caso de ter token mas NÃO ter cache ─────────────
+  // (ex: primeiro uso após instalação do PWA ou cache apagado manualmente)
+  // Se há token+cache, o useState já restaurou tudo sincronamente acima.
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    
-    if (!token) {
-      // Sem token: não há sessão → vai para Login
-      setIsLoading(false);
-      return;
-    }
-
+    const token = localStorage.getItem('token');
     const cached = localStorage.getItem('ov_cached_user');
-    
-    if (cached) {
-      // Tem token + cache: restaura imediatamente, sem chamar o servidor
-      try {
-        setUser(JSON.parse(cached));
-      } catch {
-        // Cache corrompido: limpa e pede login
-        localStorage.removeItem('ov_cached_user');
-        localStorage.removeItem('token');
-      }
-      setIsLoading(false);
-      return;
-    }
 
-    // Tem token mas SEM cache: valida com o servidor uma vez
-    api.get("/v1/user")
-      .then(({ data }) => {
-        setUser(data);
-        localStorage.setItem('ov_cached_user', JSON.stringify(data));
-      })
-      .catch(() => {
-        // Qualquer falha aqui: limpa o token e pede login
-        setUser(null);
-        localStorage.removeItem('token');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    // Se tem token mas não tem cache, precisa buscar do servidor
+    if (token && !cached) {
+      api.get('/v1/user')
+        .then(({ data }) => {
+          setUser(data);
+          localStorage.setItem('ov_cached_user', JSON.stringify(data));
+        })
+        .catch(() => {
+          setUser(null);
+          localStorage.removeItem('token');
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+    // Todos os outros casos (token+cache ou sem token) já foram tratados pelo useState
   }, []);
 
   // Iniciar Echo dinamicamente após user carregar
