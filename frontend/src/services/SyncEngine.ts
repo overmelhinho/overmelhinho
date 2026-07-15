@@ -118,11 +118,16 @@ if (typeof navigator !== 'undefined' && navigator.onLine) {
   }, 1000); // Aguarda a app inicializar
 }
 
+let isSyncing = false;
+
 /**
  * Baixa o banco de dados Lite completo para uso offline 
  */
 export async function syncOfflineDatabase() {
   if (!navigator.onLine) return;
+  if (isSyncing) return; // Prevents multiple clicks from crashing the tablet!
+  
+  isSyncing = true;
   
   const syncKeyGlobal = 'last_sync_clientes';
   const lastSync = localStorage.getItem(syncKeyGlobal);
@@ -250,6 +255,8 @@ export async function syncOfflineDatabase() {
         toast.error("Falha ao sincronizar banco offline.", { id: toastId, duration: 4000 });
       });
     }
+  } finally {
+    isSyncing = false;
   }
 }
 
