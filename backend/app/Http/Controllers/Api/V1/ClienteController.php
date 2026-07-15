@@ -609,6 +609,12 @@ class ClienteController extends Controller
                 'clientes.status_assinatura',
                 'clientes.possui_publicidade',
                 'clientes.exibir_no_site',
+                'clientes.audit_differences',
+                'clientes.seo_keywords',
+                'clientes.observacoes',
+                'clientes.portfolio_url',
+                'clientes.video',
+                'clientes.contract_ends_at',
                 'clientes.created_at',
                 'clientes.updated_at',
             ]);
