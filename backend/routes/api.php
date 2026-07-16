@@ -271,7 +271,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::patch('/{id}/vendedor', [AutorizacaoController::class, 'transferVendedor']);
         Route::post('/{id}/send-link',       [AutorizacaoController::class, 'sendLink']);
         Route::post('/{id}/justify',         [AutorizacaoController::class, 'justify']);
-        Route::post('/autorizacoes/{id}/assinatura/base64', [AutorizacaoController::class, 'processSignature']);
+        Route::post('/{id}/generate-invoices', [AutorizacaoController::class, 'generateInvoices']);
+        Route::post('/{id}/assinatura/base64', [AutorizacaoController::class, 'processSignature']);
 
         // Alertas Tiny ERP
         Route::get('/alertas/tiny-cancellations', [AutorizacaoController::class, 'getPendingTinyCancellations']);

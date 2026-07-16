@@ -230,6 +230,7 @@ export default function TabFinanceiro() {
             toast.success("Autorização e faturas excluídas!");
             refetchAuths();
             queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+            queryClient.invalidateQueries({ queryKey: ["financial-invoices"] });
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || "Erro ao excluir autorização.");
@@ -264,6 +265,7 @@ export default function TabFinanceiro() {
         onSuccess: () => {
             toast.success("Cobrança(s) gerada(s) com sucesso!");
             queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+            queryClient.invalidateQueries({ queryKey: ["financial-invoices"] });
             queryClient.refetchQueries({ queryKey: ["client-invoices", id] });
             setIsModalOpen(false);
             setInstallments(1);
@@ -291,6 +293,7 @@ export default function TabFinanceiro() {
             queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
             queryClient.invalidateQueries({ queryKey: ["cliente-hub", id] });
             queryClient.invalidateQueries({ queryKey: ["cliente", Number(id)] });
+            queryClient.invalidateQueries({ queryKey: ["financial-invoices"] });
         },
         onError: (error: any) => {
             toast.error(error?.response?.data?.message || "Erro ao dar baixa na fatura.");
@@ -383,6 +386,7 @@ export default function TabFinanceiro() {
             toast.success("Pagamento desfeito com sucesso!", { id: loadingToast });
             setUndoInvoiceId(null);
             queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+            queryClient.invalidateQueries({ queryKey: ["financial-invoices"] });
         } catch (error) {
             console.error("Erro ao desfazer pagamento:", error);
             toast.error("Erro ao desfazer pagamento.");
@@ -428,6 +432,7 @@ export default function TabFinanceiro() {
             queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
             queryClient.invalidateQueries({ queryKey: ["cliente-hub", id] });
             queryClient.invalidateQueries({ queryKey: ["cliente", Number(id)] });
+            queryClient.invalidateQueries({ queryKey: ["financial-invoices"] });
         } catch (error) {
             toast.error("Erro ao realizar baixa em lote.");
         }
@@ -533,6 +538,7 @@ export default function TabFinanceiro() {
             const resp = await axios.post(`/v1/autorizacoes/${authId}/generate-invoices`);
             toast.success(`Sucesso! ${resp.data.invoices_criadas} faturas geradas.`, { id: loadingToast });
             queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+            queryClient.invalidateQueries({ queryKey: ["financial-invoices"] });
             refetchAuths();
         } catch (error: any) {
             const msg = error.response?.data?.message || "Erro ao gerar faturas.";
@@ -1373,6 +1379,7 @@ export default function TabFinanceiro() {
                 onSuccess={() => {
                     refetchAuths();
                     queryClient.invalidateQueries({ queryKey: ["client-invoices", id] });
+                    queryClient.invalidateQueries({ queryKey: ["financial-invoices"] });
                     setIsAssinaturaModalOpen(false);
                 }}
                 autorizacaoId={selectedAuth?.id || null}
