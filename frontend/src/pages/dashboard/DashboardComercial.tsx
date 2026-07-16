@@ -107,9 +107,9 @@ export default function DashboardComercial({ user }: { user: any }) {
                     <h3 className="font-bold text-slate-900 leading-tight">{cliente.nome_fantasia || "Cliente"}</h3>
                     <p className="text-xs font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
                       {cliente.computed_expiration_date 
-                        ? `Vence em: ${new Date(cliente.computed_expiration_date + 'T12:00:00').toLocaleDateString('pt-BR')}` 
+                        ? `Vence em: ${new Date(cliente.computed_expiration_date.split(' ')[0] + 'T12:00:00').toLocaleDateString('pt-BR')}` 
                         : cliente.contract_ends_at
-                          ? `Vence em: ${new Date(cliente.contract_ends_at + 'T12:00:00').toLocaleDateString('pt-BR')}`
+                          ? `Vence em: ${new Date(cliente.contract_ends_at.split(' ')[0] + 'T12:00:00').toLocaleDateString('pt-BR')}`
                           : "Sem vencimento"
                       }
                     </p>
