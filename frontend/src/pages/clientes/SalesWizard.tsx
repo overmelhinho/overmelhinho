@@ -150,6 +150,16 @@ export default function SalesWizard() {
   const { data: cliente, isLoading } = useQuery({
     queryKey: ["cliente", id],
     queryFn: async () => {
+      if (!navigator.onLine) {
+        try {
+          const { get } = await import('idb-keyval');
+          const offlineDb: any[] = (await get('offline_clientes_db')) || [];
+          const localClient = offlineDb.find(c => c.id.toString() === id?.toString());
+          if (localClient) return { data: localClient };
+        } catch (e) {
+          console.error("Erro ao ler cliente offline", e);
+        }
+      }
       const res = await api.get(`/v1/clientes/${id}`);
       return res.data;
     },
