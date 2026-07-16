@@ -832,6 +832,13 @@ class ClienteController extends Controller
                   ->where('data_fim', '>=', \Carbon\Carbon::today());
             });
 
+            // Restaura o selectRaw apenas para esta visualização, 
+            // evitando que quebre o sync offline (que não usa sort=expiring)
+            $query->selectRaw("
+                clientes.*, 
+                (SELECT MAX(data_fim) FROM autorizacoes WHERE autorizacoes.cliente_id = clientes.id AND autorizacoes.status IN ('assinado', 'aguardando_assinatura')) as computed_expiration_date
+            ");
+
             $query->orderByRaw("
                 (SELECT MAX(data_fim) FROM autorizacoes WHERE autorizacoes.cliente_id = clientes.id AND autorizacoes.status IN ('assinado', 'aguardando_assinatura')) ASC
             ");
