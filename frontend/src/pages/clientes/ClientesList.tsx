@@ -333,6 +333,43 @@ export default function ClientesList() {
     placeholderData: (prev: any) => prev,
     staleTime: 60_000,
     queryFn: async () => {
+      if (!navigator.onLine) {
+        try {
+          const { get } = await import('idb-keyval');
+          const offlineDb: any[] = (await get('offline_clientes_db')) || [];
+          
+          let filteredRows = offlineDb;
+          if (searchDebounced) {
+            const qLower = searchDebounced.toLowerCase();
+            filteredRows = filteredRows.filter(r => 
+              (r.nome_fantasia?.toLowerCase() || "").includes(qLower) ||
+              (r.razao_social?.toLowerCase() || "").includes(qLower) ||
+              (r.cpf_cnpj || "").includes(qLower)
+            );
+          }
+          if (tipo !== "all") filteredRows = filteredRows.filter(r => r.tipo_cliente === tipo);
+          if (statusFilter !== "all") filteredRows = filteredRows.filter(r => r.status_assinatura === statusFilter);
+          
+          const perPage = 15; // default pagination
+          const total = filteredRows.length;
+          const start = (page - 1) * perPage;
+          const paginated = filteredRows.slice(start, start + perPage);
+          
+          return {
+             data: paginated,
+             meta: {
+                current_page: page,
+                last_page: Math.ceil(total / perPage) || 1,
+                per_page: perPage,
+                total,
+             }
+          };
+        } catch(e) {
+          console.error('Erro ao ler banco offline na listagem', e);
+          return { data: [], meta: null };
+        }
+      }
+
       const resp = await axios.get("/v1/clientes", {
         params: {
           page,
