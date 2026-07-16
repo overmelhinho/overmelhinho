@@ -108,7 +108,17 @@ export default function Header({ onToggleHelp }: { onToggleHelp?: () => void }) 
           
           {/* 🔒 FASE 4 — Indicador de Fila Offline (Outbox) */}
           {outboxCount > 0 && (
-            <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-amber-700 border border-amber-200 text-xs font-bold animate-pulse" title={`${outboxCount} ações aguardando rede para sincronizar`}>
+            <div 
+              onDoubleClick={() => {
+                if (window.confirm('Forçar limpeza da fila de sincronização? Use apenas se estiver travado.')) {
+                  import('idb-keyval').then(db => {
+                    db.del('offline_outbox').then(() => window.location.reload());
+                  });
+                }
+              }}
+              className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-amber-700 border border-amber-200 text-xs font-bold animate-pulse cursor-pointer hover:bg-amber-100 transition-colors" 
+              title={`Aguardando rede: duplo-clique para forçar limpeza da fila`}
+            >
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
