@@ -62,8 +62,10 @@ export async function processOutbox() {
     // Processa os itens um a um, em ordem de chegada
     const remainingQueue = [...queue];
 
-    for (const item of queue) {
+    for (let i = 0; i < queue.length; i++) {
       if (!navigator.onLine) break; // Caiu a rede no meio do processamento
+      
+      const item = remainingQueue[0];
 
       try {
         // Envia para a API real, ignorando o interceptor offline (precisa de um header flag)
@@ -72,9 +74,6 @@ export async function processOutbox() {
           url: item.url,
           data: item.data,
           headers: {
-            // Não enviamos ...item.headers porque o objeto AxiosHeaders perde o prototype 
-            // no IndexedDB e causa um TypeError interno no Axios 1.x ao ser restaurado!
-            // O próprio interceptor de request (api.ts) vai adicionar o Token JWT fresco.
             'X-From-Outbox': 'true', 
           }
         });
@@ -82,18 +81,22 @@ export async function processOutbox() {
         // Sucesso: remove o item processado da fila
         remainingQueue.shift();
       } catch (err: any) {
+        item.retries = (item.retries || 0) + 1;
         const isNetworkError = !err.response;
         
+        if (item.retries >= 3) {
+           console.error('Falha permanente ou item corrompido após 3 tentativas:', item, err);
+           remainingQueue.shift(); // Remove da fila para não travar os outros itens!
+           continue;
+        }
+        
         if (isNetworkError) {
-          // Erro de rede (ex: instabilidade), para o processamento e deixa na fila
+          // Erro de rede (ex: instabilidade temporária), para o processamento e tenta na próxima vez
           break;
         }
 
-        // Se for erro 400 (Bad Request), 403, 404, etc, o dado é inválido
-        // Falha permanente, incrementa tentativas ou descarta
-        // Por ora, vamos remover para não travar a fila com um erro 422 (validação),
-        // mas o ideal futuro é mover para uma lista de "Atenção Necessária".
-        console.error('Falha permanente ao sincronizar item:', item, err);
+        // Se for erro 400, 403, 422, etc, o dado é inválido, remove imediatamente para não travar a fila.
+        console.error('Falha de validação da API ao sincronizar item:', item, err);
         remainingQueue.shift();
       }
     }
