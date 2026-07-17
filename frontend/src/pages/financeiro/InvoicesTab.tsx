@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "@/services/api";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -121,6 +121,7 @@ const formatInvoiceTime = (dateStr?: string | null) => {
 };
 
 export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (filters: any) => void }) {
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -1568,6 +1569,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                     });
                                     toast.success(actionType === 'paid' ? "Fatura liquidada!" : "Fatura cancelada.");
                                     refetch();
+                                    queryClient.invalidateQueries({ queryKey: ["financial-stats"] });
                                     setIsActionModalOpen(false);
                                 } catch (error) {
                                     toast.error("Erro ao atualizar fatura.");
@@ -1808,6 +1810,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                     }
                                     
                                     refetch();
+                                    queryClient.invalidateQueries({ queryKey: ["financial-stats"] });
                                     setIsEditModalOpen(false);
                                 } catch (error: any) {
                                     const msg = error?.response?.data?.message ?? "Erro ao concluir pagamento.";
