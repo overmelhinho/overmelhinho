@@ -22,11 +22,17 @@ class Cliente extends Model
 
             if (empty($cliente->slug) && !empty($cliente->nome_fantasia)) {
                 // Gera o slug altamente sanitizado
-                $slug = \App\Services\SlugService::create($cliente->nome_fantasia);
+                $originalSlug = \App\Services\SlugService::create($cliente->nome_fantasia);
+                $slug = $originalSlug;
                 
-                // Garante que o slug seja único (adiciona sufixo se necessário)
-                $count = static::where('slug', 'LIKE', "{$slug}%")->where('id', '<>', $cliente->id)->count();
-                $cliente->slug = $count > 0 ? "{$slug}-{$count}" : $slug;
+                // Garante que o slug seja único verificando a existência
+                $counter = 1;
+                while (static::where('slug', $slug)->where('id', '<>', $cliente->id)->exists()) {
+                    $slug = $originalSlug . '-' . $counter;
+                    $counter++;
+                }
+                
+                $cliente->slug = $slug;
             }
         });
     }
