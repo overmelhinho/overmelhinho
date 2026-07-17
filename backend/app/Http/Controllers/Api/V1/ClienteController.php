@@ -971,7 +971,7 @@ class ClienteController extends Controller
         // 2. Se não deu 4, completa com outros random (ainda sem os concorrentes)
         if ($results->count() < 4) {
             $excludeIds = $results->pluck('id')->toArray();
-            $excludeIds[] = $id;
+            $excludeIds[] = $cliente->id;
 
             $others = (clone $baseQuery)
                 ->whereNotIn('id', $excludeIds)
