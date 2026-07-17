@@ -69,7 +69,7 @@ export async function processOutbox() {
 
       try {
         // Envia para a API real, ignorando o interceptor offline (precisa de um header flag)
-        await api.request({
+        const response = await api.request({
           method: item.method,
           url: item.url,
           data: item.data,
@@ -78,6 +78,29 @@ export async function processOutbox() {
           }
         });
         
+        // FASE 5: Idempotência & Dependentes - Se for criação, atualiza o ID temporário na fila
+        const realId = response?.data?.data?.id;
+        if (realId && typeof realId !== 'object') {
+           const offlineId = item.id;
+           for (let j = 1; j < remainingQueue.length; j++) {
+              let futureItem = remainingQueue[j];
+              
+              // Atualiza na URL
+              if (futureItem.url.includes(offlineId)) {
+                 futureItem.url = futureItem.url.replace(offlineId, realId.toString());
+              }
+              
+              // Atualiza no corpo da requisição (Payload JSON)
+              if (futureItem.data) {
+                 let dataStr = typeof futureItem.data === 'string' ? futureItem.data : JSON.stringify(futureItem.data);
+                 if (dataStr.includes(offlineId)) {
+                    dataStr = dataStr.replace(new RegExp(offlineId, 'g'), realId.toString());
+                    futureItem.data = typeof futureItem.data === 'string' ? dataStr : JSON.parse(dataStr);
+                 }
+              }
+           }
+        }
+
         // Sucesso: remove o item processado da fila
         remainingQueue.shift();
       } catch (err: any) {

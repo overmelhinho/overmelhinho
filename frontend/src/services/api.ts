@@ -31,7 +31,7 @@ api.interceptors.request.use(async (config) => {
     // Importa o SyncEngine dinamicamente para evitar ciclo de dependência
     const { addToOutbox } = await import('./SyncEngine');
     
-    await addToOutbox({
+    const id = await addToOutbox({
       method: config.method.toUpperCase() as any,
       url: config.url || '',
       data: config.data,
@@ -43,6 +43,7 @@ api.interceptors.request.use(async (config) => {
     return Promise.reject({
       isOfflineMock: true,
       config,
+      offlineId: id,
     });
   }
 
@@ -56,7 +57,11 @@ api.interceptors.response.use(
     // FASE 4: Se for um erro falso gerado pelo interceptor offline, fingimos sucesso (Optimistic UI)
     if (error.isOfflineMock) {
       return Promise.resolve({
-        data: { success: true, message: 'Salvo offline com sucesso.' },
+        data: { 
+          success: true, 
+          message: 'Salvo offline com sucesso.',
+          data: { id: error.offlineId }
+        },
         status: 200,
         statusText: 'OK',
         headers: {},
