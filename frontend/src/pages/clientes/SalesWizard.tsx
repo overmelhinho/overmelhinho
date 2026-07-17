@@ -295,7 +295,7 @@ export default function SalesWizard() {
       const authId = res.data.data.id;
 
       if (assinaturaData && !assinaturaDispensada) {
-        await api.post(`/v1/autorizacoes/autorizacoes/${authId}/assinatura/base64`, {
+        await api.post(`/v1/autorizacoes/${authId}/assinatura/base64`, {
           assinatura_base64: assinaturaData
         });
       } else if (assinaturaDispensada) {
