@@ -852,7 +852,7 @@ class FinancialController extends Controller
         $validated = $request->validate([
             'amount'            => 'required|numeric|min:0',
             'due_date'          => 'required|date',
-            'justification'     => 'required|string|min:5',
+            'justification'     => 'nullable|string',
             'difference_action' => 'nullable|string|in:discount,redistribute,create_extra,next_installment',
             'extra_due_date'    => 'required_if:difference_action,create_extra|nullable|date',
         ]);

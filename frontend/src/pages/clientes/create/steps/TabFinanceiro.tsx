@@ -1603,7 +1603,7 @@ export default function TabFinanceiro() {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Data de Pagamento</label>
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Data de Vencimento</label>
                                 <Input
                                     type="date" value={editDueDate}
                                     onChange={e => setEditDueDate(e.target.value)}
@@ -1719,7 +1719,7 @@ export default function TabFinanceiro() {
                         })()}
 
                         <div className="space-y-1">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Motivo da Alteração (Obrigatório)</label>
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Motivo da Alteração (Opcional)</label>
                             <Textarea
                                 placeholder="Ex: Negociação comercial, correção de valor..."
                                 value={editJustification}
@@ -1754,7 +1754,7 @@ export default function TabFinanceiro() {
                     <DialogFooter className="gap-2 sm:justify-end">
                         <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
                         <Button
-                            disabled={!editAmount || !editDueDate || editJustification.length < 5 ||
+                            disabled={!editAmount || !editDueDate ||
                                 (editDifferenceAction === 'create_extra' && !editExtraDueDate) ||
                                 isEditSubmitting
                             }
