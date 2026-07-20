@@ -171,6 +171,41 @@ export default function SalesWizard() {
     }
   });
 
+  // Buscar métricas de impacto (Tenta puxar relatório salvo, senão cai pro preview)
+  const { data: analyticsData, isLoading: isLoadingAnalytics } = useQuery({
+    queryKey: ["cliente-analytics", id],
+    queryFn: async () => {
+      try {
+        const reportsRes = await api.get(`/v1/clients/${id}/reports`);
+        if (reportsRes.data && reportsRes.data.length > 0) {
+          const lastReport = reportsRes.data[0];
+          return {
+            source: 'report',
+            period_label: lastReport.period_label,
+            views: lastReport.data.custom_metrics?.views_geral || 0,
+            clicks_site: lastReport.data.custom_metrics?.clicks_waze || 0,
+            clicks_whatsapp: lastReport.data.custom_metrics?.clicks_whats || 0,
+          };
+        }
+      } catch (e) {
+        console.warn("Sem relatório salvo ou erro.", e);
+      }
+
+      // Fallback para GA4 Preview
+      const previewRes = await api.get(`/v1/clients/${id}/reports/preview?period=30d`);
+      const data = previewRes.data;
+      const rawGa4Views = data?.ga4?.total_views || 0;
+      return {
+        source: 'preview',
+        period_label: 'Últimos 30 Dias (GA4)',
+        views: rawGa4Views + (data?.conversions?.db_views || 0),
+        clicks_site: data?.conversions?.waze || 0,
+        clicks_whatsapp: data?.conversions?.whatsapp || 0,
+      };
+    },
+    enabled: !!id && navigator.onLine,
+  });
+
   const handleDataInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
     setDataInicio(newDate);
@@ -396,10 +431,12 @@ export default function SalesWizard() {
           {/* ABA 1: IMPACTO (ANALYTICS) */}
           {step === 'impact' && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-[2rem] p-8 text-white shadow-xl">
-                <p className="text-green-100 font-bold uppercase tracking-widest text-xs mb-2">Visibilidade (Últimos 30 dias)</p>
+              <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden">
+                <p className="text-green-100 font-bold uppercase tracking-widest text-xs mb-2">Visibilidade {analyticsData?.period_label ? `(${analyticsData.period_label})` : '(Carregando...)'}</p>
                 <div className="flex items-end gap-3">
-                  <h3 className="text-6xl font-black tracking-tighter">2.450</h3>
+                  <h3 className="text-6xl font-black tracking-tighter">
+                    {isLoadingAnalytics ? '...' : (analyticsData?.views?.toLocaleString('pt-BR') || '0')}
+                  </h3>
                   <span className="text-green-100 font-medium mb-2">visualizações</span>
                 </div>
                 <p className="mt-4 text-green-50">
@@ -412,14 +449,18 @@ export default function SalesWizard() {
                   <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-4 text-blue-600">
                     <Globe size={20} />
                   </div>
-                  <p className="text-3xl font-black text-slate-900">184</p>
-                  <p className="text-xs text-slate-500 font-bold uppercase mt-1">Cliques no Site</p>
+                  <p className="text-3xl font-black text-slate-900">
+                    {isLoadingAnalytics ? '...' : (analyticsData?.clicks_site || 0)}
+                  </p>
+                  <p className="text-xs text-slate-500 font-bold uppercase mt-1">Cliques no Waze</p>
                 </div>
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                   <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mb-4 text-amber-600">
                     <Phone size={20} />
                   </div>
-                  <p className="text-3xl font-black text-slate-900">42</p>
+                  <p className="text-3xl font-black text-slate-900">
+                    {isLoadingAnalytics ? '...' : (analyticsData?.clicks_whatsapp || 0)}
+                  </p>
                   <p className="text-xs text-slate-500 font-bold uppercase mt-1">Cliques no WhatsApp</p>
                 </div>
               </div>
