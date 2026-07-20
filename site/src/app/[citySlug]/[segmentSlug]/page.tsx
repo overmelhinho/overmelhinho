@@ -121,7 +121,8 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
         topBanner = {
             id: heroAdData.id,
             title: heroAdData.nome,
-            image: midia.desktop?.url || midia.mobile?.url,
+            imageDesktop: midia.desktop?.url || midia.mobile?.url,
+            imageMobile: midia.mobile?.url || midia.desktop?.url,
             link: heroAdData.url || null,
         };
     }
@@ -134,7 +135,8 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
         listAd = {
             id: listAdData.id,
             title: listAdData.nome,
-            image: midia.desktop?.url || midia.mobile?.url,
+            imageDesktop: midia.desktop?.url || midia.mobile?.url,
+            imageMobile: midia.mobile?.url || midia.desktop?.url,
             link: listAdData.url || null,
         };
     }
@@ -184,14 +186,18 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                 </div>
 
                 {/* HERO AD BANNER (PATROCINADO) */}
-                {topBanner && topBanner.image && (
+                {topBanner && (topBanner.imageDesktop || topBanner.imageMobile) && (
                     <section className={`relative group mb-12 ${topBanner.link ? 'cursor-pointer' : 'cursor-default'} lg:max-w-[85%] lg:mx-auto px-6`}>
                         <a href={topBanner.link || '#'} target={topBanner.link && topBanner.link.startsWith('http') ? "_blank" : "_self"} className="block relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden bg-gray-50/50 transition-transform duration-700 hover:scale-[1.01]">
-                            <img 
-                                src={topBanner.image} 
-                                className="w-full h-auto max-h-[350px] lg:max-h-[280px] object-contain mx-auto" 
-                                alt={topBanner.title} 
-                            />
+                            <picture>
+                                <source media="(max-width: 767px)" srcSet={topBanner.imageMobile} />
+                                <source media="(min-width: 768px)" srcSet={topBanner.imageDesktop} />
+                                <img 
+                                    src={topBanner.imageDesktop} 
+                                    className="w-full h-auto max-h-[350px] lg:max-h-[280px] object-contain mx-auto" 
+                                    alt={topBanner.title} 
+                                />
+                            </picture>
                             {topBanner.link && (
                                 <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
                                     <ExternalLink size={14} className="text-white" />
@@ -279,14 +285,18 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                             )}
 
                             {/* BANNER LISTING AD */}
-                            {listAd && listAd.image && (
+                            {listAd && (listAd.imageDesktop || listAd.imageMobile) && (
                                 <section className={`relative group my-12 ${listAd.link ? 'cursor-pointer' : 'cursor-default'} w-full`}>
                                     <a href={listAd.link || '#'} target={listAd.link && listAd.link.startsWith('http') ? "_blank" : "_self"} className="block relative rounded-[2rem] md:rounded-[3rem] overflow-hidden bg-gray-50 shadow-lg transition-transform hover:scale-[1.01]">
-                                        <img 
-                                            src={listAd.image} 
-                                            className="w-full h-auto max-h-[300px] object-cover" 
-                                            alt={listAd.title} 
-                                        />
+                                        <picture>
+                                            <source media="(max-width: 767px)" srcSet={listAd.imageMobile} />
+                                            <source media="(min-width: 768px)" srcSet={listAd.imageDesktop} />
+                                            <img 
+                                                src={listAd.imageDesktop} 
+                                                className="w-full h-auto max-h-[300px] object-cover" 
+                                                alt={listAd.title} 
+                                            />
+                                        </picture>
                                     </a>
                                 </section>
                             )}

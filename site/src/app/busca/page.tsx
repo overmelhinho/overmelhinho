@@ -205,9 +205,8 @@ function SearchContent() {
         return {
             id: ad.id,
             title: ad.nome,
-            image: (typeof window !== 'undefined' && window.innerWidth < 768) 
-                ? (midia.mobile?.url || midia.desktop?.url) 
-                : (midia.desktop?.url || midia.mobile?.url),
+            imageDesktop: midia.desktop?.url || midia.mobile?.url,
+            imageMobile: midia.mobile?.url || midia.desktop?.url,
             link: ad.url || null,
         };
     }, [searchAds]);
@@ -233,9 +232,8 @@ function SearchContent() {
         return {
             id: ad.id,
             title: ad.nome,
-            image: (typeof window !== 'undefined' && window.innerWidth < 768) 
-                ? (midia.mobile?.url || midia.desktop?.url) 
-                : (midia.desktop?.url || midia.mobile?.url),
+            imageDesktop: midia.desktop?.url || midia.mobile?.url,
+            imageMobile: midia.mobile?.url || midia.desktop?.url,
             link: ad.url || null,
         };
     }, [searchAds, heroAd]);
@@ -261,9 +259,8 @@ function SearchContent() {
                 id: ad.id,
                 title: ad.nome,
                 description: `Destaque de ${ad.cliente.nome}`,
-                image: (typeof window !== 'undefined' && window.innerWidth < 768) 
-                    ? (midia.mobile?.url || midia.desktop?.url) 
-                    : (midia.desktop?.url || midia.mobile?.url),
+                imageDesktop: midia.desktop?.url || midia.mobile?.url,
+                imageMobile: midia.mobile?.url || midia.desktop?.url,
                 cta: "Saber Mais",
                 link: ad.cliente.whatsapp ? `https://wa.me/55${ad.cliente.whatsapp.replace(/\D/g, '')}` : `/cliente/${ad.cliente.slug}`,
                 bgColor: "bg-brand-red"
@@ -525,7 +522,7 @@ function SearchContent() {
                     <main className="px-5 py-6 space-y-12 pb-40">
 
                         {/* HERO AD BANNER (PATROCINADO / INSTITUCIONAL) */}
-                        {topBanner && topBanner.image && (
+                        {topBanner && (topBanner.imageDesktop || topBanner.imageMobile) && (
                             <motion.section
                                 initial={{ opacity: 0, y: -20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -538,11 +535,15 @@ function SearchContent() {
                                 }}
                             >
                                 <div className={`relative h-auto md:h-auto rounded-[2rem] md:rounded-[2.5rem] overflow-hidden bg-gray-50/50 transition-transform duration-700 ${topBanner.link ? 'group-hover:scale-[1.01]' : ''}`}>
-                                    <img 
-                                        src={topBanner.image} 
-                                        className="w-full h-auto max-h-[350px] lg:max-h-[280px] object-contain mx-auto" 
-                                        alt={topBanner.title} 
-                                    />
+                                    <picture>
+                                        <source media="(max-width: 767px)" srcSet={topBanner.imageMobile} />
+                                        <source media="(min-width: 768px)" srcSet={topBanner.imageDesktop} />
+                                        <img 
+                                            src={topBanner.imageDesktop} 
+                                            className="w-full h-auto max-h-[350px] lg:max-h-[280px] object-contain mx-auto" 
+                                            alt={topBanner.title} 
+                                        />
+                                    </picture>
                                     {/* Link Indicator (Optional but subtle) */}
                                     {topBanner.link && (
                                         <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/30">
@@ -758,11 +759,15 @@ function SearchContent() {
                                                     }
                                                 }}
                                             >
-                                                <img 
-                                                    src={listAd.image} 
-                                                    className="w-full h-auto max-h-[220px] md:max-h-[260px] object-contain mx-auto" 
-                                                    alt={listAd.title} 
-                                                />
+                                                <picture>
+                                                    <source media="(max-width: 767px)" srcSet={listAd.imageMobile} />
+                                                    <source media="(min-width: 768px)" srcSet={listAd.imageDesktop} />
+                                                    <img 
+                                                        src={listAd.imageDesktop} 
+                                                        className="w-full h-auto max-h-[300px] object-cover" 
+                                                        alt={listAd.title} 
+                                                    />
+                                                </picture>
                                                 {listAd.link && (
                                                     <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center transition-opacity border border-white/30">
                                                         <ExternalLink size={14} className="text-white" />

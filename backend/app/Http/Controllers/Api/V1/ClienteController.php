@@ -57,6 +57,7 @@ class ClienteController extends Controller
     public function indexPublic(Request $request)
     {
         $q = trim((string) ($request->input('q') ?? ''));
+        $q = trim(preg_replace('/[\-_]+/', ' ', $q));
         $q = $this->normalizeQueryTypo($q);
         $perPage = (int) ($request->input('per_page') ?? 15);
         $cityId = $request->input('city_id');
@@ -398,6 +399,7 @@ class ClienteController extends Controller
     public function suggestions(Request $request)
     {
         $q = trim((string) ($request->input('q') ?? ''));
+        $q = trim(preg_replace('/[\-_]+/', ' ', $q));
         $q = $this->normalizeQueryTypo($q);
         $cityId = $request->input('city_id');
 

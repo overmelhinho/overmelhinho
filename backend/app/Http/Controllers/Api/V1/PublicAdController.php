@@ -76,6 +76,7 @@ class PublicAdController extends Controller
 
         // 2) Filtro de Keywords
         if ($keywords) {
+            $keywords = trim(preg_replace('/[\-_]+/', ' ', $keywords));
             $phrases = array_filter(array_map('trim', explode(',', $keywords)));
             if (!empty($phrases)) {
                 $q->whereExists(function ($sub) use ($phrases) {
