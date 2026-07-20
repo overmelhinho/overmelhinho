@@ -700,7 +700,8 @@ class ClienteController extends Controller
 
                 $query->where(function ($sub) use ($q, $qDigits, $unaccentExists) {
                     // Busca por palavras individuais (permite que a ordem das palavras não importe)
-                    $terms = array_filter(explode(' ', $q));
+                    $cleanQ = str_replace([',', '-'], ' ', $q);
+                    $terms = array_filter(explode(' ', $cleanQ));
                     
                     if (count($terms) > 1) {
                         $sub->where(function ($inner) use ($terms, $unaccentExists) {
@@ -745,8 +746,8 @@ class ClienteController extends Controller
                         }
                     }
 
-                    // cpf/cnpj: tenta por dígitos e por texto também (caso venha mascarado)
-                    if ($qDigits !== '') {
+                    // cpf/cnpj: tenta por dígitos apenas se tiver tamanho suficiente para não causar falsos positivos
+                    if ($qDigits !== '' && strlen($qDigits) >= 4) {
                         $sub->orWhere('cpf_cnpj', 'like', "%{$qDigits}%");
                     } else {
                         $sub->orWhere('cpf_cnpj', 'ilike', "%{$q}%");
@@ -761,7 +762,7 @@ class ClienteController extends Controller
                            ->orWhere('telefone_outro', 'ilike', "%{$q}%")
                            ->orWhere('nome_contato', 'ilike', "%{$q}%");
                         
-                        if ($qDigits !== '') {
+                        if ($qDigits !== '' && strlen($qDigits) >= 4) {
                             $cq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_principal, '\D', '', 'g')"), 'like', "%{$qDigits}%")
                                ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone_secundario, '\D', '', 'g')"), 'like', "%{$qDigits}%")
                                ->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(celular, '\D', '', 'g')"), 'like', "%{$qDigits}%")
@@ -769,24 +770,35 @@ class ClienteController extends Controller
                         }
                     });
 
-                    // endereços
-                    $sub->orWhereHas('enderecos', function ($eq) use ($q, $qDigits, $unaccentExists) {
+                    // endereços (busca por palavras-chave concatenando os campos, incluindo numero)
+                    $sub->orWhereHas('enderecos', function ($eq) use ($q, $qDigits, $unaccentExists, $terms) {
                         $eq->where('telefone', 'ilike', "%{$q}%");
-                        if ($qDigits !== '') {
+                        if ($qDigits !== '' && strlen($qDigits) >= 4) {
                             $eq->orWhere(\Illuminate\Support\Facades\DB::raw("regexp_replace(telefone, '\D', '', 'g')"), 'like', "%{$qDigits}%");
                         }
 
-                        if ($unaccentExists) {
-                            $eq->orWhereRaw("unaccent(cidade) ilike unaccent(?)", ["%{$q}%"])
-                               ->orWhereRaw("unaccent(estado) ilike unaccent(?)", ["%{$q}%"])
-                               ->orWhereRaw("unaccent(bairro) ilike unaccent(?)", ["%{$q}%"])
-                               ->orWhereRaw("unaccent(rua) ilike unaccent(?)", ["%{$q}%"]);
-                        } else {
-                            $eq->orWhere('cidade', 'ilike', "%{$q}%")
-                               ->orWhere('estado', 'ilike', "%{$q}%")
-                               ->orWhere('bairro', 'ilike', "%{$q}%")
-                               ->orWhere('rua', 'ilike', "%{$q}%");
-                        }
+                        $concatFields = "COALESCE(rua,'') || ' ' || COALESCE(numero,'') || ' ' || COALESCE(bairro,'') || ' ' || COALESCE(cidade,'') || ' ' || COALESCE(estado,'')";
+                        
+                        $eq->orWhere(function ($innerEq) use ($terms, $concatFields, $unaccentExists, $q) {
+                            if (count($terms) > 1) {
+                                foreach ($terms as $term) {
+                                    $ignoreWords = ['rua', 'avenida', 'av', 'n', 'numero', 'de', 'das', 'dos', 'da', 'do'];
+                                    if (in_array(strtolower($term), $ignoreWords)) continue;
+                                    
+                                    if ($unaccentExists) {
+                                        $innerEq->whereRaw("unaccent($concatFields) ilike unaccent(?)", ["%{$term}%"]);
+                                    } else {
+                                        $innerEq->whereRaw("($concatFields) ilike ?", ["%{$term}%"]);
+                                    }
+                                }
+                            } else {
+                                if ($unaccentExists) {
+                                    $innerEq->whereRaw("unaccent($concatFields) ilike unaccent(?)", ["%{$q}%"]);
+                                } else {
+                                    $innerEq->whereRaw("($concatFields) ilike ?", ["%{$q}%"]);
+                                }
+                            }
+                        });
                     });
 
                     // segmentos
