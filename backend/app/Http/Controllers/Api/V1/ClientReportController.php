@@ -200,7 +200,7 @@ class ClientReportController extends Controller
         $reports = ClientReport::where('cliente_id', $clienteId)
             ->with('generatedBy:id,name')
             ->orderBy('created_at', 'desc')
-            ->get(['id', 'token', 'period_label', 'status', 'viewed_at', 'created_at', 'generated_by']);
+            ->get(['id', 'token', 'period_label', 'status', 'viewed_at', 'created_at', 'generated_by', 'data']);
 
         return response()->json($reports);
     }
