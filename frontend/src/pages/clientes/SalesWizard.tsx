@@ -5,7 +5,7 @@ import api from "@/services/api";
 import { 
   BarChart3, Edit3, FileSignature, 
   ChevronLeft, CheckCircle2, Phone, 
-  Globe, Building2, Calendar, Receipt
+  Globe, Building2, Calendar, Receipt, FileText
 } from "lucide-react";
 import SignaturePad from "@/components/SignaturePad";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -185,6 +185,7 @@ export default function SalesWizard() {
             views: lastReport.data.custom_metrics?.views_geral || 0,
             clicks_site: lastReport.data.custom_metrics?.clicks_waze || 0,
             clicks_whatsapp: lastReport.data.custom_metrics?.clicks_whats || 0,
+            token: lastReport.token,
           };
         }
       } catch (e) {
@@ -465,12 +466,25 @@ export default function SalesWizard() {
                 </div>
               </div>
 
-              <button 
-                onClick={() => setStep('update')}
-                className="w-full mt-4 py-4 rounded-2xl bg-slate-900 text-white font-bold text-lg hover:bg-slate-800 transition shadow-lg"
-              >
-                Prosseguir para Cadastro
-              </button>
+              <div className="pt-4 flex flex-col gap-3">
+                {analyticsData?.token && (
+                  <a 
+                    href={`/relatorio/${analyticsData.token}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-xl shadow-blue-200 flex items-center justify-center gap-2"
+                  >
+                    <FileText size={20} /> Apresentar Relatório Oficial
+                  </a>
+                )}
+
+                <button 
+                  onClick={() => setStep('update')}
+                  className={`w-full py-4 rounded-2xl font-bold text-lg transition shadow-lg flex items-center justify-center gap-2 ${analyticsData?.token ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-none' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                >
+                  Prosseguir para Cadastro {analyticsData?.token ? '➔' : ''}
+                </button>
+              </div>
             </div>
           )}
 
