@@ -216,7 +216,8 @@ function SearchContent() {
         const defaultInstitutional = {
             id: 101,
             title: "Anuncie no O Vermelhinho",
-            image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+            imageDesktop: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+            imageMobile: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
             link: "https://overmelhinho.com.br/anuncie"
         };
 
@@ -239,7 +240,7 @@ function SearchContent() {
     }, [searchAds, heroAd]);
 
     const topBanner = useMemo(() => {
-        if (heroAd && heroAd.image) {
+        if (heroAd && (heroAd.imageDesktop || heroAd.imageMobile)) {
             return {
                 ...heroAd,
                 isInstitutional: false
@@ -866,11 +867,15 @@ function SearchContent() {
                                                                         </div>
                                                                     </div>
                                                                     <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl rotate-3 group-hover/ad:rotate-0 transition-transform duration-500 hidden sm:block">
-                                                                        <img
-                                                                            src={ad.image}
-                                                                            className="w-full h-full object-cover"
-                                                                            alt=""
-                                                                        />
+                                                                        <picture>
+                                                                            <source media="(max-width: 767px)" srcSet={ad.imageMobile} />
+                                                                            <source media="(min-width: 768px)" srcSet={ad.imageDesktop} />
+                                                                            <img
+                                                                                src={ad.imageDesktop}
+                                                                                className="w-full h-full object-cover"
+                                                                                alt=""
+                                                                            />
+                                                                        </picture>
                                                                     </div>
                                                                 </div>
                                                                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
