@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import axios from "@/services/api";
-import {
-    BarChart2, Globe, ArrowLeft, Send,
-    Loader2, ChevronRight, Edit3, Trash2,
-    MessageCircle, MapPin, TrendingUp, Search, Calendar, Plus
+import { 
+    ArrowLeft, Send, Globe, Loader2, Calendar, Edit3, Save, MessageCircle, MapPin, TrendingUp, Search, Eye, Users, Clock, Zap, BarChart2, Check, Plus, Trash2, History, Copy, ExternalLink, Star 
 } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ExpressCalendar } from "@/components/ui/ExpressCalendar";
 
 // ── Componentes de UI ─────────────────────────────────────────────────────────
 
@@ -63,15 +64,33 @@ export default function ClientReportPreviewPage() {
     const navigate = useNavigate();
 
     const [period, setPeriod] = useState("30d");
+    const [customStart, setCustomStart] = useState("");
+    const [customEnd, setCustomEnd] = useState("");
     const [overrides, setOverrides] = useState<Record<string, any>>({});
     const [cities, setCities] = useState<any[]>([]);
     const [notes, setNotes] = useState("");
     const [saved, setSaved] = useState<{ id: number; token: string; link: string } | null>(null);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [history, setHistory] = useState<any[]>([]);
+
+    const fetchHistory = async () => {
+        setIsHistoryOpen(true);
+        try {
+            const res = await axios.get(`/v1/clients/${id}/reports`);
+            setHistory(res.data);
+        } catch (e) {
+            console.error("Erro ao carregar histórico", e);
+        }
+    };
 
     const { data, isLoading, isFetching, error } = useQuery({
-        queryKey: ["report-preview", id, period],
+        queryKey: ["report-preview", id, period, customStart, customEnd],
         queryFn: async () => {
-            const res = await axios.get(`/v1/clients/${id}/reports/preview?period=${period}`);
+            let url = `/v1/clients/${id}/reports/preview?period=${period}`;
+            if (period === "custom" && customStart && customEnd) {
+                url += `&start_date=${customStart}&end_date=${customEnd}`;
+            }
+            const res = await axios.get(url);
             return res.data;
         },
         enabled: !!id,
@@ -85,14 +104,6 @@ export default function ClientReportPreviewPage() {
         }
     }, [data]);
 
-    if (error) {
-        return (
-            <div className="p-20 text-center">
-                <p className="text-red-500 font-black uppercase mb-4">Erro ao carregar dados</p>
-                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-gray-200 rounded-xl font-bold uppercase text-[10px]">Tentar novamente</button>
-            </div>
-        );
-    }
 
     const ga4Data  = data?.ga4 ?? {};
     const convData = data?.conversions ?? {};
@@ -155,7 +166,18 @@ export default function ClientReportPreviewPage() {
     }, [cities]);
 
     // Card Values (Sempre refletem a tabela se não houver override direto)
-    const totalViews  = get('ga4_views',  ga4Data.total_views > 0 ? ga4Data.total_views : (convData.db_views || calculatedTotals.views || 0));
+    const rawGa4Views = ga4Data.total_views > 0 ? ga4Data.total_views : (calculatedTotals.views || 0);
+    
+    // As 6 Métricas Solicitadas
+    const viewsGeral    = get('views_geral',    rawGa4Views + (convData.db_views || 0));
+    const viewsSegmento = get('views_segmento', Math.max(0, rawGa4Views - (calculatedTotals.views || 0)));
+    const viewsCidade   = get('views_cidade',   calculatedTotals.views || 0);
+    const viewsDireto   = get('views_direto',   (convData.db_views || 0) + (data?.portal_searches || 0));
+    const clicksWaze    = get('clicks_waze',    convData.waze || 0);
+    const clicksWhats   = get('clicks_whats',   convData.whatsapp || 0);
+
+    // Variáveis antigas para a tabela
+    const totalViews  = viewsGeral;
     const totalUsers  = get('ga4_users',  ga4Data.total_users > 0 ? ga4Data.total_users : (calculatedTotals.users || 0));
     const totalEvents = get('ga4_events', ga4Data.total_events > 0 ? ga4Data.total_events : (calculatedTotals.events || 0));
     const avgTime     = get('ga4_time',   ga4Data.avg_time || (totalUsers > 0 ? Math.round(calculatedTotals.totalTime / totalUsers) : 0));
@@ -176,13 +198,21 @@ export default function ClientReportPreviewPage() {
                         pct_users: totalUsers > 0 ? Math.round((c.users / totalUsers) * 1000) / 10 : 0,
                     }))
                 },
+                custom_metrics: {
+                    views_geral: viewsGeral,
+                    views_segmento: viewsSegmento,
+                    views_cidade: viewsCidade,
+                    views_direto: viewsDireto,
+                    clicks_waze: clicksWaze,
+                    clicks_whats: clicksWhats,
+                },
                 conversions: {
                     whatsapp: get('whatsapp', convData.whatsapp || 0),
                     waze:     get('waze',     convData.waze || 0),
                     social:   get('social',   convData.social || 0),
                     db_views: get('db_views', convData.db_views || 0),
                 },
-                portal_searches: get('searches', data.portal_searches || 0),
+                portal_searches: get('searches', data?.portal_searches || 0),
             };
 
             const res = await axios.post(`/v1/clients/${id}/reports`, {
@@ -194,6 +224,15 @@ export default function ClientReportPreviewPage() {
         },
         onSuccess: (res) => setSaved(res),
     });
+
+    if (error) {
+        return (
+            <div className="p-20 text-center font-sans">
+                <p className="text-red-500 font-black uppercase mb-4 tracking-widest text-xs">Erro ao carregar dados</p>
+                <button onClick={() => window.location.reload()} className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold uppercase text-[10px] tracking-widest transition-colors">Tentar novamente</button>
+            </div>
+        );
+    }
 
     if (isLoading) return <div className="p-20 text-center font-black animate-pulse uppercase tracking-[0.2em] text-gray-400">Preparando relatório...</div>;
 
@@ -210,17 +249,57 @@ export default function ClientReportPreviewPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button onClick={fetchHistory} className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-widest px-4 h-9 rounded-xl transition-all mr-2">
+                        <History size={14} /> Histórico
+                    </button>
+                    {data?.cliente?.contract_starts_at && data?.cliente?.contract_ends_at && (
+                        <button 
+                            onClick={() => {
+                                setPeriod("custom");
+                                setCustomStart(data.cliente.contract_starts_at.split('T')[0]);
+                                setCustomEnd(data.cliente.contract_ends_at.split('T')[0]);
+                            }}
+                            className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-700 text-[10px] font-black uppercase tracking-widest px-4 h-9 rounded-xl hover:bg-yellow-100 transition-all mr-2"
+                            title="Usar período do contrato vigente"
+                        >
+                            <Star size={14} className="fill-yellow-500 text-yellow-500" /> Contrato Vigente
+                        </button>
+                    )}
                     <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
                         {["30d", "90d", "365d"].map(p => (
                             <button
                                 key={p}
-                                onClick={() => setPeriod(p)}
-                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                onClick={() => { setPeriod(p); setCustomStart(""); setCustomEnd(""); }}
+                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${period === p ? 'bg-white text-[#C00000] shadow-sm ring-1 ring-gray-200' : 'text-gray-400 hover:text-gray-600'}`}
                             >
                                 {p === '365d' ? '1 ano' : p}
                             </button>
                         ))}
                     </div>
+
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 h-9 shadow-sm hover:border-[#C00000] transition-all text-xs font-bold text-gray-700">
+                                <Calendar size={14} className="text-gray-400" />
+                                {customStart && customEnd ? (
+                                    <span>{customStart.split('-').reverse().join('/')} até {customEnd.split('-').reverse().join('/')}</span>
+                                ) : (
+                                    <span className="text-gray-400">Personalizado...</span>
+                                )}
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 border-none bg-transparent shadow-none" align="end">
+                            <ExpressCalendar 
+                                startDate={customStart} 
+                                endDate={customEnd} 
+                                onChange={(start, end) => {
+                                    setCustomStart(start || "");
+                                    setCustomEnd(end || "");
+                                    if (start && end) setPeriod("custom");
+                                }} 
+                            />
+                        </PopoverContent>
+                    </Popover>
                     {saved ? (
                         <a href={saved.link} target="_blank" rel="noreferrer" className="flex items-center gap-2 bg-emerald-600 text-white text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl hover:bg-emerald-700 active:scale-95 transition-all">
                             <Globe size={14} /> Link Gerado
@@ -235,15 +314,15 @@ export default function ClientReportPreviewPage() {
 
             <div className="max-w-5xl mx-auto p-6 space-y-6">
 
-                {/* ── KPIs Hero ────────────────────────────────────────── */}
+                {/* ── KPIs Hero (As 6 Métricas) ────────────────────────────────────────── */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
                     <div className="flex items-center gap-3 mb-8">
                         <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
                             <BarChart2 size={20} />
                         </div>
                         <div>
-                            <h2 className="text-sm font-black text-gray-900 uppercase tracking-tight">Performance de Audiência</h2>
-                            <p className="text-xs text-gray-400 font-medium">Edite os números grandes para distribuir automaticamente na tabela</p>
+                            <h2 className="text-sm font-black text-gray-900 uppercase tracking-tight">Métricas Principais</h2>
+                            <p className="text-xs text-gray-400 font-medium">Você pode revisar e alterar esses números antes de gerar o relatório final</p>
                         </div>
                         <div className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-100 bg-green-50 text-green-700">
                            ● {data?.ga4?.status === 'active' ? 'GA4 Ativo' : 'Dados Locais'}
@@ -251,31 +330,57 @@ export default function ClientReportPreviewPage() {
                         {isFetching && <Loader2 size={16} className="animate-spin text-blue-400 ml-4" />}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                        <EditableNumber 
-                            label="Visualizações" 
-                            value={totalViews} 
-                            onChange={v => { redistributeField('views', v); setOverrides({...overrides, ga4_views: v}); }} 
-                            color="text-blue-600" 
-                        />
-                        <EditableNumber 
-                            label="Pessoas Únicas" 
-                            value={totalUsers} 
-                            onChange={v => { redistributeField('users', v); setOverrides({...overrides, ga4_users: v}); }} 
-                            color="text-purple-600" 
-                        />
-                        <EditableNumber 
-                            label="Tempo Médio (s)" 
-                            value={avgTime} 
-                            onChange={v => setOverrides({ ...overrides, ga4_time: v })} 
-                            color="text-amber-600" 
-                        />
-                        <EditableNumber 
-                            label="Interações Totais" 
-                            value={totalEvents} 
-                            onChange={v => { redistributeField('events', v); setOverrides({...overrides, ga4_events: v}); }} 
-                            color="text-emerald-600" 
-                        />
+                    {/* Divisão: Top Funnel vs Bottom Funnel */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                        {/* Bloco 1: Visualizações / Descoberta */}
+                        <div className="space-y-4">
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b pb-2">Descoberta (Views)</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <EditableNumber 
+                                    label="Views Gerais" 
+                                    value={viewsGeral} 
+                                    onChange={v => setOverrides({...overrides, views_geral: v})} 
+                                    color="text-blue-600" 
+                                />
+                                <EditableNumber 
+                                    label="Views por Segmentos" 
+                                    value={viewsSegmento} 
+                                    onChange={v => setOverrides({...overrides, views_segmento: v})} 
+                                    color="text-indigo-600" 
+                                />
+                                <EditableNumber 
+                                    label="Views por Cidades" 
+                                    value={viewsCidade} 
+                                    onChange={v => setOverrides({...overrides, views_cidade: v})} 
+                                    color="text-teal-600" 
+                                />
+                                <EditableNumber 
+                                    label="Busca Direta (Perfil)" 
+                                    value={viewsDireto} 
+                                    onChange={v => setOverrides({...overrides, views_direto: v})} 
+                                    color="text-amber-600" 
+                                />
+                            </div>
+                        </div>
+
+                        {/* Bloco 2: Ações / Conversões */}
+                        <div className="space-y-4">
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b pb-2">Ações e Contatos (Cliques)</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <EditableNumber 
+                                    label="Cliques no Waze" 
+                                    value={clicksWaze} 
+                                    onChange={v => setOverrides({...overrides, clicks_waze: v})} 
+                                    color="text-sky-600" 
+                                />
+                                <EditableNumber 
+                                    label="Cliques no WhatsApp" 
+                                    value={clicksWhats} 
+                                    onChange={v => setOverrides({...overrides, clicks_whats: v})} 
+                                    color="text-green-600" 
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -297,7 +402,7 @@ export default function ClientReportPreviewPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                                    <th className="px-8 py-4">Cidade / Nome da Página</th>
+                                    <th className="px-8 py-4 w-[60%] min-w-[400px]">Cidade / Nome da Página</th>
                                     <th className="px-6 py-4 text-right">Views</th>
                                     <th className="px-6 py-4 text-right">Usuários</th>
                                     <th className="px-6 py-4 text-right border-l border-gray-100">Eventos</th>
@@ -364,37 +469,7 @@ export default function ClientReportPreviewPage() {
                     </div>
                 </div>
 
-                {/* ── Outras Interações ────────────────────────────────────────── */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 rounded-xl bg-green-50 text-green-600 flex items-center justify-center"><MessageCircle size={16} /></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">WhatsApp</span>
-                        </div>
-                        <EditableNumber label="Cliques" value={get('whatsapp', convData.whatsapp || 0)} onChange={v => setOverrides({ ...overrides, whatsapp: v })} color="text-green-600" />
-                    </div>
-                    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><MapPin size={16} /></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Waze / Maps</span>
-                        </div>
-                        <EditableNumber label="Rotas" value={get('waze', convData.waze || 0)} onChange={v => setOverrides({ ...overrides, waze: v })} color="text-blue-600" />
-                    </div>
-                    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center"><TrendingUp size={16} /></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Social</span>
-                        </div>
-                        <EditableNumber label="Acessos" value={get('social', convData.social || 0)} onChange={v => setOverrides({ ...overrides, social: v })} color="text-purple-600" />
-                    </div>
-                    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center"><Search size={16} /></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Portal</span>
-                        </div>
-                        <EditableNumber label="Buscas" value={get('searches', data?.portal_searches || 0)} onChange={v => setOverrides({ ...overrides, searches: v })} color="text-gray-900" />
-                    </div>
-                </div>
+                {/* ── Tabela (mantida para visualização de GA4 mas sem ser o destaque) ────────────────────────────────────────── */}
 
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
                     <div className="flex items-center gap-2 mb-4">
@@ -410,6 +485,50 @@ export default function ClientReportPreviewPage() {
                 </div>
 
             </div>
+
+            <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+                <DialogContent className="max-w-3xl rounded-3xl p-8 bg-gray-50 border-gray-200 shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black text-gray-900 flex items-center gap-2">
+                            <History size={24} className="text-[#C00000]" /> Histórico de Relatórios Gerados
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-6 max-h-[60vh] overflow-y-auto pr-2">
+                        {history.length === 0 ? (
+                            <div className="p-10 text-center border-2 border-dashed border-gray-200 rounded-3xl">
+                                <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">Nenhum relatório gerado ainda</p>
+                            </div>
+                        ) : (
+                            history.map(h => (
+                                <div key={h.id} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <p className="text-sm font-black text-gray-900">{h.period_label}</p>
+                                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ${h.status === 'viewed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                {h.status === 'viewed' ? 'Visualizado' : 'Gerado (Não Aberto)'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 font-medium">
+                                            Gerado em: {new Date(h.created_at).toLocaleDateString('pt-BR')} às {new Date(h.created_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})} por {h.generated_by?.name || 'Sistema'}
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => {
+                                            navigator.clipboard.writeText(`${window.location.origin}/relatorio/${h.token}`);
+                                            alert("Link copiado!");
+                                        }} className="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors" title="Copiar Link">
+                                            <Copy size={16} />
+                                        </button>
+                                        <a href={`/relatorio/${h.token}`} target="_blank" rel="noreferrer" className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" title="Abrir Relatório">
+                                            <ExternalLink size={16} />
+                                        </a>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

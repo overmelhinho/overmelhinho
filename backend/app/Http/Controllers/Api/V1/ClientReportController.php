@@ -28,6 +28,15 @@ class ClientReportController extends Controller
     {
         $cliente = Cliente::findOrFail($clienteId);
 
+        // Busca o contrato ativo mais recente
+        $autorizacao = \App\Models\Autorizacao::where('cliente_id', $clienteId)
+            ->where('status', 'assinado')
+            ->orderBy('data_inicio', 'desc')
+            ->first();
+
+        $contractStart = $autorizacao ? $autorizacao->data_inicio : null;
+        $contractEnd = $autorizacao ? $autorizacao->data_fim : $cliente->contract_ends_at;
+
         $period    = $request->query('period', '30d');
         $startDate = $request->query('start_date');
         $endDate   = $request->query('end_date');
@@ -116,6 +125,8 @@ class ClientReportController extends Controller
                 'logo_url'       => $cliente->logo_url ?? null,
                 'cidade'         => $cliente->enderecos?->first()?->cidade ?? null,
                 'estado'         => $cliente->enderecos?->first()?->estado ?? null,
+                'contract_starts_at' => $contractStart,
+                'contract_ends_at'   => $contractEnd,
             ],
             'period_label'    => $periodLabel,
             'period'          => $period,

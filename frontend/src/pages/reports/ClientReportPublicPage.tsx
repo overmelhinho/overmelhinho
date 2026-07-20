@@ -6,7 +6,7 @@ import api from "@/services/api";
 import {
     Eye, MessageCircle, MapPin, TrendingUp, Globe,
     Clock, Users, Printer, BarChart2, Zap, Star, Building2,
-    Calendar, ExternalLink, ChevronRight
+    Calendar, ExternalLink, ChevronRight, Search
 } from "lucide-react";
 
 function formatTime(seconds: number): string {
@@ -82,9 +82,14 @@ export default function ClientReportPublicPage() {
     const cliente = report?.cliente ?? {};
     const ga4     = report?.data?.ga4 ?? {};
     const conv    = report?.data?.conversions ?? {};
+    const custom  = report?.data?.custom_metrics ?? {};
     const cities  = ga4?.cities ?? [];
 
-    const totalConversions = (conv.whatsapp ?? 0) + (conv.waze ?? 0) + (conv.social ?? 0);
+    const wazeClicks   = custom.clicks_waze ?? conv.waze ?? 0;
+    const whatsClicks  = custom.clicks_whats ?? conv.whatsapp ?? 0;
+    const socialClicks = conv.social ?? 0;
+
+    const totalConversions = wazeClicks + whatsClicks + socialClicks;
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans print:bg-white pb-20 overflow-x-hidden print:pb-0">
@@ -134,18 +139,18 @@ export default function ClientReportPublicPage() {
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto px-6 py-10 space-y-12">
+            <div className="max-w-4xl mx-auto px-6 py-10 space-y-12 print:space-y-6 print:py-6">
 
-                {/* ── KPIs Hero ────────────────────────────────────────── */}
+                {/* ── KPIs Hero (As 6 Métricas) ────────────────────────────────────────── */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4 print-no-break">
-                    <KpiCard icon={<Eye size={20} />} label="Visualizações" value={ga4.total_views ?? 0} sub="Acessos totais" color="blue" />
-                    <KpiCard icon={<Users size={20} />} label="Pessoas Únicas" value={ga4.total_users ?? 0} sub="Visitantes distintos" color="purple" />
-                    <KpiCard icon={<Clock size={20} />} label="Tempo Médio" value={formatTime(ga4.avg_time ?? 0)} sub="Duração da sessão" color="amber" />
-                    <KpiCard icon={<Zap size={20} />} label="Interações" value={ga4.total_events ?? 0} sub="Ações registradas" color="green" />
+                    <KpiCard icon={<Eye size={20} />} label="Views Gerais" value={custom.views_geral ?? ga4.total_views ?? 0} sub="Acessos Totais" color="blue" />
+                    <KpiCard icon={<BarChart2 size={20} />} label="Views por Segmento" value={custom.views_segmento ?? 0} sub="Impressões na busca" color="purple" />
+                    <KpiCard icon={<Globe size={20} />} label="Views nas Cidades" value={custom.views_cidade ?? 0} sub="Presença regional" color="amber" />
+                    <KpiCard icon={<Search size={20} />} label="Acessos Diretos" value={custom.views_direto ?? 0} sub="Procuraram seu perfil" color="green" />
                 </div>
 
                 {/* ── Seção Tabela Inteligente ─────────────────────────────── */}
-                <section className="print-no-break">
+                <section>
                     <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden p-2 print:border-gray-200 print:rounded-3xl">
                         <div className="px-8 py-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
@@ -184,7 +189,7 @@ export default function ClientReportPublicPage() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 transition-all">
                                     {cities.map((city: any, idx: number) => (
-                                        <tr key={idx} className={`group ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'} print:bg-white`}>
+                                        <tr key={idx} className={`group ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'} print:bg-white print-no-break`}>
                                             <td className="px-8 py-4">
                                                 <p className="text-xs font-bold text-blue-600 truncate max-w-[250px]">{city.title}</p>
                                             </td>
@@ -212,7 +217,7 @@ export default function ClientReportPublicPage() {
                     </div>
                 </section>
 
-                <section className="space-y-6 print-no-break">
+                <section className="space-y-6 print:space-y-4 print-no-break">
                     <div className="flex items-center gap-2 mb-2">
                         <Zap size={18} className="text-emerald-500" />
                         <h2 className="text-sm font-black uppercase tracking-widest text-gray-400">Conversões Coletadas</h2>
@@ -223,21 +228,21 @@ export default function ClientReportPublicPage() {
                             <div className="space-y-4">
                                 <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 print:bg-white"><MessageCircle size={24} /></div>
                                 <div className="space-y-1">
-                                    <p className="text-4xl font-black text-gray-900">{conv.whatsapp ?? 0}</p>
+                                    <p className="text-4xl font-black text-gray-900">{whatsClicks}</p>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-green-700">Cliques no WhatsApp</p>
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 print:bg-white"><MapPin size={24} /></div>
                                 <div className="space-y-1">
-                                    <p className="text-4xl font-black text-gray-900">{conv.waze ?? 0}</p>
+                                    <p className="text-4xl font-black text-gray-900">{wazeClicks}</p>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">Waze / Google Maps</p>
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 print:bg-white"><TrendingUp size={24} /></div>
                                 <div className="space-y-1">
-                                    <p className="text-4xl font-black text-gray-900">{conv.social ?? 0}</p>
+                                    <p className="text-4xl font-black text-gray-900">{socialClicks}</p>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-purple-700">Acessos Sociais</p>
                                 </div>
                             </div>

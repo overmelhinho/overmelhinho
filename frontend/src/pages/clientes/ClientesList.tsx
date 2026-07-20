@@ -778,7 +778,7 @@ export default function ClientesList() {
                             className="px-2 py-1.5 rounded-lg border text-[10px] bg-blue-50 border-blue-100 text-blue-700 hover:bg-blue-100 transition font-bold"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/clientes/${c.id}/hub`);
+                              navigate(`/clientes/hub/${c.id}`);
                             }}
                           >
                             <span className="hidden sm:inline">Relatórios</span>
