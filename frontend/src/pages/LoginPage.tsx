@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "@/services/api";
@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [rateLimited, setRateLimited] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isBloqueado = new URLSearchParams(location.search).get("bloqueado") === "1";
 
   // ─── PWA FIX: Se já estiver logado, sai da tela de login ──────────────────
   // O PWA sempre abre na raiz ("/"). Se o AuthContext restaurou o usuário,
@@ -70,6 +72,15 @@ export default function LoginPage() {
         >
           {({ isSubmitting }) => (
             <Form className="space-y-4">
+              {isBloqueado && (
+                <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg px-4 py-3 text-sm font-medium flex items-start gap-2">
+                  <span className="text-lg leading-none">🔒</span>
+                  <span>
+                    Sua conta foi <strong>bloqueada</strong> por um administrador.
+                    Entre em contato para solicitar o reacesso.
+                  </span>
+                </div>
+              )}
               <div>
                 <label htmlFor="email" className="block text-sm text-gray-700">E-mail</label>
                 <Field

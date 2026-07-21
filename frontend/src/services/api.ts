@@ -82,6 +82,16 @@ api.interceptors.response.use(
         window.location.href = "/login";
       }
     }
+
+    // FASE SEGURANÇA: Trata 403 com blocked:true — usuário bloqueado em tempo real
+    if (error.response?.status === 403 && error.response?.data?.blocked === true) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("ov_cached_user");
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login?bloqueado=1";
+      }
+    }
+
     return Promise.reject(error);
   }
 );
