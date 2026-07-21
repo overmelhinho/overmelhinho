@@ -1,3 +1,24 @@
+export const getPrimaryCityName = (client: any): string => {
+    if (!client) return '';
+    const enderecos = client.enderecos || [];
+    const addressCity = enderecos[0]?.cidade || '';
+    const cidadesAtendidas = client.cidades_atendidas || client.cidadesAtendidas || [];
+
+    if (cidadesAtendidas.length > 0) {
+        const hasAddressCityInServed = cidadesAtendidas.some((c: any) => 
+            c.nome.toLowerCase().trim() === addressCity.toLowerCase().trim()
+        );
+
+        if (hasAddressCityInServed) {
+            return addressCity;
+        }
+
+        return cidadesAtendidas[0].nome || addressCity;
+    }
+
+    return addressCity;
+};
+
 export const getClientSeoUrl = (client: any, currentCityName?: string | null): string => {
     if (!client) return '#';
 
@@ -26,14 +47,7 @@ export const getClientSeoUrl = (client: any, currentCityName?: string | null): s
 
     // Se targetCity for nula (busca global ou cliente não atende a cidade buscada), usamos a principal do cliente
     if (!targetCity) {
-        const enderecos = client.enderecos || [];
-        const cidadesAtendidas = client.cidades_atendidas || client.cidadesAtendidas || [];
-
-        if (enderecos.length > 0 && enderecos[0].cidade) {
-            targetCity = enderecos[0].cidade;
-        } else if (cidadesAtendidas.length > 0 && cidadesAtendidas[0].nome) {
-            targetCity = cidadesAtendidas[0].nome;
-        }
+        targetCity = getPrimaryCityName(client);
     }
 
     // Se o cliente não possui nenhuma cidade, fallback

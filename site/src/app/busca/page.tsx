@@ -39,7 +39,7 @@ import { useLocation } from '@/contexts/LocationContext';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useAds } from '@/hooks/useAds';
 import { useCidades } from '@/hooks/useCidades';
-import { getClientSeoUrl } from '@/utils/seo';
+import { getClientSeoUrl, getPrimaryCityName } from '@/utils/seo';
 import 'leaflet/dist/leaflet.css';
 
 // Importação dinâmica do mapa (sem SSR, obrigatório para Leaflet)
@@ -618,14 +618,14 @@ function SearchContent() {
                                             <div className="flex flex-wrap items-center gap-3">
                                                 <span className="flex items-center text-[10px] font-black text-brand-red uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-xl border border-red-100 shadow-sm">
                                                     <MapPin size={12} className="mr-1.5" /> 
-                                                    {matchPerfeito.enderecos?.[0]?.cidade || 'Local'}
+                                                    {getPrimaryCityName(matchPerfeito) || 'Local'}
                                                 </span>
-                                                {matchPerfeito.enderecos?.[0]?.bairro && matchPerfeito.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
+                                                {matchPerfeito.enderecos?.[0]?.bairro && matchPerfeito.enderecos[0].bairro.toLowerCase() !== 'vazio' && !matchPerfeito.enderecos[0].exibir_apenas_cidade && (
                                                     <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
                                                         {matchPerfeito.enderecos[0].bairro}
                                                     </span>
                                                 )}
-                                                {formatStreetName(matchPerfeito.enderecos?.[0]?.rua) && (
+                                                {formatStreetName(matchPerfeito.enderecos?.[0]?.rua) && !matchPerfeito.enderecos[0].exibir_apenas_cidade && (
                                                     <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 truncate max-w-[150px]" title={formatStreetName(matchPerfeito.enderecos[0].rua) || ''}>
                                                         {formatStreetName(matchPerfeito.enderecos[0].rua)}
                                                     </span>
@@ -720,14 +720,14 @@ function SearchContent() {
                                                         <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
                                                             <span className="flex items-center text-[9px] font-black text-brand-red bg-red-50/80 px-2.5 py-1 rounded-lg border border-red-100 uppercase tracking-wider shadow-sm">
                                                                 <MapPin size={11} className="mr-1" />
-                                                                {item.enderecos?.[0]?.cidade || 'Local'}
+                                                                {getPrimaryCityName(item) || 'Local'}
                                                             </span>
-                                                            {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
+                                                            {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && !item.enderecos[0].exibir_apenas_cidade && (
                                                                 <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[100px]" title={item.enderecos[0].bairro}>
                                                                     {item.enderecos[0].bairro}
                                                                 </span>
                                                             )}
-                                                            {formatStreetName(item.enderecos?.[0]?.rua) && (
+                                                            {formatStreetName(item.enderecos?.[0]?.rua) && !item.enderecos[0].exibir_apenas_cidade && (
                                                                 <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua) || ''}>
                                                                     {formatStreetName(item.enderecos[0].rua)}
                                                                 </span>
@@ -812,14 +812,14 @@ function SearchContent() {
                                                                 <div className="flex flex-wrap items-center gap-2 mt-1">
                                                                     <span className="flex items-center text-[9px] font-black text-brand-red bg-red-50/80 px-2 py-0.5 rounded-lg border border-red-100 uppercase tracking-wider">
                                                                         <MapPin size={10} className="mr-1" />
-                                                                        {item.enderecos?.[0]?.cidade || 'Local'}
+                                                                        {getPrimaryCityName(item) || 'Local'}
                                                                     </span>
-                                                                    {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && (
+                                                                    {item.enderecos?.[0]?.bairro && item.enderecos[0].bairro.toLowerCase() !== 'vazio' && !item.enderecos[0].exibir_apenas_cidade && (
                                                                         <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider">
                                                                             {item.enderecos[0].bairro}
                                                                         </span>
                                                                     )}
-                                                                    {formatStreetName(item.enderecos?.[0]?.rua) && (
+                                                                    {formatStreetName(item.enderecos?.[0]?.rua) && !item.enderecos[0].exibir_apenas_cidade && (
                                                                         <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua) || ''}>
                                                                             {formatStreetName(item.enderecos[0].rua)}
                                                                         </span>

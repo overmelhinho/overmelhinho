@@ -37,9 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const client = await getClient(id);
     if (!client || client.is_inactive_redirect) return { title: 'O Vermelhinho | Guia de Empresas' };
 
-    const address = client.enderecos?.[0] || {};
-    const city = address.cidade || '';
-    const uf = address.estado || 'RS';
+    const { city, uf } = getPrimaryCity(client);
     const segment = client.segmentos?.[0]?.nome || 'Empresa';
     
     // Canonical URL generation based on SEO pattern
@@ -80,9 +78,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         permanentRedirect(`/${city_slug}/${segment_slug}`);
     }
 
-    const address = client.enderecos?.[0] || {};
-    const city = address.cidade || '';
-    const uf = address.estado || 'RS';
+    const { city, uf } = getPrimaryCity(client);
     const segment = client.segmentos?.[0]?.nome || 'Empresa';
     
     // Calcula a nova URL canonical para o redirecionamento 301
@@ -172,4 +168,30 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <ClientProfileClient />
         </>
     );
+}
+
+// Determina qual a cidade principal para redirecionamento canonical
+function getPrimaryCity(client: any): { city: string; uf: string } {
+    const address = client.enderecos?.[0] || {};
+    const addressCity = address.cidade || '';
+    const addressUf = address.estado || 'RS';
+
+    const citiesServed = client.cidades_atendidas || [];
+
+    if (citiesServed.length > 0) {
+        // Se a cidade do endereço estiver na lista de cidades atendidas, ela é a principal
+        const hasAddressCityInServed = citiesServed.some((c: any) => 
+            c.nome.toLowerCase().trim() === addressCity.toLowerCase().trim()
+        );
+
+        if (hasAddressCityInServed) {
+            return { city: addressCity, uf: addressUf };
+        }
+
+        // Se não tiver, considera a primeira cidade atendida
+        const firstServed = citiesServed[0];
+        return { city: firstServed.nome, uf: firstServed.uf || addressUf };
+    }
+
+    return { city: addressCity, uf: addressUf };
 }
