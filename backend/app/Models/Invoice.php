@@ -10,7 +10,6 @@ class Invoice extends Model
         'client_id',
         'plan_id',
         'amount',
-        'amount_paid',
         'due_date',
         'status',
         'tiny_account_id',
@@ -31,7 +30,6 @@ class Invoice extends Model
 
     protected $casts = [
         'amount'          => 'decimal:2',
-        'amount_paid'     => 'decimal:2',
         'permuta_amount'  => 'decimal:2',
         'payable_amount'  => 'decimal:2',
 

@@ -230,8 +230,6 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     const [editPaymentMethod, setEditPaymentMethod] = useState("pix");
     const [editDifferenceAction, setEditDifferenceAction] = useState<"discount" | "redistribute" | "create_extra" | "next_installment">("discount");
     const [editExtraDueDate, setEditExtraDueDate] = useState("");
-    const [editAmountPaid, setEditAmountPaid] = useState("");
-    const [editPaymentDate, setEditPaymentDate] = useState(new Date().toISOString().slice(0, 10));
 
     // Tiny Errors Modal
     const [tinyErrorsOpen, setTinyErrorsOpen] = useState(false);
@@ -1409,8 +1407,6 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                                 <button
                                                                     onClick={() => {
                                                                         setSelectedInvoice(invoice);
-                                                                        setEditAmountPaid("");
-                                                                        setEditPaymentDate(new Date().toISOString().slice(0, 10));
                                                                         setEditAmount(String(invoice.payable_amount ?? invoice.amount));
                                                                         setEditDueDate(invoice.due_date?.slice(0, 10) ?? "");
                                                                         setEditJustification("");
@@ -1604,7 +1600,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                         {/* Campos principais */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Valor da Parcela / Saldo (R$)</label>
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Novo Valor (R$)</label>
                                 <Input
                                     type="number" min="0" step="0.01"
                                     value={editAmount}
@@ -1613,7 +1609,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Data de Vencimento</label>
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Data de Pagamento</label>
                                 <Input
                                     type="date" value={editDueDate}
                                     onChange={e => setEditDueDate(e.target.value)}
@@ -1622,40 +1618,9 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                             </div>
                         </div>
 
-                        {/* Baixa Parcial (Opcional) */}
-                        <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-3 mt-4">
-                            <p className="text-xs font-black text-green-700 uppercase tracking-widest flex items-center gap-2">
-                                💸 Registrar Baixa Parcial (Opcional)
-                            </p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-black text-green-600 uppercase tracking-widest">Valor Recebido (R$)</label>
-                                    <Input
-                                        type="number" min="0" step="0.01"
-                                        placeholder="Ex: 2.79"
-                                        value={editAmountPaid}
-                                        onChange={e => setEditAmountPaid(e.target.value)}
-                                        className="rounded-xl border-green-200 bg-white font-bold text-gray-900"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-black text-green-600 uppercase tracking-widest">Data do Pagamento</label>
-                                    <Input
-                                        type="date"
-                                        value={editPaymentDate}
-                                        onChange={e => setEditPaymentDate(e.target.value)}
-                                        className="rounded-xl border-green-200 bg-white font-bold text-gray-900"
-                                    />
-                                </div>
-                            </div>
-                            <p className="text-[10px] text-green-600 font-bold">
-                                Se preenchido, a parcela continuará em aberto com o saldo restante deduzido do valor pago.
-                            </p>
-                        </div>
-
                         {/* Forma de pagamento */}
                         <div className="space-y-1 mt-4">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Forma de Pagamento (Caso vá concluir/baixar)</label>
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Forma de Pagamento (Caso vá concluir o pagamento)</label>
                             <Select value={editPaymentMethod} onValueChange={setEditPaymentMethod}>
                                 <SelectTrigger className="w-full rounded-xl border-gray-200">
                                     <SelectValue placeholder="Selecione..." />
@@ -1674,7 +1639,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                             const originalAmount = selectedInvoice ? Number(selectedInvoice.payable_amount ?? selectedInvoice.amount) : 0;
                             const newAmt = Number(editAmount);
                             const diff = Math.round((originalAmount - newAmt) * 100) / 100;
-                            if (!editAmount || Math.abs(diff) < 0.01 || editAmountPaid) return null;
+                            if (!editAmount || Math.abs(diff) < 0.01) return null;
 
                             const hasSiblings = selectedInvoice?.group_id && (selectedInvoice.total_parcels ?? 1) > 1;
                             const hasNextSibling = hasSiblings && (invoices ?? []).some(i => 
@@ -1811,7 +1776,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                     <DialogFooter className="gap-2 sm:justify-end flex-wrap">
                         <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
                         <Button
-                            disabled={(!editAmount && !editAmountPaid) || !editDueDate ||
+                            disabled={!editAmount || !editDueDate ||
                                 (editDifferenceAction === 'create_extra' && !editExtraDueDate) ||
                                 isEditSubmitting
                             }
@@ -1822,25 +1787,19 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                 try {
                                     // 1. Salvar edição (se mudou algo ou sempre pra garantir diff logic)
                                     const resEdit = await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/edit`, {
-                                        amount: editAmount ? Number(editAmount) : undefined,
+                                        amount: Number(editAmount),
                                         due_date: editDueDate,
-                                        justification: editJustification || undefined,
+                                        justification: editJustification + " (Edição antes da baixa)",
                                         difference_action: editDifferenceAction,
                                         extra_due_date: editDifferenceAction === 'create_extra' ? editExtraDueDate : undefined,
-                                        amount_paid: editAmountPaid ? Number(editAmountPaid) : undefined,
-                                        payment_date: editPaymentDate || undefined,
-                                        payment_method: editPaymentMethod,
                                     });
 
-                                    // 2. Dar baixa (apenas se não for baixa parcial)
-                                    if (!editAmountPaid) {
-                                        await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/status`, {
-                                            status: 'paid',
-                                            payment_method: editPaymentMethod,
-                                            justification: editJustification || 'Baixa manual e edição confirmadas',
-                                            payment_date: editPaymentDate || undefined,
-                                        });
-                                    }
+                                    // 2. Dar baixa (O ID continua o mesmo, a não ser que tenha sido recriado no tiny, mas o local ID é o mesmo)
+                                    await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/status`, {
+                                        status: 'paid',
+                                        payment_method: editPaymentMethod,
+                                        justification: editJustification || 'Baixa manual e edição confirmadas',
+                                    });
 
                                     if (resEdit.data.tiny_errors?.length > 0) {
                                         toast.success("Liquidado com ressalvas no Tiny ERP!");

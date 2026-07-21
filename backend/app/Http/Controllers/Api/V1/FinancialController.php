@@ -454,13 +454,8 @@ class FinancialController extends Controller
         }
 
         $generatedAt = \Carbon\Carbon::now()->format('d/m/Y H:i');
-        $receiptValue = ($invoice->status === 'pending' && ($invoice->amount_paid ?? 0) > 0)
-            ? (float)$invoice->amount_paid
-            : (float)($invoice->payable_amount ?? $invoice->amount);
-
-        $invoice->amount = $receiptValue;
-        $invoice->payable_amount = $receiptValue;
-        $payableAmount_extenso = $this->valorPorExtenso($receiptValue);
+        $payableAmount = $invoice->payable_amount ?? $invoice->amount;
+        $payableAmount_extenso = $this->valorPorExtenso($payableAmount);
 
         // Carregar Logo em Base64 para o PDF
         $logoPath = public_path('logo-contract.png');
@@ -773,13 +768,12 @@ class FinancialController extends Controller
             'status'         => 'required|in:paid,canceled,pending',
             'justification'  => 'nullable|string',
             'payment_method' => 'nullable|string|in:pix,dinheiro,cartao,boleto',
-            'payment_date'   => 'nullable|date',
         ]);
 
         $updateData = [
             'status'        => $validated['status'],
             'justification' => $validated['justification'] ?? null,
-            'action_date'   => $validated['payment_date'] ?? now(),
+            'action_date'   => now(),
         ];
 
         if (!empty($validated['payment_method'])) {
@@ -856,69 +850,15 @@ class FinancialController extends Controller
         }
 
         $validated = $request->validate([
-            'amount'            => 'required_without:amount_paid|numeric|min:0',
+            'amount'            => 'required|numeric|min:0',
             'due_date'          => 'required|date',
             'justification'     => 'nullable|string',
-            'amount_paid'       => 'nullable|numeric|min:0.01',
-            'payment_method'    => 'nullable|string|in:pix,dinheiro,cartao,boleto',
             'difference_action' => 'nullable|string|in:discount,redistribute,create_extra,next_installment',
             'extra_due_date'    => 'required_if:difference_action,create_extra|nullable|date',
         ]);
 
-        if ($request->filled('amount_paid')) {
-            $paid = (float) $validated['amount_paid'];
-            $oldPayable = (float) ($invoice->payable_amount ?? $invoice->amount);
-            
-            $invoice->amount_paid = round(($invoice->amount_paid ?? 0) + $paid, 2);
-            $invoice->payable_amount = round($oldPayable - $paid, 2);
-            $invoice->action_date = now();
-            
-            if ($invoice->payable_amount <= 0.01) {
-                $invoice->payable_amount = 0;
-                $invoice->status = 'paid';
-            } else {
-                $invoice->status = 'pending';
-            }
-            
-            $invoice->due_date = $validated['due_date'];
-            
-            if (!empty($validated['payment_method'])) {
-                $invoice->payment_method = $validated['payment_method'];
-            }
-            
-            $obs = $validated['justification'] ?? 'Nenhuma';
-            $invoice->justification = "Pago parcial de R$ " . number_format($paid, 2, ',', '.') . " em " . now()->format('d/m/Y') . ". Saldo restante R$ " . number_format($invoice->payable_amount, 2, ',', '.') . ". Obs: " . $obs;
-            
-            $invoice->save();
-            
-            // Sync Tiny
-            $tinyErrors = [];
-            if ($invoice->tiny_account_id) {
-                try {
-                    $invoice->load(['client.enderecos', 'client.contatos', 'plan']);
-                    if ($invoice->payable_amount > 0) {
-                        $tinyData = $this->tinyService->updateReceivable($invoice, $invoice->payable_amount, $validated['due_date']);
-                        $invoice->update([
-                            'tiny_account_id' => $tinyData['tiny_account_id'],
-                            'payment_url'     => $tinyData['payment_url'],
-                        ]);
-                    } else {
-                        $this->tinyService->payReceivable($invoice->tiny_account_id, $paid, 0);
-                    }
-                } catch (\Exception $e) {
-                    $tinyErrors[] = "Erro ao atualizar Tiny: " . $e->getMessage();
-                }
-            }
-            
-            return response()->json([
-                'message' => 'Baixa parcial registrada com sucesso. Saldo restante: R$ ' . number_format($invoice->payable_amount, 2, ',', '.'),
-                'invoice' => $invoice->load(['client', 'plan']),
-                'tiny_errors' => $tinyErrors,
-            ]);
-        }
-
         $oldAmount         = (float) ($invoice->payable_amount ?? $invoice->amount);
-        $newAmount         = (float) ($validated['amount'] ?? $invoice->amount);
+        $newAmount         = (float) $validated['amount'];
         $difference        = round($oldAmount - $newAmount, 2);
         $differenceAction  = $validated['difference_action'] ?? 'discount';
         $justification     = $validated['justification'];
@@ -1179,7 +1119,6 @@ class FinancialController extends Controller
             'ids.*'          => 'exists:invoices,id',
             'payment_method' => 'nullable|string|in:pix,dinheiro,cartao,boleto',
             'justification'  => 'nullable|string',
-            'payment_date'   => 'nullable|date',
         ]);
 
         $invoices = Invoice::whereIn('id', $validated['ids'])
@@ -1198,7 +1137,7 @@ class FinancialController extends Controller
                 'status'         => 'paid',
                 'payment_method' => $validated['payment_method'] ?? $invoice->payment_method ?? 'pix',
                 'justification'  => $validated['justification'] ?? 'Baixa em lote realizada pelo administrativo.',
-                'action_date'    => $validated['payment_date'] ?? now(),
+                'action_date'    => now(),
             ]);
 
             if ($invoice->tiny_account_id) {
@@ -1268,13 +1207,8 @@ class FinancialController extends Controller
             }
 
             $generatedAt = \Carbon\Carbon::now()->format('d/m/Y H:i');
-            $receiptValue = ($invoice->status === 'pending' && ($invoice->amount_paid ?? 0) > 0)
-                ? (float)$invoice->amount_paid
-                : (float)($invoice->payable_amount ?? $invoice->amount);
-
-            $invoice->amount = $receiptValue;
-            $invoice->payable_amount = $receiptValue;
-            $payableAmount_extenso = $this->valorPorExtenso($receiptValue);
+            $payableAmount = $invoice->payable_amount ?? $invoice->amount;
+            $payableAmount_extenso = $this->valorPorExtenso($payableAmount);
 
             $client = $invoice->client;
             if ($client && $client->enderecos) {
@@ -1377,13 +1311,8 @@ class FinancialController extends Controller
                 $authNumero = \App\Models\Autorizacao::where('id', $authId)->value('numero');
             }
 
-            $receiptValue = ($invoice->status === 'pending' && ($invoice->amount_paid ?? 0) > 0)
-                ? (float)$invoice->amount_paid
-                : (float)($invoice->payable_amount ?? $invoice->amount);
-
-            $invoice->amount = $receiptValue;
-            $invoice->payable_amount = $receiptValue;
-            $payableAmount_extenso = $this->valorPorExtenso($receiptValue);
+            $payableAmount = $invoice->payable_amount ?? $invoice->amount;
+            $payableAmount_extenso = $this->valorPorExtenso($payableAmount);
 
             $client = $invoice->client;
             if ($client && $client->enderecos) {
