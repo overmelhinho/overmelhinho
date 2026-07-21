@@ -86,7 +86,8 @@ class UserController extends Controller implements HasMiddleware
         unset($updateData['roles']);
 
         if (!empty($updateData)) {
-            $user->update(array_filter($updateData));
+            // Usa fn($v) => !is_null($v) para preservar valores false (ex: is_active)
+            $user->update(array_filter($updateData, fn($v) => !is_null($v)));
         }
 
         if (array_key_exists('roles', $data)) {
@@ -172,4 +173,6 @@ class UserController extends Controller implements HasMiddleware
             'message' => 'Status do usuário atualizado com sucesso.',
             'is_active' => $user->is_active,
         ]);
+    }
 }
+
