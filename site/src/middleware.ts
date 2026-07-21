@@ -33,16 +33,32 @@ export function middleware(request: NextRequest) {
     return getRedirect('/api/legacy-busca', sp);
   }
 
-  // 2.5. Redirecionamento de busca que caiu direto no /busca com parâmetro segmento (numérico)
-  if (pathname === '/busca' && searchParams.has('segmento')) {
-    const segmento = searchParams.get('segmento');
-    if (segmento && /^\d+$/.test(segmento)) {
+  // 2.5. Redirecionamento de busca que caiu direto no /busca com parâmetro segmento, id_subcategoria ou id_categoria (numérico, ignorando '0')
+  if (pathname === '/busca' && (searchParams.has('segmento') || searchParams.has('id_categoria') || searchParams.has('id_subcategoria'))) {
+    const getValidSegment = () => {
+      for (const key of ['id_subcategoria', 'id_categoria', 'segmento']) {
+        const val = searchParams.get(key);
+        if (val && /^[1-9]\d*$/.test(val)) {
+          return val;
+        }
+      }
+      return null;
+    };
+    const segmento = getValidSegment();
+    if (segmento) {
       const sp = new URLSearchParams();
       sp.set('id_categoria', segmento);
-      // Mantém a cidade caso exista
-      if (searchParams.has('city_id')) {
-        sp.set('id_cidade', searchParams.get('city_id')!);
+      
+      const cityId = searchParams.get('city_id') || searchParams.get('id_cidade');
+      if (cityId && /^[1-9]\d*$/.test(cityId)) {
+        sp.set('id_cidade', cityId);
       }
+      
+      const term = searchParams.get('palavra') || searchParams.get('q');
+      if (term) {
+        sp.set('palavra', term);
+      }
+      
       return getRedirect('/api/legacy-busca', sp);
     }
   }
@@ -59,13 +75,22 @@ export function middleware(request: NextRequest) {
   // 4. Redirecionamento de busca legada: /busca.php?palavra=...
   if (pathname === '/busca.php') {
     const term = searchParams.get('palavra') || '';
-    const idCategoria = searchParams.get('id_categoria');
+    const getValidSegment = () => {
+      for (const key of ['id_subcategoria', 'id_categoria']) {
+        const val = searchParams.get(key);
+        if (val && /^[1-9]\d*$/.test(val)) {
+          return val;
+        }
+      }
+      return null;
+    };
+    const idCategoria = getValidSegment();
     const idCidade = searchParams.get('id_cidade');
 
     if (idCategoria) {
       const sp = new URLSearchParams();
       sp.set('id_categoria', idCategoria);
-      if (idCidade) sp.set('id_cidade', idCidade);
+      if (idCidade && /^[1-9]\d*$/.test(idCidade)) sp.set('id_cidade', idCidade);
       if (term) sp.set('palavra', term);
       return getRedirect('/api/legacy-busca', sp);
     }

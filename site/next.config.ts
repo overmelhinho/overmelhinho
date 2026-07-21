@@ -49,11 +49,6 @@ const nextConfig: NextConfig = {
         source: '/gera-curriculo/:id',
         destination: '/vagas',
         permanent: true,
-      },
-      {
-        source: '/busca.php',
-        destination: '/busca',
-        permanent: true,
       }
     ];
   },

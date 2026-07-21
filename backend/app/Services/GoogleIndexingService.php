@@ -25,6 +25,16 @@ class GoogleIndexingService
         }
     }
 
+    protected $lastError = null;
+
+    /**
+     * Retorna o último erro ocorrido.
+     */
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
     /**
      * Notifica o Google sobre uma URL nova ou atualizada.
      * 
@@ -34,6 +44,7 @@ class GoogleIndexingService
     public function updateUrl(string $url): bool
     {
         if (!$this->indexing) {
+            $this->lastError = "Google Indexing API não inicializada. Verifique se o arquivo JSON de credenciais existe.";
             return false;
         }
 
@@ -42,11 +53,13 @@ class GoogleIndexingService
         $urlNotification->setType('URL_UPDATED');
 
         try {
+            $this->lastError = null;
             $this->indexing->urlNotifications->publish($urlNotification);
             Log::info("Google Indexing API: URL enviada com sucesso -> $url");
             return true;
         } catch (\Exception $e) {
             Log::error("Google Indexing API: Erro ao indexar URL $url -> " . $e->getMessage());
+            $this->lastError = $e->getMessage();
             return false;
         }
     }

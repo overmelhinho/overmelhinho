@@ -20,6 +20,8 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\SyncTinyErpCommand::class,
         \App\Console\Commands\ReconcileTinyInvoicesCommand::class,
         \App\Console\Commands\SendDailyQuotesReport::class,
+        \App\Console\Commands\PopulateIndexingQueue::class,
+        \App\Console\Commands\ProcessIndexingQueue::class,
     ];
 
     /**
@@ -50,6 +52,12 @@ class Kernel extends ConsoleKernel
 
         // 📊 Envia o relatório diário de orçamentos às 08:00 da manhã
         $schedule->command('app:send-daily-quotes-report')->dailyAt('08:00');
+
+        // 🔍 Varre o banco e carrega URLs ativas para fila de indexação (Todo Domingo às 01:00)
+        $schedule->command('seo:populate-indexing-queue')->weeklyOn(0, '01:00');
+
+        // 📡 Envia URLs pendentes para a Google Indexing API diariamente às 02:00
+        $schedule->command('seo:process-indexing-queue')->dailyAt('02:00');
     }
 
     /**
