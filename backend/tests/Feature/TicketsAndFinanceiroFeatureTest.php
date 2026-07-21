@@ -201,4 +201,69 @@ class TicketsAndFinanceiroFeatureTest extends TestCase
             'status' => 'paid'
         ]);
     }
+
+    /** @test */
+    public function it_processes_partial_payments()
+    {
+        // 1. Create a client and plan
+        $client = Cliente::create([
+            'nome_fantasia' => 'Cliente E2E Partial Payment',
+            'tipo_cliente' => 'pagante',
+            'status_assinatura' => 'ativa'
+        ]);
+
+        $plan = Plan::create([
+            'name' => 'Plano Teste Parcial',
+            'price' => 150.00,
+            'billing_cycle' => 'monthly'
+        ]);
+
+        // 2. Create Invoice
+        $payload = [
+            'plan_id' => $plan->id,
+            'due_date' => now()->addDays(10)->format('Y-m-d'),
+            'amount' => 150.00,
+            'payment_method' => 'boleto'
+        ];
+
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->postJson("/api/v1/clientes/{$client->id}/invoices", $payload);
+
+        $response->assertStatus(201);
+        $invoiceId = $response->json('invoices')[0]['id'];
+
+        // 3. Make first partial payment of 50.00
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->patchJson("/api/v1/financial/invoices/{$invoiceId}/edit", [
+                'amount_paid' => 50.00,
+                'due_date' => now()->addDays(5)->format('Y-m-d'),
+                'payment_method' => 'pix',
+                'justification' => 'Primeira baixa parcial'
+            ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('invoices', [
+            'id' => $invoiceId,
+            'amount_paid' => 50.00,
+            'payable_amount' => 100.00,
+            'status' => 'pending'
+        ]);
+
+        // 4. Make second partial payment of 100.00 (settles the balance)
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->patchJson("/api/v1/financial/invoices/{$invoiceId}/edit", [
+                'amount_paid' => 100.00,
+                'due_date' => now()->addDays(5)->format('Y-m-d'),
+                'payment_method' => 'pix',
+                'justification' => 'Segunda baixa parcial e liquidacao'
+            ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('invoices', [
+            'id' => $invoiceId,
+            'amount_paid' => 150.00,
+            'payable_amount' => 0.00,
+            'status' => 'paid'
+        ]);
+    }
 }
