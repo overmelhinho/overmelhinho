@@ -30,6 +30,9 @@ import {
     Info,
     Printer,
     Filter,
+    Smartphone,
+    CreditCard,
+    Barcode,
 } from "lucide-react";
 import { format, isBefore, startOfDay, subDays, isAfter, startOfMonth, endOfMonth, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1407,11 +1410,10 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                                 <button
                                                                     onClick={() => {
                                                                         setSelectedInvoice(invoice);
-                                                                        setEditAmount(String(invoice.payable_amount ?? invoice.amount));
-                                                                        setEditDueDate(invoice.due_date?.slice(0, 10) ?? "");
-                                                                        setEditJustification("");
+                                                                        setActionType('paid');
+                                                                        setJustification("");
                                                                         setEditPaymentMethod(invoice.payment_method || "pix");
-                                                                        setIsEditModalOpen(true);
+                                                                        setIsActionModalOpen(true);
                                                                     }}
                                                                     className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors"
                                                                     title="Dar Baixa (Confirmar Pagamento)"
@@ -1531,6 +1533,37 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
+                        {actionType === 'paid' && (
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-1">
+                                    Forma de Pagamento
+                                </label>
+                                <div className="grid grid-cols-4 gap-2 mt-2 px-1">
+                                    {[
+                                        { id: 'pix', label: 'Pix', icon: <Smartphone size={14} /> },
+                                        { id: 'dinheiro', label: 'Dinheiro', icon: <DollarSign size={14} /> },
+                                        { id: 'cartao', label: 'Cartão', icon: <CreditCard size={14} /> },
+                                        { id: 'boleto', label: 'Boleto', icon: <Barcode size={14} /> }
+                                    ].map(method => (
+                                        <button
+                                            key={method.id}
+                                            type="button"
+                                            onClick={() => setEditPaymentMethod(method.id)}
+                                            className={cn(
+                                                "flex flex-col items-center justify-center py-3 px-1 rounded-2xl border-2 transition-all gap-1.5",
+                                                editPaymentMethod === method.id 
+                                                    ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-100" 
+                                                    : "bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                                            )}
+                                        >
+                                            {method.icon}
+                                            <span className="text-[10px] font-black uppercase tracking-tighter">{method.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
                                 Justificativa (Opcional)
@@ -1565,7 +1598,8 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                 try {
                                     await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/status`, {
                                         status: actionType,
-                                        justification: justification || (actionType === 'paid' ? 'Baixa manual confirmada' : 'Cancelamento manual confirmado')
+                                        justification: justification || (actionType === 'paid' ? 'Baixa manual confirmada' : 'Cancelamento manual confirmado'),
+                                        payment_method: actionType === 'paid' ? editPaymentMethod : undefined,
                                     });
                                     toast.success(actionType === 'paid' ? "Fatura liquidada!" : "Fatura cancelada.");
                                     refetch();
