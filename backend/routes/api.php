@@ -206,6 +206,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('leads/{lead}/converter', [LeadController::class , 'converterOportunidade']);
     Route::post('oportunidades/{oportunidade}/converter-cliente', [OportunidadeController::class , 'converterCliente']);
 
+    Route::patch('users/{id}/toggle-active', [UserController::class, 'toggleActive']);
     Route::apiResource('users', UserController::class);
     Route::get('/dashboard/kpis', [DashboardController::class , 'kpis']);
     Route::get('/dashboard/daily-quote', [DashboardController::class , 'dailyQuote']);

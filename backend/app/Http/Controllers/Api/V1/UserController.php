@@ -33,6 +33,7 @@ class UserController extends Controller implements HasMiddleware
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
+            'is_active' => 'sometimes|boolean',
             'roles'    => 'required|array|min:1',
             'roles.*'  => 'exists:roles,id',
         ]);
@@ -41,6 +42,7 @@ class UserController extends Controller implements HasMiddleware
             'name'     => $data['name'],
             'email'    => $data['email'],
             'password' => bcrypt($data['password']),
+            'is_active' => $data['is_active'] ?? true,
         ]);
 
         // ✅ Importante:
@@ -70,6 +72,7 @@ class UserController extends Controller implements HasMiddleware
             'name'     => 'sometimes|string|max:255',
             'email'    => 'sometimes|email|unique:users,email,' . $id,
             'password' => 'nullable|string|min:6',
+            'is_active' => 'sometimes|boolean',
 
             // ✅ Ajuste seguro:
             // - permite enviar [] para remover todas as roles
@@ -119,7 +122,15 @@ class UserController extends Controller implements HasMiddleware
             'name'             => 'sometimes|string|max:255',
             'email'            => 'sometimes|email|unique:users,email,' . $user->id,
             'current_password' => 'required_with:password|string',
-            'password'         => 'nullable|string|min:6',
+            'password'         => [
+                'nullable',
+                'confirmed',
+                \Illuminate\Validation\Rules\Password::min(8)
+                    ->letters()
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols(),
+            ],
         ]);
 
         if ($request->filled('name')) {
@@ -141,4 +152,24 @@ class UserController extends Controller implements HasMiddleware
             'user'    => $user->load('roles', 'permissions'),
         ]);
     }
+
+    /**
+     * Alterna o status ativo/inativo do usuário.
+     */
+    public function toggleActive($id)
+    {
+        $user = User::findOrFail($id);
+        
+        // Evitar que o admin desative a si próprio por acidente
+        if (auth()->id() == $user->id) {
+            return response()->json(['message' => 'Você não pode desativar a sua própria conta.'], 400);
+        }
+
+        $user->is_active = !$user->is_active;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Status do usuário atualizado com sucesso.',
+            'is_active' => $user->is_active,
+        ]);
 }

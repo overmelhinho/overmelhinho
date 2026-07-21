@@ -15,7 +15,13 @@ class AuthController extends Controller
             return response()->json(['message' => 'Credenciais inválidas'], 401);
         }
 
-        $token = $request->user()->createToken('token')->plainTextToken;
+        $user = Auth::user();
+        if ($user && !$user->is_active) {
+            Auth::logout();
+            return response()->json(['message' => 'Esta conta foi desativada pelo administrador.'], 403);
+        }
+
+        $token = $user->createToken('token')->plainTextToken;
 
         return response()->json(['token' => $token]);
     }
