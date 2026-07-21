@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ResetPasswordMail;
 
 class PasswordResetController extends Controller
 {
@@ -27,10 +29,17 @@ class PasswordResetController extends Controller
             'created_at' => Carbon::now(),
         ]);
 
-        // Em produção: envie o token por e-mail
+        // Envia o e-mail (se houver configuração SMTP ou no log se local)
+        try {
+            Mail::to($request->email)->send(new ResetPasswordMail($token, $request->email));
+        } catch (\Exception $e) {
+            // Apenas ignoramos para não expor erros caso o SMTP não esteja configurado corretamente.
+            // O frontend apenas dirá "se o e-mail existir na base, enviaremos o link".
+        }
+
+        // Retorna sucesso SEM expor o token
         return response()->json([
-            'message' => 'Token de redefinição gerado com sucesso.',
-            'token' => $token, // Remover em produção
+            'message' => 'Se o e-mail estiver cadastrado, um link de redefinição foi enviado.',
         ]);
     }
 

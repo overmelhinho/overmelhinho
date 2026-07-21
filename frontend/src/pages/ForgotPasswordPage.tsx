@@ -5,7 +5,6 @@ import * as Yup from "yup";
 
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
-  const [token, setToken] = useState("");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -18,10 +17,9 @@ export default function ForgotPasswordPage() {
 
         {sent ? (
           <div className="text-center space-y-3">
-            <p className="text-green-600 font-medium">Token de redefinição gerado com sucesso.</p>
-            <p className="bg-gray-100 border font-mono text-sm px-3 py-2 rounded">{token}</p>
-            <p className="text-xs text-gray-500">
-              Em produção, este token seria enviado por e-mail.
+            <p className="text-green-600 font-medium">Link de redefinição enviado!</p>
+            <p className="text-sm text-gray-600">
+              Se o e-mail informado estiver em nossa base de dados, você receberá um link seguro para cadastrar uma nova senha.
             </p>
           </div>
         ) : (
@@ -32,8 +30,7 @@ export default function ForgotPasswordPage() {
             })}
             onSubmit={async (values, { setSubmitting }) => {
               try {
-                const { data } = await axios.post("/v1/password/email", values);
-                setToken(data.token);
+                await axios.post("/v1/password/email", values);
                 setSent(true);
               } catch {
                 alert("Erro ao solicitar redefinição.");

@@ -59,17 +59,13 @@ export default function UserList() {
   };
 
   const handleConfirmToggle = async () => {
-    if (!confirmToggle) return;
-    try {
-      await toggleActive.mutateAsync(confirmToggle.id);
-      toast.success(
-        confirmToggle.is_active
-          ? `Usuário ${confirmToggle.name} foi bloqueado.`
-          : `Usuário ${confirmToggle.name} foi reativado.`
-      );
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Erro ao alterar status do usuário.");
-    } finally {
+    if (confirmToggle) {
+      try {
+        await toggleActive.mutateAsync(confirmToggle.id);
+        toast.success(`Usuário ${confirmToggle.is_active === false ? "reativado" : "bloqueado"} com sucesso.`);
+      } catch (err: any) {
+        toast.error(err.response?.data?.message || "Erro ao alterar status do usuário.");
+      }
       setConfirmToggle(null);
     }
   };
@@ -218,7 +214,6 @@ export default function UserList() {
         </div>
       </CardContent>
 
-      {/* Modal de Confirmar Exclusão */}
       <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -238,7 +233,6 @@ export default function UserList() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal de Confirmar Bloquear/Reativar */}
       <AlertDialog open={!!confirmToggle} onOpenChange={(open) => !open && setConfirmToggle(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

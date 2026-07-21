@@ -166,8 +166,14 @@ class UserController extends Controller implements HasMiddleware
             return response()->json(['message' => 'Você não pode desativar a sua própria conta.'], 400);
         }
 
-        $user->is_active = !$user->is_active;
-        $user->save();
+        // Usa DB::raw para enviar literal boolean do PostgreSQL (true/false),
+        // evitando o type mismatch que ocorre quando PDO envia 0/1 (integer).
+        $newValue = !((bool) $user->is_active);
+        \DB::table('users')
+            ->where('id', $user->id)
+            ->update(['is_active' => \DB::raw($newValue ? 'true' : 'false')]);
+
+        $user->refresh();
 
         return response()->json([
             'message' => 'Status do usuário atualizado com sucesso.',
@@ -175,4 +181,3 @@ class UserController extends Controller implements HasMiddleware
         ]);
     }
 }
-

@@ -27,9 +27,9 @@ export default function ProtectedRoute({ perms = [], children }: ProtectedRouteP
 
   // Garante arrays válidos
   const userPermissions: string[] = Array.isArray(user?.permissions) ? user.permissions : [];
-  // ✅ CORRIGIDO: comparação case-insensitive para o role Admin
+  // ✅ CORRIGIDO: suporta roles como string[] OU objeto[] {id, name, ...}
   const userRoles: string[] = Array.isArray(user?.roles)
-    ? user.roles.map((r) => r.toLowerCase())
+    ? user.roles.map((r) => (typeof r === "string" ? r : r?.name ?? "").toLowerCase())
     : [];
 
   // Libera acesso se: não exige perms OU user tem a perm OU user é Admin (qualquer capitalização)
