@@ -1515,106 +1515,151 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
 
             {/* Action Modal (Paid/Cancel) */}
             <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
-                <DialogContent className="sm:max-w-md rounded-3xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-black flex items-center gap-2">
-                            {actionType === 'paid' ? (
-                                <><CheckCircle2 className="text-green-600" /> Confirmar Pagamento</>
-                            ) : (
-                                <><Trash2 className="text-red-600" /> Confirmar Cancelamento</>
-                            )}
-                        </DialogTitle>
-                        <DialogDescription className="font-medium">
-                            {actionType === 'paid'
-                                ? "Você está marcando esta fatura como paga manualmente. Como o pagamento foi realizado?"
-                                : "Você está cancelando esta fatura. Qual o motivo do cancelamento?"
-                            }
-                        </DialogDescription>
-                    </DialogHeader>
+                <DialogContent className={cn(
+                    "rounded-[32px] border-none p-8 max-w-md shadow-2xl bg-white",
+                    actionType === 'canceled' && "sm:max-w-md rounded-3xl p-6"
+                )}>
+                    {actionType === 'paid' ? (
+                        <>
+                            <div className="flex flex-col items-center text-center">
+                                <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
+                                    <DollarSign size={42} />
+                                </div>
+                                <h3 className="text-2xl font-black text-gray-900 tracking-tight">
+                                    Confirmar Pagamento?
+                                </h3>
+                                <p className="text-gray-500 font-medium px-4 mt-2 text-sm">
+                                    Selecione o método utilizado e confirme a liquidação da fatura.
+                                </p>
+                            </div>
 
-                    <div className="space-y-4 py-4">
-                        {actionType === 'paid' && (
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-1">
-                                    Forma de Pagamento
-                                </label>
-                                <div className="grid grid-cols-4 gap-2 mt-2 px-1">
-                                    {[
-                                        { id: 'pix', label: 'Pix', icon: <Smartphone size={14} /> },
-                                        { id: 'dinheiro', label: 'Dinheiro', icon: <DollarSign size={14} /> },
-                                        { id: 'cartao', label: 'Cartão', icon: <CreditCard size={14} /> },
-                                        { id: 'boleto', label: 'Boleto', icon: <Barcode size={14} /> }
-                                    ].map(method => (
-                                        <button
-                                            key={method.id}
-                                            type="button"
-                                            onClick={() => setEditPaymentMethod(method.id)}
-                                            className={cn(
-                                                "flex flex-col items-center justify-center py-3 px-1 rounded-2xl border-2 transition-all gap-1.5",
-                                                editPaymentMethod === method.id 
-                                                    ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-100" 
-                                                    : "bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100 hover:text-gray-500"
-                                            )}
-                                        >
-                                            {method.icon}
-                                            <span className="text-[10px] font-black uppercase tracking-tighter">{method.label}</span>
-                                        </button>
-                                    ))}
+                            <div className="grid grid-cols-4 gap-2 mt-6 px-2">
+                                {[
+                                    { id: 'pix', label: 'Pix', icon: <Smartphone size={14} /> },
+                                    { id: 'dinheiro', label: 'Dinheiro', icon: <DollarSign size={14} /> },
+                                    { id: 'cartao', label: 'Cartão', icon: <CreditCard size={14} /> },
+                                    { id: 'boleto', label: 'Boleto', icon: <Barcode size={14} /> }
+                                ].map(method => (
+                                    <button
+                                        key={method.id}
+                                        type="button"
+                                        onClick={() => setEditPaymentMethod(method.id)}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center py-3 px-1 rounded-2xl border-2 transition-all gap-1.5",
+                                            editPaymentMethod === method.id 
+                                                ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-100" 
+                                                : "bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                                        )}
+                                    >
+                                        {method.icon}
+                                        <span className="text-[10px] font-black uppercase tracking-tighter">{method.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase text-center leading-tight">
+                                    O status será alterado para <span className="text-emerald-600">PAGO</span> e sincronizado com o <b>Tiny ERP</b>.
+                                </p>
+                            </div>
+
+                            <div className="mt-8 flex flex-col sm:flex-row gap-3 w-full">
+                                <Button 
+                                    variant="outline"
+                                    onClick={() => setIsActionModalOpen(false)}
+                                    disabled={isSubmitting}
+                                    className="flex-1 h-14 rounded-2xl border border-gray-100 bg-white font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-500 transition-all uppercase text-[10px]"
+                                >
+                                    Voltar
+                                </Button>
+                                <Button 
+                                    disabled={isSubmitting}
+                                    onClick={async () => {
+                                        if (!selectedInvoice || !actionType) return;
+                                        setIsSubmitting(true);
+                                        try {
+                                            await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/status`, {
+                                                status: 'paid',
+                                                justification: 'Baixa manual confirmada',
+                                                payment_method: editPaymentMethod,
+                                            });
+                                            toast.success("Fatura liquidada!");
+                                            refetch();
+                                            queryClient.invalidateQueries({ queryKey: ["financial-stats"] });
+                                            setIsActionModalOpen(false);
+                                        } catch (error) {
+                                            toast.error("Erro ao atualizar fatura.");
+                                        } finally {
+                                            setIsSubmitting(false);
+                                        }
+                                    }}
+                                    className="flex-1 h-14 rounded-2xl bg-green-600 hover:bg-green-700 font-black text-white shadow-lg shadow-green-100 transition-all uppercase text-[10px]"
+                                >
+                                    {isSubmitting ? "Processando..." : "Sim, Confirmar"}
+                                </Button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-black flex items-center gap-2">
+                                    <Trash2 className="text-red-600" /> Confirmar Cancelamento
+                                </DialogTitle>
+                                <DialogDescription className="font-medium">
+                                    Você está cancelando esta fatura. Qual o motivo do cancelamento?
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                                        Justificativa (Opcional)
+                                    </label>
+                                    <Textarea
+                                        placeholder="Ex: Erro no valor, cliente desistiu, faturamento duplicado..."
+                                        value={justification}
+                                        onChange={(e) => setJustification(e.target.value)}
+                                        className="min-h-[100px] rounded-2xl border-gray-200 focus:ring-red-500"
+                                    />
                                 </div>
                             </div>
-                        )}
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
-                                Justificativa (Opcional)
-                            </label>
-                            <Textarea
-                                placeholder={actionType === 'paid' ? "Ex: Pago via PIX direto, Transferência bancária..." : "Ex: Erro no valor, cliente desistiu, faturamento duplicado..."}
-                                value={justification}
-                                onChange={(e) => setJustification(e.target.value)}
-                                className="min-h-[100px] rounded-2xl border-gray-200 focus:ring-red-500"
-                            />
-                        </div>
-                    </div>
-
-                    <DialogFooter className="gap-2 sm:justify-end">
-                        <Button
-                            variant="secondary"
-                            onClick={() => setIsActionModalOpen(false)}
-                            className="rounded-xl font-bold"
-                        >
-                            Voltar
-                        </Button>
-                        <Button
-                            variant={actionType === 'paid' ? 'default' : 'destructive'}
-                            disabled={isSubmitting}
-                            className={cn(
-                                "rounded-xl font-black px-8",
-                                actionType === 'paid' && "bg-green-600 hover:bg-green-700"
-                            )}
-                            onClick={async () => {
-                                if (!selectedInvoice || !actionType) return;
-                                setIsSubmitting(true);
-                                try {
-                                    await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/status`, {
-                                        status: actionType,
-                                        justification: justification || (actionType === 'paid' ? 'Baixa manual confirmada' : 'Cancelamento manual confirmado'),
-                                        payment_method: actionType === 'paid' ? editPaymentMethod : undefined,
-                                    });
-                                    toast.success(actionType === 'paid' ? "Fatura liquidada!" : "Fatura cancelada.");
-                                    refetch();
-                                    queryClient.invalidateQueries({ queryKey: ["financial-stats"] });
-                                    setIsActionModalOpen(false);
-                                } catch (error) {
-                                    toast.error("Erro ao atualizar fatura.");
-                                } finally {
-                                    setIsSubmitting(false);
-                                }
-                            }}
-                        >
-                            {isSubmitting ? "Processando..." : "Confirmar Ação"}
-                        </Button>
-                    </DialogFooter>
+                            <DialogFooter className="gap-2 sm:justify-end">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setIsActionModalOpen(false)}
+                                    className="rounded-xl font-bold"
+                                >
+                                    Voltar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    disabled={isSubmitting}
+                                    className="rounded-xl font-black px-8"
+                                    onClick={async () => {
+                                        if (!selectedInvoice || !actionType) return;
+                                        setIsSubmitting(true);
+                                        try {
+                                            await axios.patch(`/v1/financial/invoices/${selectedInvoice.id}/status`, {
+                                                status: 'canceled',
+                                                justification: justification || 'Cancelamento manual confirmado'
+                                            });
+                                            toast.success("Fatura cancelada.");
+                                            refetch();
+                                            queryClient.invalidateQueries({ queryKey: ["financial-stats"] });
+                                            setIsActionModalOpen(false);
+                                        } catch (error) {
+                                            toast.error("Erro ao atualizar fatura.");
+                                        } finally {
+                                            setIsSubmitting(false);
+                                        }
+                                    }}
+                                >
+                                    {isSubmitting ? "Processando..." : "Confirmar Ação"}
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
 
