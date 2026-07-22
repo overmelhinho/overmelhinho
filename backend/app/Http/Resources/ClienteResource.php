@@ -56,6 +56,7 @@ class ClienteResource extends JsonResource
             'exibir_data_fundacao' => filter_var($this->exibir_data_fundacao ?? true, FILTER_VALIDATE_BOOLEAN),
             'horario_atendimento' => $this->horario_atendimento,
             'observacoes_horario' => $this->observacoes_horario,
+            'is_horario_marcado' => filter_var($this->is_horario_marcado ?? false, FILTER_VALIDATE_BOOLEAN),
             'legacy_horario' => $this->legacy_horario,
             'beneficios' => is_string($this->beneficios) ? (json_decode($this->beneficios, true) ?: []) : ($this->beneficios ?: []),
 

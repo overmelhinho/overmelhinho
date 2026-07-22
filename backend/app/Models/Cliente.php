@@ -78,6 +78,7 @@ class Cliente extends Model
         'beneficios',
         'horario_atendimento',
         'observacoes_horario',
+        'is_horario_marcado',
         'google_place_id',
         'data_fundacao',
         'tipo_arquivo_midia',

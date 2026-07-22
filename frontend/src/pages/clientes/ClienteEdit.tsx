@@ -1,7 +1,7 @@
 // /var/www/frontend/src/pages/clientes/ClienteEdit.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import toast from "react-hot-toast";
@@ -74,6 +74,7 @@ export default function ClienteEdit() {
   const clienteId = Number(id);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
 
   const initialStep = useMemo(() => {
     const s = searchParams.get("step");
@@ -257,6 +258,7 @@ export default function ClienteEdit() {
         ? c.horario_atendimento
         : [],
       observacoes_horario: c?.observacoes_horario || "",
+      is_horario_marcado: c?.is_horario_marcado === true || c?.is_horario_marcado === "true",
       data_fundacao: c?.data_fundacao ? c.data_fundacao.split("T")[0] : "",
       google_place_id: c?.google_place_id || "",
       exibir_data_fundacao: c?.exibir_data_fundacao === "true" || c?.exibir_data_fundacao === true ? true : false,
@@ -463,6 +465,7 @@ export default function ClienteEdit() {
               exibir_data_fundacao: values.exibir_data_fundacao,
               horario_atendimento: values.horario_atendimento || [],
               observacoes_horario: values.observacoes_horario || null,
+              is_horario_marcado: values.is_horario_marcado || false,
               reviews: values.reviews || [],
               beneficios: values.beneficios || [],
               tipo_arquivo_midia: values.tipo_arquivo_midia || "catalogo",
@@ -598,6 +601,8 @@ export default function ClienteEdit() {
             }
 
             toast.dismiss(loadingToast);
+            queryClient.invalidateQueries({ queryKey: ["clientes"] });
+            queryClient.invalidateQueries({ queryKey: ["cliente", clienteId] });
             toast.success("Cliente atualizado com sucesso!");
             navigate("/clientes");
           } catch (err: any) {

@@ -559,7 +559,7 @@ class ClienteController extends Controller
                     'type' => 'client',
                     'priority' => $isPagante,
                     'seo_url' => $seoUrl ?: ("/cliente/" . ($c->slug ?: $c->id)),
-                    'street' => $c->enderecos->first() ? $c->enderecos->first()->rua : null,
+                    'street' => $c->enderecos->first() ? trim(($c->enderecos->first()->tipo_logradouro && strtolower($c->enderecos->first()->tipo_logradouro) !== 'outro' && !\Illuminate\Support\Str::startsWith(strtolower($c->enderecos->first()->rua), strtolower($c->enderecos->first()->tipo_logradouro)) ? $c->enderecos->first()->tipo_logradouro . ' ' : '') . $c->enderecos->first()->rua) : null,
                     'city' => $c->enderecos->first() ? $c->enderecos->first()->cidade : null,
                     'rating' => $c->reviews_count > 0 ? round((float)$c->reviews_avg_rating, 1) : null
                 ];
@@ -1269,6 +1269,7 @@ public function historico(Request $request, int $id)
                 'banner_url' => 'nullable|string|max:255',
                 'horario_atendimento' => 'nullable',
                 'observacoes_horario' => 'nullable|string',
+                'is_horario_marcado'  => 'nullable|boolean',
 
                 'generate_seo_keywords' => 'nullable|boolean',
                 'seo_keywords_text'     => 'nullable|string',
@@ -1314,6 +1315,9 @@ public function historico(Request $request, int $id)
             }
             if (Schema::hasColumn('clientes', 'observacoes_horario')) {
                 $clienteData['observacoes_horario'] = $validated['observacoes_horario'] ?? null;
+            }
+            if (Schema::hasColumn('clientes', 'is_horario_marcado')) {
+                $clienteData['is_horario_marcado'] = filter_var($validated['is_horario_marcado'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
             }
 
             if (Schema::hasColumn('clientes', 'seo_keywords_source')) {
@@ -1752,6 +1756,7 @@ public function historico(Request $request, int $id)
                 'banner_url' => 'nullable|string|max:255',
                 'horario_atendimento' => 'nullable',
                 'observacoes_horario' => 'nullable|string',
+                'is_horario_marcado'  => 'nullable|boolean',
 
                 'generate_seo_keywords' => 'nullable|boolean',
                 'seo_keywords_text'     => 'nullable|string',
@@ -1859,6 +1864,10 @@ public function historico(Request $request, int $id)
 
             if ($request->has('observacoes_horario')) {
                 $clienteData['observacoes_horario'] = $request->input('observacoes_horario');
+            }
+
+            if ($request->has('is_horario_marcado')) {
+                $clienteData['is_horario_marcado'] = filter_var($request->input('is_horario_marcado'), FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
             }
 
             if ($request->has('google_place_id')) {

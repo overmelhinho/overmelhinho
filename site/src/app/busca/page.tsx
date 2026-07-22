@@ -58,6 +58,10 @@ import { Suspense } from 'react';
 const getTodayStatus = (client: any) => {
     if (!client || client.tipo_cliente !== 'pagante' || !['ativa', 'ativo', 'inadimplente'].includes(client.status_assinatura)) return null;
     
+    if (client.is_horario_marcado) {
+        return { open: true, label: 'Com Horário Marcado', special: true };
+    }
+
     let schedule = [];
     if (Array.isArray(client.horario_atendimento)) {
         schedule = client.horario_atendimento;
@@ -117,14 +121,21 @@ const getTodayStatus = (client: any) => {
     return { open: false, label: 'Fechado' };
 };
 
-const formatStreetName = (street: string | null | undefined) => {
+const formatStreetName = (street: string | null | undefined, type?: string | null) => {
     if (!street || street.toLowerCase() === 'não informado' || street.toLowerCase() === 'vazio') return null;
-    const s = street.trim();
-    const lower = s.toLowerCase();
-    if (!lower.startsWith('rua') && !lower.startsWith('av') && !lower.startsWith('avenida') && !lower.startsWith('rod') && !lower.startsWith('br') && !lower.startsWith('rs') && !lower.startsWith('estrada') && !lower.startsWith('travessa') && !lower.startsWith('praça') && !lower.startsWith('praca')) {
-        return `Rua ${s}`;
+    
+    let fullStreet = street.trim();
+    if (type && type.trim() && type.toLowerCase() !== 'outro') {
+        if (!fullStreet.toLowerCase().startsWith(type.toLowerCase())) {
+            fullStreet = `${type.trim()} ${fullStreet}`;
+        }
     }
-    return s;
+    
+    const lower = fullStreet.toLowerCase();
+    if (!lower.startsWith('rua') && !lower.startsWith('av') && !lower.startsWith('avenida') && !lower.startsWith('rod') && !lower.startsWith('br') && !lower.startsWith('rs') && !lower.startsWith('estrada') && !lower.startsWith('travessa') && !lower.startsWith('praça') && !lower.startsWith('praca')) {
+        return `Rua ${fullStreet}`;
+    }
+    return fullStreet;
 };
 
 
@@ -625,14 +636,14 @@ function SearchContent() {
                                                         {matchPerfeito.enderecos[0].bairro}
                                                     </span>
                                                 )}
-                                                {formatStreetName(matchPerfeito.enderecos?.[0]?.rua) && !matchPerfeito.enderecos[0].exibir_apenas_cidade && (
-                                                    <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 truncate max-w-[150px]" title={formatStreetName(matchPerfeito.enderecos[0].rua) || ''}>
-                                                        {formatStreetName(matchPerfeito.enderecos[0].rua)}
+                                                {formatStreetName(matchPerfeito.enderecos?.[0]?.rua, matchPerfeito.enderecos?.[0]?.tipo_logradouro) && !matchPerfeito.enderecos[0].exibir_apenas_cidade && (
+                                                    <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 truncate max-w-[150px]" title={formatStreetName(matchPerfeito.enderecos[0].rua, matchPerfeito.enderecos[0].tipo_logradouro) || ''}>
+                                                        {formatStreetName(matchPerfeito.enderecos[0].rua, matchPerfeito.enderecos[0].tipo_logradouro)}
                                                     </span>
                                                 )}
                                                 {getTodayStatus(matchPerfeito) && (
-                                                    <span className={`${getTodayStatus(matchPerfeito)?.open ? 'text-green-500 bg-green-50 border-green-100' : 'text-brand-red bg-red-50 border-red-100'} font-black flex items-center text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-xl border`}>
-                                                        <div className={`w-1.5 h-1.5 ${getTodayStatus(matchPerfeito)?.open ? 'bg-green-500' : 'bg-brand-red'} rounded-full mr-1.5 ${getTodayStatus(matchPerfeito)?.open ? 'animate-pulse' : ''}`}></div>
+                                                    <span className={`${getTodayStatus(matchPerfeito)?.special ? 'text-blue-600 bg-blue-50 border-blue-200' : (getTodayStatus(matchPerfeito)?.open ? 'text-green-500 bg-green-50 border-green-100' : 'text-brand-red bg-red-50 border-red-100')} font-black flex items-center text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-xl border`}>
+                                                        <div className={`w-1.5 h-1.5 ${getTodayStatus(matchPerfeito)?.special ? 'bg-blue-600' : (getTodayStatus(matchPerfeito)?.open ? 'bg-green-500' : 'bg-brand-red')} rounded-full mr-1.5 ${getTodayStatus(matchPerfeito)?.open && !getTodayStatus(matchPerfeito)?.special ? 'animate-pulse' : ''}`}></div>
                                                         {getTodayStatus(matchPerfeito)?.label}
                                                     </span>
                                                 )}
@@ -727,14 +738,14 @@ function SearchContent() {
                                                                     {item.enderecos[0].bairro}
                                                                 </span>
                                                             )}
-                                                            {formatStreetName(item.enderecos?.[0]?.rua) && !item.enderecos[0].exibir_apenas_cidade && (
-                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua) || ''}>
-                                                                    {formatStreetName(item.enderecos[0].rua)}
+                                                            {formatStreetName(item.enderecos?.[0]?.rua, item.enderecos?.[0]?.tipo_logradouro) && !item.enderecos[0].exibir_apenas_cidade && (
+                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro) || ''}>
+                                                                    {formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro)}
                                                                 </span>
                                                             )}
                                                             {getTodayStatus(item) && (
-                                                                <span className={`${getTodayStatus(item)?.open ? 'text-green-500 bg-green-50/80 border-green-100' : 'text-brand-red bg-red-50/80 border-red-100'} font-black flex items-center text-[9px] uppercase tracking-wider px-2 py-1 rounded-lg border`}>
-                                                                    <div className={`w-1 h-1 ${getTodayStatus(item)?.open ? 'bg-green-500' : 'bg-brand-red'} rounded-full mr-1 ${getTodayStatus(item)?.open ? 'animate-pulse' : ''}`}></div>
+                                                                <span className={`${getTodayStatus(item)?.special ? 'text-blue-600 bg-blue-50/80 border-blue-200' : (getTodayStatus(item)?.open ? 'text-green-500 bg-green-50/80 border-green-100' : 'text-brand-red bg-red-50/80 border-red-100')} font-black flex items-center text-[9px] uppercase tracking-wider px-2 py-1 rounded-lg border`}>
+                                                                    <div className={`w-1 h-1 ${getTodayStatus(item)?.special ? 'bg-blue-600' : (getTodayStatus(item)?.open ? 'bg-green-500' : 'bg-brand-red')} rounded-full mr-1 ${getTodayStatus(item)?.open && !getTodayStatus(item)?.special ? 'animate-pulse' : ''}`}></div>
                                                                     {getTodayStatus(item)?.label}
                                                                 </span>
                                                             )}
@@ -819,9 +830,9 @@ function SearchContent() {
                                                                             {item.enderecos[0].bairro}
                                                                         </span>
                                                                     )}
-                                                                    {formatStreetName(item.enderecos?.[0]?.rua) && !item.enderecos[0].exibir_apenas_cidade && (
-                                                                        <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua) || ''}>
-                                                                            {formatStreetName(item.enderecos[0].rua)}
+                                                                    {formatStreetName(item.enderecos?.[0]?.rua, item.enderecos?.[0]?.tipo_logradouro) && !item.enderecos[0].exibir_apenas_cidade && (
+                                                                        <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro) || ''}>
+                                                                            {formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro)}
                                                                         </span>
                                                                     )}
                                                                 </div>

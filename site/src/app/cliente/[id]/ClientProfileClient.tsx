@@ -577,6 +577,10 @@ export default function ClientProfileClient() {
         : [];
 
     const getTodayStatus = () => {
+        if (client.is_horario_marcado) {
+            return { open: true, label: 'Com Horário Marcado', special: true };
+        }
+
         if (!schedule || schedule.length === 0) return null;
 
         const today = new Date().getDay();
@@ -816,8 +820,8 @@ export default function ClientProfileClient() {
                                 <div className="flex flex-wrap items-center gap-4 text-[11px] md:text-xs font-black uppercase tracking-widest font-sans">
                                     {status && isPagante && (
                                         <>
-                                            <div className={`flex items-center py-1 px-3 rounded-full ${status.open ? 'bg-green-50 text-green-500 border border-green-100' : 'bg-red-50 text-brand-red border border-red-100'}`}>
-                                                <div className={`w-2 h-2 rounded-full mr-2 ${status.open ? 'bg-green-500' : 'bg-brand-red'} animate-pulse`}></div>
+                                            <div className={`flex items-center py-1 px-3 rounded-full ${(status as any).special ? 'bg-blue-50 text-blue-600 border border-blue-200' : (status.open ? 'bg-green-50 text-green-500 border border-green-100' : 'bg-red-50 text-brand-red border border-red-100')}`}>
+                                                <div className={`w-2 h-2 rounded-full mr-2 ${(status as any).special ? 'bg-blue-600' : (status.open ? 'bg-green-500' : 'bg-brand-red')} ${!(status as any).special && status.open ? 'animate-pulse' : ''}`}></div>
                                                 {status.label}
                                             </div>
                                             <span className="text-gray-300 md:block hidden">•</span>
@@ -1479,24 +1483,30 @@ export default function ClientProfileClient() {
                         {/* Hours Section (Real Data) */}
                         {isPagante && (<div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-white gummy-card space-y-6">
                             <h3 className="text-xl font-black font-serif italic text-gray-900">Funcionamento</h3>
-                            <div className="space-y-3 font-black text-[11px] md:text-xs uppercase tracking-widest">
-                                {schedule.length > 0 ? schedule.map((s: any) => (
-                                    <div key={s.day} className={`flex justify-between items-center ${new Date().getDay() === (s.day === 7 ? 0 : s.day) ? 'text-brand-red' : 'text-gray-900'}`}>
-                                        <span className="w-24">{daysMap[s.day]}</span>
-                                        <div className="flex-1 h-px border-t border-dotted border-gray-100 mx-4"></div>
-                                        {s.closed ? (
-                                            <span className="text-gray-300 text-right">Fechado</span>
-                                        ) : (
-                                            <div className="text-right flex flex-col items-end">
-                                                <span>{s.open} - {s.close}</span>
-                                                {s.open2 && s.close2 && (
-                                                    <span className="text-[10px] opacity-60 leading-tight">{s.open2} - {s.close2}</span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )) : <p className="text-gray-400 font-bold italic lowercase">Não informado</p>}
-                            </div>
+                            {client.is_horario_marcado ? (
+                                <div className="space-y-3 font-black text-[11px] md:text-xs uppercase tracking-widest text-blue-900 bg-blue-50/50 p-6 rounded-2xl border border-blue-100/50 text-center">
+                                    Atendimento com horário marcado
+                                </div>
+                            ) : (
+                                <div className="space-y-3 font-black text-[11px] md:text-xs uppercase tracking-widest">
+                                    {schedule.length > 0 ? schedule.map((s: any) => (
+                                        <div key={s.day} className={`flex justify-between items-center ${new Date().getDay() === (s.day === 7 ? 0 : s.day) ? 'text-brand-red' : 'text-gray-900'}`}>
+                                            <span className="w-24">{daysMap[s.day]}</span>
+                                            <div className="flex-1 h-px border-t border-dotted border-gray-100 mx-4"></div>
+                                            {s.closed ? (
+                                                <span className="text-gray-300 text-right">Fechado</span>
+                                            ) : (
+                                                <div className="text-right flex flex-col items-end">
+                                                    <span>{s.open} - {s.close}</span>
+                                                    {s.open2 && s.close2 && (
+                                                        <span className="text-[10px] opacity-60 leading-tight">{s.open2} - {s.close2}</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )) : <p className="text-gray-400 font-bold italic lowercase">Não informado</p>}
+                                </div>
+                            )}
 
                             {/* Observações de Horário */}
                             {client.observacoes_horario && (

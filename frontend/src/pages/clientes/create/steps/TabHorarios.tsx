@@ -132,8 +132,25 @@ export default function TabHorarios() {
         </div>
       )}
 
-      <div className="bg-white border rounded-xl overflow-hidden shadow-sm overflow-x-auto">
-        <table className="w-full text-sm min-w-[700px]">
+      <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-blue-100 transition-colors mb-4" onClick={() => setFieldValue("is_horario_marcado", !values.is_horario_marcado)}>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-bold text-blue-900 cursor-pointer">Atendimento exclusivo com horário marcado / agendamento</label>
+          <span className="text-xs text-blue-700">Oculta a tabela de dias e exibe o selo 'COM HORÁRIO MARCADO' no perfil do cliente.</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={values.is_horario_marcado || false}
+            onChange={(e) => setFieldValue("is_horario_marcado", e.target.checked)}
+            className="w-5 h-5 text-blue-600 rounded border-blue-300 focus:ring-blue-500 cursor-pointer"
+          />
+        </div>
+      </div>
+
+      {!values.is_horario_marcado && (
+        <>
+          <div className="bg-white border rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="px-4 py-3 text-left font-semibold text-gray-700">Dia</th>
@@ -231,7 +248,7 @@ export default function TabHorarios() {
         </table>
       </div>
 
-      <div className="flex items-start gap-3 text-xs text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100">
+      <div className="flex items-start gap-3 text-xs text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-4">
         <Clock className="w-4 h-4 text-slate-400 mt-0.5" />
         <div className="space-y-1">
           <p className="font-bold text-slate-700">Dicas de Preenchimento:</p>
@@ -242,6 +259,8 @@ export default function TabHorarios() {
           </ul>
         </div>
       </div>
+        </>
+      )}
 
       <div className="mt-6">
         <label className="block text-sm font-semibold text-gray-700 mb-2">
