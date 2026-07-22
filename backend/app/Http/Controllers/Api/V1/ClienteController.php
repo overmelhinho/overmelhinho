@@ -2788,6 +2788,14 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
         $query = Cliente::query()
             ->with(['enderecos', 'contatos', 'redesSociais'])
+            ->addSelect([
+                'last_auditor_name' => \App\Models\AuditLog::select('users.name')
+                    ->join('users', 'users.id', '=', 'audit_logs.actor_user_id')
+                    ->whereColumn('audit_logs.cliente_id', 'clientes.id')
+                    ->where('audit_logs.action', 'like', '%audit%')
+                    ->latest('audit_logs.created_at')
+                    ->limit(1)
+            ])
             ->where(function($q) use ($cidadesPermitidas) {
                 $q->whereHas('enderecos', function($sub) use ($cidadesPermitidas) {
                     $sub->whereIn(\Illuminate\Support\Facades\DB::raw('trim(cidade)'), $cidadesPermitidas);
@@ -2833,6 +2841,26 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             } else {
                 $query->where('audit_status', $status);
             }
+        }
+
+        // Filtro por auditor responsável
+        if ($request->filled('user_id')) {
+            $userId = $request->input('user_id');
+            $query->whereExists(function($sub) use ($userId) {
+                $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                    ->from('audit_logs')
+                    ->whereColumn('audit_logs.cliente_id', 'clientes.id')
+                    ->where('audit_logs.actor_user_id', $userId)
+                    ->where('audit_logs.action', 'ilike', '%audit%');
+            });
+        }
+
+        // Filtro por data
+        if ($request->filled('date_start')) {
+            $query->whereDate('last_audit_at', '>=', $request->input('date_start'));
+        }
+        if ($request->filled('date_end')) {
+            $query->whereDate('last_audit_at', '<=', $request->input('date_end'));
         }
 
         if ($cidade) {

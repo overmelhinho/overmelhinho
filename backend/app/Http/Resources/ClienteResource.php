@@ -94,6 +94,7 @@ class ClienteResource extends JsonResource
 
             // ✅ Novos Campos de Auditoria
             'audit_status' => $this->audit_status ?? 'ok',
+            'last_auditor_name' => $this->last_auditor_name ?? null,
             'last_audit_at' => $this->last_audit_at ? (is_string($this->last_audit_at) ? $this->last_audit_at : $this->last_audit_at->toIso8601String()) : null,
             'audit_differences' => is_string($this->audit_differences) ? json_decode($this->audit_differences, true) : $this->audit_differences,
             'contact_preference' => $this->contact_preference,

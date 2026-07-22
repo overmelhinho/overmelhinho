@@ -38,7 +38,8 @@ import {
     Phone,
     Instagram,
     Save,
-    ExternalLink
+    ExternalLink,
+    User
 } from 'lucide-react';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
@@ -308,7 +309,7 @@ const AuditDashboardPage: React.FC = () => {
 
     // 2. Busca Fila de Auditoria
     const { data: queueData, isLoading: loadingQueue } = useQuery({
-        queryKey: ['audit-queue', page, filterCity, filterType, filterVisibilidade, filterSegmento, searchTerm, filterStatus],
+        queryKey: ['audit-queue', page, filterCity, filterType, filterVisibilidade, filterSegmento, searchTerm, filterStatus, filterUser, filterDateStart, filterDateEnd],
         queryFn: async () => {
             const response = await api.get('/v1/audit/queue', {
                 params: {
@@ -318,7 +319,10 @@ const AuditDashboardPage: React.FC = () => {
                     visibilidade: filterVisibilidade,
                     segmento_id: filterSegmento,
                     q: searchTerm,
-                    status: filterStatus || 'pending'
+                    status: filterStatus || 'pending',
+                    user_id: filterUser,
+                    date_start: filterDateStart,
+                    date_end: filterDateEnd
                 }
             });
             return response.data;
@@ -1014,7 +1018,7 @@ const AuditDashboardPage: React.FC = () => {
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Identificação do Cliente</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Localização / Status</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Telefone</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Data Varredura</th>
+                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Auditoria / Data</th>
                                         <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Inconsistências</th>
                                         <th className="px-8 py-5 text-right">Ação</th>
                                     </tr>
@@ -1152,11 +1156,19 @@ const AuditDashboardPage: React.FC = () => {
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-2 text-slate-500">
-                                                            <CalendarDays className="w-4 h-4" />
-                                                            <span className="text-xs font-medium">
-                                                                {c.last_audit_at ? format(new Date(c.last_audit_at), 'dd/MM/yyyy • HH:mm') : 'Pendente'}
-                                                            </span>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <div className="flex items-center gap-2 text-slate-500">
+                                                                <CalendarDays className="w-4 h-4" />
+                                                                <span className="text-xs font-medium">
+                                                                    {c.last_audit_at ? format(new Date(c.last_audit_at), 'dd/MM/yyyy • HH:mm') : (c.audit_status === 'ok' ? 'Migração / Legado' : 'Pendente')}
+                                                                </span>
+                                                            </div>
+                                                            {c.last_auditor_name && (
+                                                                <div className="flex items-center gap-2 text-slate-400 pl-[2px]" title="Responsável pela última conferência">
+                                                                    <User className="w-3.5 h-3.5" />
+                                                                    <span className="text-[10px] font-bold uppercase tracking-widest truncate max-w-[120px]">{c.last_auditor_name}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-6">
