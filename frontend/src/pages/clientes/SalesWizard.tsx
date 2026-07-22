@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import SignaturePad from "@/components/SignaturePad";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import toast from "react-hot-toast";
 import { format, addMonths } from "date-fns";
@@ -22,6 +23,7 @@ export default function SalesWizard() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [step, setStep] = useState<WizardStep>('impact');
+  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   
   // Estados para atualização rápida (Update)
   const [telefone, setTelefone] = useState("");
@@ -186,6 +188,7 @@ export default function SalesWizard() {
             clicks_site: lastReport.data.custom_metrics?.clicks_waze || 0,
             clicks_whatsapp: lastReport.data.custom_metrics?.clicks_whats || 0,
             token: lastReport.token,
+            all_reports: reportsRes.data,
           };
         }
       } catch (e) {
@@ -467,7 +470,47 @@ export default function SalesWizard() {
               </div>
 
               <div className="pt-4 flex flex-col gap-3">
-                {analyticsData?.token && (
+                {analyticsData?.all_reports && analyticsData.all_reports.length > 1 ? (
+                  <>
+                    <button
+                      onClick={() => setIsReportsModalOpen(true)}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-xl shadow-blue-200 flex items-center justify-center gap-2"
+                    >
+                      <FileText size={20} /> Histórico de Relatórios
+                    </button>
+
+                    <Dialog open={isReportsModalOpen} onOpenChange={setIsReportsModalOpen}>
+                      <DialogContent className="max-w-md w-[90vw] rounded-3xl p-6 bg-gray-50 border-gray-200 shadow-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl font-black text-gray-900 flex items-center gap-2 mb-4">
+                            <FileText size={24} className="text-blue-600" /> Relatórios Disponíveis
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-2">
+                          {analyticsData.all_reports.map((rep: any) => (
+                            <a 
+                              key={rep.id}
+                              href={`/relatorio/${rep.token}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full py-4 px-4 rounded-2xl bg-white border border-gray-200 text-slate-800 font-bold text-base hover:bg-gray-50 transition shadow-sm flex flex-col gap-1"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FileText size={18} className="text-blue-500" />
+                                {rep.period_label || 'Relatório Gerado'}
+                              </div>
+                              {rep.created_at && (
+                                <span className="text-xs text-slate-400 font-medium ml-6">
+                                  Gerado em: {format(new Date(rep.created_at), 'dd/MM/yyyy HH:mm')}
+                                </span>
+                              )}
+                            </a>
+                          ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                ) : analyticsData?.token ? (
                   <a 
                     href={`/relatorio/${analyticsData.token}`}
                     target="_blank"
@@ -476,7 +519,7 @@ export default function SalesWizard() {
                   >
                     <FileText size={20} /> Apresentar Relatório Oficial
                   </a>
-                )}
+                ) : null}
 
                 <button 
                   onClick={() => setStep('update')}
