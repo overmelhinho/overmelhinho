@@ -83,6 +83,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
+import { ExpressDatePicker } from "@/components/ui/ExpressDatePicker";
 
 interface Plan {
     id: number;
@@ -142,6 +143,7 @@ export default function TabFinanceiro() {
     const [isPayModalOpen, setIsPayModalOpen] = useState(false);
     const [invoiceToPay, setInvoiceToPay] = useState<number | null>(null);
     const [manualPaymentMethod, setManualPaymentMethod] = useState("pix");
+    const [actionDate, setActionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
     // Edit Invoice Modal States
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -286,6 +288,7 @@ export default function TabFinanceiro() {
             const resp = await axios.patch(`/v1/financial/invoices/${invoiceId}/status`, {
                 status: 'paid',
                 payment_method: manualPaymentMethod,
+                action_date: actionDate,
                 justification: `Baixa manual confirmada pelo administrador via ${manualPaymentMethod}`
             });
             return resp.data;
@@ -305,6 +308,7 @@ export default function TabFinanceiro() {
 
     const handleMarkAsPaid = (invoiceId: number) => {
         setInvoiceToPay(invoiceId);
+        setActionDate(format(new Date(), 'yyyy-MM-dd'));
         setIsPayModalOpen(true);
     };
 
@@ -1461,6 +1465,16 @@ export default function TabFinanceiro() {
                                 <span className="text-[10px] font-black uppercase tracking-tighter">{method.label}</span>
                             </button>
                         ))}
+                    </div>
+
+                    <div className="mt-4 px-2">
+                        <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">
+                            Data do Pagamento
+                        </label>
+                        <ExpressDatePicker
+                            date={actionDate}
+                            onChange={(date) => setActionDate(date || format(new Date(), 'yyyy-MM-dd'))}
+                        />
                     </div>
 
                     <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100/50">

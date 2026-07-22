@@ -11,3 +11,13 @@ REGRA DE PUSH SEGURO (O Vermelhinho): Sempre que o usuário solicitar explicitam
 Essas ações só podem ser executadas se, e somente se, a mensagem atual do usuário contiver EXPLICITAMENTE a frase "suba para o github" ou "deploy". Sem isso, o agente deve se limitar a alterar arquivos localmente e orientar o usuário.
 </RULE[strict_no_auto_deploy]>
 
+
+<RULE[local_environment]>
+**AMBIENTE LOCAL (XAMPP)**: Para iniciar os serviços ou executar comandos PHP/Laravel localmente, NUNCA utilize Docker (ignore o docker-compose.yml).
+O ambiente local roda estritamente no XAMPP localizado em C:\xampp2.
+Sempre utilize o executável do PHP do XAMPP: C:\xampp2\php\php.exe (ex: C:\xampp2\php\php.exe artisan serve).
+O frontend deve ser iniciado na pasta rontend rodando 
+pm run dev.
+</RULE[local_environment]>
+- O site principal (Next.js) deve ser iniciado na pasta site rodando 
+pm run dev (Porta 3000).

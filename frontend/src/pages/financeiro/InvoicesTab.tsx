@@ -59,6 +59,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { ExpressCalendar } from "@/components/ui/ExpressCalendar";
+import { ExpressDatePicker } from "@/components/ui/ExpressDatePicker";
 import { DateRangePicker } from "@/components/reports/DateRangePicker";
 import { useCidades } from "@/hooks/useCidades";
 
@@ -221,6 +223,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
     const [actionType, setActionType] = useState<'paid' | 'canceled' | null>(null);
     const [justification, setJustification] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [actionDate, setActionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [isSyncing, setIsSyncing] = useState(false);
     const [isResending, setIsResending] = useState(false);
 
@@ -1413,6 +1416,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                                         setActionType('paid');
                                                                         setJustification("");
                                                                         setEditPaymentMethod(invoice.payment_method || "pix");
+                                                                        setActionDate(format(new Date(), 'yyyy-MM-dd'));
                                                                         setIsActionModalOpen(true);
                                                                     }}
                                                                     className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors"
@@ -1557,6 +1561,16 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                 ))}
                             </div>
 
+                            <div className="mt-4 px-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-500 mb-1">
+                                    Data do Pagamento
+                                </label>
+                                <ExpressDatePicker
+                                    date={actionDate}
+                                    onChange={(date) => setActionDate(date || format(new Date(), 'yyyy-MM-dd'))}
+                                />
+                            </div>
+
                             <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
                                 <p className="text-[10px] text-slate-400 font-bold uppercase text-center leading-tight">
                                     O status será alterado para <span className="text-emerald-600">PAGO</span> e sincronizado com o <b>Tiny ERP</b>.
@@ -1582,6 +1596,7 @@ export default function InvoicesTab({ onFiltersChange }: { onFiltersChange?: (fi
                                                 status: 'paid',
                                                 justification: 'Baixa manual confirmada',
                                                 payment_method: editPaymentMethod,
+                                                action_date: actionDate,
                                             });
                                             toast.success("Fatura liquidada!");
                                             refetch();

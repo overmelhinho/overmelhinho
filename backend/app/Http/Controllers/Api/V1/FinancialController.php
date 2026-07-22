@@ -101,19 +101,19 @@ class FinancialController extends Controller
         // 1. Status Filter
         if ($request->filled('status') && $request->status !== 'all') {
             if ($request->status === 'overdue') {
-                $query->where('status', 'pending')
-                      ->where('due_date', '<', now()->startOfDay());
+                $query->where('invoices.status', 'pending')
+                      ->where('invoices.due_date', '<', now()->startOfDay());
             } else {
-                $query->where('status', $request->status);
+                $query->where('invoices.status', $request->status);
             }
         }
 
         // 2. Vencimento: date_start / date_end (which translates to start_date / end_date)
         if ($request->filled('date_start')) {
-            $query->where('due_date', '>=', $request->date_start);
+            $query->where('invoices.due_date', '>=', $request->date_start);
         }
         if ($request->filled('date_end')) {
-            $query->where('due_date', '<=', $request->date_end);
+            $query->where('invoices.due_date', '<=', $request->date_end);
         }
 
         // 3. Search query: q
@@ -125,7 +125,7 @@ class FinancialController extends Controller
 
         // 4. Emissão (Data Cad. Inicial/Final)
         if ($request->filled('data_cad_inicial') && $request->filled('data_cad_final')) {
-            $query->whereBetween(DB::raw('DATE(created_at)'), [$request->data_cad_inicial, $request->data_cad_final]);
+            $query->whereBetween(DB::raw('DATE(invoices.created_at)'), [$request->data_cad_inicial, $request->data_cad_final]);
         }
 
         // 5. Termo (Nome/Razão Social/CNPJ)
@@ -219,15 +219,15 @@ class FinancialController extends Controller
             $groupIds = $authIds->map(fn($id) => 'autorizacao-' . $id)->toArray();
             
             if (empty($groupIds)) {
-                $query->where('id', 0);
+                $query->where('invoices.id', 0);
             } else {
-                $query->whereIn('group_id', $groupIds);
+                $query->whereIn('invoices.group_id', $groupIds);
             }
         }
 
         // 10. Plano
         if ($request->filled('plan_id') && $request->plan_id !== 'all') {
-            $query->where('plan_id', $request->plan_id);
+            $query->where('invoices.plan_id', $request->plan_id);
         }
 
         // 11. Cobrança / Pagamento
@@ -257,14 +257,14 @@ class FinancialController extends Controller
             
             if ($hasDirect) {
                 $query->where(function($q) use ($methods) {
-                    $q->whereNotIn('payment_method', ['boleto', 'cartao', 'pix', 'permuta']);
+                    $q->whereNotIn('invoices.payment_method', ['boleto', 'cartao', 'pix', 'permuta']);
                     if (!empty($methods)) {
-                        $q->orWhereIn('payment_method', $methods);
+                        $q->orWhereIn('invoices.payment_method', $methods);
                     }
                 });
             } else {
                 if (!empty($methods)) {
-                    $query->whereIn('payment_method', $methods);
+                    $query->whereIn('invoices.payment_method', $methods);
                 }
             }
         }
@@ -584,7 +584,11 @@ class FinancialController extends Controller
      */
     public function indexAllInvoices(Request $request)
     {
-        $query = Invoice::with(['client.contatos', 'plan']);
+        $query = Invoice::with(['client.contatos', 'plan'])
+            ->leftJoin('autorizacoes', function($join) {
+                $join->on(DB::raw("(CASE WHEN invoices.group_id LIKE 'autorizacao-%' THEN NULLIF(REGEXP_REPLACE(invoices.group_id, '[^0-9]', '', 'g'), '')::bigint ELSE NULL END)"), '=', 'autorizacoes.id');
+            })
+            ->select('invoices.*');
 
         $query = $this->applyFinancialFilters($query, $request);
 
@@ -596,7 +600,9 @@ class FinancialController extends Controller
             }
         }
 
-        $invoices = $query->orderBy('due_date', 'asc')
+        $invoices = $query->orderByRaw("NULLIF(REGEXP_REPLACE(autorizacoes.numero, '[^0-9]', '', 'g'), '')::bigint ASC NULLS LAST")
+            ->orderBy('invoices.parcel_number', 'asc')
+            ->orderBy('invoices.due_date', 'asc')
             ->limit(300)
             ->get();
 
@@ -768,12 +774,13 @@ class FinancialController extends Controller
             'status'         => 'required|in:paid,canceled,pending',
             'justification'  => 'nullable|string',
             'payment_method' => 'nullable|string|in:pix,dinheiro,cartao,boleto',
+            'action_date'    => 'nullable|date',
         ]);
 
         $updateData = [
             'status'        => $validated['status'],
             'justification' => $validated['justification'] ?? null,
-            'action_date'   => now(),
+            'action_date'   => !empty($validated['action_date']) ? \Carbon\Carbon::parse($validated['action_date']) : now(),
         ];
 
         if (!empty($validated['payment_method'])) {
