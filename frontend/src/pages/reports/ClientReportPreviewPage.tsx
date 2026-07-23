@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import axios from "@/services/api";
+import toast from "react-hot-toast";
 import { 
     ArrowLeft, Send, Globe, Loader2, Calendar, Edit3, Save, MessageCircle, MapPin, TrendingUp, Search, Eye, Users, Clock, Zap, BarChart2, Check, Plus, Trash2, History, Copy, ExternalLink, Star 
 } from "lucide-react";
@@ -80,6 +81,21 @@ export default function ClientReportPreviewPage() {
             setHistory(res.data);
         } catch (e) {
             console.error("Erro ao carregar histórico", e);
+        }
+    };
+
+    const [reportToDelete, setReportToDelete] = useState<number | null>(null);
+
+    const confirmDeleteReport = async (reportId: number) => {
+        try {
+            await axios.delete(`/v1/reports/${reportId}`);
+            setHistory(prev => prev.filter(r => r.id !== reportId));
+            toast.success("Relatório excluído com sucesso!");
+        } catch (e) {
+            console.error("Erro ao excluir relatório", e);
+            toast.error("Erro ao excluir relatório.");
+        } finally {
+            setReportToDelete(null);
         }
     };
 
@@ -392,7 +408,6 @@ export default function ClientReportPreviewPage() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Detalhamento por Cidade / Página</p>
                         </div>
                         <div className="flex items-center gap-4">
-                            <div className="px-3 py-1 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 text-[10px] font-black uppercase">{cities.length} cidades</div>
                             <button onClick={addCity} className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-1 hover:underline">
                                 <Plus size={14} /> Adicionar Linha
                             </button>
@@ -515,17 +530,53 @@ export default function ClientReportPreviewPage() {
                                     <div className="flex gap-2">
                                         <button onClick={() => {
                                             navigator.clipboard.writeText(`${window.location.origin}/relatorio/${h.token}`);
-                                            alert("Link copiado!");
+                                            toast.success("Link copiado!");
                                         }} className="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors" title="Copiar Link">
                                             <Copy size={16} />
                                         </button>
                                         <a href={`/relatorio/${h.token}`} target="_blank" rel="noreferrer" className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" title="Abrir Relatório">
                                             <ExternalLink size={16} />
                                         </a>
+                                        <button onClick={() => setReportToDelete(h.id)} className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 hover:text-red-700 transition-colors" title="Excluir Relatório">
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                 </div>
                             ))
                         )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={reportToDelete !== null} onOpenChange={(open) => { if (!open) setReportToDelete(null); }}>
+                <DialogContent className="max-w-md rounded-3xl p-6 bg-white border-gray-100 shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg font-black text-gray-900 flex items-center gap-2">
+                            <Trash2 className="text-red-600" size={20} /> Excluir Relatório
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4">
+                        <p className="text-sm text-gray-500 font-semibold leading-relaxed">
+                            Tem certeza que deseja excluir este relatório? Esta ação é permanente e o link gerado deixará de funcionar imediatamente.
+                        </p>
+                    </div>
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button
+                            onClick={() => setReportToDelete(null)}
+                            className="px-4 py-2.5 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors uppercase tracking-wider"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (reportToDelete) {
+                                    confirmDeleteReport(reportToDelete);
+                                }
+                            }}
+                            className="px-5 py-2.5 text-xs font-black text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm hover:shadow-md transition-all uppercase tracking-wider"
+                        >
+                            Excluir
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>

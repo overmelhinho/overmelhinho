@@ -305,6 +305,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/clients/{id}/reports', [ClientReportController::class, 'store']);
     Route::get('/clients/{id}/reports', [ClientReportController::class, 'index']);
     Route::patch('/reports/{id}/sent', [ClientReportController::class, 'markAsSent']);
+    Route::delete('/reports/{id}', [ClientReportController::class, 'destroy']);
     
     // ✅ Radar de Oportunidades (Gaps + IA)
     Route::get('/radar/oportunidades', [\App\Http\Controllers\Api\V1\RadarController::class, 'index']);

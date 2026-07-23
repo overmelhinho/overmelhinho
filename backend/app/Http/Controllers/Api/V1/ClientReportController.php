@@ -232,4 +232,15 @@ class ClientReportController extends Controller
         $report->update(['status' => 'sent']);
         return response()->json(['message' => 'Relatório marcado como enviado.']);
     }
+
+    /**
+     * Exclui um relatório de performance.
+     */
+    public function destroy($id)
+    {
+        $report = ClientReport::findOrFail($id);
+        $report->delete();
+
+        return response()->json(['message' => 'Relatório excluído com sucesso!']);
+    }
 }
