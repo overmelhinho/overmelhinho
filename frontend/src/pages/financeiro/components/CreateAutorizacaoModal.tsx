@@ -230,47 +230,65 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
 
     // Calculate Installments Preview and Sync with State
     useEffect(() => {
-        const basePrice = parseFloat(parseCurrency(form.valor_total)) || 0;
-        const discountValue = parseFloat(form.desconto_valor) || 0;
-        const discountAmount = form.desconto_tipo === "fixed" ? discountValue : (basePrice * discountValue) / 100;
-        const priceAfterDiscount = Math.max(0, basePrice - discountAmount);
-        const taxa = parseFloat(form.taxa_cadastro) || 0;
-        const totalComTaxa = priceAfterDiscount + taxa;
-        const permuta = form.is_permuta ? parseFloat(parseCurrency(form.permuta_amount || "0")) : 0;
-        const finalPayable = Math.max(0, totalComTaxa - permuta);
+        try {
+            const basePrice = parseFloat(parseCurrency(form.valor_total)) || 0;
+            const discountValue = parseFloat(form.desconto_valor) || 0;
+            const discountAmount = form.desconto_tipo === "fixed" ? discountValue : (basePrice * discountValue) / 100;
+            const priceAfterDiscount = Math.max(0, basePrice - discountAmount);
+            const taxa = parseFloat(form.taxa_cadastro) || 0;
+            const totalComTaxa = priceAfterDiscount + taxa;
+            const permuta = form.is_permuta ? parseFloat(parseCurrency(form.permuta_amount || "0")) : 0;
+            const finalPayable = Math.max(0, totalComTaxa - permuta);
 
-        const num = parseInt(form.num_parcelas) || 1;
-        // Fix: Parse YYYY-MM-DD manually to avoid UTC shift
-        const [y, m, d] = form.data_primeira_parcela.split("-").map(Number);
-        const start = new Date(y, m - 1, d);
+            const num = parseInt(form.num_parcelas) || 1;
+            if (!form.data_primeira_parcela) return;
+            const parts = form.data_primeira_parcela.split("-");
+            if (parts.length !== 3) return;
+            const [y, m, d] = parts.map(Number);
+            if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return;
 
-        if (finalPayable <= 0) {
-            setParcelasPreview([{ numero: 1, vencimento: format(start, "yyyy-MM-dd"), label: format(start, "dd/MM/yyyy"), valor: "0.00" }]);
-            return;
+            const start = new Date(y, m - 1, d);
+            if (isNaN(start.getTime())) return;
+
+            if (finalPayable <= 0) {
+                setParcelasPreview([{ numero: 1, vencimento: format(start, "yyyy-MM-dd"), label: format(start, "dd/MM/yyyy"), valor: "0.00" }]);
+                return;
+            }
+
+            const baseVal = Math.floor((finalPayable / num) * 100) / 100;
+            const diff = finalPayable - (baseVal * num);
+
+            const newParcelas = Array.from({ length: num }).map((_, i) => {
+                const date = addMonths(start, i);
+                return {
+                    numero: i + 1,
+                    vencimento: format(date, "yyyy-MM-dd"), // internal state for input
+                    label: format(date, "dd/MM/yyyy"), // display
+                    valor: (i === num - 1 ? (baseVal + diff) : baseVal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
+                };
+            });
+
+            setParcelasPreview(newParcelas);
+        } catch (error) {
+            console.error("Erro ao recalcular parcelas:", error);
         }
-
-        const baseVal = Math.floor((finalPayable / num) * 100) / 100;
-        const diff = finalPayable - (baseVal * num);
-
-        const newParcelas = Array.from({ length: num }).map((_, i) => {
-            const date = addMonths(start, i);
-            return {
-                numero: i + 1,
-                vencimento: format(date, "yyyy-MM-dd"), // internal state for input
-                label: format(date, "dd/MM/yyyy"), // display
-                valor: (i === num - 1 ? (baseVal + diff) : baseVal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
-            };
-        });
-
-        setParcelasPreview(newParcelas);
     }, [form.valor_total, form.taxa_cadastro, form.num_parcelas, form.data_primeira_parcela, form.desconto_valor, form.desconto_tipo, form.is_permuta, form.permuta_amount]);
 
     const handleParcelaDateChange = (index: number, newDate: string) => {
         const updated = [...parcelasPreview];
-        const [y, m, d] = newDate.split("-").map(Number);
-        const date = new Date(y, m - 1, d);
         updated[index].vencimento = newDate;
-        updated[index].label = format(date, "dd/MM/yyyy");
+        if (newDate) {
+            const parts = newDate.split("-");
+            if (parts.length === 3) {
+                const [y, m, d] = parts.map(Number);
+                if (y && m && d && !isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                    const date = new Date(y, m - 1, d);
+                    if (!isNaN(date.getTime())) {
+                        updated[index].label = format(date, "dd/MM/yyyy");
+                    }
+                }
+            }
+        }
         setParcelasPreview(updated);
     };
 
@@ -286,10 +304,12 @@ export default function CreateAutorizacaoModal({ isOpen, onClose, onSuccess, ini
             const next = { ...prev, [name]: value };
             if (name === "data_inicio" && value) {
                 const parts = value.split("-").map(Number);
-                if (parts.length >= 2 && parts[0] && parts[1]) {
-                    const [y, m] = parts;
-                    const endDate = new Date(y + 1, m, 0);
-                    next.data_fim = format(endDate, "yyyy-MM-dd");
+                if (parts.length === 3 && parts[0] && parts[1] && parts[2] && !parts.some(isNaN)) {
+                    const [y, m, d] = parts;
+                    const endDate = new Date(y + 1, m - 1, d || 1);
+                    if (!isNaN(endDate.getTime())) {
+                        next.data_fim = format(endDate, "yyyy-MM-dd");
+                    }
                 }
             }
             return next;

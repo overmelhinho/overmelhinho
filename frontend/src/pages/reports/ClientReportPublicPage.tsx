@@ -166,10 +166,6 @@ export default function ClientReportPublicPage() {
                                 </div>
                             </div>
                             <div className="flex bg-gray-50 px-5 py-3 rounded-2xl border border-gray-100 print:bg-white">
-                                <div className="text-center border-r border-gray-200 px-4">
-                                    <p className="text-lg font-black text-gray-900">{cities.length}</p>
-                                    <p className="text-[8px] font-black uppercase text-gray-400">Regiões</p>
-                                </div>
                                 <div className="text-center px-4">
                                     <p className="text-lg font-black text-blue-600">{(ga4.total_views ?? 0).toLocaleString('pt-BR')}</p>
                                     <p className="text-[8px] font-black uppercase text-gray-400">Total Views</p>

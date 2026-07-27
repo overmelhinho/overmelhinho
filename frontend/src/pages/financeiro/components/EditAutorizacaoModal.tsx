@@ -183,10 +183,19 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
 
     const handleParcelaDateChange = (index: number, newDate: string) => {
         const updated = [...parcelasPreview];
-        const [y, m, d] = newDate.split("-").map(Number);
-        const date = new Date(y, m - 1, d);
         updated[index].vencimento = newDate;
-        updated[index].label = format(date, "dd/MM/yyyy");
+        if (newDate) {
+            const parts = newDate.split("-");
+            if (parts.length === 3) {
+                const [y, m, d] = parts.map(Number);
+                if (y && m && d && !isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                    const date = new Date(y, m - 1, d);
+                    if (!isNaN(date.getTime())) {
+                        updated[index].label = format(date, "dd/MM/yyyy");
+                    }
+                }
+            }
+        }
         setParcelasPreview(updated);
     };
 

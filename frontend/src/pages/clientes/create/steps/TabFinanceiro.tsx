@@ -917,9 +917,9 @@ export default function TabFinanceiro() {
 
                                         const parcA = Number(a.parcel_number) || 0;
                                         const parcB = Number(b.parcel_number) || 0;
-                                        if (parcA !== parcB) return parcB - parcA;
+                                        if (parcA !== parcB) return parcA - parcB;
 
-                                        return new Date(b.due_date).getTime() - new Date(a.due_date).getTime();
+                                        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
                                     })
                                     .map((invoice) => (
                                         <tr key={invoice.id} className={cn(
