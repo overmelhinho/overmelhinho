@@ -2802,13 +2802,23 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
         ];
 
+        $auditActionCondition = function($q) {
+            $q->where('action', 'ilike', '%audit%')
+              ->orWhere(function($q2) {
+                  $q2->where('action', 'update')
+                     ->whereNotNull('actor_user_id')
+                     ->whereRaw("(jsonb_exists(field_changes::jsonb, 'audit_status') OR jsonb_exists(field_changes::jsonb, 'last_audit_at'))")
+                     ->whereRaw("EXISTS (SELECT 1 FROM jsonb_each(field_changes::jsonb) AS kv(k,v) WHERE jsonb_typeof(v) = 'object' AND jsonb_exists(v, 'from') AND jsonb_exists(v, 'to'))");
+              });
+        };
+
         $query = Cliente::query()
             ->with(['enderecos', 'contatos', 'redesSociais'])
             ->addSelect([
                 'last_auditor_name' => \App\Models\AuditLog::select('users.name')
                     ->join('users', 'users.id', '=', 'audit_logs.actor_user_id')
                     ->whereColumn('audit_logs.cliente_id', 'clientes.id')
-                    ->where('audit_logs.action', 'like', '%audit%')
+                    ->where($auditActionCondition)
                     ->latest('audit_logs.created_at')
                     ->limit(1)
             ])
@@ -2862,12 +2872,12 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
         // Filtro por auditor responsável
         if ($request->filled('user_id')) {
             $userId = $request->input('user_id');
-            $query->whereExists(function($sub) use ($userId) {
+            $query->whereExists(function($sub) use ($userId, $auditActionCondition) {
                 $sub->select(\Illuminate\Support\Facades\DB::raw(1))
                     ->from('audit_logs')
                     ->whereColumn('audit_logs.cliente_id', 'clientes.id')
                     ->where('audit_logs.actor_user_id', $userId)
-                    ->where('audit_logs.action', 'ilike', '%audit%');
+                    ->where($auditActionCondition);
             });
         }
 
@@ -2929,19 +2939,18 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             'São Pedro da Serra', 'São Sebastião do Caí', 'São Vendelino', 'Veranópolis'
         ];
 
+        $auditActionCondition = function($q) {
+            $q->where('action', 'ilike', '%audit%')
+              ->orWhere(function($q2) {
+                  $q2->where('action', 'update')
+                     ->whereNotNull('actor_user_id')
+                     ->whereRaw("(jsonb_exists(field_changes::jsonb, 'audit_status') OR jsonb_exists(field_changes::jsonb, 'last_audit_at'))")
+                     ->whereRaw("EXISTS (SELECT 1 FROM jsonb_each(field_changes::jsonb) AS kv(k,v) WHERE jsonb_typeof(v) = 'object' AND jsonb_exists(v, 'from') AND jsonb_exists(v, 'to'))");
+              });
+        };
+
         $innerQuery = \App\Models\AuditLog::selectRaw('DISTINCT ON (actor_user_id, cliente_id, DATE(created_at)) audit_logs.*')
-            ->where(function($q) {
-                // ✅ Logs gravados explicitamente pelo fluxo de auditoria (audit_save, audit_update, etc.)
-                $q->where('action', 'ilike', '%audit%')
-                  // ✅ Logs de 'update' gerados pelo Observer do model que contêm audit_status (também são revisões de auditoria)
-                  ->orWhere(function($q2) {
-                      $q2->where('action', 'update')
-                         ->whereNotNull('actor_user_id')
-                         ->whereRaw("jsonb_exists(field_changes::jsonb, 'audit_status')")
-                         // Só logs com formato {from, to} completo (gerados pelo Observer do model)
-                         ->whereRaw("EXISTS (SELECT 1 FROM jsonb_each(field_changes::jsonb) AS kv(k,v) WHERE jsonb_typeof(v) = 'object' AND jsonb_exists(v, 'from') AND jsonb_exists(v, 'to'))");
-                  });
-            })
+            ->where($auditActionCondition)
             ->whereHas('cliente', function($q) use ($cidadesPermitidas) {
                 $q->where(function($sub) use ($cidadesPermitidas) {
                     $sub->whereHas('enderecos', function($end) use ($cidadesPermitidas) {
@@ -2992,7 +3001,7 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             ->orderByRaw('actor_user_id, cliente_id, DATE(created_at), created_at DESC');
 
         $query = \App\Models\AuditLog::fromSub($innerQuery, 'audit_logs')
-            ->with(['actor', 'cliente'])
+            ->with(['actor', 'cliente.enderecos', 'cliente.contatos'])
             ->orderBy('created_at', 'desc');
 
         return response()->json($query->paginate($request->input('per_page', 15)));
@@ -3022,8 +3031,18 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             });
         });
 
+        $auditActionCondition = function($q) {
+            $q->where('action', 'ilike', '%audit%')
+              ->orWhere(function($q2) {
+                  $q2->where('action', 'update')
+                     ->whereNotNull('actor_user_id')
+                     ->whereRaw("(jsonb_exists(field_changes::jsonb, 'audit_status') OR jsonb_exists(field_changes::jsonb, 'last_audit_at'))")
+                     ->whereRaw("EXISTS (SELECT 1 FROM jsonb_each(field_changes::jsonb) AS kv(k,v) WHERE jsonb_typeof(v) = 'object' AND jsonb_exists(v, 'from') AND jsonb_exists(v, 'to'))");
+              });
+        };
+
         // Contagens de revisões humanas no AuditLog restrict to standard cities
-        $logQuery = \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+        $logQuery = \App\Models\AuditLog::where($auditActionCondition)
             ->whereHas('cliente', function($q) use ($cidadesPermitidas) {
                 $q->where(function($sub) use ($cidadesPermitidas) {
                     $sub->whereHas('enderecos', function($end) use ($cidadesPermitidas) {
@@ -3035,10 +3054,10 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             });
 
         $stats = [
-            'hoje'        => $logQuery->clone()->where('created_at', '>=', $today)->count(),
-            'ontem'       => $logQuery->clone()->where('created_at', '>=', $yesterday)->where('created_at', '<', $today)->count(),
-            'sete_dias'   => $logQuery->clone()->where('created_at', '>=', $sevenDays)->count(),
-            'trinta_dias' => $logQuery->clone()->where('created_at', '>=', $thirtyDays)->count(),
+            'hoje'        => $logQuery->clone()->where('created_at', '>=', $today)->distinct('cliente_id')->count('cliente_id'),
+            'ontem'       => $logQuery->clone()->where('created_at', '>=', $yesterday)->where('created_at', '<', $today)->distinct('cliente_id')->count('cliente_id'),
+            'sete_dias'   => $logQuery->clone()->where('created_at', '>=', $sevenDays)->distinct('cliente_id')->count('cliente_id'),
+            'trinta_dias' => $logQuery->clone()->where('created_at', '>=', $thirtyDays)->distinct('cliente_id')->count('cliente_id'),
         ];
 
         $total = $baseQuery->clone()->count();
@@ -3119,7 +3138,17 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
     public function auditUsers()
     {
-        $userIds = \App\Models\AuditLog::where('action', 'ilike', '%audit%')
+        $auditActionCondition = function($q) {
+            $q->where('action', 'ilike', '%audit%')
+              ->orWhere(function($q2) {
+                  $q2->where('action', 'update')
+                     ->whereNotNull('actor_user_id')
+                     ->whereRaw("(jsonb_exists(field_changes::jsonb, 'audit_status') OR jsonb_exists(field_changes::jsonb, 'last_audit_at'))")
+                     ->whereRaw("EXISTS (SELECT 1 FROM jsonb_each(field_changes::jsonb) AS kv(k,v) WHERE jsonb_typeof(v) = 'object' AND jsonb_exists(v, 'from') AND jsonb_exists(v, 'to'))");
+              });
+        };
+
+        $userIds = \App\Models\AuditLog::where($auditActionCondition)
             ->whereNotNull('actor_user_id')
             ->pluck('actor_user_id')
             ->unique();

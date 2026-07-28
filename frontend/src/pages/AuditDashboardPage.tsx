@@ -143,7 +143,20 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                     </div>
                 </td>
                 <td className="px-8 py-6">
-                    <span className="text-sm font-bold text-[#B70F0A]">{log.cliente?.nome_fantasia || '---'}</span>
+                    <div className="flex flex-col">
+                        <span className="text-sm font-bold text-[#B70F0A]">{log.cliente?.nome_fantasia || '---'}</span>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] font-medium text-slate-400">
+                            {log.cliente?.enderecos && log.cliente.enderecos.length > 0 && (
+                                <span>{log.cliente.enderecos[0].cidade}</span>
+                            )}
+                            {log.cliente?.contatos && log.cliente.contatos.length > 0 && log.cliente.contatos[0].telefone_principal && (
+                                <>
+                                    <span>•</span>
+                                    <span>{log.cliente.contatos[0].telefone_principal}</span>
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </td>
                 <td className="px-8 py-6">
                     {hasRealChanges ? (
