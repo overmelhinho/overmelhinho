@@ -154,6 +154,21 @@ function SearchContent() {
     const [query, setQuery] = useState('');
     const observerTarget = useRef(null);
     const { cityId, cityName, setCity, setIsCityModalOpen } = useLocation();
+    const syncedUrlCityId = useRef<string | null>(null);
+
+    // Sincroniza a cidade da URL com o Context apenas quando a URL muda, para não travar a escolha manual
+    useEffect(() => {
+        const urlCityId = searchParams.get('city_id');
+        if (urlCityId && urlCityId !== syncedUrlCityId.current && availableCities) {
+            syncedUrlCityId.current = urlCityId;
+            if (cityId?.toString() !== urlCityId) {
+                const city = availableCities.find((c: any) => c.id.toString() === urlCityId);
+                if (city) {
+                    setCity(city.id, city.nome);
+                }
+            }
+        }
+    }, [searchParams, cityId, availableCities, setCity]);
 
     // Foco automático no input ao carregar a página (Abre o teclado no Mobile)
     useEffect(() => {

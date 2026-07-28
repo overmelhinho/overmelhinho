@@ -323,11 +323,11 @@ class ClienteController extends Controller
                 -- NÍVEL 1 (OURO) + PAGANTE GERAL
                 WHEN ($ouroCondition) AND tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
 
-                -- NÍVEL 1 (OURO) + GRATUITO
-                WHEN ($ouroCondition) THEN 2
-
                 -- NÍVEL 2 (PRATA) - PAGANTES PARCIAIS
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 3
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 2
+
+                -- NÍVEL 1 (OURO) + GRATUITO
+                WHEN ($ouroCondition) THEN 3
 
                 -- NÍVEL 3 (BRONZE) - GRATUITOS PARCIAIS
                 ELSE 4
