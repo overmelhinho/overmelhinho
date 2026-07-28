@@ -199,7 +199,7 @@ class LeadController extends Controller
 
         foreach ($leadsPerdidos as $lead) {
             $lostAt = $lead->lost_at;
-            $diffInMonths = $lostAt->diffInMonths($now);
+            $diffInMonths = (int) $lostAt->diffInMonths($now);
             
             // Lógica de 3 meses: (3, 6, 9, 12...)
             if ($diffInMonths > 0 && $diffInMonths % 3 === 0) {

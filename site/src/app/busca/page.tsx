@@ -637,7 +637,7 @@ function SearchContent() {
                                                     </span>
                                                 )}
                                                 {formatStreetName(matchPerfeito.enderecos?.[0]?.rua, matchPerfeito.enderecos?.[0]?.tipo_logradouro) && !matchPerfeito.enderecos[0].exibir_apenas_cidade && (
-                                                    <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 truncate max-w-[150px]" title={formatStreetName(matchPerfeito.enderecos[0].rua, matchPerfeito.enderecos[0].tipo_logradouro) || ''}>
+                                                    <span className="flex items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 whitespace-normal text-left break-words" title={formatStreetName(matchPerfeito.enderecos[0].rua, matchPerfeito.enderecos[0].tipo_logradouro) || ''}>
                                                         {formatStreetName(matchPerfeito.enderecos[0].rua, matchPerfeito.enderecos[0].tipo_logradouro)}
                                                     </span>
                                                 )}
@@ -739,7 +739,7 @@ function SearchContent() {
                                                                 </span>
                                                             )}
                                                             {formatStreetName(item.enderecos?.[0]?.rua, item.enderecos?.[0]?.tipo_logradouro) && !item.enderecos[0].exibir_apenas_cidade && (
-                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro) || ''}>
+                                                                <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 uppercase tracking-wider whitespace-normal text-left break-words" title={formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro) || ''}>
                                                                     {formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro)}
                                                                 </span>
                                                             )}
@@ -831,7 +831,7 @@ function SearchContent() {
                                                                         </span>
                                                                     )}
                                                                     {formatStreetName(item.enderecos?.[0]?.rua, item.enderecos?.[0]?.tipo_logradouro) && !item.enderecos[0].exibir_apenas_cidade && (
-                                                                        <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider truncate max-w-[120px]" title={formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro) || ''}>
+                                                                        <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100 uppercase tracking-wider whitespace-normal text-left" title={formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro) || ''}>
                                                                             {formatStreetName(item.enderecos[0].rua, item.enderecos[0].tipo_logradouro)}
                                                                         </span>
                                                                     )}

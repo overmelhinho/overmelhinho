@@ -1000,59 +1000,66 @@ class ClienteController extends Controller
     }
 
 
-public function historico(Request $request, int $id)
-{
-    $limit = (int) $request->query('limit', 50);
-    $limit = max(1, min($limit, 200));
+    public function historico(Request $request, int $id)
+    {
+        $limit = (int) $request->query('limit', 50);
+        $limit = max(1, min($limit, 200));
 
-    $cursor = $request->query('cursor'); // "ISO_DATE|ID"
-    $cursorCreatedAt = null;
-    $cursorId = null;
+        $cursor = $request->query('cursor'); // "ISO_DATE|ID"
+        $cursorCreatedAt = null;
+        $cursorId = null;
 
-    if (is_string($cursor) && str_contains($cursor, '|')) {
-        [$cursorCreatedAt, $cursorId] = explode('|', $cursor, 2);
-        $cursorId = is_numeric($cursorId) ? (int) $cursorId : null;
-    }
+        if (is_string($cursor) && str_contains($cursor, '|')) {
+            [$cursorCreatedAt, $cursorId] = explode('|', $cursor, 2);
+            $cursorId = is_numeric($cursorId) ? (int) $cursorId : null;
+        }
 
-    $q = \App\Models\AuditLog::query()
-        ->where('cliente_id', $id)
-        ->orderByDesc('created_at')
-        ->orderByDesc('id');
+        $q = \App\Models\AuditLog::query()
+            ->with('actor:id,name') // Eager load the actor relationship
+            ->where('cliente_id', $id)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
-    // filtros opcionais
-    if ($request->filled('action')) {
-        $q->where('action', $request->query('action'));
-    }
+        // filtros opcionais
+        if ($request->filled('action')) {
+            $q->where('action', $request->query('action'));
+        }
 
-    if ($request->filled('entity_type')) {
-        $q->where('entity_type', $request->query('entity_type'));
-    }
+        if ($request->filled('entity_type')) {
+            $q->where('entity_type', $request->query('entity_type'));
+        }
 
-    // cursor pagination (sem OFFSET caro)
-    if ($cursorCreatedAt && $cursorId) {
-        $q->where(function ($sub) use ($cursorCreatedAt, $cursorId) {
-            $sub->where('created_at', '<', $cursorCreatedAt)
-                ->orWhere(function ($sub2) use ($cursorCreatedAt, $cursorId) {
-                    $sub2->where('created_at', '=', $cursorCreatedAt)
-                         ->where('id', '<', $cursorId);
-                });
+        // cursor pagination (sem OFFSET caro)
+        if ($cursorCreatedAt && $cursorId) {
+            $q->where(function ($sub) use ($cursorCreatedAt, $cursorId) {
+                $sub->where('created_at', '<', $cursorCreatedAt)
+                    ->orWhere(function ($sub2) use ($cursorCreatedAt, $cursorId) {
+                        $sub2->where('created_at', '=', $cursorCreatedAt)
+                             ->where('id', '<', $cursorId);
+                    });
+            });
+        }
+
+        $items = $q->limit($limit + 1)->get();
+
+        $nextCursor = null;
+        if ($items->count() > $limit) {
+            $last = $items[$limit - 1];
+            $nextCursor = $last->created_at->toISOString() . '|' . $last->id;
+            $items = $items->take($limit);
+        }
+
+        $mapped = $items->values()->map(function($item) {
+            $data = $item->toArray();
+            $data['actor_name'] = $item->actor ? $item->actor->name : 'Sistema';
+            return $data;
         });
+
+        return response()->json([
+            'data' => $mapped,
+            'next_cursor' => $nextCursor,
+        ]);
     }
-
-    $items = $q->limit($limit + 1)->get();
-
-    $nextCursor = null;
-    if ($items->count() > $limit) {
-        $last = $items[$limit - 1];
-        $nextCursor = $last->created_at->toISOString() . '|' . $last->id;
-        $items = $items->take($limit);
-    }
-
-    return response()->json([
-        'data' => $items->values(),
-        'next_cursor' => $nextCursor,
-    ]);
-}
 
 
 

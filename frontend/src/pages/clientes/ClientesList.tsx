@@ -1007,7 +1007,9 @@ export default function ClientesList() {
                       if (!selected) return;
                       const siteUrl = window.location.hostname === "localhost" 
                         ? "http://localhost:3000" 
-                        : "https://novo.overmelhinho.com.br";
+                        : window.location.hostname.includes("novo")
+                        ? "https://novo.overmelhinho.com.br"
+                        : "https://overmelhinho.com.br";
                       window.open(`${siteUrl}/cliente/${selected.slug || selected.id}`, "_blank");
                     }}
                   />

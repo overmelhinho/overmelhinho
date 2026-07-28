@@ -182,108 +182,161 @@ export default function TabAuditoria() {
                                         )}
 
                                         {log.field_changes && Object.keys(log.field_changes).length > 0 && (
-                                            <div className="mt-4 pt-4 border-t border-slate-100">
-                                                <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
-                                                    <History className="w-4 h-4 text-[#B70F0A]" />
-                                                    Detalhes da Atualização
-                                                </h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                                    {Object.entries(log.field_changes).map(([field, change]: [string, any]) => {
-                                                        if (!change) return null;
-                                                        const oldVal = change.old !== undefined ? change.old : change.from;
-                                                        const newVal = change.new !== undefined ? change.new : change.to;
+                                            (() => {
+                                                const changeElements = Object.entries(log.field_changes).map(([field, change]: [string, any]) => {
+                                                    if (!change) return null;
+                                                    const oldVal = change.old !== undefined ? change.old : change.from;
+                                                    const newVal = change.new !== undefined ? change.new : change.to;
 
-                                                        if (['seo_keywords_updated_at', 'updated_at', 'created_at', 'last_audit_at', 'audit_action', 'audit_differences'].includes(field)) {
-                                                            return null;
+                                                    if (['seo_keywords_updated_at', 'updated_at', 'created_at', 'last_audit_at', 'audit_action', 'audit_differences'].includes(field)) {
+                                                        return null;
+                                                    }
+
+                                                    const fieldLabels: Record<string, string> = {
+                                                        horario_atendimento: 'Horários de Atendimento',
+                                                        logo_url: 'Logotipo',
+                                                        banner_url: 'Banner',
+                                                        video: 'Vídeo / Apresentação',
+                                                        descricao: 'Descrição Completa',
+                                                        seo_keywords: 'Palavras-Chave (SEO)',
+                                                        redes_sociais: 'Redes Sociais',
+                                                        enderecos: 'Endereço',
+                                                        contatos: 'Contatos',
+                                                        exibir_no_site: 'Visibilidade no Site',
+                                                        possui_publicidade: 'Possui Publicidade',
+                                                        exibir_data_fundacao: 'Exibir Data de Fundação',
+                                                        razao_social: 'Razão Social',
+                                                        nome_fantasia: 'Nome Fantasia',
+                                                        audit_status: 'Status da Auditoria',
+                                                        responsavel: 'Responsável',
+                                                        telefone: 'Telefone Principal',
+                                                        website: 'Site',
+                                                        observacoes: 'Observações Internas',
+                                                        observacoes_horario: 'Obs. de Horários',
+                                                        beneficios: 'Benefícios',
+                                                        google_place_id: 'ID do Google Maps',
+                                                        cep: 'CEP',
+                                                        logradouro: 'Logradouro',
+                                                        numero: 'Número',
+                                                        bairro: 'Bairro',
+                                                        cidade: 'Cidade',
+                                                        estado: 'Estado',
+                                                        complemento: 'Complemento',
+                                                        latitude: 'Latitude',
+                                                        longitude: 'Longitude',
+                                                        seo_description: 'Descrição SEO',
+                                                        seo_title: 'Título SEO'
+                                                    };
+
+                                                    const label = fieldLabels[field] || field.replace(/_/g, ' ');
+
+                                                    const formatValue = (val: any, fieldName: string) => {
+                                                        if (val === null || val === undefined || val === '') return null;
+                                                        
+                                                        if (typeof val === 'boolean' || val === 'true' || val === 'false') {
+                                                            return String(val) === 'true' ? 'Sim' : 'Não';
                                                         }
 
-                                                        const fieldLabels: Record<string, string> = {
-                                                            horario_atendimento: 'Horários de Atendimento',
-                                                            logo_url: 'Logotipo',
-                                                            banner_url: 'Banner',
-                                                            video: 'Vídeo / Apresentação',
-                                                            descricao: 'Descrição Completa',
-                                                            seo_keywords: 'Palavras-Chave (SEO)',
-                                                            redes_sociais: 'Redes Sociais',
-                                                            enderecos: 'Endereço',
-                                                            contatos: 'Contatos',
-                                                            exibir_no_site: 'Visibilidade no Site',
-                                                            possui_publicidade: 'Possui Publicidade',
-                                                            exibir_data_fundacao: 'Exibir Data de Fundação',
-                                                            razao_social: 'Razão Social',
-                                                            nome_fantasia: 'Nome Fantasia',
-                                                            audit_status: 'Status da Auditoria',
-                                                            responsavel: 'Responsável',
-                                                            telefone: 'Telefone Principal',
-                                                            website: 'Site',
-                                                            observacoes: 'Observações Internas',
-                                                            observacoes_horario: 'Obs. de Horários',
-                                                            beneficios: 'Benefícios',
-                                                            google_place_id: 'ID do Google Maps',
-                                                            cep: 'CEP',
-                                                            logradouro: 'Logradouro',
-                                                            numero: 'Número',
-                                                            bairro: 'Bairro',
-                                                            cidade: 'Cidade',
-                                                            estado: 'Estado',
-                                                            complemento: 'Complemento',
-                                                            latitude: 'Latitude',
-                                                            longitude: 'Longitude',
-                                                            seo_description: 'Descrição SEO',
-                                                            seo_title: 'Título SEO'
-                                                        };
-
-                                                        const label = fieldLabels[field] || field.replace(/_/g, ' ');
-
-                                                        const formatValue = (val: any) => {
-                                                            if (val === null || val === undefined || val === '') return null;
-                                                            if (typeof val === 'boolean' || val === 'true' || val === 'false') {
-                                                                return String(val) === 'true' ? 'Sim' : 'Não';
+                                                        // Handle Double Encoded JSON Strings that were stringified
+                                                        if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{') || val.startsWith('"[') || val.startsWith('"{'))) {
+                                                            try {
+                                                                let parsed = JSON.parse(val);
+                                                                if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Double decode if necessary
+                                                                val = parsed;
+                                                            } catch(e) {
+                                                                // Ignore parse errors, treat as normal string
                                                             }
-                                                            if (Array.isArray(val)) {
-                                                                return val.length === 0 ? 'Vazio' : `${val.length} item(s)`;
+                                                        }
+
+                                                        if (fieldName === 'horario_atendimento') {
+                                                            return 'Grade de horários atualizada';
+                                                        }
+
+                                                        if (fieldName === 'logo_url' || fieldName === 'banner_url') {
+                                                            if (typeof val === 'string' && val.startsWith('http')) {
+                                                                return (
+                                                                    <div className="mt-1">
+                                                                        <img src={val} alt="Mídia" className="h-12 w-auto object-contain rounded-md border border-slate-200" />
+                                                                    </div>
+                                                                );
                                                             }
-                                                            if (typeof val === 'object') {
-                                                                return 'Dados Atualizados';
+                                                        }
+
+                                                        if (Array.isArray(val)) {
+                                                            if (val.length === 0) return 'Vazio';
+                                                            // Extract string values if it's an array of objects or strings
+                                                            const items = val.map(v => typeof v === 'object' ? (v.nome || v.titulo || v.name || JSON.stringify(v)) : String(v));
+                                                            return items.join(', ');
+                                                        }
+
+                                                        if (typeof val === 'object') {
+                                                            return 'Dados Atualizados';
+                                                        }
+                                                        
+                                                        // Format dates
+                                                        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+                                                            try {
+                                                                const dateStr = val.split('.')[0]; // Remove ms if present
+                                                                return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: ptBR }).replace(' 00:00', '');
+                                                            } catch (e) {
+                                                                // fallthrough
                                                             }
-                                                            if (typeof val === 'string' && val.length > 80) {
-                                                                return val.substring(0, 80) + '...';
-                                                            }
-                                                            return String(val);
-                                                        };
+                                                        }
 
-                                                        const oldFormatted = formatValue(oldVal);
-                                                        const newFormatted = formatValue(newVal);
+                                                        if (typeof val === 'string' && val.length > 80) {
+                                                            return val.substring(0, 80) + '...';
+                                                        }
+                                                        return String(val);
+                                                    };
 
-                                                        if (oldFormatted === newFormatted && oldFormatted !== null) return null;
+                                                    const oldFormatted = formatValue(oldVal, field);
+                                                    const newFormatted = formatValue(newVal, field);
 
-                                                        const from = oldFormatted === null ? 'Vazio' : oldFormatted;
-                                                        const to = newFormatted === null ? 'Vazio' : newFormatted;
+                                                    // Compare React elements or strings
+                                                    const isSame = typeof oldFormatted === 'string' && typeof newFormatted === 'string' 
+                                                        ? oldFormatted === newFormatted 
+                                                        : oldFormatted === newFormatted;
 
-                                                        return (
-                                                            <div key={field} className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
-                                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                                                                    {label}
+                                                    if (isSame && oldFormatted !== null) return null;
+
+                                                    const from = oldFormatted === null ? 'Vazio' : oldFormatted;
+                                                    const to = newFormatted === null ? 'Vazio' : newFormatted;
+
+                                                    return (
+                                                        <div key={field} className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
+                                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                                                {label}
+                                                            </div>
+                                                            <div className="flex flex-col gap-2">
+                                                                <div className="flex items-start gap-2">
+                                                                    <span className="mt-0.5 text-slate-300"><X className="w-3.5 h-3.5" /></span>
+                                                                    <span className="text-sm text-slate-500 font-medium line-through decoration-slate-300 break-words line-clamp-2">
+                                                                        {from}
+                                                                    </span>
                                                                 </div>
-                                                                <div className="flex flex-col gap-2">
-                                                                    <div className="flex items-start gap-2">
-                                                                        <span className="mt-0.5 text-slate-300"><X className="w-3.5 h-3.5" /></span>
-                                                                        <span className="text-sm text-slate-500 font-medium line-through decoration-slate-300 break-words line-clamp-2">
-                                                                            {from}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="flex items-start gap-2">
-                                                                        <span className="mt-0.5 text-emerald-500"><Check className="w-3.5 h-3.5" /></span>
-                                                                        <span className="text-sm text-emerald-700 font-bold break-words line-clamp-3">
-                                                                            {to}
-                                                                        </span>
-                                                                    </div>
+                                                                <div className="flex items-start gap-2">
+                                                                    <span className="mt-0.5 text-emerald-500"><Check className="w-3.5 h-3.5" /></span>
+                                                                    <span className="text-sm text-emerald-700 font-bold break-words line-clamp-3">
+                                                                        {to}
+                                                                    </span>
                                                                 </div>
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                                
+                                                const validChangeElements = changeElements.filter(el => el !== null);
+                                                
+                                                if (validChangeElements.length === 0) return null;
+
+                                                return (
+                                                    <div className="mt-4 pt-4 border-t border-slate-100">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                                            {validChangeElements}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()
                                         )}
                                     </div>
                                 </div>
