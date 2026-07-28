@@ -1,13 +1,24 @@
-import { useState } from "react";
+
 import AdminReportDashboard from "./reports/AdminReportDashboard";
 import SalesReportsTab from "./reports/SalesReportsTab";
 import CommissionReportsTab from "./reports/CommissionReportsTab";
 import JobReportsTab from "./reports/JobReportsTab";
 import { Tabs, Tab } from "@/components/ui/tabs";
 import { LayoutDashboard, ShoppingCart, Percent, FileText } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 export default function RelatoriosPage() {
-    const [activeTabIndex, setActiveTabIndex] = useState(0);
+    const [searchParams, setSearchParams] = useSearchParams();
+    
+    const tabs = ["geral", "vendas", "comissoes", "curriculos"];
+    const currentTab = searchParams.get("tab");
+    
+    const activeTabIndex = currentTab ? tabs.indexOf(currentTab) : 0;
+    const resolvedIndex = activeTabIndex === -1 ? 0 : activeTabIndex;
+
+    const handleTabChange = (index: number) => {
+        setSearchParams({ tab: tabs[index] }, { replace: true });
+    };
 
     return (
         <div className="p-0">
@@ -17,7 +28,7 @@ export default function RelatoriosPage() {
                     <p className="text-gray-400 font-medium text-xs">Acompanhamento de vendas, comissões e performance operacional.</p>
                 </div>
 
-                <Tabs selectedIndex={activeTabIndex} onChange={setActiveTabIndex}>
+                <Tabs selectedIndex={resolvedIndex} onChange={handleTabChange}>
                     <Tab 
                         title={
                             <div className="flex items-center gap-2">

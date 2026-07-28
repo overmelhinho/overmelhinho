@@ -183,11 +183,11 @@ class ClientReportController extends Controller
             'status'        => 'draft',
         ]);
 
-        $frontendUrl = env('FRONTEND_URL', 'https://novo.overmelhinho.com.br');
+        $dashboardUrl = env('DASHBOARD_URL', 'https://dash.overmelhinho.com.br');
         return response()->json([
             'id'      => $report->id,
             'token'   => $report->token,
-            'link'    => "{$frontendUrl}/relatorio/{$report->token}",
+            'link'    => "{$dashboardUrl}/relatorio/{$report->token}",
             'message' => 'Relatório gerado com sucesso!',
         ], 201);
     }
