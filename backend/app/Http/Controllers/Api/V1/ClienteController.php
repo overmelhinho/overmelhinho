@@ -1287,6 +1287,7 @@ class ClienteController extends Controller
                 'beneficios.*'          => 'string|max:100',
                 'contact_preference'    => 'nullable|string|max:50',
                 'best_contact_shift'    => 'nullable|string|max:50',
+                'responsavel'           => 'nullable|string|max:255',
             ]);
 
             $generate = $request->boolean('generate_seo_keywords', true);
@@ -1367,6 +1368,16 @@ class ClienteController extends Controller
 
             if (isset($validated['beneficios'])) {
                 $clienteData['beneficios'] = $validated['beneficios'];
+            }
+
+            if (isset($validated['contact_preference'])) {
+                $clienteData['contact_preference'] = $validated['contact_preference'];
+            }
+            if (isset($validated['best_contact_shift'])) {
+                $clienteData['best_contact_shift'] = $validated['best_contact_shift'];
+            }
+            if (isset($validated['responsavel'])) {
+                $clienteData['responsavel'] = $validated['responsavel'];
             }
 
             $cliente = Cliente::create($clienteData);
@@ -1778,6 +1789,7 @@ class ClienteController extends Controller
                 'audit_action'          => 'nullable|string',
                 'contact_preference'    => 'nullable|string|max:50',
                 'best_contact_shift'    => 'nullable|string|max:50',
+                'responsavel'           => 'nullable|string|max:255',
             ]);
 
             $generate = $request->boolean('generate_seo_keywords', true);
@@ -1815,14 +1827,11 @@ class ClienteController extends Controller
                 'audit_differences'     => array_key_exists('audit_differences', $validated) ? $validated['audit_differences'] : $cliente->audit_differences,
                 'contact_preference'    => $validated['contact_preference'] ?? $cliente->contact_preference,
                 'best_contact_shift'    => $validated['best_contact_shift'] ?? $cliente->best_contact_shift,
+                'responsavel'           => $request->has('responsavel') ? ($validated['responsavel'] ?? null) : $cliente->responsavel,
             ];
 
             if (isset($validated['last_audit_at'])) {
                 $clienteData['last_audit_at'] = $validated['last_audit_at'];
-            }
-
-            if ($request->filled('audit_action') && $request->user()) {
-                $clienteData['responsavel'] = $request->user()->name;
             }
 
             if (Schema::hasColumn('clientes', 'horario_atendimento') && !$request->has('horario_atendimento')) {
