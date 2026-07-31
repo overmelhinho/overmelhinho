@@ -38,12 +38,22 @@ class UserController extends Controller implements HasMiddleware
             'roles.*'  => 'exists:roles,id',
         ]);
 
+        $isActive = (bool) ($data['is_active'] ?? true);
+
         $user = User::create([
             'name'     => $data['name'],
             'email'    => $data['email'],
             'password' => bcrypt($data['password']),
-            'is_active' => $data['is_active'] ?? true,
         ]);
+
+        // ✅ PostgreSQL exige boolean nativo (true/false), não integer (1/0).
+        // PDO envia 1/0 via Eloquent, causando "Datatype mismatch".
+        // Usar DB::table + DB::raw garante o boolean correto.
+        \DB::table('users')
+            ->where('id', $user->id)
+            ->update(['is_active' => \DB::raw($isActive ? 'true' : 'false')]);
+
+        $user->refresh();
 
         // ✅ Importante:
         // Evita assignRole($role->name) (que tenta resolver pelo guard default e pode cair em sanctum).
@@ -81,13 +91,24 @@ class UserController extends Controller implements HasMiddleware
             'roles.*'  => 'exists:roles,id',
         ]);
 
-        // Remover 'roles' do update para não tentar salvar coluna inexistente
+        // Remover 'roles' e 'is_active' do update Eloquent para tratar separadamente
         $updateData = $data;
         unset($updateData['roles']);
+        $hasIsActive = array_key_exists('is_active', $updateData);
+        unset($updateData['is_active']);
 
         if (!empty($updateData)) {
-            // Usa fn($v) => !is_null($v) para preservar valores false (ex: is_active)
+            // Usa fn($v) => !is_null($v) para preservar valores false
             $user->update(array_filter($updateData, fn($v) => !is_null($v)));
+        }
+
+        // ✅ PostgreSQL exige boolean nativo (true/false), não integer (1/0).
+        if ($hasIsActive) {
+            $newActive = (bool) $data['is_active'];
+            \DB::table('users')
+                ->where('id', $user->id)
+                ->update(['is_active' => \DB::raw($newActive ? 'true' : 'false')]);
+            $user->refresh();
         }
 
         if (array_key_exists('roles', $data)) {
