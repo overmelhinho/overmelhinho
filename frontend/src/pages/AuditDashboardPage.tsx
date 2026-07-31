@@ -173,7 +173,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                 </td>
                 <td className="px-8 py-6 text-right">
                     <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/clientes/${log.cliente_id}/hub`); }}
+                        onClick={(e) => { e.stopPropagation(); window.open(`https://overmelhinho.com.br/cliente/${log.cliente_id}`, '_blank'); }}
                         className="p-2.5 hover:bg-white hover:shadow-md rounded-xl transition-all text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-100"
                     >
                         <ArrowUpRight className="w-5 h-5" />
