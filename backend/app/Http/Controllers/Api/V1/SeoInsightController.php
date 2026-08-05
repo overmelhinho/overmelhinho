@@ -14,8 +14,13 @@ class SeoInsightController extends Controller
      */
     public function index(Request $request)
     {
-        $query = SeoInsight::with('cliente:id,nome_fantasia,slug')
-            ->where('status', 'pending');
+        $query = SeoInsight::with('cliente:id,nome_fantasia,slug');
+
+        if ($request->has('status') && !empty($request->status)) {
+            $query->where('status', $request->status);
+        } else {
+            $query->where('status', 'pending');
+        }
 
         if ($request->has('insight_type') && !empty($request->insight_type)) {
             $query->where('insight_type', $request->insight_type);

@@ -20,6 +20,7 @@ export default function SeoInsightsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [insightType, setInsightType] = useState("");
+  const [status, setStatus] = useState("pending");
   const [sortBy, setSortBy] = useState("impressions");
   const [sortOrder, setSortOrder] = useState("desc");
 
@@ -27,9 +28,10 @@ export default function SeoInsightsPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
-  // Estado para IA (linha individual)
+  // Estado para IA (linha individual e modal)
   const [loadingAiId, setLoadingAiId] = useState<number | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<Record<number, any[]>>({});
+  const [selectedInsightForAi, setSelectedInsightForAi] = useState<any | null>(null);
 
   const fetchInsights = useCallback(async () => {
     setLoading(true);
@@ -38,6 +40,7 @@ export default function SeoInsightsPage() {
         page: page.toString(),
         search,
         insight_type: insightType,
+        status,
         sort_by: sortBy,
         sort_order: sortOrder,
         per_page: "20"
@@ -57,7 +60,7 @@ export default function SeoInsightsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, insightType, sortBy, sortOrder]);
+  }, [page, search, insightType, status, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchInsights();
@@ -98,6 +101,7 @@ export default function SeoInsightsPage() {
   };
 
   const handleGenerateAi = async (insight: any) => {
+    setSelectedInsightForAi(insight);
     setLoadingAiId(insight.id);
     try {
       const { data } = await api.post(`/v1/seo-insights/${insight.id}/generate-ai`);
@@ -108,14 +112,15 @@ export default function SeoInsightsPage() {
     } catch (error) {
       console.error("Erro ao gerar IA:", error);
       toast.error("Falha ao gerar sugestões com a IA.");
+      setSelectedInsightForAi(null);
     } finally {
       setLoadingAiId(null);
     }
   };
 
-  const handleAction = async (id: number, status: 'applied' | 'ignored') => {
+  const handleAction = async (id: number, actionStatus: 'applied' | 'ignored') => {
     try {
-      await api.post(`/v1/seo-insights/${id}/action`, { status });
+      await api.post(`/v1/seo-insights/${id}/action`, { status: actionStatus });
       toast.success("Ação registrada com sucesso!");
       fetchInsights();
     } catch (error) {
@@ -187,6 +192,19 @@ export default function SeoInsightsPage() {
                 }}
               />
             </div>
+
+            <select
+              className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="pending">Pendentes</option>
+              <option value="applied">Aplicados</option>
+              <option value="ignored">Ignorados</option>
+            </select>
             
             <select
               className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
@@ -351,6 +369,7 @@ export default function SeoInsightsPage() {
                               <div className="flex gap-2">
                                 <button onClick={() => handleAction(insight.id, 'applied')} className="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded font-semibold border border-green-200">Aplicado</button>
                                 <button onClick={() => handleAction(insight.id, 'ignored')} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 rounded font-semibold border border-gray-200">Ignorar</button>
+                                <button onClick={() => setSelectedInsightForAi(insight)} className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 px-2 py-1 rounded font-semibold border border-purple-200">Ver IA</button>
                               </div>
                             ) : (
                               <button
@@ -363,19 +382,6 @@ export default function SeoInsightsPage() {
                               </button>
                             )}
                           </div>
-                          
-                          {/* Exibe sugestões se a IA já tiver gerado para esta linha */}
-                          {hasAi && (
-                            <div className="mt-3 text-left w-64 max-w-sm absolute right-10 bg-white border shadow-xl p-3 rounded-lg z-10 text-xs">
-                              <p className="font-bold text-purple-900 mb-2 border-b pb-1">Sugestões (Copiar)</p>
-                              {aiSuggestions[insight.id].map((sug, i) => (
-                                <div key={i} className="mb-2 pb-2 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
-                                  <div className="font-bold text-gray-800 line-clamp-1">{sug.title}</div>
-                                  <div className="text-gray-500 line-clamp-2 mt-0.5">{sug.description}</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </td>
                       </tr>
                     );
@@ -387,6 +393,95 @@ export default function SeoInsightsPage() {
           {renderPagination()}
         </div>
       </div>
+
+      {/* Modal / Drawer de IA */}
+      {selectedInsightForAi && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slide-up">
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-white relative">
+              <button 
+                onClick={() => setSelectedInsightForAi(null)}
+                className="absolute top-4 right-4 text-white/70 hover:text-white"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-md">
+                  <Sparkles className="w-6 h-6 text-purple-100" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Otimização Inteligente</h2>
+                  <p className="text-purple-100 text-sm mt-1">{selectedInsightForAi.url}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-6">
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Palavra-Chave Alvo</h3>
+                <div className="inline-block bg-purple-50 text-purple-800 border border-purple-200 px-3 py-1.5 rounded-lg font-medium">
+                  {selectedInsightForAi.keyword}
+                </div>
+              </div>
+
+              {loadingAiId === selectedInsightForAi.id ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center">
+                  <Loader className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+                  <h3 className="text-lg font-bold text-gray-900">A IA está analisando a página...</h3>
+                  <p className="text-gray-500 mt-2 max-w-sm">Estamos cruzando dados do Google com o conteúdo atual para gerar as melhores recomendações de SEO.</p>
+                </div>
+              ) : aiSuggestions[selectedInsightForAi.id]?.length > 0 ? (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Sugestões Geradas</h3>
+                  <div className="space-y-3">
+                    {aiSuggestions[selectedInsightForAi.id].map((sug: any, i: number) => (
+                      <div key={i} className="border border-gray-200 rounded-xl p-4 hover:border-purple-300 transition-colors bg-gray-50/50">
+                        <div className="font-bold text-gray-900 text-base mb-1">{sug.title}</div>
+                        <div className="text-gray-600 text-sm leading-relaxed">{sug.description}</div>
+                        <div className="mt-3 flex justify-end">
+                          <button 
+                            className="text-xs bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold px-3 py-1.5 rounded-lg shadow-sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${sug.title}\n${sug.description}`);
+                              toast.success("Copiado para a área de transferência!");
+                            }}
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
+                     <button 
+                      onClick={() => {
+                        handleAction(selectedInsightForAi.id, 'ignored');
+                        setSelectedInsightForAi(null);
+                      }} 
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                    >
+                      Ignorar Alerta
+                    </button>
+                    <button 
+                      onClick={() => {
+                        handleAction(selectedInsightForAi.id, 'applied');
+                        setSelectedInsightForAi(null);
+                      }} 
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                    >
+                      Marcar como Aplicado
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  Nenhuma sugestão encontrada. Tente gerar novamente.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
