@@ -253,7 +253,7 @@ export default function CampanhaWizard({
     const PLACEMENT_SPECS: Record<string, { label: string; desktop: string; mobile: string; desc: string }> = {
         HOME_TOP: {
             label: "Banner Topo (Home)",
-            desktop: "1280x480px",
+            desktop: "1280x300px",
             mobile: "800x500px",
             desc: "Exibido no topo da página inicial do portal."
         },
@@ -265,13 +265,13 @@ export default function CampanhaWizard({
         },
         SEARCH_RESULT: {
             label: "Banner de Busca",
-            desktop: "1280x400px",
+            desktop: "1280x300px",
             mobile: "800x500px",
             desc: "Exibido no topo dos resultados de pesquisa."
         },
         SEGMENT_LISTING: {
             label: "Banner de Segmento",
-            desktop: "1280x400px",
+            desktop: "1280x300px",
             mobile: "800x500px",
             desc: "Exibido na listagem de categorias."
         }
@@ -318,12 +318,15 @@ export default function CampanhaWizard({
                                         Tamanho único: 800x800px
                                     </span>
                                 ) : (
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                         <span className="inline-block text-[10px] font-bold text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1">
                                             Desktop: {PLACEMENT_SPECS[type.placement]?.desktop}
                                         </span>
                                         <span className="inline-block text-[10px] font-bold text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1">
                                             Mobile: {PLACEMENT_SPECS[type.placement]?.mobile}
+                                        </span>
+                                        <span className="inline-block text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-1">
+                                            Máximo 2MB
                                         </span>
                                     </div>
                                 )}
