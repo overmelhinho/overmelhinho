@@ -400,7 +400,7 @@ export default function ClientProfileClient() {
         if (!isSelectedHidden) primaryWhatsApp = contactInfo[contactInfo.whatsapp_selected];
     }
     if (!primaryWhatsApp) {
-        primaryWhatsApp = allPhones.find(p => p.isWhatsApp)?.number || allPhones[0]?.number;
+        primaryWhatsApp = allPhones.find(p => p.isWhatsApp)?.number;
     }
     const hasWhatsApp = !!primaryWhatsApp && isPagante;
 
