@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Megaphone,
   Sparkles,
+  Zap,
 } from "lucide-react";
 
 type Item = {
@@ -104,6 +105,12 @@ export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: Sidebar
       to: "/radar-prospeccao",
       label: "Radar Google",
       icon: <Sparkles size={18} />,
+      perms: ["view_dashboard"],
+    },
+    {
+      to: "/seo-oportunidades",
+      label: "Oportunidades SEO",
+      icon: <Zap size={18} />,
       perms: ["view_dashboard"],
     },
     {

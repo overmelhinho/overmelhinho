@@ -31,9 +31,6 @@ class GoogleSearchConsoleService
         $this->siteUrl = env('GOOGLE_SEARCH_CONSOLE_SITE_URL', 'https://novo.overmelhinho.com.br/');
     }
 
-    /**
-     * Busca métricas para uma palavra-chave específica.
-     */
     public function getKeywordMetrics(string $keyword, int $days = 14)
     {
         if (!$this->service) {
@@ -43,7 +40,7 @@ class GoogleSearchConsoleService
         $request = new SearchAnalyticsQueryRequest();
         $request->setStartDate(now()->subDays($days + 2)->format('Y-m-d'));
         $request->setEndDate(now()->subDays(2)->format('Y-m-d')); // O Google tem delay de ~48h
-        $request->setDimensions(['query']);
+        $request->setDimensions(['query', 'page']);
         
         // Filtro para a palavra-chave exata
         $request->setDimensionFilterGroups([
@@ -67,16 +64,22 @@ class GoogleSearchConsoleService
                     'position' => 0,
                     'clicks' => 0,
                     'impressions' => 0,
-                    'ctr' => 0
+                    'ctr' => 0,
+                    'url' => null,
                 ];
             }
 
+            // A primeira linha contém os melhores dados para essa keyword (como está ordenada pela maior performance)
             $data = $rows[0];
+            $keys = $data->getKeys();
+            $url = isset($keys[1]) ? $keys[1] : null;
+
             return [
                 'position' => round($data->getPosition(), 1),
                 'clicks' => $data->getClicks(),
                 'impressions' => $data->getImpressions(),
-                'ctr' => round($data->getCtr() * 100, 2)
+                'ctr' => round($data->getCtr() * 100, 2),
+                'url' => $url,
             ];
         } catch (\Exception $e) {
             \Log::error("Search Console API Error: " . $e->getMessage());

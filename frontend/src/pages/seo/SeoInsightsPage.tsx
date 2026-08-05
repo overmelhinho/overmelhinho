@@ -1,0 +1,392 @@
+import { useEffect, useState, useCallback } from "react";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import api from "@/services/api";
+import { Loader, Zap, Search, AlertTriangle, TrendingUp, CheckCircle, XCircle, Sparkles, Filter, CheckSquare } from "lucide-react";
+import toast from "react-hot-toast";
+
+interface PaginationData {
+  current_page: number;
+  last_page: number;
+  total: number;
+  per_page: number;
+}
+
+export default function SeoInsightsPage() {
+  const [insights, setInsights] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationData | null>(null);
+
+  // Filtros
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [insightType, setInsightType] = useState("");
+  const [sortBy, setSortBy] = useState("impressions");
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  // Ações em lote
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  // Estado para IA (linha individual)
+  const [loadingAiId, setLoadingAiId] = useState<number | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<Record<number, any[]>>({});
+
+  const fetchInsights = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        search,
+        insight_type: insightType,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+        per_page: "20"
+      });
+
+      const { data } = await api.get(`/v1/seo-insights?${params.toString()}`);
+      setInsights(data.data || []);
+      setPagination({
+        current_page: data.current_page,
+        last_page: data.last_page,
+        total: data.total,
+        per_page: data.per_page,
+      });
+    } catch (error) {
+      console.error("Erro ao buscar SEO insights:", error);
+      toast.error("Falha ao carregar oportunidades de SEO.");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search, insightType, sortBy, sortOrder]);
+
+  useEffect(() => {
+    fetchInsights();
+  }, [fetchInsights]);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(insights.map((i) => i.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkAction = async (status: 'applied' | 'ignored') => {
+    if (selectedIds.length === 0) return;
+    
+    setBulkActionLoading(true);
+    try {
+      await api.post(`/v1/seo-insights/bulk-action`, { 
+        ids: selectedIds, 
+        status 
+      });
+      toast.success(`${selectedIds.length} oportunidades marcadas como ${status === 'applied' ? 'aplicadas' : 'ignoradas'}.`);
+      setSelectedIds([]);
+      fetchInsights();
+    } catch (error) {
+      console.error("Erro em lote:", error);
+      toast.error("Erro ao processar ações em lote.");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleGenerateAi = async (insight: any) => {
+    setLoadingAiId(insight.id);
+    try {
+      const { data } = await api.post(`/v1/seo-insights/${insight.id}/generate-ai`);
+      setAiSuggestions(prev => ({
+        ...prev,
+        [insight.id]: data.suggestions || []
+      }));
+    } catch (error) {
+      console.error("Erro ao gerar IA:", error);
+      toast.error("Falha ao gerar sugestões com a IA.");
+    } finally {
+      setLoadingAiId(null);
+    }
+  };
+
+  const handleAction = async (id: number, status: 'applied' | 'ignored') => {
+    try {
+      await api.post(`/v1/seo-insights/${id}/action`, { status });
+      toast.success("Ação registrada com sucesso!");
+      fetchInsights();
+    } catch (error) {
+      toast.error("Erro ao registrar ação.");
+    }
+  };
+
+  const renderPagination = () => {
+    if (!pagination || pagination.last_page <= 1) return null;
+    return (
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Mostrando <span className="font-medium">{(pagination.current_page - 1) * pagination.per_page + 1}</span> a <span className="font-medium">{Math.min(pagination.current_page * pagination.per_page, pagination.total)}</span> de <span className="font-medium">{pagination.total}</span> resultados
+            </p>
+          </div>
+          <div>
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(pagination.last_page, p + 1))}
+                disabled={page === pagination.last_page}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Próxima
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Zap className="text-yellow-500 w-6 h-6" />
+              Oportunidades SEO Proativas
+            </h1>
+            <p className="text-gray-500 mt-1">
+              Gerencie e otimize os alertas detectados pelo motor do Vermelhinho em larga escala.
+            </p>
+          </div>
+        </div>
+
+        {/* Filtros */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-wrap gap-4 items-center justify-between">
+          <div className="flex flex-wrap gap-4 flex-1">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar cliente, URL ou keyword..."
+                className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            
+            <select
+              className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+              value={insightType}
+              onChange={(e) => {
+                setInsightType(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">Todos os Alertas</option>
+              <option value="low_ctr">Baixo CTR</option>
+              <option value="page_2">Preso na Página 2</option>
+              <option value="drop">Queda Brusca</option>
+            </select>
+
+            <select
+              className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+              value={`${sortBy}-${sortOrder}`}
+              onChange={(e) => {
+                const [sort, order] = e.target.value.split('-');
+                setSortBy(sort);
+                setSortOrder(order);
+                setPage(1);
+              }}
+            >
+              <option value="impressions-desc">Maiores Impressões</option>
+              <option value="ctr-asc">Piores CTRs</option>
+              <option value="position-desc">Piores Posições</option>
+              <option value="created_at-desc">Mais Recentes</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedIds.length > 0 && (
+          <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg mb-4 flex items-center justify-between animate-fade-in">
+            <span className="text-purple-800 font-semibold text-sm flex items-center gap-2">
+              <CheckSquare className="w-4 h-4" />
+              {selectedIds.length} itens selecionados
+            </span>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => handleBulkAction('ignored')}
+                disabled={bulkActionLoading}
+                className="text-xs bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-50 flex items-center gap-1 font-semibold disabled:opacity-50"
+              >
+                <XCircle className="w-3 h-3" /> Ignorar Lote
+              </button>
+              <button 
+                onClick={() => handleBulkAction('applied')}
+                disabled={bulkActionLoading}
+                className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 flex items-center gap-1 font-semibold disabled:opacity-50"
+              >
+                <CheckCircle className="w-3 h-3" /> Marcar Lote como Aplicado
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tabela */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left w-12">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      onChange={handleSelectAll}
+                      checked={insights.length > 0 && selectedIds.length === insights.length}
+                    />
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-500 uppercase tracking-wider">
+                    Cliente / URL
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-500 uppercase tracking-wider">
+                    Keyword
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-500 uppercase tracking-wider">
+                    Problema
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-500 uppercase tracking-wider">
+                    Métricas
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right font-semibold text-gray-500 uppercase tracking-wider">
+                    Ação (IA)
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center">
+                      <Loader className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
+                      <p className="text-gray-500">Carregando oportunidades...</p>
+                    </td>
+                  </tr>
+                ) : insights.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center">
+                      <Search className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 font-medium">Nenhum resultado encontrado.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  insights.map((insight) => {
+                    const isLowCtr = insight.insight_type === 'low_ctr';
+                    const hasAi = !!aiSuggestions[insight.id];
+
+                    return (
+                      <tr key={insight.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(insight.id) ? 'bg-purple-50/50' : ''}`}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            checked={selectedIds.includes(insight.id)}
+                            onChange={() => handleSelectRow(insight.id)}
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-gray-900">{insight.cliente?.nome_fantasia || 'Cliente Removido'}</div>
+                          <a href={insight.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate max-w-[200px] block" title={insight.url}>
+                            {insight.url}
+                          </a>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="bg-blue-100 text-blue-800 font-medium px-2.5 py-0.5 rounded text-xs border border-blue-200">
+                            {insight.keyword}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {isLowCtr ? (
+                            <span className="flex items-center gap-1 text-red-600 text-xs font-semibold">
+                              <AlertTriangle className="w-3 h-3" /> CTR Baixo
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-orange-600 text-xs font-semibold">
+                              <TrendingUp className="w-3 h-3" /> Quase na Pg 1
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex gap-4">
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase font-bold">Posição</p>
+                              <p className="font-semibold text-gray-900">#{insight.position}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase font-bold">CTR</p>
+                              <p className={`font-semibold ${isLowCtr ? 'text-red-600' : 'text-gray-900'}`}>{insight.ctr}%</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase font-bold">Impr.</p>
+                              <p className="font-semibold text-gray-900">{insight.impressions}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex flex-col items-end gap-2">
+                            {hasAi ? (
+                              <div className="flex gap-2">
+                                <button onClick={() => handleAction(insight.id, 'applied')} className="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded font-semibold border border-green-200">Aplicado</button>
+                                <button onClick={() => handleAction(insight.id, 'ignored')} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 rounded font-semibold border border-gray-200">Ignorar</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleGenerateAi(insight)}
+                                disabled={loadingAiId === insight.id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded text-xs font-semibold hover:from-purple-700 hover:to-indigo-700 transition-colors disabled:opacity-50"
+                              >
+                                {loadingAiId === insight.id ? <Loader className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                Gerar IA
+                              </button>
+                            )}
+                          </div>
+                          
+                          {/* Exibe sugestões se a IA já tiver gerado para esta linha */}
+                          {hasAi && (
+                            <div className="mt-3 text-left w-64 max-w-sm absolute right-10 bg-white border shadow-xl p-3 rounded-lg z-10 text-xs">
+                              <p className="font-bold text-purple-900 mb-2 border-b pb-1">Sugestões (Copiar)</p>
+                              {aiSuggestions[insight.id].map((sug, i) => (
+                                <div key={i} className="mb-2 pb-2 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+                                  <div className="font-bold text-gray-800 line-clamp-1">{sug.title}</div>
+                                  <div className="text-gray-500 line-clamp-2 mt-0.5">{sug.description}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          {renderPagination()}
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}

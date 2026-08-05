@@ -18,6 +18,7 @@ import ConfiguracoesPage from "@/pages/ConfiguracoesPage";
 import Unauthorized from "@/pages/Unauthorized";
 import MinhaContaPage from "@/pages/MinhaContaPage";
 import DocumentationPage from "@/pages/DocumentationPage";
+import SeoInsightsPage from "@/pages/seo/SeoInsightsPage";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -109,6 +110,15 @@ const router = createBrowserRouter([
         <DashboardLayout>
           <FocusDashboard />
         </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+
+  {
+    path: "/seo-oportunidades",
+    element: (
+      <ProtectedRoute perms={["view_dashboard"]}>
+        <SeoInsightsPage />
       </ProtectedRoute>
     ),
   },

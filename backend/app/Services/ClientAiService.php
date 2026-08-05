@@ -277,10 +277,58 @@ class ClientAiService
             }
 
             return null;
-
         } catch (\Throwable $e) {
             Log::error('[ClientAiService] Erro na geração da frase diária', ['error' => $e->getMessage()]);
             return null;
+        }
+    }
+
+    /**
+     * Gera 3 sugestões de Title e Meta Description focadas em conversão (SEO).
+     */
+    public function generateSeoSuggestions(string $keyword, string $url, string $insightType): array
+    {
+        if (!$this->openaiKey) return [];
+
+        $context = "";
+        if ($insightType === 'low_ctr') {
+            $context = "O problema atual é que a página tem muitas impressões mas pouquíssimos cliques (CTR baixo). Precisamos de títulos e descrições extremamente chamativos e persuasivos (gatilhos mentais).";
+        } elseif ($insightType === 'page_2') {
+            $context = "A página está presa na Página 2 do Google. Precisamos de títulos e descrições super otimizados exatamente para a palavra-chave para dar o empurrão final para a Página 1.";
+        }
+
+        $prompt = "Gere 3 opções de <title> e <meta description> otimizadas para SEO.\n" .
+                  "Palavra-chave foco: '{$keyword}'\n" .
+                  "URL Alvo: '{$url}'\n\n" .
+                  "Contexto/Objetivo: {$context}\n\n" .
+                  "Instruções Técnicas:\n" .
+                  "- O Title deve ter no máximo 60 caracteres.\n" .
+                  "- A Meta Description deve ter no máximo 155 caracteres.\n" .
+                  "- Retorne APENAS um JSON contendo a chave 'suggestions' com um array de 3 objetos. Cada objeto deve ter as chaves 'title' e 'description'.\n";
+
+        try {
+            $response = Http::withToken($this->openaiKey)
+                ->timeout(30)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'Você é um especialista em SEO técnico e copywriting voltado para conversão (aumento de CTR no Google).'],
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature' => 0.7
+                ]);
+
+            if (!$response->successful()) return [];
+
+            $json = $response->json('choices.0.message.content');
+            $data = is_string($json) ? json_decode($json, true) : $json;
+
+            return (isset($data['suggestions']) && is_array($data['suggestions'])) ? $data['suggestions'] : [];
+
+        } catch (\Throwable $e) {
+            Log::error('[ClientAiService] Erro na geração de SEO Suggestions', ['error' => $e->getMessage()]);
+            return [];
         }
     }
 }

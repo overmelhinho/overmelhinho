@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\OportunidadeController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\SeoRankingController;
+use App\Http\Controllers\Api\V1\SeoInsightController;
 
 use App\Http\Controllers\LeadIntelController;
 use App\Http\Controllers\Api\V1\SegmentoController;
@@ -128,6 +129,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/clientes/{id}/audit/save', [ClienteController::class, 'auditSave']);
     Route::get('/clientes/{id}/seo-rankings', [SeoRankingController::class , 'getClientRankings']);
     Route::post('/clientes/{id}/seo-rankings/sync', [SeoRankingController::class , 'syncClientRankings']);
+    
+    // Insights de SEO Proativo
+    Route::get('/seo-insights', [SeoInsightController::class, 'index']);
+    Route::post('/seo-insights/bulk-action', [SeoInsightController::class, 'bulkAction']);
+    Route::post('/seo-insights/{id}/action', [SeoInsightController::class, 'updateAction']);
+    Route::post('/seo-insights/{id}/generate-ai', [SeoInsightController::class, 'generateAi']);
+
     Route::get('/clientes/{id}/suggest-keywords', [ClienteController::class , 'keywordSuggestions']);
     Route::post('/clientes/{id}/seo/keywords/generate', [ClienteController::class , 'generateSeoKeywords']);
     Route::patch('/clientes/{id}/seo/keywords', [ClienteController::class , 'updateSeoKeywords']);
