@@ -516,21 +516,23 @@ export default function ClienteCreateFromLead() {
                   segmentos: values.segmentos,
                   cidades_atendidas: values.cidades_atendidas,
 
-                  enderecos: values.enderecos.map((e: any) => ({
-                    nome_unidade: e.nome_unidade || null,
-                    cep: e.cep,
-                    estado: e.estado,
-                    cidade: e.cidade,
-                    bairro: e.bairro,
-                    tipo_logradouro: e.tipo_logradouro || null,
-                    rua: e.rua,
-                    numero: e.numero,
-                    complemento: e.complemento || null,
-                    telefone: e.telefone || null,
-                    link_maps: e.link_maps || null,
-                    link_waze: e.link_waze || null,
-                    exibir_apenas_cidade: e.exibir_apenas_cidade ?? false,
-                  })),
+                  enderecos: values.enderecos
+                    .filter((e: any) => e.estado && e.cidade)
+                    .map((e: any) => ({
+                      nome_unidade: e.nome_unidade || null,
+                      cep: e.cep,
+                      estado: e.estado,
+                      cidade: e.cidade,
+                      bairro: e.bairro,
+                      tipo_logradouro: e.tipo_logradouro || null,
+                      rua: e.rua,
+                      numero: e.numero,
+                      complemento: e.complemento || null,
+                      telefone: e.telefone || null,
+                      link_maps: e.link_maps || null,
+                      link_waze: e.link_waze || null,
+                      exibir_apenas_cidade: e.exibir_apenas_cidade ?? false,
+                    })),
 
                   contatos: [
                     {
@@ -547,6 +549,12 @@ export default function ClienteCreateFromLead() {
                       has_whatsapp_secundario: (values.has_whatsapp_secundario || values.whatsapp_selected === 'telefone_secundario') ? true : false,
                       has_whatsapp_celular: (values.has_whatsapp_celular || values.whatsapp_selected === 'celular') ? true : false,
                       has_whatsapp_outro: (values.has_whatsapp_outro || values.whatsapp_selected === 'telefone_outro') ? true : false,
+                      exibir_tel_principal: values.exibir_tel_principal ?? false,
+                      telefone_principal_hidden_until: values.telefone_principal_hidden_until || null,
+                      exibir_tel_secundario: values.exibir_tel_secundario ?? false,
+                      exibir_celular: values.exibir_celular ?? false,
+                      exibir_tel_outro: values.exibir_tel_outro ?? false,
+                      exibir_email: values.exibir_email ?? false,
                       email_principal: values.email,
                       nome_contato: values.responsavel,
                     },
