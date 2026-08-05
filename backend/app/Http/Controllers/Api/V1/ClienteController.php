@@ -1843,19 +1843,42 @@ class ClienteController extends Controller
             }
 
             if (Schema::hasColumn('clientes', 'logo_url')) {
-                $clienteData['logo_url'] = $request->has('logo_url') ? ($validated['logo_url'] ?? null) : $cliente->logo_url;
+                $logoInput = $request->input('logo_url') ?? $request->input('logotipo');
+                if (!empty($logoInput)) {
+                    $cleanLogo = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $logoInput);
+                    $clienteData['logo_url'] = $cleanLogo;
+                } else {
+                    unset($clienteData['logo_url']);
+                }
             }
 
             if (Schema::hasColumn('clientes', 'banner_url')) {
-                $clienteData['banner_url'] = $request->has('banner_url') ? ($validated['banner_url'] ?? null) : $cliente->banner_url;
+                $bannerInput = $request->input('banner_url') ?? $request->input('banner');
+                if (!empty($bannerInput)) {
+                    $cleanBanner = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $bannerInput);
+                    $clienteData['banner_url'] = $cleanBanner;
+                } else {
+                    unset($clienteData['banner_url']);
+                }
             }
 
             if (Schema::hasColumn('clientes', 'video')) {
-                $clienteData['video'] = $request->has('video') ? ($validated['video'] ?? null) : $cliente->video;
+                $videoInput = $request->input('video') ?? $request->input('video_link');
+                if (!empty($videoInput)) {
+                    $clienteData['video'] = $videoInput;
+                } else {
+                    unset($clienteData['video']);
+                }
             }
 
             if (Schema::hasColumn('clientes', 'portfolio_url')) {
-                $clienteData['portfolio_url'] = $request->has('portfolio_url') ? ($validated['portfolio_url'] ?? null) : $cliente->portfolio_url;
+                $portfolioInput = $request->input('portfolio_url') ?? $request->input('arquivo_midia');
+                if (!empty($portfolioInput)) {
+                    $cleanPortfolio = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $portfolioInput);
+                    $clienteData['portfolio_url'] = $cleanPortfolio;
+                } else {
+                    unset($clienteData['portfolio_url']);
+                }
             }
 
             if (Schema::hasColumn('clientes', 'tipo_arquivo_midia')) {
@@ -2987,12 +3010,27 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             })
             ->when($request->input('result'), function($q, $res) {
                 if ($res === 'corrected') {
+                    // BUG 4 FIX: Verifica se existe ao menos 1 campo com {from, to} onde from != to
+                    // e que não seja apenas campos internos (last_audit_at, updated_at, audit_status)
                     return $q->whereNotNull('field_changes')
-                             ->whereRaw("(SELECT count(*) FROM jsonb_object_keys(field_changes::jsonb) k WHERE k NOT IN ('last_audit_at', 'updated_at')) > 0");
+                             ->whereRaw("EXISTS (
+                                 SELECT 1 FROM jsonb_each(field_changes::jsonb) AS kv(k,v)
+                                 WHERE k NOT IN ('last_audit_at', 'updated_at', 'audit_status', 'audit_differences')
+                                   AND jsonb_typeof(v) = 'object'
+                                   AND (v::jsonb ? 'from') AND (v::jsonb ? 'to')
+                                   AND (v->>'from') IS DISTINCT FROM (v->>'to')
+                             )");
                 } elseif ($res === 'kept') {
+                    // Conferências onde nenhum campo real mudou
                     return $q->where(function($sq) {
                         $sq->whereNull('field_changes')
-                           ->orWhereRaw("(SELECT count(*) FROM jsonb_object_keys(field_changes::jsonb) k WHERE k NOT IN ('last_audit_at', 'updated_at')) = 0");
+                           ->orWhereRaw("NOT EXISTS (
+                               SELECT 1 FROM jsonb_each(field_changes::jsonb) AS kv(k,v)
+                               WHERE k NOT IN ('last_audit_at', 'updated_at', 'audit_status', 'audit_differences')
+                                 AND jsonb_typeof(v) = 'object'
+                                 AND (v::jsonb ? 'from') AND (v::jsonb ? 'to')
+                                 AND (v->>'from') IS DISTINCT FROM (v->>'to')
+                           )");
                     });
                 }
             })
@@ -3252,6 +3290,13 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
     public function auditSave(Request $request, $id)
     {
         $cliente = Cliente::findOrFail($id);
+
+        // BUG 3 FIX: Captura o estado ANTES da atualização para calcular diff {from, to} real
+        $beforeSnapshot = $cliente->only([
+            'nome_fantasia', 'razao_social', 'exibir_no_site', 'exibir_data_fundacao',
+            'observacoes', 'audit_status', 'last_audit_at'
+        ]);
+
         $payload = [];
 
         if ($request->has('nome_fantasia')) {
@@ -3278,13 +3323,38 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
 
         // Update relationships if provided
         if ($request->has('contatos') && is_array($request->input('contatos'))) {
+            $contatos = $request->input('contatos');
+            // Captura contato atual para diff
+            $contatoAntes = $cliente->contatos()->first()?->only(['telefone_principal', 'celular', 'email_principal']) ?? [];
             $cliente->contatos()->delete();
-            $cliente->contatos()->createMany($request->input('contatos'));
+            $cliente->contatos()->createMany($contatos);
+            $contatoDepois = $contatos[0] ?? [];
+            // Compara campos de contato relevantes
+            $camposContato = ['telefone_principal', 'celular', 'email_principal'];
+            foreach ($camposContato as $campo) {
+                $antes = $contatoAntes[$campo] ?? null;
+                $depois = $contatoDepois[$campo] ?? null;
+                if ((string)$antes !== (string)$depois) {
+                    $payload["contato_{$campo}"] = ['from' => $antes, 'to' => $depois];
+                }
+            }
         }
 
         if ($request->has('enderecos') && is_array($request->input('enderecos'))) {
+            $enderecos = $request->input('enderecos');
+            // Captura endereço atual para diff
+            $endAntes = $cliente->enderecos()->first()?->only(['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep']) ?? [];
             $cliente->enderecos()->delete();
-            $cliente->enderecos()->createMany($request->input('enderecos'));
+            $cliente->enderecos()->createMany($enderecos);
+            $endDepois = $enderecos[0] ?? [];
+            $camposEnd = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
+            foreach ($camposEnd as $campo) {
+                $antes = $endAntes[$campo] ?? null;
+                $depois = $endDepois[$campo] ?? null;
+                if ((string)$antes !== (string)$depois) {
+                    $payload["endereco_{$campo}"] = ['from' => $antes, 'to' => $depois];
+                }
+            }
         }
 
         if ($request->has('redes_sociais') && is_array($request->input('redes_sociais'))) {
@@ -3292,12 +3362,33 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             $cliente->redesSociais()->createMany($request->input('redes_sociais'));
         }
 
-        // Register Audit Log
+        // BUG 3 FIX: Monta field_changes com estrutura {from, to} apenas para campos que mudaram
+        $trackableFields = ['nome_fantasia', 'exibir_no_site', 'exibir_data_fundacao', 'observacoes', 'audit_status'];
+        $fieldChanges = [];
+        foreach ($trackableFields as $field) {
+            if (array_key_exists($field, $payload)) {
+                $before = (string)($beforeSnapshot[$field] ?? '');
+                $after  = (string)($payload[$field] ?? '');
+                if ($before !== $after) {
+                    $fieldChanges[$field] = ['from' => $beforeSnapshot[$field] ?? null, 'to' => $payload[$field] ?? null];
+                }
+            }
+        }
+        // Inclui campos de contato e endereço calculados acima
+        foreach ($payload as $k => $v) {
+            if (str_starts_with($k, 'contato_') || str_starts_with($k, 'endereco_')) {
+                $fieldChanges[$k] = $v;
+            }
+        }
+        // Sempre inclui last_audit_at para que o auditActionCondition o reconheça
+        $fieldChanges['last_audit_at'] = ['from' => $beforeSnapshot['last_audit_at'] ?? null, 'to' => now()->toISOString()];
+
+        // Register Audit Log com diff real
         $this->audit(
             action: 'update',
             entityType: 'cliente_audit_inline',
             entityId: $cliente->id,
-            fieldChanges: $payload,
+            fieldChanges: $fieldChanges,
             clienteId: $cliente->id
         );
 

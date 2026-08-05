@@ -122,15 +122,13 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.03 }}
                 className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
-                onClick={() => hasRealChanges && setExpanded(!expanded)}
+                onClick={() => setExpanded(!expanded)}
             >
                 <td className="px-8 py-6">
                     <span className="text-sm font-bold text-slate-600 flex items-center gap-2">
-                        {hasRealChanges && (
-                            <button className="text-slate-400 group-hover:text-[#B70F0A] transition-colors">
-                                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
-                        )}
+                        <button className="text-slate-400 group-hover:text-[#B70F0A] transition-colors">
+                            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
                         {format(new Date(log.created_at), "dd/MM/yy '•' HH:mm", { locale: ptBR })}
                     </span>
                 </td>
@@ -182,7 +180,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
             </motion.tr>
             
             <AnimatePresence>
-                {expanded && hasRealChanges && (
+                {expanded && (
                     <motion.tr
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -190,40 +188,113 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                         className="bg-slate-50/30 overflow-hidden"
                     >
                         <td colSpan={5} className="px-8 py-6">
-                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                                <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
-                                    <History className="w-4 h-4 text-[#B70F0A]" />
-                                    Detalhes da Atualização
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    {changes.map(([key, vals]: [string, any]) => {
-                                        if (!vals) return null;
-                                        const label = fieldLabels[key] || key;
-                                        const from = vals.from === null || vals.from === '' ? 'Vazio' : String(vals.from);
-                                        const to = vals.to === null || vals.to === '' ? 'Vazio' : String(vals.to);
-                                        
-                                        return (
-                                            <div key={key} className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
-                                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                                                    {label}
+                            <div className="space-y-6 text-slate-700 bg-white p-6 rounded-3xl border border-slate-150 shadow-sm" onClick={(e) => e.stopPropagation()}>
+                                {/* Ficha Cadastral do Cliente (Dados Atuais) */}
+                                {(() => {
+                                    const c = log.cliente || {};
+                                    const mainAddress = c.enderecos?.[0] || {};
+                                    const addressDisplay = mainAddress.rua 
+                                        ? `${mainAddress.rua}, ${mainAddress.numero || 'S/N'}${mainAddress.complemento ? `, ${mainAddress.complemento}` : ''}${mainAddress.bairro ? `, ${mainAddress.bairro}` : ''}${mainAddress.cidade ? `, ${mainAddress.cidade}` : ''}${mainAddress.estado ? ` - ${mainAddress.estado}` : ''}`
+                                        : 'Não informado';
+
+                                    const telPrincipal = c.contatos?.[0]?.telefone_principal ? formatPhone(c.contatos[0].telefone_principal) : '';
+                                    const celular = c.contatos?.[0]?.celular ? formatPhone(c.contatos[0].celular) : '';
+                                    const telefoneDisplay = telPrincipal ? (celular ? `${telPrincipal} / ${celular}` : telPrincipal) : (celular || 'Não informado');
+
+                                    return (
+                                        <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100/80 space-y-3.5">
+                                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                                                <FileText className="w-4 h-4 text-[#B70F0A]" /> Ficha Cadastral do Cliente (Dados Atuais)
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="font-extrabold text-slate-500 whitespace-nowrap">Nome Fantasia:</span>
+                                                    <span className="font-bold text-slate-800">{c.nome_fantasia || 'Não informado'}</span>
                                                 </div>
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex items-start gap-2">
-                                                        <span className="mt-0.5 text-slate-300"><X className="w-3.5 h-3.5" /></span>
-                                                        <span className="text-sm text-slate-500 font-medium line-through decoration-slate-300 break-words line-clamp-2">
-                                                            {from === 'true' ? 'Sim' : from === 'false' ? 'Não' : from}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start gap-2">
-                                                        <span className="mt-0.5 text-emerald-500"><Check className="w-3.5 h-3.5" /></span>
-                                                        <span className="text-sm text-emerald-700 font-bold break-words line-clamp-3">
-                                                            {to === 'true' ? 'Sim' : to === 'false' ? 'Não' : to}
-                                                        </span>
-                                                    </div>
+                                                <div className="flex items-start gap-2">
+                                                    <span className="font-extrabold text-slate-500 whitespace-nowrap">Razão Social:</span>
+                                                    <span className="font-bold text-slate-800">{c.razao_social || 'Não informado'}</span>
                                                 </div>
+                                                <div className="flex items-start gap-2">
+                                                    <span className="font-extrabold text-slate-500 whitespace-nowrap">Telefone Principal:</span>
+                                                    <span className="font-bold text-slate-800">{telefoneDisplay}</span>
+                                                </div>
+                                                <div className="flex items-start gap-2">
+                                                    <span className="font-extrabold text-slate-500 whitespace-nowrap">E-mail:</span>
+                                                    <span className="font-bold text-slate-800 truncate" title={c.contatos?.[0]?.email_principal}>{c.contatos?.[0]?.email_principal || 'Não informado'}</span>
+                                                </div>
+                                                <div className="flex items-start gap-2 col-span-1 md:col-span-2">
+                                                    <span className="font-extrabold text-slate-500 whitespace-nowrap">Endereço:</span>
+                                                    <span className="font-bold text-slate-800">{addressDisplay}</span>
+                                                </div>
+                                                {c.observacoes && (
+                                                    <div className="flex flex-col gap-1 col-span-1 md:col-span-2 pt-1">
+                                                        <span className="font-extrabold text-slate-500 text-xs">Observações:</span>
+                                                        <p className="text-xs font-semibold text-slate-700 bg-white p-3 rounded-xl border border-slate-100">{c.observacoes}</p>
+                                                    </div>
+                                                )}
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Detalhes das Alterações (se existirem) */}
+                                {hasRealChanges ? (
+                                    <div className="space-y-4">
+                                        <h4 className="text-xs font-black text-slate-800 flex items-center gap-2">
+                                            <History className="w-4 h-4 text-[#B70F0A]" />
+                                            Detalhes das Alterações Efetuadas Nesta Conferência
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                            {changes.map(([key, vals]: [string, any]) => {
+                                                if (!vals) return null;
+                                                const label = fieldLabels[key] || key;
+                                                const from = vals.from === null || vals.from === '' ? 'Vazio' : String(vals.from);
+                                                const to = vals.to === null || vals.to === '' ? 'Vazio' : String(vals.to);
+                                                
+                                                return (
+                                                    <div key={key} className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
+                                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                                            {label}
+                                                        </div>
+                                                        <div className="flex flex-col gap-2">
+                                                            <div className="flex items-start gap-2">
+                                                                <span className="mt-0.5 text-slate-300"><X className="w-3.5 h-3.5" /></span>
+                                                                <span className="text-sm text-slate-500 font-medium line-through decoration-slate-300 break-words line-clamp-2">
+                                                                    {from === 'true' ? 'Sim' : from === 'false' ? 'Não' : from}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-start gap-2">
+                                                                <span className="mt-0.5 text-emerald-500"><Check className="w-3.5 h-3.5" /></span>
+                                                                <span className="text-sm text-emerald-700 font-bold break-words line-clamp-3">
+                                                                    {to === 'true' ? 'Sim' : to === 'false' ? 'Não' : to}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="py-3 px-5 bg-emerald-50 rounded-2xl border border-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                        Nenhuma alteração foi necessária nesta conferência. O cadastro foi verificado e mantido 100% íntegro.
+                                    </div>
+                                )}
+
+                                {/* Ação direta para abrir formulário de edição do cliente */}
+                                <div className="flex justify-end pt-3 border-t border-slate-100">
+                                    {log.cliente_id && (
+                                        <a
+                                            href={`/clientes/${log.cliente_id}/editar`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="bg-slate-900 text-white px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-1.5"
+                                        >
+                                            <ExternalLink className="w-4 h-4" /> Editar Cadastro Completo
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         </td>
@@ -245,7 +316,7 @@ const AuditDashboardPage: React.FC = () => {
     const [forcingScanId, setForcingScanId] = useState<number | null>(null);
     const [forceScanResult, setForceScanResult] = useState<Record<number, {status: string; message: string}>>({});
     const [expandedClientId, setExpandedClientId] = useState<number | null>(null);
-    const [inlineStatus, setInlineStatus] = useState<Record<string, 'accepted' | 'rejected'>>({});
+    const [inlineStatus, setInlineStatus] = useState<Record<string, 'accepted' | 'rejected' | 'pending'>>({});
     const [showCitiesPanel, setShowCitiesPanel] = useState(false);
     const [editingObservations, setEditingObservations] = useState<string>('');
 
@@ -253,7 +324,7 @@ const AuditDashboardPage: React.FC = () => {
     const tab = (searchParams.get('tab') as 'queue' | 'history' | 'cities') || 'queue';
     const page = parseInt(searchParams.get('page') || '1');
     const filterCity = searchParams.get('cidade') || '';
-    const filterType = searchParams.get('tipo') || 'gratuito';
+    const filterType = searchParams.get('tipo') || '';
     const filterUser = searchParams.get('user_id') || '';
     const filterDateStart = searchParams.get('date_start') || '';
     const filterDateEnd = searchParams.get('date_end') || '';
@@ -391,6 +462,8 @@ const AuditDashboardPage: React.FC = () => {
             setForcingScanId(null);
             setForceScanResult(prev => ({ ...prev, [clienteId]: { status: res.data.status, message: res.data.message } }));
             queryClient.invalidateQueries({ queryKey: ['audit-queue'] });
+            queryClient.invalidateQueries({ queryKey: ['audit-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['audit-city-stats'] });
             setTimeout(() => setForceScanResult(prev => { const n = {...prev}; delete n[clienteId]; return n; }), 8000);
         },
         onError: (_err, clienteId) => {
@@ -426,7 +499,8 @@ const AuditDashboardPage: React.FC = () => {
 
         if (client.contatos) payload.contatos = JSON.parse(JSON.stringify(client.contatos));
         if (client.enderecos) payload.enderecos = JSON.parse(JSON.stringify(client.enderecos));
-        if (client.redes_sociais) payload.redes_sociais = JSON.parse(JSON.stringify(client.redes_sociais));
+        // BUG 1 FIX: sempre inicializar como array vazio para evitar TypeError no findIndex
+        payload.redes_sociais = client.redes_sociais ? JSON.parse(JSON.stringify(client.redes_sociais)) : [];
 
         const diffs = client.audit_differences || {};
 
@@ -640,7 +714,7 @@ const AuditDashboardPage: React.FC = () => {
                     },
                     {
                         label: 'Cobertura Total',
-                        value: stats?.porcentagem_concluida + '%',
+                        value: (stats?.porcentagem_concluida ?? 0) + '%',
                         color: 'text-red-600',
                         bg: 'bg-red-50',
                         sub: `(${stats?.clientes_auditados}/${stats?.total_clientes})`,
@@ -1084,8 +1158,11 @@ const AuditDashboardPage: React.FC = () => {
                                                             </div>
                                                             <div className="relative shrink-0">
                                                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden border border-white shadow-inner group-hover:shadow-md transition-all">
-                                                                    {c.logo_url ? (
-                                                                        <img src={c.logo_url} className="w-full h-full object-cover" />
+                                                                    {c.tipo_cliente === 'pagante' && c.logo_url ? (
+                                                                        <img 
+                                                                            src={c.logo_url.startsWith('http') ? c.logo_url : `${(import.meta.env.VITE_API_URL as string || 'https://api.overmelhinho.com.br/api').replace(/\/api\/v1|\/api$/, '')}/storage/${c.logo_url}`} 
+                                                                            className="w-full h-full object-cover" 
+                                                                        />
                                                                     ) : (
                                                                         <Building2 className="text-slate-400 w-5 h-5" />
                                                                     )}

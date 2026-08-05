@@ -24,14 +24,24 @@ class ClienteResource extends JsonResource
             $tipoCliente = 'gratuito';
         }
 
+        $formatStorageUrl = function(?string $path) {
+            if (!$path) return null;
+            if (Str::startsWith($path, ['http://', 'https://'])) {
+                return $path;
+            }
+            $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');
+            $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+            return "{$supabaseUrl}/storage/v1/object/public/{$bucket}/" . ltrim($path, '/');
+        };
+
         // Tratamento de URL do Logo (Suporta local e externo)
         $logoUrl = $this->logo_url;
         
         // ✅ Clientes Gratuitos NÃO exibem logotipo no site frontend
         if (!$isDashboard && $tipoCliente === 'gratuito') {
             $logoUrl = null;
-        } elseif ($logoUrl && !Str::startsWith($logoUrl, ['http://', 'https://'])) {
-            $logoUrl = asset('storage/' . $logoUrl);
+        } else {
+            $logoUrl = $formatStorageUrl($logoUrl);
         }
 
         return [
@@ -62,7 +72,7 @@ class ClienteResource extends JsonResource
 
             'logotipo_url' => $logoUrl,
             'logo_url' => $logoUrl, // ✅ Alias para o frontend identificar pendência
-            'banner_url' => $this->banner_url && !Str::startsWith($this->banner_url, ['http://', 'https://']) ? asset('storage/' . $this->banner_url) : $this->banner_url,
+            'banner_url' => $formatStorageUrl($this->banner_url),
 
             'seo_keywords' => $this->seo_keywords ?? [],
             'seo_keywords_source' => $this->seo_keywords_source ?? 'generated',
@@ -85,7 +95,7 @@ class ClienteResource extends JsonResource
             'job_opportunities' => $this->whenLoaded('jobOpportunities'),
 
             'video' => $this->video,
-            'portfolio_url' => $this->portfolio_url && !Str::startsWith($this->portfolio_url, ['http://', 'https://']) ? asset('storage/' . $this->portfolio_url) : $this->portfolio_url,
+            'portfolio_url' => $formatStorageUrl($this->portfolio_url),
             'tipo_arquivo_midia' => $this->tipo_arquivo_midia ?? 'catalogo',
 
             'google_place_id' => $this->google_place_id,
