@@ -149,9 +149,9 @@ export default function TabMidia() {
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const maxSize = 2 * 1024 * 1024; // 2MB
+    const maxSize = 10 * 1024 * 1024; // 10MB (mesmo limite do backend e logo)
     if (file.size > maxSize) {
-      toast.error(`Limite de 2MB excedido.`);
+      toast.error(`Limite de 10MB excedido.`);
       e.target.value = "";
       return;
     }
