@@ -1843,41 +1843,55 @@ class ClienteController extends Controller
             }
 
             if (Schema::hasColumn('clientes', 'logo_url')) {
-                $logoInput = $request->input('logo_url') ?? $request->input('logotipo');
-                if (!empty($logoInput)) {
-                    $cleanLogo = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $logoInput);
-                    $clienteData['logo_url'] = $cleanLogo;
-                } else {
-                    unset($clienteData['logo_url']);
+                if ($request->has('logo_url') || $request->has('logotipo')) {
+                    $logoInput = $request->input('logo_url') ?? $request->input('logotipo');
+                    if (!empty($logoInput)) {
+                        $cleanLogo = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $logoInput);
+                        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+                        $cleanLogo = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanLogo);
+                        $clienteData['logo_url'] = ltrim($cleanLogo, '/');
+                    } else {
+                        $clienteData['logo_url'] = null;
+                    }
                 }
             }
 
             if (Schema::hasColumn('clientes', 'banner_url')) {
-                $bannerInput = $request->input('banner_url') ?? $request->input('banner');
-                if (!empty($bannerInput)) {
-                    $cleanBanner = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $bannerInput);
-                    $clienteData['banner_url'] = $cleanBanner;
-                } else {
-                    unset($clienteData['banner_url']);
+                if ($request->has('banner_url') || $request->has('banner')) {
+                    $bannerInput = $request->input('banner_url') ?? $request->input('banner');
+                    if (!empty($bannerInput)) {
+                        $cleanBanner = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $bannerInput);
+                        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+                        $cleanBanner = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanBanner);
+                        $clienteData['banner_url'] = ltrim($cleanBanner, '/');
+                    } else {
+                        $clienteData['banner_url'] = null;
+                    }
                 }
             }
 
             if (Schema::hasColumn('clientes', 'video')) {
-                $videoInput = $request->input('video') ?? $request->input('video_link');
-                if (!empty($videoInput)) {
-                    $clienteData['video'] = $videoInput;
-                } else {
-                    unset($clienteData['video']);
+                if ($request->has('video') || $request->has('video_link')) {
+                    $videoInput = $request->input('video') ?? $request->input('video_link');
+                    if (!empty($videoInput)) {
+                        $clienteData['video'] = $videoInput;
+                    } else {
+                        $clienteData['video'] = null;
+                    }
                 }
             }
 
             if (Schema::hasColumn('clientes', 'portfolio_url')) {
-                $portfolioInput = $request->input('portfolio_url') ?? $request->input('arquivo_midia');
-                if (!empty($portfolioInput)) {
-                    $cleanPortfolio = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $portfolioInput);
-                    $clienteData['portfolio_url'] = $cleanPortfolio;
-                } else {
-                    unset($clienteData['portfolio_url']);
+                if ($request->has('portfolio_url') || $request->has('arquivo_midia')) {
+                    $portfolioInput = $request->input('portfolio_url') ?? $request->input('arquivo_midia');
+                    if (!empty($portfolioInput)) {
+                        $cleanPortfolio = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $portfolioInput);
+                        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+                        $cleanPortfolio = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanPortfolio);
+                        $clienteData['portfolio_url'] = ltrim($cleanPortfolio, '/');
+                    } else {
+                        $clienteData['portfolio_url'] = null;
+                    }
                 }
             }
 

@@ -31,7 +31,14 @@ class ClienteResource extends JsonResource
             }
             $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');
             $bucket = env('SUPABASE_BUCKET', 'clientes-media');
-            return "{$supabaseUrl}/storage/v1/object/public/{$bucket}/" . ltrim($path, '/');
+            
+            // Fix double path if it already has v1/object/public/
+            $cleanPath = ltrim($path, '/');
+            if (Str::startsWith($cleanPath, 'v1/object/public/')) {
+                return "{$supabaseUrl}/storage/{$cleanPath}";
+            }
+            
+            return "{$supabaseUrl}/storage/v1/object/public/{$bucket}/{$cleanPath}";
         };
 
         // Tratamento de URL do Logo (Suporta local e externo)
