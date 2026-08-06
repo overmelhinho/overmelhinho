@@ -251,14 +251,16 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
 
                                                     <div className="px-5 pb-6 pt-1 relative flex-1 flex flex-col">
                                                         {client.logotipo_url && (
-                                                            <div className="absolute -top-12 left-5 w-24 h-24 rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500 z-10 overflow-hidden relative">
-                                                                <Image 
-                                                                    src={client.logotipo_url} 
-                                                                    alt="Logo" 
-                                                                    fill
-                                                                    sizes="96px"
-                                                                    className="object-cover rounded-[1.3rem]" 
-                                                                />
+                                                            <div className="absolute -top-12 left-5 w-24 h-24 rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500 z-10">
+                                                                <div className="relative w-full h-full rounded-[1.3rem] overflow-hidden">
+                                                                    <Image 
+                                                                        src={client.logotipo_url} 
+                                                                        alt="Logo" 
+                                                                        fill
+                                                                        sizes="96px"
+                                                                        className="object-cover" 
+                                                                    />
+                                                                </div>
                                                             </div>
                                                         )}
                                                         <div className="pt-14 space-y-2 flex-1 flex flex-col">
