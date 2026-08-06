@@ -33,6 +33,9 @@ echo "${LOG_PREFIX} ✓ Backend atualizado."
 # ── 3. Frontend: Build ───────────────────────────────────────
 echo "${LOG_PREFIX} [3/5] Gerando build do frontend..."
 cd "${FRONTEND_DIR}"
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+command -v nvm >/dev/null && nvm install 20 && nvm use 20
 npm ci --silent
 npm run build
 echo "${LOG_PREFIX} ✓ Frontend compilado."

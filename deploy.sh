@@ -90,7 +90,7 @@ rollback() {
   if $frontend_changed; then
     log "Rollback frontend: rebuild"
     cd "$APP_DIR/frontend"
-    export PATH="/root/.nvm/versions/node/v20.20.0/bin:$PATH"
+    command -v nvm >/dev/null && nvm use 20
     npm ci || true
     npm run build || true
   fi
@@ -149,7 +149,7 @@ if $frontend_changed; then
   cd "$APP_DIR/frontend"
 
   log "npm ci..."
-  export PATH="/root/.nvm/versions/node/v20.20.0/bin:$PATH"
+  command -v nvm >/dev/null && nvm install 20 && nvm use 20
   npm ci
 
   log "npm run build (atômico)..."
@@ -202,7 +202,7 @@ else
   if $frontend_changed; then
     log "== FRONTEND DEPLOY (forçado pela sanity check) =="
     cd "$APP_DIR/frontend"
-    command -v nvm >/dev/null && nvm use 18.20.8
+    command -v nvm >/dev/null && nvm install 20 && nvm use 20
     npm ci
     rm -rf dist_new
     npm run build -- --outDir dist_new
