@@ -4,6 +4,8 @@ namespace App\Observers;
 
 use App\Models\Cliente;
 use App\Services\GoogleIndexingService;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ClienteObserver
 {
@@ -16,6 +18,8 @@ class ClienteObserver
 
     public function saved(Cliente $cliente): void
     {
+        // 🚀 Dispara a Revalidação de Cache no Next.js (On-Demand ISR)
+        $this->triggerNextJsRevalidation($cliente);
         $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
         
         // Pula indexação para testes E2E, robots ou se rodando localmente
@@ -39,6 +43,8 @@ class ClienteObserver
      */
     public function deleted(Cliente $cliente): void
     {
+        // 🚀 Dispara a Revalidação de Cache no Next.js (On-Demand ISR)
+        $this->triggerNextJsRevalidation($cliente);
         $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
         
         // Pula indexação para testes E2E, robots ou se rodando localmente
@@ -52,5 +58,36 @@ class ClienteObserver
         $url = "{$siteUrl}/cliente/{$slug}";
         
         $this->indexingService->deleteUrl($url);
+    }
+
+    /**
+     * Dispara um Webhook para o Next.js purgar o cache ISR deste cliente específico.
+     */
+    protected function triggerNextJsRevalidation(Cliente $cliente): void
+    {
+        $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
+        $secret = env('REVALIDATE_SECRET', 'overmelhinho_revalidate_2026');
+        
+        // Pula se for robô ou teste E2E
+        if (str_contains(strtolower($cliente->nome_fantasia), 'e2e') || 
+            str_contains(strtolower($cliente->nome_fantasia), 'robot')) {
+            return;
+        }
+
+        try {
+            // Revalida pela Tag do ID
+            Http::timeout(3)->post("{$siteUrl}/api/revalidate?secret={$secret}", [
+                'tag' => "client-{$cliente->id}"
+            ]);
+            
+            // Revalida pela Tag do Slug
+            if ($cliente->slug) {
+                Http::timeout(3)->post("{$siteUrl}/api/revalidate?secret={$secret}", [
+                    'tag' => "client-{$cliente->slug}"
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error("Falha ao revalidar cache Next.js para o cliente {$cliente->id}: " . $e->getMessage());
+        }
     }
 }

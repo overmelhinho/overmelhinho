@@ -33,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
 
     // 2. Busca clientes ativos para suas páginas de perfil
-    const clientsRes = await fetch(`${apiUrl}/public/sitemap-data`, { next: { revalidate: 3600 } });
+    const clientsRes = await fetch(`${apiUrl}/public/sitemap-data`, { cache: 'no-store' });
     if (clientsRes.ok) {
       const clients = await clientsRes.json();
       clients.forEach((client: { id: string | number, slug: string | null, updated_at: string }) => {

@@ -33,7 +33,7 @@ async function getClient(slug: string) {
             headers: {
                 'Accept': 'application/json',
             },
-            next: { revalidate: 3600 } // Cache maior para landing pages
+            next: { revalidate: 3600, tags: ['client-' + slug] } // Cache com Tag para Webhook
         });
 
         const data = await response.json().catch(() => null);

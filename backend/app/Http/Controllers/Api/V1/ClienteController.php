@@ -25,33 +25,37 @@ class ClienteController extends Controller
 {
     public function sitemap()
     {
-        return Cliente::query()
-            ->select(['id', 'slug', 'updated_at'])
-            ->where(function ($sub) {
-                $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
-                    ->orWhere('tipo_cliente', 'gratuito');
-            })
-            ->where('exibir_no_site', 'true')
-            ->get();
+        return \Illuminate\Support\Facades\Cache::remember('sitemap_data_clientes', 3600, function () {
+            return Cliente::query()
+                ->select(['id', 'slug', 'updated_at'])
+                ->where(function ($sub) {
+                    $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
+                        ->orWhere('tipo_cliente', 'gratuito');
+                })
+                ->where('exibir_no_site', 'true')
+                ->get();
+        });
     }
 
     public function activeSitemapCombinations()
     {
-        $combinations = DB::table('clientes as c')
-            ->join('cliente_cidade as cc', 'c.id', '=', 'cc.cliente_id')
-            ->join('cidades as cid', 'cc.cidade_id', '=', 'cid.id')
-            ->join('cliente_segmento as cs', 'c.id', '=', 'cs.cliente_id')
-            ->join('segmentos as seg', 'cs.segmento_id', '=', 'seg.id')
-            ->where('c.exibir_no_site', 'true')
-            ->where(function ($query) {
-                $query->whereIn('c.status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
-                      ->orWhere('c.tipo_cliente', 'gratuito');
-            })
-            ->select('cid.nome as city_name', 'seg.nome as segment_name')
-            ->distinct()
-            ->get();
+        return \Illuminate\Support\Facades\Cache::remember('sitemap_combinations', 3600, function () {
+            $combinations = DB::table('clientes as c')
+                ->join('cliente_cidade as cc', 'c.id', '=', 'cc.cliente_id')
+                ->join('cidades as cid', 'cc.cidade_id', '=', 'cid.id')
+                ->join('cliente_segmento as cs', 'c.id', '=', 'cs.cliente_id')
+                ->join('segmentos as seg', 'cs.segmento_id', '=', 'seg.id')
+                ->where('c.exibir_no_site', 'true')
+                ->where(function ($query) {
+                    $query->whereIn('c.status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
+                          ->orWhere('c.tipo_cliente', 'gratuito');
+                })
+                ->select('cid.nome as city_name', 'seg.nome as segment_name')
+                ->distinct()
+                ->get();
 
-        return response()->json(['data' => $combinations]);
+            return response()->json(['data' => $combinations]);
+        });
     }
 
     public function indexPublic(Request $request)
@@ -77,6 +81,7 @@ class ClienteController extends Controller
         }
         
         $query = Cliente::query()
+            ->with(['enderecos', 'segmentos', 'galeriaImagens', 'contatos'])
             ->where('exibir_no_site', 'true')
             ->where(function($sub) {
                 $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido', 'inadimplente'])

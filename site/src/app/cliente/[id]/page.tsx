@@ -13,7 +13,7 @@ async function getClient(id: string) {
             headers: {
                 'Accept': 'application/json',
             },
-            next: { revalidate: 60 } // Opcional: cache de 60 segundos
+            next: { revalidate: 3600, tags: ['client-' + id] } // Cache de 1 hora para performance máxima, com Tag para Webhook
         });
 
         const data = await response.json().catch(() => null);
