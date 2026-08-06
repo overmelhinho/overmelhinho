@@ -1543,6 +1543,15 @@ class ClienteController extends Controller
             $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas'])
                 ->findOrFail($id);
 
+            // 📷 CAPTURA DO ANTES (Snapshot para Auditoria das Tabelas Filhas)
+            $beforeSnapshot = [
+                'enderecos' => $cliente->enderecos->toArray(),
+                'contatos' => $cliente->contatos->toArray(),
+                'redes_sociais' => $cliente->redesSociais->toArray(),
+                'segmentos' => $cliente->segmentos->toArray(),
+                'cidades_atendidas' => $cliente->cidadesAtendidas->toArray(),
+            ];
+
             // AUTO-HEALING SCHEMA (Garante que Supabase esteja em dia)
             try {
                 if (!Schema::hasColumn('cliente_reviews', 'google_review_id')) {
@@ -1931,6 +1940,11 @@ class ClienteController extends Controller
                 $clienteData['beneficios'] = $request->input('beneficios');
             }
 
+            // Bloqueia o robô de IA de sobrescrever edições manuais pelos próximos 6 meses
+            $clienteData['last_audit_at'] = now();
+            $clienteData['audit_status'] = 'ok';
+            $clienteData['audit_differences'] = null;
+
             Log::info('CLIENTE UPDATE - DADOS PARA SALVAR', [
                 'cliente_id' => $id,
                 'exibir_no_site' => $clienteData['exibir_no_site'],
@@ -2112,6 +2126,46 @@ class ClienteController extends Controller
                     fieldChanges: [], 
                     clienteId: (int) $cliente->id,
                     metadata: ['operator' => 'IA/User Audit']
+                );
+            }
+
+            // 📸 CAPTURA DO DEPOIS & GERAÇÃO DE LOG (Auditoria Tabelas Filhas)
+            $cliente->load(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas']);
+            $afterSnapshot = [
+                'enderecos' => $cliente->enderecos->toArray(),
+                'contatos' => $cliente->contatos->toArray(),
+                'redes_sociais' => $cliente->redesSociais->toArray(),
+                'segmentos' => $cliente->segmentos->toArray(),
+                'cidades_atendidas' => $cliente->cidadesAtendidas->toArray(),
+            ];
+
+            $relChanges = [];
+            $cleanData = function($data) {
+                return array_map(function($item) {
+                    unset($item['id'], $item['cliente_id'], $item['created_at'], $item['updated_at'], $item['pivot']);
+                    return $item;
+                }, $data);
+            };
+
+            foreach ($beforeSnapshot as $key => $beforeData) {
+                $b = $cleanData($beforeData);
+                $a = $cleanData($afterSnapshot[$key]);
+                if (json_encode($b) !== json_encode($a)) {
+                    $relChanges[$key] = [
+                        'from' => empty($b) ? [] : $b,
+                        'to' => empty($a) ? [] : $a
+                    ];
+                }
+            }
+
+            if (!empty($relChanges)) {
+                $this->audit(
+                    action: 'update',
+                    entityType: 'cliente',
+                    entityId: (int) $cliente->id,
+                    fieldChanges: $relChanges,
+                    clienteId: (int) $cliente->id,
+                    metadata: ['operator' => 'User Audit (Relational Sync)']
                 );
             }
 

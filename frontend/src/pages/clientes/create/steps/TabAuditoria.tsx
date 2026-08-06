@@ -126,6 +126,191 @@ export default function TabAuditoria() {
                     {logs.length > 0 ? (
                         logs.map((log) => {
                             const props = getActionProps(log);
+                            
+                            let changeElements: any[] = [];
+                            if (log.type !== 'ticket' && log.field_changes && Object.keys(log.field_changes).length > 0) {
+                                changeElements = Object.entries(log.field_changes).map(([field, change]: [string, any]) => {
+                                    if (!change) return null;
+                                    const oldVal = change.old !== undefined ? change.old : change.from;
+                                    const newVal = change.new !== undefined ? change.new : change.to;
+
+                                    if (['seo_keywords_updated_at', 'updated_at', 'created_at', 'last_audit_at', 'audit_action', 'audit_differences'].includes(field)) {
+                                        return null;
+                                    }
+
+                                    const fieldLabels: Record<string, string> = {
+                                        horario_atendimento: 'Horários de Atendimento',
+                                        logo_url: 'Logotipo',
+                                        banner_url: 'Banner',
+                                        video: 'Vídeo / Apresentação',
+                                        descricao: 'Descrição Completa',
+                                        seo_keywords: 'Palavras-Chave (SEO)',
+                                        redes_sociais: 'Redes Sociais',
+                                        enderecos: 'Endereço',
+                                        contatos: 'Contatos',
+                                        exibir_no_site: 'Visibilidade no Site',
+                                        possui_publicidade: 'Possui Publicidade',
+                                        exibir_data_fundacao: 'Exibir Data de Fundação',
+                                        razao_social: 'Razão Social',
+                                        nome_fantasia: 'Nome Fantasia',
+                                        audit_status: 'Status da Auditoria',
+                                        responsavel: 'Responsável',
+                                        telefone: 'Telefone Principal',
+                                        website: 'Site',
+                                        observacoes: 'Observações Internas',
+                                        observacoes_horario: 'Obs. de Horários',
+                                        beneficios: 'Benefícios',
+                                        google_place_id: 'ID do Google Maps',
+                                        cep: 'CEP',
+                                        logradouro: 'Logradouro',
+                                        numero: 'Número',
+                                        bairro: 'Bairro',
+                                        cidade: 'Cidade',
+                                        estado: 'Estado',
+                                        complemento: 'Complemento',
+                                        latitude: 'Latitude',
+                                        longitude: 'Longitude',
+                                        seo_description: 'Descrição SEO',
+                                        seo_title: 'Título SEO'
+                                    };
+
+                                    const label = fieldLabels[field] || field.replace(/_/g, ' ');
+
+                                    const formatValue = (val: any, fieldName: string) => {
+                                        if (val === null || val === undefined || val === '') return null;
+                                        
+                                        if (typeof val === 'boolean' || val === 'true' || val === 'false') {
+                                            return String(val) === 'true' ? 'Sim' : 'Não';
+                                        }
+
+                                        // Handle Double Encoded JSON Strings that were stringified
+                                        if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{') || val.startsWith('"[') || val.startsWith('"{'))) {
+                                            try {
+                                                let parsed = JSON.parse(val);
+                                                if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Double decode if necessary
+                                                val = parsed;
+                                            } catch(e) {
+                                                // Ignore parse errors, treat as normal string
+                                            }
+                                        }
+
+                                        if (fieldName === 'horario_atendimento') {
+                                            if (!Array.isArray(val) || val.length === 0) return 'Vazio';
+                                            const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                                            const parts = val.map((h: any) => {
+                                                if (h.closed || h.closed === 'true' || h.closed === true) return `${days[h.day % 7]}: Fechado`;
+                                                const open2 = h.open2 ? ` / ${h.open2} às ${h.close2}` : '';
+                                                return `${days[h.day % 7]}: ${h.open} às ${h.close}${open2}`;
+                                            });
+                                            return parts.join(', ');
+                                        }
+
+                                        if (fieldName === 'logo_url' || fieldName === 'banner_url' || fieldName === 'logotipo') {
+                                            if (typeof val === 'string' && val.startsWith('http')) {
+                                                return (
+                                                    <div className="mt-1">
+                                                        <img src={val} alt="Mídia" className="h-12 w-auto object-contain rounded-md border border-slate-200" />
+                                                    </div>
+                                                );
+                                            }
+                                        }
+
+                                        if (Array.isArray(val)) {
+                                            if (val.length === 0) return 'Vazio';
+                                            // Extract string values se for um array de objetos ou strings
+                                            const items = val.map(v => {
+                                                if (typeof v === 'object') {
+                                                    if (v.nome) return v.nome;
+                                                    if (v.titulo) return v.titulo;
+                                                    if (v.name) return v.name;
+                                                    if (v.rua && v.numero) return `${v.rua}, ${v.numero} - ${v.cidade}/${v.estado}`;
+                                                    if (v.tipo && v.url) return `${v.tipo}: ${v.url}`;
+                                                    if (v.email_principal || v.telefone_principal) return `${v.nome_contato || 'Contato'} (${v.email_principal || v.telefone_principal})`;
+                                                    return JSON.stringify(v);
+                                                }
+                                                return String(v);
+                                            });
+                                            return items.join(' | ');
+                                        }
+
+                                        if (typeof val === 'object') {
+                                            return 'Dados Atualizados';
+                                        }
+                                        
+                                        // Format dates
+                                        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+                                            try {
+                                                const dateStr = val.split('.')[0]; // Remove ms if present
+                                                return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: ptBR }).replace(' 00:00', '');
+                                            } catch (e) {
+                                                // fallthrough
+                                            }
+                                        }
+
+                                        if (typeof val === 'string' && val.length > 80) {
+                                            return val.substring(0, 80) + '...';
+                                        }
+                                        return String(val);
+                                    };
+
+                                    const oldFormatted = formatValue(oldVal, field);
+                                    const newFormatted = formatValue(newVal, field);
+
+                                    let isSame = false;
+
+                                    const cleanUrl = (url: any) => {
+                                        if (typeof url !== 'string') return url;
+                                        let clean = url.replace(/^https?:\/\/[^\/]+\/storage\//, '');
+                                        clean = clean.replace(/^v1\/object\/public\/[^\/]+\//, '');
+                                        return clean;
+                                    };
+
+                                    if (field === 'logo_url' || field === 'banner_url' || field === 'logotipo') {
+                                        if (cleanUrl(oldVal) === cleanUrl(newVal)) {
+                                            isSame = true;
+                                        }
+                                    }
+
+                                    if (!isSame) {
+                                        isSame = typeof oldFormatted === 'string' && typeof newFormatted === 'string' 
+                                            ? oldFormatted === newFormatted 
+                                            : oldFormatted === newFormatted;
+                                    }
+
+                                    if (isSame && oldFormatted !== null) return null;
+
+                                    const from = oldFormatted === null ? 'Vazio' : oldFormatted;
+                                    const to = newFormatted === null ? 'Vazio' : newFormatted;
+
+                                    return (
+                                        <div key={field} className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
+                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                                {label}
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="mt-0.5 text-slate-300"><X className="w-3.5 h-3.5" /></span>
+                                                    <span className="text-sm text-slate-500 font-medium line-through decoration-slate-300 break-words line-clamp-2">
+                                                        {from}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start gap-2">
+                                                    <span className="mt-0.5 text-emerald-500"><Check className="w-3.5 h-3.5" /></span>
+                                                    <span className="text-sm text-emerald-700 font-bold break-words line-clamp-3">
+                                                        {to}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                }).filter(Boolean);
+                            }
+
+                            // Do not render empty update blocks
+                            if (log.type !== 'ticket' && changeElements.length === 0) {
+                                return null;
+                            }
+
                             return (
                                 <div key={log.id} className="relative pl-10">
                                     {/* Ponto na linha do tempo */}
@@ -181,162 +366,12 @@ export default function TabAuditoria() {
                                             </div>
                                         )}
 
-                                        {log.field_changes && Object.keys(log.field_changes).length > 0 && (
-                                            (() => {
-                                                const changeElements = Object.entries(log.field_changes).map(([field, change]: [string, any]) => {
-                                                    if (!change) return null;
-                                                    const oldVal = change.old !== undefined ? change.old : change.from;
-                                                    const newVal = change.new !== undefined ? change.new : change.to;
-
-                                                    if (['seo_keywords_updated_at', 'updated_at', 'created_at', 'last_audit_at', 'audit_action', 'audit_differences'].includes(field)) {
-                                                        return null;
-                                                    }
-
-                                                    const fieldLabels: Record<string, string> = {
-                                                        horario_atendimento: 'Horários de Atendimento',
-                                                        logo_url: 'Logotipo',
-                                                        banner_url: 'Banner',
-                                                        video: 'Vídeo / Apresentação',
-                                                        descricao: 'Descrição Completa',
-                                                        seo_keywords: 'Palavras-Chave (SEO)',
-                                                        redes_sociais: 'Redes Sociais',
-                                                        enderecos: 'Endereço',
-                                                        contatos: 'Contatos',
-                                                        exibir_no_site: 'Visibilidade no Site',
-                                                        possui_publicidade: 'Possui Publicidade',
-                                                        exibir_data_fundacao: 'Exibir Data de Fundação',
-                                                        razao_social: 'Razão Social',
-                                                        nome_fantasia: 'Nome Fantasia',
-                                                        audit_status: 'Status da Auditoria',
-                                                        responsavel: 'Responsável',
-                                                        telefone: 'Telefone Principal',
-                                                        website: 'Site',
-                                                        observacoes: 'Observações Internas',
-                                                        observacoes_horario: 'Obs. de Horários',
-                                                        beneficios: 'Benefícios',
-                                                        google_place_id: 'ID do Google Maps',
-                                                        cep: 'CEP',
-                                                        logradouro: 'Logradouro',
-                                                        numero: 'Número',
-                                                        bairro: 'Bairro',
-                                                        cidade: 'Cidade',
-                                                        estado: 'Estado',
-                                                        complemento: 'Complemento',
-                                                        latitude: 'Latitude',
-                                                        longitude: 'Longitude',
-                                                        seo_description: 'Descrição SEO',
-                                                        seo_title: 'Título SEO'
-                                                    };
-
-                                                    const label = fieldLabels[field] || field.replace(/_/g, ' ');
-
-                                                    const formatValue = (val: any, fieldName: string) => {
-                                                        if (val === null || val === undefined || val === '') return null;
-                                                        
-                                                        if (typeof val === 'boolean' || val === 'true' || val === 'false') {
-                                                            return String(val) === 'true' ? 'Sim' : 'Não';
-                                                        }
-
-                                                        // Handle Double Encoded JSON Strings that were stringified
-                                                        if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{') || val.startsWith('"[') || val.startsWith('"{'))) {
-                                                            try {
-                                                                let parsed = JSON.parse(val);
-                                                                if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Double decode if necessary
-                                                                val = parsed;
-                                                            } catch(e) {
-                                                                // Ignore parse errors, treat as normal string
-                                                            }
-                                                        }
-
-                                                        if (fieldName === 'horario_atendimento') {
-                                                            return 'Grade de horários atualizada';
-                                                        }
-
-                                                        if (fieldName === 'logo_url' || fieldName === 'banner_url') {
-                                                            if (typeof val === 'string' && val.startsWith('http')) {
-                                                                return (
-                                                                    <div className="mt-1">
-                                                                        <img src={val} alt="Mídia" className="h-12 w-auto object-contain rounded-md border border-slate-200" />
-                                                                    </div>
-                                                                );
-                                                            }
-                                                        }
-
-                                                        if (Array.isArray(val)) {
-                                                            if (val.length === 0) return 'Vazio';
-                                                            // Extract string values if it's an array of objects or strings
-                                                            const items = val.map(v => typeof v === 'object' ? (v.nome || v.titulo || v.name || JSON.stringify(v)) : String(v));
-                                                            return items.join(', ');
-                                                        }
-
-                                                        if (typeof val === 'object') {
-                                                            return 'Dados Atualizados';
-                                                        }
-                                                        
-                                                        // Format dates
-                                                        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
-                                                            try {
-                                                                const dateStr = val.split('.')[0]; // Remove ms if present
-                                                                return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: ptBR }).replace(' 00:00', '');
-                                                            } catch (e) {
-                                                                // fallthrough
-                                                            }
-                                                        }
-
-                                                        if (typeof val === 'string' && val.length > 80) {
-                                                            return val.substring(0, 80) + '...';
-                                                        }
-                                                        return String(val);
-                                                    };
-
-                                                    const oldFormatted = formatValue(oldVal, field);
-                                                    const newFormatted = formatValue(newVal, field);
-
-                                                    // Compare React elements or strings
-                                                    const isSame = typeof oldFormatted === 'string' && typeof newFormatted === 'string' 
-                                                        ? oldFormatted === newFormatted 
-                                                        : oldFormatted === newFormatted;
-
-                                                    if (isSame && oldFormatted !== null) return null;
-
-                                                    const from = oldFormatted === null ? 'Vazio' : oldFormatted;
-                                                    const to = newFormatted === null ? 'Vazio' : newFormatted;
-
-                                                    return (
-                                                        <div key={field} className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
-                                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                                                                {label}
-                                                            </div>
-                                                            <div className="flex flex-col gap-2">
-                                                                <div className="flex items-start gap-2">
-                                                                    <span className="mt-0.5 text-slate-300"><X className="w-3.5 h-3.5" /></span>
-                                                                    <span className="text-sm text-slate-500 font-medium line-through decoration-slate-300 break-words line-clamp-2">
-                                                                        {from}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex items-start gap-2">
-                                                                    <span className="mt-0.5 text-emerald-500"><Check className="w-3.5 h-3.5" /></span>
-                                                                    <span className="text-sm text-emerald-700 font-bold break-words line-clamp-3">
-                                                                        {to}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                });
-                                                
-                                                const validChangeElements = changeElements.filter(el => el !== null);
-                                                
-                                                if (validChangeElements.length === 0) return null;
-
-                                                return (
-                                                    <div className="mt-4 pt-4 border-t border-slate-100">
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                                            {validChangeElements}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()
+                                        {changeElements.length > 0 && (
+                                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                                    {changeElements}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>

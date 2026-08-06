@@ -603,6 +603,7 @@ export default function ClienteEdit() {
             toast.dismiss(loadingToast);
             queryClient.invalidateQueries({ queryKey: ["clientes"] });
             queryClient.invalidateQueries({ queryKey: ["cliente", clienteId] });
+            queryClient.invalidateQueries({ queryKey: ["client-audit-logs", clienteId] });
             toast.success("Cliente atualizado com sucesso!");
             navigate("/clientes");
           } catch (err: any) {

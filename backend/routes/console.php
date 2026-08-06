@@ -19,7 +19,8 @@ Schedule::command('seo:check-rankings')->weeklyOn(0, '02:00');
 Schedule::command('renewals:generate')->monthlyOn(1, '01:00');
 
 // Auditoria Inteligente: Varredura de dados na internet
-Schedule::command('audit:scan --limit=50')->dailyAt('02:00');
+// Temporariamente desativado a pedido
+// Schedule::command('audit:scan --limit=50')->dailyAt('02:00');
 
 // Relatório Diário de Orçamentos IA
 // Roda todos os dias às 06:00 (horário de Brasília) para enviar o resumo do dia anterior
