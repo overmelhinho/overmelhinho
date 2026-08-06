@@ -48,7 +48,21 @@ class ProcessClienteSeoJob implements ShouldQueue
             $keywords = $registeredKeywords;
         }
 
+        // Pré-carrega a última posição de todas as palavras-chave do cliente de uma só vez (N+1 fix)
+        $latestRankings = SeoRanking::where('cliente_id', $this->cliente->id)
+            ->whereIn('keyword', $keywords)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->unique('keyword')
+            ->keyBy('keyword');
+
+        $ignoredKeywords = [];
+
         foreach ($keywords as $keyword) {
+            // Pegamos o registro da memória (O(1)) sem bater no banco
+            $lastRecord = $latestRankings->get($keyword);
+            $previousPosition = $lastRecord ? $lastRecord->position : null;
+
             // Tenta buscar dado real
             $metrics = $gsc->getKeywordMetrics($keyword);
             $isSimulated = false;
@@ -64,30 +78,16 @@ class ProcessClienteSeoJob implements ShouldQueue
                 // Fallback para Simulação se API não estiver pronta
                 $isSimulated = true;
                 
-                $lastRanking = SeoRanking::where('cliente_id', $this->cliente->id)
-                    ->where('keyword', $keyword)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-
-                $prevPos = $lastRanking ? $lastRanking->position : null;
-                if (!$prevPos) {
+                if (!$previousPosition) {
                     $newPosition = rand(1, 40);
                 } else {
                     $oscilation = rand(-3, 3);
-                    $newPosition = max(1, $prevPos + $oscilation);
+                    $newPosition = max(1, $previousPosition + $oscilation);
                 }
                 $clicks = rand(0, 50);
                 $impressions = rand(100, 1000);
                 $ctr = ($impressions > 0) ? round(($clicks / $impressions) * 100, 2) : 0;
             }
-
-            // Pegar posição anterior para o alerta
-            $lastRecord = SeoRanking::where('cliente_id', $this->cliente->id)
-                ->where('keyword', $keyword)
-                ->orderBy('created_at', 'desc')
-                ->first();
-            
-            $previousPosition = $lastRecord ? $lastRecord->position : null;
 
             // Salvar histórico de métricas
             SeoRanking::create([
@@ -133,11 +133,8 @@ class ProcessClienteSeoJob implements ShouldQueue
                         ]
                     );
                 } else {
-                    // Se a palavra agora está bem, podemos marcar qualquer insight pendente como resolvido implicitamente
-                    SeoInsight::where('cliente_id', $this->cliente->id)
-                        ->where('keyword', $keyword)
-                        ->where('status', 'pending')
-                        ->update(['status' => 'ignored']); // Pode ser ignored ou resolved, usaremos ignored
+                    // Guarda para ignorar todas em um só comando SQL depois do loop
+                    $ignoredKeywords[] = $keyword;
                 }
             }
 
@@ -162,6 +159,14 @@ class ProcessClienteSeoJob implements ShouldQueue
                     ]
                 );
             }
+        }
+
+        // Realiza um único UPDATE massivo para os insights ignorados (N+1 fix)
+        if (!empty($ignoredKeywords)) {
+            SeoInsight::where('cliente_id', $this->cliente->id)
+                ->whereIn('keyword', $ignoredKeywords)
+                ->where('status', 'pending')
+                ->update(['status' => 'ignored']);
         }
         
         Log::info("Finalizado SEO Check Job para Cliente ID: {$this->cliente->id}");
