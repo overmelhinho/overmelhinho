@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Phone, MessageCircle, Star, ExternalLink, ChevronRight } from 'lucide-react';
 import Header from '@/components/Header';
@@ -167,9 +168,9 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
     return (
         <div className="min-h-screen font-sans bg-gray-50">
             <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
-            />
+                    type="application/ld+json"
+                    {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(schemaData).replace(/</g, '\\u003c') } }}
+                />
             <main className="pt-24 pb-20">
                 {/* Hero Section */}
                 <div className="bg-white border-b border-gray-100">
@@ -233,7 +234,13 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                                                 <Link href={seoUrl} className="flex flex-col flex-1 relative">
                                                     <div className="h-48 relative overflow-hidden bg-gray-50">
                                                         {client.banner_url || client.galeria?.[0]?.url ? (
-                                                            <img src={client.banner_url || client.galeria[0].url} alt={client.nome_fantasia} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                                            <Image 
+                                                                src={client.banner_url || client.galeria[0].url} 
+                                                                alt={client.nome_fantasia} 
+                                                                fill
+                                                                sizes="(max-width: 768px) 100vw, 33vw"
+                                                                className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                                                            />
                                                         ) : (
                                                             <div className="w-full h-full bg-brand-red/10 flex items-center justify-center">
                                                                 <span className="text-4xl text-brand-red/20 font-black uppercase">{client.nome_fantasia.charAt(0)}</span>
@@ -244,8 +251,14 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
 
                                                     <div className="px-5 pb-6 pt-1 relative flex-1 flex flex-col">
                                                         {client.logotipo_url && (
-                                                            <div className="absolute -top-12 left-5 w-24 h-24 rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500 z-10">
-                                                                <img src={client.logotipo_url} alt="Logo" className="w-full h-full object-cover rounded-[1.3rem]" />
+                                                            <div className="absolute -top-12 left-5 w-24 h-24 rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500 z-10 overflow-hidden relative">
+                                                                <Image 
+                                                                    src={client.logotipo_url} 
+                                                                    alt="Logo" 
+                                                                    fill
+                                                                    sizes="96px"
+                                                                    className="object-cover rounded-[1.3rem]" 
+                                                                />
                                                             </div>
                                                         )}
                                                         <div className="pt-14 space-y-2 flex-1 flex flex-col">

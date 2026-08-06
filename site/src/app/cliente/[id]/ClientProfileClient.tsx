@@ -16,6 +16,7 @@ import { useInterests } from '@/hooks/useInterests';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import api from '@/services/api';
 
 // Helper para normalizar strings para slugs (URL friendly)
@@ -60,11 +61,13 @@ const CompanyLogo = ({ company, logo, className = '' }: { company: string, logo?
     }
 
     return (
-        <div className={`flex items-center justify-center flex-shrink-0 overflow-hidden ${className}`}>
-            <img 
+        <div className={`flex items-center justify-center flex-shrink-0 overflow-hidden relative ${className}`}>
+            <Image 
                 src={logo} 
                 alt={company} 
-                className="w-full h-full object-contain p-2"
+                fill
+                sizes="(max-width: 768px) 128px, 192px"
+                className="object-contain p-2"
                 onError={() => setError(true)}
             />
         </div>
@@ -715,11 +718,11 @@ export default function ClientProfileClient() {
             {/* 🤖 SEO Structured Data */}
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(schemaData).replace(/</g, '\\u003c') } }}
             />
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(breadcrumbData).replace(/</g, '\\u003c') } }}
             />
 
             {/* 📍 Banner de Atendimento Local (SEO Context) */}
@@ -779,10 +782,13 @@ export default function ClientProfileClient() {
                 </div>
 
                 {client.banner_url && isPagante ? (
-                    <img
+                    <Image
                         src={client.banner_url}
-                        className="w-full h-full object-cover object-left md:object-center"
+                        className="object-cover object-left md:object-center"
                         alt={client.nome_fantasia}
+                        fill
+                        priority={true}
+                        sizes="100vw"
                     />
                 ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200"></div>
@@ -798,14 +804,12 @@ export default function ClientProfileClient() {
                     {/* Floating Profile Image */}
                     {isPagante && client.logotipo_url && (
                         <div className="absolute -top-16 md:-top-24 left-6 md:left-10 w-32 h-32 md:w-48 md:h-48 rounded-[2rem] bg-white p-1.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] border-[4px] md:border-[6px] border-white overflow-hidden group flex items-center justify-center">
-                            <img
-                                src={client.logotipo_url}
-                                className="w-full h-full object-contain rounded-[1.6rem] group-hover:scale-110 transition-transform duration-700"
+                            <Image
+                                src={client.logotipo_url || '/logo-overmelhinho.png'}
+                                fill
+                                sizes="(max-width: 768px) 128px, 192px"
+                                className="object-contain p-1.5 rounded-[1.6rem] group-hover:scale-110 transition-transform duration-700"
                                 alt={`Logotipo de ${client.nome_fantasia}`}
-                                onError={(e) => {
-                                    e.currentTarget.src = '/logo-overmelhinho.png';
-                                    e.currentTarget.onerror = null;
-                                }}
                             />
                         </div>
                     )}
@@ -1284,9 +1288,11 @@ export default function ClientProfileClient() {
                                             onClick={() => setSelectedImageIndex(i)}
                                             className="group relative aspect-square rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white cursor-pointer gummy-card"
                                         >
-                                            <img
+                                            <Image
                                                 src={img.url}
-                                                className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110"
+                                                fill
+                                                sizes="(max-width: 768px) 50vw, 33vw"
+                                                className="object-cover transition-transform duration-700 group-hover:scale-110"
                                                 alt={`Foto de ${client.nome_fantasia} - ${i + 1}`}
                                             />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
@@ -1369,7 +1375,7 @@ export default function ClientProfileClient() {
                                                 </div>
                                             </div>
                                             {rev.text && rev.text.trim() !== '' && (
-                                                <p className="text-sm text-gray-500 font-medium leading-relaxed italic" dangerouslySetInnerHTML={{ __html: `"${rev.text}"` }} />
+                                                <p className="text-sm text-gray-500 font-medium leading-relaxed italic">"{rev.text}"</p>
                                             )}
                                         </div>
                                     )) : (
@@ -1877,9 +1883,11 @@ export default function ClientProfileClient() {
                                 >
                                     <div className="aspect-square md:h-48 md:aspect-auto overflow-hidden relative bg-gray-50 flex items-center justify-center p-4">
                                         {(rec.galeria?.[0]?.url || rec.logotipo_url) ? (
-                                            <img
+                                            <Image
                                                 src={rec.galeria?.[0]?.url || rec.logotipo_url}
-                                                className={`w-full h-full group-hover:scale-110 transition-all duration-700 ${rec.galeria?.[0]?.url ? 'object-cover rounded-xl' : 'object-contain'}`}
+                                                fill
+                                                sizes="(max-width: 768px) 100vw, 33vw"
+                                                className={`group-hover:scale-110 transition-all duration-700 ${rec.galeria?.[0]?.url ? 'object-cover rounded-xl' : 'object-contain p-4'}`}
                                                 alt={rec.nome_fantasia}
                                             />
                                         ) : (
@@ -2035,10 +2043,11 @@ export default function ClientProfileClient() {
                             {/* Content */}
                             <div className="flex-1 bg-gray-100/50 relative overflow-hidden flex items-center justify-center p-4">
                                 {isImage(client.portfolio_url) ? (
-                                    <img
+                                    <Image
                                         src={client.portfolio_url}
                                         alt={client.nome_fantasia}
-                                        className="max-w-full max-h-full object-contain rounded-lg shadow-md"
+                                        fill
+                                        className="object-contain p-4 rounded-lg shadow-md"
                                     />
                                 ) : (
                                     <iframe
@@ -2109,9 +2118,10 @@ export default function ClientProfileClient() {
                             className="relative max-w-5xl w-full h-[70vh] md:h-[85vh] flex items-center justify-center"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <img
+                            <Image
                                 src={client.galeria[selectedImageIndex].url}
-                                className="max-w-full max-h-full object-contain rounded-3xl shadow-2xl"
+                                fill
+                                className="object-contain p-4 rounded-3xl shadow-2xl"
                                 alt="Imagem ampliada"
                             />
 

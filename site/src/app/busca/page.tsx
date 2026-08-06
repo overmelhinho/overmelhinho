@@ -9,6 +9,7 @@ function WhatsAppIcon({ size = 20 }) {
 }
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import {
     Search as SearchIcon,
@@ -614,7 +615,14 @@ function SearchContent() {
                                     {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(matchPerfeito.status_assinatura) && (
                                         <div className="w-full md:w-2/5 h-40 md:h-auto relative overflow-hidden flex-shrink-0">
                                             {matchPerfeito.banner_url || matchPerfeito.galeria?.[0]?.url ? (
-                                                <img src={matchPerfeito.banner_url || matchPerfeito.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+                                                <Image 
+                                                    src={matchPerfeito.banner_url || matchPerfeito.galeria[0].url} 
+                                                    fill
+                                                    sizes="(max-width: 768px) 100vw, 50vw"
+                                                    priority
+                                                    className="object-cover group-hover:scale-110 transition-transform duration-1000" 
+                                                    alt="" 
+                                                />
                                             ) : (
                                                 <div className="w-full h-full bg-brand-red/5 group-hover:scale-110 transition-transform duration-1000 flex items-center justify-center">
                                                     <span className="text-brand-red/20 font-black text-4xl uppercase">{matchPerfeito.nome_fantasia.charAt(0)}</span>
@@ -623,8 +631,15 @@ function SearchContent() {
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                                             
                                             {matchPerfeito.logotipo_url && (
-                                                <div className="absolute bottom-4 md:bottom-6 left-4 md:left-6 w-24 h-24 md:w-32 md:h-32 rounded-[1.5rem] md:rounded-[2rem] bg-white p-1 shadow-2xl border-4 border-white z-10 group-hover:scale-110 transition-transform duration-500">
-                                                    <img src={matchPerfeito.logotipo_url} className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.6rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                <div className="absolute bottom-4 md:bottom-6 left-4 md:left-6 w-24 h-24 md:w-32 md:h-32 rounded-[1.5rem] md:rounded-[2rem] bg-white p-1 shadow-2xl border-4 border-white z-10 group-hover:scale-110 transition-transform duration-500 overflow-hidden relative">
+                                                    <Image 
+                                                        src={matchPerfeito.logotipo_url} 
+                                                        fill
+                                                        sizes="128px"
+                                                        className="object-cover rounded-[1.2rem] md:rounded-[1.6rem]" 
+                                                        alt="" 
+                                                        onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} 
+                                                    />
                                                 </div>
                                             )}
                                         </div>
@@ -722,7 +737,13 @@ function SearchContent() {
                                             >
                                                 <div className="h-20 md:h-24 overflow-hidden relative flex-shrink-0">
                                                     {item.banner_url || item.galeria?.[0]?.url ? (
-                                                        <img src={item.banner_url || item.galeria[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+                                                        <Image 
+                                                            src={item.banner_url || item.galeria[0].url} 
+                                                            fill
+                                                            sizes="(max-width: 768px) 100vw, 33vw"
+                                                            className="object-cover group-hover:scale-110 transition-transform duration-1000" 
+                                                            alt="" 
+                                                        />
                                                     ) : (
                                                         <div className="w-full h-full bg-brand-red/10 group-hover:scale-110 transition-transform duration-1000"></div>
                                                     )}
@@ -730,8 +751,15 @@ function SearchContent() {
                                                 </div>
                                                 <div className="px-4 pb-6 md:px-5 md:pb-6 pt-1 relative flex-1 flex flex-col">
                                                     {item.tipo_cliente !== 'gratuito' && item.logotipo_url && (
-                                                        <div className="absolute -top-10 md:-top-12 left-4 md:left-5 w-20 h-20 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500">
-                                                            <img src={item.logotipo_url} className="w-full h-full object-cover rounded-[1rem] md:rounded-[1.3rem]" alt="" onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                        <div className="absolute -top-10 md:-top-12 left-4 md:left-5 w-20 h-20 md:w-24 md:h-24 rounded-[1.2rem] md:rounded-[1.5rem] bg-white p-1 shadow-2xl border-[3px] border-white group-hover:-translate-y-2 transition-transform duration-500 overflow-hidden relative">
+                                                            <Image 
+                                                                src={item.logotipo_url} 
+                                                                fill
+                                                                sizes="96px"
+                                                                className="object-cover rounded-[1rem] md:rounded-[1.3rem]" 
+                                                                alt="" 
+                                                                onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }} 
+                                                            />
                                                         </div>
                                                     )}
                                                     <div className="pt-12 md:pt-14 space-y-2 flex-1 flex flex-col">
