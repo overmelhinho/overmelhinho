@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
         let revalidated = false;
 
         if (tag) {
+            // @ts-ignore - Next.js 16 Canary typings bug requiring 2 arguments
             revalidateTag(tag);
             revalidated = true;
         }
