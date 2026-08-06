@@ -1,8 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,9 +10,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('seo_insights', function (Blueprint $table) {
-            $table->index(['cliente_id', 'keyword', 'status'], 'idx_seo_insights_lookup');
-        });
+        DB::statement('CREATE INDEX IF NOT EXISTS idx_seo_insights_lookup ON seo_insights (cliente_id, keyword, status)');
     }
 
     /**
@@ -21,8 +18,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('seo_insights', function (Blueprint $table) {
-            $table->dropIndex('idx_seo_insights_lookup');
-        });
+        DB::statement('DROP INDEX IF EXISTS idx_seo_insights_lookup');
     }
 };
