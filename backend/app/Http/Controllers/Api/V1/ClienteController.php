@@ -1538,6 +1538,10 @@ class ClienteController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // 🔒 ANTI-IDOR / ZERO TRUST CHECK
+        if (!$request->user()->can('edit_cliente') && !$request->user()->can('manage_clients') && !$request->user()->hasRole(['Admin', 'Administrador'])) {
+            abort(403, 'Acesso Negado: Você não tem permissão para editar clientes.');
+        }
 
         try {
             $cliente = Cliente::with(['enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas'])

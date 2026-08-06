@@ -8,7 +8,12 @@
  * CONFIGURAÇÃO: Defina o mesmo segredo usado no GitHub Webhooks.
  */
 
-$secret = getenv('DEPLOY_WEBHOOK_SECRET') ?: 'overmelhinho_deploy_2026';
+$secret = getenv('DEPLOY_WEBHOOK_SECRET');
+
+if (empty($secret)) {
+    http_response_code(500);
+    die('Server Misconfiguration: Webhook secret not set in environment.');
+}
 $logFile = __DIR__ . '/../storage/logs/deploy.log';
 $rootDir = '/var/www';
 

@@ -18,6 +18,8 @@ class GaleriaImagemRequest extends FormRequest
             'legenda'   => 'nullable|string|max:191',
             'ordem'     => 'nullable|integer|min:0',
             'thumb_url' => 'nullable|string|max:255',
+            // 🔒 ANTI-WEB SHELL
+            'imagem'    => 'nullable|file|image|mimes:jpeg,png,jpg,webp,svg|max:10240',
         ];
     }
 }

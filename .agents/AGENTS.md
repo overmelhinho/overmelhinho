@@ -21,3 +21,10 @@ pm run dev.
 </RULE[local_environment]>
 - O site principal (Next.js) deve ser iniciado na pasta site rodando 
 pm run dev (Porta 3000).
+
+<RULE[security_scanning_policy]>
+**Fluxo de Trabalho DevSecOps Obrigatório**:
+1. Após escrever ou modificar qualquer arquivo, o agente é OBRIGADO a invocar a skill security_scanner no arquivo modificado.
+2. O agente NUNCA deve aprovar o próprio código ou finalizar a tarefa se a ferramenta de segurança retornar alertas (🚨).
+3. Se houver falha de segurança, analise, corrija o código de forma segura e rode o scanner novamente até passar (✅).
+</RULE[security_scanning_policy]>
