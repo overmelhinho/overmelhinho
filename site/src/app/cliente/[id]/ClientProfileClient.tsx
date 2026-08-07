@@ -74,7 +74,7 @@ const CompanyLogo = ({ company, logo, className = '' }: { company: string, logo?
     );
 };
 
-export default function ClientProfileClient() {
+export default function ClientProfileClient({ initialClient }: { initialClient?: any }) {
     const getGoogleMapsLink = (endereco: any) => {
         if (endereco?.link_maps) return endereco.link_maps;
         if (endereco?.latitude && endereco?.longitude) return `https://www.google.com/maps/search/?api=1&query=${endereco.latitude},${endereco.longitude}`;
@@ -200,6 +200,7 @@ export default function ClientProfileClient() {
             const res = await api.get(`/public/clientes/${id}`);
             return res.data.data;
         },
+        initialData: initialClient,
         enabled: !!id
     });
 

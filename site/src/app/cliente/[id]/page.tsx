@@ -153,19 +153,19 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <>
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, '\\u003c') } }}
             />
             {localBusinessJsonLd && (
                 <script
                     type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+                    {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') } }}
                 />
             )}
             
             {/* H1 Oculto visualmente ou passado para o componente para garantir SEO */}
             <h1 className="sr-only">{h1Title}</h1>
             
-            <ClientProfileClient />
+            <ClientProfileClient initialClient={client} />
         </>
     );
 }

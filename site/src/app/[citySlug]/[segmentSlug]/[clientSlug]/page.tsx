@@ -137,7 +137,7 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
         <>
             {/* H1 Oculto visualmente focado em SEO Local Dinâmico */}
             <h1 className="sr-only">{h1Title}</h1>
-            <ClientProfileClient />
+            <ClientProfileClient initialClient={client} />
         </>
     );
 }
