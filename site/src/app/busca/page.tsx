@@ -221,7 +221,7 @@ function SearchContent() {
     }, [cityName]);
 
     // ✅ Campanhas de Banners (Busca)
-    const { data: searchAds } = useAds({
+    const { data: searchAds, isLoading: isLoadingAds } = useAds({
         city_id: cityId,
         keywords: query,
         tipo: 'BANNER'
@@ -309,7 +309,7 @@ function SearchContent() {
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
-        isLoading,
+        isLoading: isSearchLoading,
     } = useInfiniteQuery({
         queryKey: ['search', query, cityId],
         queryFn: async ({ pageParam = 1 }) => {
@@ -342,9 +342,9 @@ function SearchContent() {
         });
     }, [data]);
  
-    // ✅ Helper para gerar links SEO (Cidade/Segmento/Cliente)
     const getClientLink = (client: any) => getClientSeoUrl(client, cityName || null);
 
+    const isFullLoading = isSearchLoading || isLoadingAds;
  
     const { trackSearch, trackInteraction, trackAdInteraction: trackAd } = useAnalytics();
  
@@ -359,10 +359,10 @@ function SearchContent() {
  
     // Tracking de busca
     useEffect(() => {
-        if (!isLoading && (query || cityName)) {
+        if (!isFullLoading && (query || cityName)) {
             trackSearch(query || cityName || 'Busca Geral', cityName || 'Geral', allResults.length);
         }
-    }, [isLoading, query, cityName, allResults.length]);
+    }, [isFullLoading, query, cityName, allResults.length]);
  
     useEffect(() => {
         if (topBanner) {
@@ -594,7 +594,7 @@ function SearchContent() {
                         )}
 
                         {/* LOADING */}
-                        {isLoading && (
+                        {isFullLoading && (
                             <div className="flex flex-col items-center justify-center py-40 space-y-4">
                                 <div className="w-12 h-12 border-4 border-brand-red border-t-transparent rounded-full animate-spin"></div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Escaneando a região...</p>
@@ -602,7 +602,7 @@ function SearchContent() {
                         )}
 
                         {/* EMPTY */}
-                        {!isLoading && allResults.length === 0 && (
+                        {!isFullLoading && allResults.length === 0 && (
                             <div className="text-center py-32 space-y-4">
                                 <div className="bg-gray-50 w-20 h-20 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 shadow-inner border border-gray-100">
                                     <SearchIcon className="text-gray-200" size={32} />
@@ -614,7 +614,7 @@ function SearchContent() {
 
                         {/* BLOCO HERO REMOVIDO A PEDIDO DO CLIENTE - RESTAURADO COM NOVA LÓGICA */}
                         {/* 1. HERO RESULT (MATCH PERFEITO) */}
-                        {!isLoading && matchPerfeito && (
+                        {!isFullLoading && matchPerfeito && (
                             <section className="animate-fade-in relative z-10 w-full mb-3 md:mb-5 mt-4">
 
                                 <div
@@ -631,6 +631,7 @@ function SearchContent() {
                                                     fill
                                                     sizes="(max-width: 768px) 100vw, 50vw"
                                                     priority
+                                                    quality={80}
                                                     className="object-cover group-hover:scale-110 transition-transform duration-1000" 
                                                     alt="" 
                                                 />
@@ -648,6 +649,8 @@ function SearchContent() {
                                                             src={matchPerfeito.logotipo_url} 
                                                             fill
                                                             sizes="128px"
+                                                            priority
+                                                            quality={85}
                                                             className="object-cover" 
                                                             alt="" 
                                                             onError={(e) => { e.currentTarget.parentElement!.parentElement!.style.display = 'none'; }} 
@@ -715,7 +718,7 @@ function SearchContent() {
 
 
                         {/* HEADER DA BUSCA */}
-                        {!isLoading && allResults.length > 0 && (
+                        {!isFullLoading && allResults.length > 0 && (
                             <div className="flex justify-between items-end px-2 mb-6">
                                 <h3 className="text-base md:text-xl font-black text-gray-900 tracking-tight font-serif flex flex-wrap items-center gap-1.5 md:gap-2 leading-relaxed">
                                     <span>Encontramos</span>
@@ -736,11 +739,11 @@ function SearchContent() {
                         )}
 
                         {/* RENDERIZAÇÃO SEQUENCIAL DOS BLOCOS */}
-                        {!isLoading && blocks.map((block, blockIdx) => (
+                        {!isFullLoading && blocks.map((block, blockIdx) => (
                             block.type === 'cards' ? (
                                 <section key={`block-${blockIdx}`} className="space-y-8 mb-8">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {block.items.map((item: any) => (
+                                        {block.items.map((item: any, itemIdx: number) => (
                                             <div
                                                 key={item.id}
                                                 onClick={() => router.push(getClientLink(item))}
@@ -754,6 +757,8 @@ function SearchContent() {
                                                             src={item.banner_url || item.galeria[0].url} 
                                                             fill
                                                             sizes="(max-width: 768px) 100vw, 33vw"
+                                                            priority={blockIdx === 0 && itemIdx < 2}
+                                                            quality={75}
                                                             className="object-cover group-hover:scale-110 transition-transform duration-1000" 
                                                             alt="" 
                                                         />
@@ -770,6 +775,8 @@ function SearchContent() {
                                                                     src={item.logotipo_url} 
                                                                     fill
                                                                     sizes="96px"
+                                                                    priority={blockIdx === 0 && itemIdx < 2}
+                                                                    quality={80}
                                                                     className="object-cover" 
                                                                     alt="" 
                                                                     onError={(e) => { e.currentTarget.parentElement!.parentElement!.style.display = 'none'; }} 
@@ -963,7 +970,7 @@ function SearchContent() {
                         ))}
                         
                         {/* INFINITE SCROLL OBSERVER - DEVE FICAR FORA DO CONDICIONAL */}
-                        {!isLoading && (
+                        {!isFullLoading && (
                             <div ref={observerTarget} className="py-12 flex justify-center">
                                 {isFetchingNextPage ? (
                                     <div className="flex items-center space-x-3 bg-gray-50 px-6 py-3 rounded-full border border-gray-100">
