@@ -145,6 +145,7 @@ function SearchContent() {
     const [selectedMapResult, setSelectedMapResult] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
     const [showMapDesktop, setShowMapDesktop] = useState(true);
+    const [hasRequestedMap, setHasRequestedMap] = useState(false);
     const { data: availableCities } = useCidades();
     const [citySearchQuery, setCitySearchQuery] = useState('');
     const [isListening, setIsListening] = useState(false);
@@ -175,6 +176,13 @@ function SearchContent() {
     useEffect(() => {
         if (inputRef.current) inputRef.current.focus();
     }, []);
+
+    // Determina se o mapa já foi requisitado pelo menos uma vez para poder montar o Leaflet (pesado)
+    useEffect(() => {
+        if (viewMode === 'map' || window.innerWidth >= 1024) {
+            setHasRequestedMap(true);
+        }
+    }, [viewMode]);
 
     const filteredCities = useMemo(() => {
         if (!citySearchQuery) return availableCities;
@@ -569,7 +577,10 @@ function SearchContent() {
                                         <img 
                                             src={topBanner.imageDesktop} 
                                             className="w-full h-auto max-h-[350px] lg:max-h-[280px] object-contain mx-auto" 
-                                            alt={topBanner.title} 
+                                            alt={topBanner.title}
+                                            width="1200"
+                                            height="400"
+                                            fetchPriority="high"
                                         />
                                     </picture>
                                     {/* Link Indicator (Optional but subtle) */}
@@ -824,7 +835,10 @@ function SearchContent() {
                                                     <img 
                                                         src={listAd.imageDesktop} 
                                                         className="w-full h-auto max-h-[300px] object-cover" 
-                                                        alt={listAd.title} 
+                                                        alt={listAd.title}
+                                                        width="1200"
+                                                        height="300"
+                                                        loading="lazy"
                                                     />
                                                 </picture>
                                                 {listAd.link && (
@@ -971,13 +985,15 @@ function SearchContent() {
                 <div className={`w-full ${showMapDesktop ? 'lg:w-[35%] lg:opacity-100' : 'lg:w-0 lg:opacity-0'} relative overflow-hidden ${viewMode === 'list' ? 'hidden lg:block' : 'block h-screen lg:h-screen'} transition-all duration-700 ease-in-out`}>
 
                     {/* Mapa real com OpenStreetMap */}
-                    <SearchMap
-                        results={allResults}
-                        highlighted={hoveredResult || selectedMapResult}
-                        onHover={setHoveredResult}
-                        onClick={setSelectedMapResult}
-                        onMapClick={() => setSelectedMapResult(null)}
-                    />
+                    {hasRequestedMap && (
+                        <SearchMap
+                            results={allResults}
+                            highlighted={hoveredResult || selectedMapResult}
+                            onHover={setHoveredResult}
+                            onClick={setSelectedMapResult}
+                            onMapClick={() => setSelectedMapResult(null)}
+                        />
+                    )}
 
                     {/* Header overlay com contagem */}
                     <div className="absolute top-6 left-6 z-[1000]">
