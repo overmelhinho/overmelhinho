@@ -639,14 +639,20 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
 
     const status = getTodayStatus();
 
+    const breadcrumbCitySlug = citySlug || (client.enderecos?.[0]?.cidade ? slugify(client.enderecos[0].cidade) : 'cidade');
+    const breadcrumbSegmentSlug = (params.segmentSlug as string) || (client.segmentos?.[0]?.nome ? slugify(client.segmentos[0].nome) : 'categoria');
+    const breadcrumbCityName = cityNameContext || client.enderecos?.[0]?.cidade || 'Cidade';
+    const breadcrumbSegmentName = client.segmentos?.[0]?.nome || 'Categoria';
+    const canonicalUrl = `https://www.overmelhinho.com.br/${breadcrumbCitySlug}/${breadcrumbSegmentSlug}/${client.slug || client.id}`;
+
     // 🧠 JSON-LD Structured Data for SEO
     const schemaData = {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
         "name": client.nome_fantasia,
         "image": client.logotipo_url || client.banner_url,
-        "@id": typeof window !== 'undefined' ? window.location.href : '',
-        "url": typeof window !== 'undefined' ? window.location.href : '',
+        "@id": canonicalUrl,
+        "url": canonicalUrl,
         "telephone": contactInfo?.telefone_principal || contactInfo?.celular,
         "address": client.enderecos?.[0] ? {
             "@type": "PostalAddress",
@@ -684,11 +690,6 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
         })) : undefined
     };
 
-    const breadcrumbCitySlug = citySlug || (client.enderecos?.[0]?.cidade ? slugify(client.enderecos[0].cidade) : 'cidade');
-    const breadcrumbSegmentSlug = (params.segmentSlug as string) || (client.segmentos?.[0]?.nome ? slugify(client.segmentos[0].nome) : 'categoria');
-    const breadcrumbCityName = cityNameContext || client.enderecos?.[0]?.cidade || 'Cidade';
-    const breadcrumbSegmentName = client.segmentos?.[0]?.nome || 'Categoria';
-
     const breadcrumbData = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -709,7 +710,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                 "@type": "ListItem",
                 "position": 3,
                 "name": client.nome_fantasia,
-                "item": typeof window !== 'undefined' ? window.location.href : ''
+                "item": canonicalUrl
             }
         ]
     };
