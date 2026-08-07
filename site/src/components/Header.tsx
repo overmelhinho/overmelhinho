@@ -109,7 +109,7 @@ export default function Header() {
                             <button
                                 key={link.href}
                                 onClick={() => router.push(link.href)}
-                                className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors relative group ${isActive(link.href) ? 'text-brand-red' : 'text-gray-400 hover:text-gray-900'}`}
+                                className={`text-[11px] font-sans font-black uppercase tracking-[0.2em] transition-colors relative group ${isActive(link.href) ? 'text-brand-red' : 'text-gray-400 hover:text-gray-900'}`}
                             >
                                 {link.label}
                                 {/* underline ativa */}
@@ -123,14 +123,14 @@ export default function Header() {
                         {/* Login Button Hidden */}
                         {/* <button
                             onClick={() => router.push('/login')}
-                            className="flex items-center gap-2 text-gray-900 bg-white px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 border border-gray-100 text-[11px] font-black uppercase tracking-widest"
+                            className="flex items-center gap-2 text-gray-900 bg-white px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 border border-gray-100 text-[11px] font-sans font-black uppercase tracking-widest"
                         >
                             <User size={16} className="text-brand-red" />
                             Login
                         </button> */}
                         <button
                             onClick={() => router.push('/anuncie')}
-                            className="hidden md:flex px-4 py-2 bg-brand-red text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md shadow-red-100 hover:scale-105 active:scale-95 transition-all outline-none"
+                            className="hidden md:flex px-4 py-2 bg-brand-red text-white rounded-xl font-sans font-black text-[10px] uppercase tracking-widest shadow-md shadow-red-100 hover:scale-105 active:scale-95 transition-all outline-none"
                         >
                             Anunciar
                         </button>
@@ -165,7 +165,7 @@ export default function Header() {
                                 <button
                                     key={link.href}
                                     onClick={() => { router.push(link.href); setMenuOpen(false); }}
-                                    className={`w-full text-left px-5 py-4 rounded-2xl font-black text-lg transition-all ${isActive(link.href) ? 'bg-brand-red/5 text-brand-red' : 'text-gray-700 hover:bg-gray-50'}`}
+                                    className={`w-full text-left px-5 py-4 rounded-2xl font-sans font-black text-lg transition-all ${isActive(link.href) ? 'bg-brand-red/5 text-brand-red' : 'text-gray-700 hover:bg-gray-50'}`}
                                 >
                                     {link.label}
                                 </button>
@@ -175,14 +175,14 @@ export default function Header() {
                                 {/* Login Button Hidden */}
                                 {/* <button
                                     onClick={() => { router.push('/login'); setMenuOpen(false); }}
-                                    className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-gray-100 font-black text-gray-700 hover:border-brand-red transition-colors"
+                                    className="flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-gray-100 font-sans font-black text-gray-700 hover:border-brand-red transition-colors"
                                 >
                                     <User size={18} className="text-brand-red" />
                                     Login
                                 </button> */}
                                 <button
                                     onClick={() => { router.push('/anuncie'); setMenuOpen(false); }}
-                                    className="w-full py-4 rounded-2xl bg-brand-red text-white font-black shadow-lg shadow-red-100 active:scale-95 transition-all text-center"
+                                    className="w-full py-4 rounded-2xl bg-brand-red text-white font-sans font-black shadow-lg shadow-red-100 active:scale-95 transition-all text-center"
                                 >
                                     Anunciar
                                 </button>

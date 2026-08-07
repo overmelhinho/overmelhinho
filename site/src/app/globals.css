@@ -90,3 +90,8 @@ input[type="button"] {
 .rich-text li {
   margin-bottom: 0.25rem;
 }
+@layer base {
+  body, button, input, optgroup, select, textarea {
+    font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif !important;
+  }
+}

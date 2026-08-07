@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -42,7 +42,8 @@ import {
     User
 } from 'lucide-react';
 import api from '@/services/api';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
+import AuditMatchFocus from '../components/auditoria/AuditMatchFocus';
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -85,7 +86,7 @@ const fieldLabels: Record<string, string> = {
     'beneficios': 'Benefícios',
     'google_place_id': 'ID do Google Maps',
     'cep': 'CEP',
-    'logradouro': 'Logradouro',
+    'logradouro': 'Logadrour',
     'numero': 'Número',
     'bairro': 'Bairro',
     'cidade': 'Cidade',
@@ -124,7 +125,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                 className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
                 onClick={() => setExpanded(!expanded)}
             >
-                <td className="px-8 py-6">
+                <td className="px-4 py-4">
                     <span className="text-sm font-bold text-slate-600 flex items-center gap-2">
                         <button className="text-slate-400 group-hover:text-[#B70F0A] transition-colors">
                             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -132,7 +133,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                         {format(new Date(log.created_at), "dd/MM/yy '•' HH:mm", { locale: ptBR })}
                     </span>
                 </td>
-                <td className="px-8 py-6">
+                <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-black ring-4 ring-slate-100">
                             {log.actor?.name?.charAt(0) || 'S'}
@@ -140,7 +141,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                         <span className="text-sm font-bold text-slate-700">{log.actor?.name || 'Sistema IA'}</span>
                     </div>
                 </td>
-                <td className="px-8 py-6">
+                <td className="px-4 py-4">
                     <div className="flex flex-col">
                         <span className="text-sm font-bold text-[#B70F0A]">{log.cliente?.nome_fantasia || '---'}</span>
                         <div className="flex items-center gap-2 mt-0.5 text-[11px] font-medium text-slate-400">
@@ -156,7 +157,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                         </div>
                     </div>
                 </td>
-                <td className="px-8 py-6">
+                <td className="px-4 py-4">
                     {hasRealChanges ? (
                         <span className="text-[10px] bg-emerald-50 text-emerald-700 font-black px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5 w-fit uppercase">
                             <CheckCircle2 className="w-3 h-3" />
@@ -169,7 +170,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                         </span>
                     )}
                 </td>
-                <td className="px-8 py-6 text-right">
+                <td className="px-4 py-4 text-right">
                     <button
                         onClick={(e) => { e.stopPropagation(); window.open(`https://overmelhinho.com.br/cliente/${log.cliente_id}`, '_blank'); }}
                         className="p-2.5 hover:bg-white hover:shadow-md rounded-xl transition-all text-slate-400 hover:text-slate-900 border border-transparent hover:border-slate-100"
@@ -187,7 +188,7 @@ const HistoryRow = ({ log, idx, navigate }: { log: any, idx: number, navigate: a
                         exit={{ opacity: 0, height: 0 }}
                         className="bg-slate-50/30 overflow-hidden"
                     >
-                        <td colSpan={5} className="px-8 py-6">
+                        <td colSpan={5} className="px-4 py-4">
                             <div className="space-y-6 text-slate-700 bg-white p-6 rounded-3xl border border-slate-150 shadow-sm" onClick={(e) => e.stopPropagation()}>
                                 {/* Ficha Cadastral do Cliente (Dados Atuais) */}
                                 {(() => {
@@ -319,6 +320,11 @@ const AuditDashboardPage: React.FC = () => {
     const [inlineStatus, setInlineStatus] = useState<Record<string, 'accepted' | 'rejected' | 'pending'>>({});
     const [showCitiesPanel, setShowCitiesPanel] = useState(false);
     const [editingObservations, setEditingObservations] = useState<string>('');
+
+    // --- Focus Mode States ---
+    const [focusMode, setFocusMode] = useState(false);
+    const [focusQueue, setFocusQueue] = useState<any[]>([]);
+    const [initialFocusQueueTotal, setInitialFocusQueueTotal] = useState(0);
 
     // Filtros persistentes na URL
     const tab = (searchParams.get('tab') as 'queue' | 'history' | 'cities') || 'queue';
@@ -597,6 +603,32 @@ const AuditDashboardPage: React.FC = () => {
         updateClientMutation.mutate({ id: client.id, payload });
     };
 
+    if (focusMode && focusQueue.length > 0) {
+        const currentClient = focusQueue[0];
+        const progressStr = `Conferindo ${initialFocusQueueTotal - focusQueue.length + 1} de ${initialFocusQueueTotal}`;
+        
+        return (
+            <AuditMatchFocus 
+                clienteId={currentClient.id} 
+                progress={progressStr}
+                onClose={() => {
+                    setFocusMode(false);
+                    queryClient.invalidateQueries({ queryKey: ['audit-queue'] });
+                }}
+                onNext={() => {
+                    const nextQueue = focusQueue.slice(1);
+                    if (nextQueue.length === 0) {
+                        toast.success('Fila de conferência da página finalizada! Ótimo trabalho.');
+                        setFocusMode(false);
+                        queryClient.invalidateQueries({ queryKey: ['audit-queue'] });
+                    } else {
+                        setFocusQueue(nextQueue);
+                    }
+                }}
+            />
+        );
+    }
+
     return (
         <div className="p-6 md:p-10 max-w-[1600px] mx-auto space-y-8 font-sans">
             {/* Background Decoration */}
@@ -652,31 +684,6 @@ const AuditDashboardPage: React.FC = () => {
                                 {queueData?.meta?.total || 0}
                             </div>
                         </div>
-                    </motion.div>
-
-                    {/* Botão: Gerar Novas Conferências */}
-                    <motion.div whileHover={{ y: -4 }} className="flex items-stretch">
-                        <button
-                            onClick={() => !scanTriggered && !triggeringScan && triggerScan()}
-                            disabled={triggeringScan || scanTriggered}
-                            title={scanTriggered ? scanMessage : 'Gerar 50 novas conferências para a equipe'}
-                            className={`flex items-center gap-3 px-5 py-4 rounded-3xl border font-bold text-sm transition-all shadow-sm
-                                ${ scanTriggered
-                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 cursor-default'
-                                    : triggeringScan
-                                    ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-wait'
-                                    : 'bg-white border-gray-100 text-slate-700 hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-red-200'
-                                }`
-                            }
-                        >
-                            {triggeringScan ? (
-                                <><RefreshCw className="w-5 h-5 animate-spin" /> Iniciando...</>
-                            ) : scanTriggered ? (
-                                <><CheckCircle2 className="w-5 h-5" /> Varredura em andamento...</>
-                            ) : (
-                                <><PlayCircle className="w-5 h-5" /> Gerar Conferências</>  
-                            )}
-                        </button>
                     </motion.div>
                 </div>
             </header>
@@ -1048,19 +1055,35 @@ const AuditDashboardPage: React.FC = () => {
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="overflow-x-auto"
                     >
                         {tab === 'queue' && cityStats && cityStats.length > 0 && (
                             <div className="bg-slate-50/50 border-b border-slate-100 p-6 space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <button
-                                        onClick={() => setShowCitiesPanel(!showCitiesPanel)}
-                                        className="text-xs font-black uppercase text-slate-650 hover:text-[#B70F0A] hover:bg-red-50 bg-slate-100 hover:border-red-200 border border-slate-200 px-3.5 py-2 rounded-2xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
-                                    >
-                                        <MapPin className="w-4 h-4 text-[#B70F0A]" />
-                                        Painel de Cidades (Concluídos / Pendentes)
-                                        {showCitiesPanel ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-                                    </button>
+                                    <div className="flex items-center gap-4">
+                                        <button
+                                            onClick={() => {
+                                                if (queueData?.data?.length > 0) {
+                                                    setFocusQueue(queueData.data);
+                                                    setInitialFocusQueueTotal(queueData.data.length);
+                                                    setFocusMode(true);
+                                                } else {
+                                                    toast.error('Não há clientes na fila atual com estes filtros.');
+                                                }
+                                            }}
+                                            className="bg-danger text-white hover:bg-red-700 px-6 py-2.5 rounded-2xl font-bold text-sm shadow-xl shadow-red-200 transition-all flex items-center gap-2 active:scale-95"
+                                        >
+                                            <PlayCircle className="w-5 h-5" />
+                                            INICIAR CONFERÊNCIA
+                                        </button>
+                                        <button
+                                            onClick={() => setShowCitiesPanel(!showCitiesPanel)}
+                                            className="text-xs font-black uppercase text-slate-650 hover:text-[#B70F0A] hover:bg-red-50 bg-slate-100 hover:border-red-200 border border-slate-200 px-3.5 py-2 rounded-2xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                                        >
+                                            <MapPin className="w-4 h-4 text-[#B70F0A]" />
+                                            Painel de Cidades (Concluídos / Pendentes)
+                                            {showCitiesPanel ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                                        </button>
+                                    </div>
                                     <span className="text-[10px] text-slate-400 font-bold uppercase">Clique em uma cidade para filtrar a fila</span>
                                 </div>
                                 
@@ -1082,12 +1105,12 @@ const AuditDashboardPage: React.FC = () => {
                                                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
                                                         {/* Concluídos (verde) */}
                                                         <span className="text-[10px] font-black text-emerald-600 flex items-center gap-0.5" title="Concluídos">
-                                                            ✓ {city.auditados}
+                                                            âœ“ {city.auditados}
                                                         </span>
                                                         <span className="text-slate-300 font-light text-xs">|</span>
                                                         {/* Pendentes (vermelho) */}
                                                         <span className="text-[10px] font-black text-red-600 flex items-center gap-0.5" title="Pendentes">
-                                                            ⚠️ {city.pendentes}
+                                                            âš ï¸ {city.pendentes}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1099,15 +1122,16 @@ const AuditDashboardPage: React.FC = () => {
                         )}
 
                         {tab === 'queue' && (
-                            <table className="w-full text-left border-collapse">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/50 border-b border-slate-100">
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Identificação do Cliente</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Localização / Status</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Telefone</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Auditoria / Data</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Inconsistências</th>
-                                        <th className="px-8 py-5 text-right">Ação</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Identificação do Cliente</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Localização / Status</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Telefone</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Auditoria / Data</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Inconsistências</th>
+                                        <th className="px-4 py-4 text-right whitespace-nowrap min-w-[220px]">Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
@@ -1151,7 +1175,7 @@ const AuditDashboardPage: React.FC = () => {
                                                         }
                                                     }}
                                                 >
-                                                    <td className="px-8 py-6">
+                                                    <td className="px-4 py-4">
                                                         <div className="flex items-center gap-4">
                                                             <div className="text-slate-400 group-hover:text-[#B70F0A] transition-colors shrink-0">
                                                                 {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1188,7 +1212,7 @@ const AuditDashboardPage: React.FC = () => {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-8 py-6">
+                                                    <td className="px-4 py-4">
                                                         <div className="space-y-2">
                                                             {c.enderecos && c.enderecos.length > 0 ? (
                                                                 c.enderecos.map((end: any, eIdx: number) => (
@@ -1233,7 +1257,7 @@ const AuditDashboardPage: React.FC = () => {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-8 py-6">
+                                                    <td className="px-4 py-4">
                                                         <div className="flex flex-col gap-1">
                                                             <span className="text-xs font-bold text-slate-700 whitespace-nowrap">
                                                                 {formatPhone(c.contatos?.[0]?.telefone_principal)}
@@ -1245,7 +1269,7 @@ const AuditDashboardPage: React.FC = () => {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-8 py-6">
+                                                    <td className="px-4 py-4">
                                                         <div className="flex flex-col gap-1.5">
                                                             <div className="flex items-center gap-2 text-slate-500">
                                                                 <CalendarDays className="w-4 h-4" />
@@ -1261,7 +1285,7 @@ const AuditDashboardPage: React.FC = () => {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-8 py-6">
+                                                    <td className="px-4 py-4">
                                                         <div className="flex gap-2 flex-wrap">
                                                             {Object.keys(c.audit_differences || {}).length > 0 ? (
                                                                 Object.keys(c.audit_differences || {}).map((key) => (
@@ -1283,7 +1307,7 @@ const AuditDashboardPage: React.FC = () => {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-8 py-6 text-right" onClick={(e) => e.stopPropagation()}>
+                                                    <td className="px-4 py-4 text-right whitespace-nowrap min-w-[220px]" onClick={(e) => e.stopPropagation()}>
                                                         <div className="flex flex-col items-end gap-2">
                                                             {/* Resultado do force scan */}
                                                             {forceScanResult[c.id] && (
@@ -1295,7 +1319,7 @@ const AuditDashboardPage: React.FC = () => {
                                                                     {forceScanResult[c.id].message}
                                                                 </span>
                                                             )}
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                                                                 {/* Botão Forçar Conferência */}
                                                                 <motion.button
                                                                     whileHover={{ scale: 1.05 }}
@@ -1573,17 +1597,19 @@ const AuditDashboardPage: React.FC = () => {
                                     )}
                                 </tbody>
                             </table>
+                            </div>
                         )}
 
                         {tab === 'history' && (
-                            <table className="w-full text-left">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
                                 <thead className="bg-slate-50/50 border-b border-slate-100">
                                     <tr>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cronologia</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Responsável</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cliente Conferido</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Resultado</th>
-                                        <th className="px-8 py-5 text-right">Visualizar</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Cronologia</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Responsável</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Cliente Conferido</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Resultado</th>
+                                        <th className="px-4 py-4 text-right">Visualizar</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
@@ -1598,17 +1624,19 @@ const AuditDashboardPage: React.FC = () => {
                                     )}
                                 </tbody>
                             </table>
+                            </div>
                         )}
 
                         {tab === 'cities' && (
-                            <table className="w-full text-left">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
                                 <thead className="bg-slate-50/50 border-b border-slate-100">
                                     <tr>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cidade</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Total Clientes</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Auditados</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Pendente</th>
-                                        <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Cobertura</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Cidade</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Total Clientes</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Auditados</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Pendente</th>
+                                        <th className="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Cobertura</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
@@ -1620,20 +1648,20 @@ const AuditDashboardPage: React.FC = () => {
                                             transition={{ delay: idx * 0.05 }}
                                             className="hover:bg-slate-50/50 transition-colors"
                                         >
-                                            <td className="px-8 py-6">
+                                            <td className="px-4 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <MapPin className="w-4 h-4 text-red-400" />
                                                     <span className="text-sm font-bold text-slate-800 uppercase tracking-tight">{city.nome}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-6 font-bold text-slate-600">{city.total}</td>
-                                            <td className="px-8 py-6">
+                                            <td className="px-4 py-4 font-bold text-slate-600">{city.total}</td>
+                                            <td className="px-4 py-4">
                                                 <span className="text-emerald-600 font-black">{city.auditados}</span>
                                             </td>
-                                            <td className="px-8 py-6">
+                                            <td className="px-4 py-4">
                                                 <span className="text-amber-600 font-black">{city.pendentes}</span>
                                             </td>
-                                            <td className="px-8 py-6">
+                                            <td className="px-4 py-4">
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex-1 h-2 bg-slate-100 rounded-full max-w-[100px] overflow-hidden">
                                                         <div 
@@ -1656,6 +1684,7 @@ const AuditDashboardPage: React.FC = () => {
                                     )}
                                 </tbody>
                             </table>
+                            </div>
                         )}
 
                         {/* Pagination Area */}
@@ -1816,3 +1845,4 @@ const AuditDashboardPage: React.FC = () => {
 };
 
 export default AuditDashboardPage;
+

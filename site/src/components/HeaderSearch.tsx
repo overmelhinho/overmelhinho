@@ -198,7 +198,7 @@ export const HeaderSearch = () => {
                         setIsExpanded(true); 
                     }}
                     placeholder={isExpanded || isDesktop || isBuscaPage ? `Buscar em ${cityName || 'todas as cidades'}...` : 'Buscar...'}
-                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-base md:text-sm font-bold text-gray-900 placeholder:text-gray-400 outline-none w-full truncate ${isExpanded || isBuscaPage ? 'block' : 'hidden md:block'}`}
+                    className={`flex-1 bg-transparent border-none focus:ring-0 px-2 text-base md:text-sm font-sans font-bold text-gray-900 placeholder:text-gray-400 outline-none w-full truncate ${isExpanded || isBuscaPage ? 'block' : 'hidden md:block'}`}
                 />
                 <div className={`flex items-center space-x-2 ${isExpanded || isDesktop || isBuscaPage ? 'flex' : 'hidden'}`}>
                     {query && (
@@ -255,7 +255,7 @@ export const HeaderSearch = () => {
                                         <button
                                             key={cat.id}
                                             onClick={() => handleSearch(cat.title)}
-                                            className="px-3 py-1 bg-gray-50 hover:bg-brand-red/5 hover:text-brand-red rounded-full text-[10px] font-black uppercase tracking-wider transition-all"
+                                            className="px-3 py-1 bg-gray-50 hover:bg-brand-red/5 hover:text-brand-red rounded-full text-[10px] font-sans font-black uppercase tracking-wider transition-all"
                                         >
                                             {cat.title}
                                         </button>
@@ -279,8 +279,8 @@ export const HeaderSearch = () => {
                                             </div>
                                         )}
                                             <div>
-                                                <h5 className="font-black text-gray-900 text-sm leading-tight">{res.title}</h5>
-                                                <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+                                                <h5 className="font-sans font-black text-gray-900 text-sm leading-tight">{res.title}</h5>
+                                                <div className="flex items-center text-[10px] text-gray-400 font-sans font-bold uppercase tracking-widest mt-0.5">
                                                     {res.rating ? (
                                                         <>
                                                             <Star size={10} className="mr-1 fill-yellow-400 text-yellow-400" /> {res.rating.toFixed(1)}
@@ -306,14 +306,14 @@ export const HeaderSearch = () => {
                                 ))
                             ) : (
                                 <div className="px-4 py-6 text-center">
-                                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Nenhum resultado direto</p>
+                                    <p className="text-[10px] font-sans font-black text-gray-300 uppercase tracking-widest">Nenhum resultado direto</p>
                                 </div>
                             )}
                         </div>
                     </div>
                     <button 
                         onClick={() => handleSearch()}
-                        className="w-full py-3 bg-gray-50 text-[10px] font-black text-brand-red uppercase tracking-widest hover:bg-gray-100 transition-colors border-t border-gray-100"
+                        className="w-full py-3 bg-gray-50 text-[10px] font-sans font-black text-brand-red uppercase tracking-widest hover:bg-gray-100 transition-colors border-t border-gray-100"
                     >
                         Ver todos os resultados
                     </button>
