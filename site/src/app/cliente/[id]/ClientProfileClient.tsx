@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import api from '@/services/api';
+import LiteYouTube from '@/components/LiteYouTube';
 
 // Helper para normalizar strings para slugs (URL friendly)
 const slugify = (text: string) => {
@@ -1147,16 +1148,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                         <section className="space-y-6">
                                             <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">Apresentação</h2>
                                             <div className="w-full aspect-video rounded-[3rem] overflow-hidden bg-gray-100 relative shadow-inner border-4 border-white gummy-card">
-                                                <iframe
-                                                    width="100%"
-                                                    height="100%"
-                                                    src={client.video.replace('watch?v=', 'embed/').split('&')[0]}
-                                                    title="Vídeo"
-                                                    frameBorder="0"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                    allowFullScreen
-                                                    loading="lazy"
-                                                ></iframe>
+                                                <LiteYouTube videoUrl={client.video} />
                                             </div>
                                         </section>
                                     )}
