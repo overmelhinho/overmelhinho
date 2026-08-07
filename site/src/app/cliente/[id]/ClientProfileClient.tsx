@@ -790,6 +790,8 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                         alt={client.nome_fantasia}
                         fill
                         priority={true}
+                        fetchPriority="high"
+                        quality={75}
                         sizes="100vw"
                     />
                 ) : (
