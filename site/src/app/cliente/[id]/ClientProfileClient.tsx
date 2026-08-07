@@ -1151,6 +1151,7 @@ export default function ClientProfileClient() {
                                                     frameBorder="0"
                                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                     allowFullScreen
+                                                    loading="lazy"
                                                 ></iframe>
                                             </div>
                                         </section>
@@ -2054,6 +2055,7 @@ export default function ClientProfileClient() {
                                         src={client.portfolio_url}
                                         title={client.nome_fantasia}
                                         className="w-full h-full border-0 rounded-lg shadow-sm"
+                                        loading="lazy"
                                     />
                                 )}
                             </div>

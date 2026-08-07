@@ -7,6 +7,7 @@ import { useLocation } from '@/contexts/LocationContext';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import Image from 'next/image';
 
 export default function GlobalPopup() {
     const { cityId } = useLocation();
@@ -81,7 +82,7 @@ export default function GlobalPopup() {
                     </button>
 
                     <div 
-                        className="relative overflow-hidden cursor-pointer rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] bg-slate-100"
+                        className="relative overflow-hidden cursor-pointer rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] bg-slate-100 flex items-center justify-center min-h-[300px] md:min-h-[400px] w-full"
                         onClick={() => {
                             if (ad.url) {
                                 trackAdInteraction(ad.id, 'click', 'POPUP_GLOBAL', ad.cliente.id);
@@ -90,10 +91,13 @@ export default function GlobalPopup() {
                             handleClose();
                         }}
                     >
-                        <img 
+                        <Image 
                             src={imageUrl} 
                             alt={ad.nome} 
-                            className="w-full h-auto max-h-[80vh] object-contain block mx-auto"
+                            fill
+                            priority
+                            sizes="(max-width: 768px) 90vw, 450px"
+                            className="object-contain"
                         />
                     </div>
                 </motion.div>

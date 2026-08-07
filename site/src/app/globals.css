@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
 :root {
@@ -13,7 +13,7 @@
 @theme inline {
   --color-brand-red: #C00000;
   --color-cloud-dancer: #FCFAF8;
-  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-sans: var(--font-poppins), system-ui, sans-serif;
   --font-serif: var(--font-geist-sans), 'Helvetica Neue', sans-serif;
   --radius-pill: 500px;
 }
