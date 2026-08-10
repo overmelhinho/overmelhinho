@@ -65,7 +65,7 @@ class ClienteObserver
      */
     protected function triggerNextJsRevalidation(Cliente $cliente): void
     {
-        $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
+        $siteUrl = env('SITE_URL', 'https://www.overmelhinho.com.br');
         $secret = env('REVALIDATE_SECRET', 'overmelhinho_revalidate_2026');
         
         // Pula se for robô ou teste E2E
@@ -76,13 +76,13 @@ class ClienteObserver
 
         try {
             // Revalida pela Tag do ID
-            Http::timeout(3)->post("{$siteUrl}/api/revalidate?secret={$secret}", [
+            Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
                 'tag' => "client-{$cliente->id}"
             ]);
             
             // Revalida pela Tag do Slug
             if ($cliente->slug) {
-                Http::timeout(3)->post("{$siteUrl}/api/revalidate?secret={$secret}", [
+                Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
                     'tag' => "client-{$cliente->slug}"
                 ]);
             }
