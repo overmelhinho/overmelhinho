@@ -16,6 +16,14 @@ class ClienteObserver
         $this->indexingService = $indexingService;
     }
 
+    public function created(Cliente $cliente): void
+    {
+        // Despacha o Job para enriquecimento de dados se tiver CNPJ
+        if (!empty($cliente->cnpj)) {
+            \App\Jobs\DispatchEnrichmentJob::dispatch($cliente);
+        }
+    }
+
     public function saved(Cliente $cliente): void
     {
         // 🚀 Dispara a Revalidação de Cache no Next.js (On-Demand ISR)

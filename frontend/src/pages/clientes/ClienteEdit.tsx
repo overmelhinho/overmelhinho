@@ -283,6 +283,10 @@ export default function ClienteEdit() {
         ? c.redes_sociais  // já está no formato correto [{tipo, url}]
         : [],  // formulário em branco (a tab vai mostrar o campo vazio)
 
+      remover_logotipo: false,
+      remover_banner: false,
+      remover_arquivo_midia: false,
+
       // seo
       generate_seo_keywords: c?.generate_seo_keywords !== false,
       seo_keywords_text: c?.seo_keywords_text || (typeof c?.seo_keywords === "string" ? c.seo_keywords : ""),
@@ -448,9 +452,16 @@ export default function ClienteEdit() {
               tipo_cliente: values.tipoCliente,
 
               logotipo: typeof values.logotipo === "string" ? values.logotipo : null,
+              remover_logotipo: values.remover_logotipo,
+
               banner_url: typeof values.banner === "string" ? values.banner : null,
+              remover_banner: values.remover_banner,
+
               video: values.video_link || null,
+              remover_video: false, // Pode adicionar no form depois se precisar
+
               portfolio_url: typeof values.arquivo_midia === "string" ? values.arquivo_midia : null,
+              remover_arquivo_midia: values.remover_arquivo_midia,
 
               contact_preference: values.contact_preference,
               best_contact_shift: values.best_contact_shift,

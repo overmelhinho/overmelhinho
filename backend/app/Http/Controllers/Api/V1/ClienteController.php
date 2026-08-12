@@ -1861,54 +1861,54 @@ class ClienteController extends Controller
             }
 
             if (Schema::hasColumn('clientes', 'logo_url')) {
-                if ($request->has('logo_url') || $request->has('logotipo')) {
+                if ($request->has('logo_url') || $request->has('logotipo') || $request->boolean('remover_logotipo')) {
                     $logoInput = $request->input('logo_url') ?? $request->input('logotipo');
-                    if (!empty($logoInput)) {
+                    if ($request->boolean('remover_logotipo')) {
+                        $clienteData['logo_url'] = null;
+                    } elseif (!empty($logoInput)) {
                         $cleanLogo = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $logoInput);
                         $bucket = env('SUPABASE_BUCKET', 'clientes-media');
                         $cleanLogo = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanLogo);
                         $clienteData['logo_url'] = ltrim($cleanLogo, '/');
-                    } else {
-                        $clienteData['logo_url'] = null;
                     }
                 }
             }
 
             if (Schema::hasColumn('clientes', 'banner_url')) {
-                if ($request->has('banner_url') || $request->has('banner')) {
+                if ($request->has('banner_url') || $request->has('banner') || $request->boolean('remover_banner')) {
                     $bannerInput = $request->input('banner_url') ?? $request->input('banner');
-                    if (!empty($bannerInput)) {
+                    if ($request->boolean('remover_banner')) {
+                        $clienteData['banner_url'] = null;
+                    } elseif (!empty($bannerInput)) {
                         $cleanBanner = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $bannerInput);
                         $bucket = env('SUPABASE_BUCKET', 'clientes-media');
                         $cleanBanner = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanBanner);
                         $clienteData['banner_url'] = ltrim($cleanBanner, '/');
-                    } else {
-                        $clienteData['banner_url'] = null;
                     }
                 }
             }
 
             if (Schema::hasColumn('clientes', 'video')) {
-                if ($request->has('video') || $request->has('video_link')) {
+                if ($request->has('video') || $request->has('video_link') || $request->boolean('remover_video')) {
                     $videoInput = $request->input('video') ?? $request->input('video_link');
-                    if (!empty($videoInput)) {
-                        $clienteData['video'] = $videoInput;
-                    } else {
+                    if ($request->boolean('remover_video')) {
                         $clienteData['video'] = null;
+                    } elseif (!empty($videoInput)) {
+                        $clienteData['video'] = $videoInput;
                     }
                 }
             }
 
             if (Schema::hasColumn('clientes', 'portfolio_url')) {
-                if ($request->has('portfolio_url') || $request->has('arquivo_midia')) {
+                if ($request->has('portfolio_url') || $request->has('arquivo_midia') || $request->boolean('remover_arquivo_midia')) {
                     $portfolioInput = $request->input('portfolio_url') ?? $request->input('arquivo_midia');
-                    if (!empty($portfolioInput)) {
+                    if ($request->boolean('remover_arquivo_midia')) {
+                        $clienteData['portfolio_url'] = null;
+                    } elseif (!empty($portfolioInput)) {
                         $cleanPortfolio = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $portfolioInput);
                         $bucket = env('SUPABASE_BUCKET', 'clientes-media');
                         $cleanPortfolio = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanPortfolio);
                         $clienteData['portfolio_url'] = ltrim($cleanPortfolio, '/');
-                    } else {
-                        $clienteData['portfolio_url'] = null;
                     }
                 }
             }

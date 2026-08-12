@@ -10,6 +10,7 @@ type FormValues = {
   logotipo?: string | File | null;
   logotipo_path?: string | null;
   logotipo_mime?: string | null;
+  remover_logotipo?: boolean;
 };
 
 async function compressLogo(file: File): Promise<File> {
@@ -78,6 +79,7 @@ export default function TabLogotipo() {
       setFieldValue("logotipo", null);
       setFieldValue("logotipo_path", null);
       setFieldValue("logotipo_mime", null);
+      setFieldValue("remover_logotipo", true);
       return;
     }
 
@@ -113,6 +115,7 @@ export default function TabLogotipo() {
         setFieldValue("logotipo", f.public_url);
         setFieldValue("logotipo_path", f.path || null);
         setFieldValue("logotipo_mime", f.mime || "image/webp");
+        setFieldValue("remover_logotipo", false);
 
         toast.success("Logotipo enviado e otimizado!");
       } else {

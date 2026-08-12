@@ -131,6 +131,7 @@ export default function TabMidia() {
       setFieldValue("arquivo_midia", uploaded.public_url);
       setFieldValue("arquivo_midia_path", uploaded.path || null);
       setFieldValue("arquivo_midia_mime", uploaded.mime || file.type || null);
+      setFieldValue("remover_arquivo_midia", false);
       toast.success("Upload concluído!");
     } catch (error: any) {
       console.error(error);
@@ -166,6 +167,7 @@ export default function TabMidia() {
       const uploaded = data.files[0];
       setFieldValue("banner", uploaded.public_url);
       setFieldValue("banner_path", uploaded.path || null);
+      setFieldValue("remover_banner", false);
       toast.success("Capa enviada!");
     } catch (error) {
       toast.error("Falha ao enviar capa.");
@@ -220,6 +222,7 @@ export default function TabMidia() {
                   onClick={() => {
                     setFieldValue("banner", null);
                     setFieldValue("banner_path", null);
+                    setFieldValue("remover_banner", true);
                   }}
                   className="text-red-500 text-sm font-medium hover:underline flex items-center gap-1"
                 >
@@ -262,7 +265,14 @@ export default function TabMidia() {
           name="video_link"
           placeholder="Ex: https://youtu.be/abc123xyz99"
           value={values.video_link || ""}
-          onChange={(e) => setFieldValue("video_link", e.target.value)}
+          onChange={(e) => {
+            setFieldValue("video_link", e.target.value);
+            if (!e.target.value) {
+              setFieldValue("remover_video", true);
+            } else {
+              setFieldValue("remover_video", false);
+            }
+          }}
           className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
         />
         {videoPreview && (
@@ -371,6 +381,7 @@ export default function TabMidia() {
                       setFieldValue("arquivo_midia", null);
                       setFieldValue("arquivo_midia_path", null);
                       setFieldValue("arquivo_midia_mime", null);
+                      setFieldValue("remover_arquivo_midia", true);
                     }}
                     className="text-red-600 text-sm hover:underline flex items-center gap-1"
                   >
@@ -402,7 +413,14 @@ export default function TabMidia() {
                 type="url"
                 placeholder="https://exemplo.com/seu-cardapio-online"
                 value={values.arquivo_midia || ""}
-                onChange={(e) => setFieldValue("arquivo_midia", e.target.value)}
+                onChange={(e) => {
+                  setFieldValue("arquivo_midia", e.target.value);
+                  if (!e.target.value) {
+                    setFieldValue("remover_arquivo_midia", true);
+                  } else {
+                    setFieldValue("remover_arquivo_midia", false);
+                  }
+                }}
                 className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#B70F0A] transition-all shadow-sm"
               />
               <p className="text-xs text-gray-500">Insira o link completo do seu material digital.</p>
