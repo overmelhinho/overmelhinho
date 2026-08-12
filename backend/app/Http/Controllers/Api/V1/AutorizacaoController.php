@@ -686,6 +686,21 @@ class AutorizacaoController extends Controller
                 $invoice = Invoice::find($parcela->invoice_id);
             }
 
+            // Proteção contra duplicidade: Se a fatura já existe (ex: foi preservada por estar paga), 
+            // vinculamos a parcela a ela em vez de criar uma duplicata
+            if (!$invoice) {
+                $invoice = Invoice::where(function($q) use ($autorizacao) {
+                    $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+                      ->orWhere('group_id', (string)$autorizacao->id);
+                })
+                ->where('parcel_number', $parcela->numero)
+                ->first();
+
+                if ($invoice) {
+                    $parcela->update(['invoice_id' => $invoice->id]);
+                }
+            }
+
             if (!$invoice) {
                 $invoice = Invoice::create([
                     'client_id'      => $autorizacao->cliente_id,
