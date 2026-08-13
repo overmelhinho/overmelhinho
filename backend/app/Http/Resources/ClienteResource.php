@@ -33,7 +33,7 @@ class ClienteResource extends JsonResource
             $cleanPath = ltrim($path, '/');
 
             // Se for um caminho legado (não está no padrão clientes/ do Supabase)
-            if (!Str::startsWith($cleanPath, ['clientes/', 'temp/', 'v1/object/public/'])) {
+            if (!Str::startsWith($cleanPath, ['clientes/', 'temp/', 'v1/object/public/', 'logos/', 'capas/', 'portfolio/'])) {
                 $legacyBase = env('LEGACY_STORAGE_URL', 'https://api.overmelhinho.com.br/storage/');
                 return rtrim($legacyBase, '/') . '/' . $cleanPath;
             }
