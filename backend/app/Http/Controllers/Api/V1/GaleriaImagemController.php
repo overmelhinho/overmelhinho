@@ -239,7 +239,7 @@ class GaleriaImagemController extends Controller
 
                 if ($copyResp->failed()) {
                     $copyData = $copyResp->json();
-                    if ($copyResp->status() === 409 || ($copyResp->status() === 400 && ($copyData['statusCode'] ?? '') == '409')) {
+                    if ($copyResp->status() === 409 || $copyResp->status() === 400) {
                         $delDestUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
                         Http::withHeaders([
                             'apikey' => $supabaseKey,

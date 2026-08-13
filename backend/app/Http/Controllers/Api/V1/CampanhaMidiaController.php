@@ -567,7 +567,7 @@ class CampanhaMidiaController extends Controller
 
             if ($copyResp->failed()) {
                 $copyData = $copyResp->json();
-                if ($copyResp->status() === 409 || ($copyResp->status() === 400 && ($copyData['statusCode'] ?? '') == '409')) {
+                if ($copyResp->status() === 409 || $copyResp->status() === 400) {
                     $delDestUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
                     Http::withHeaders([
                         'apikey' => $supabaseKey,
@@ -852,8 +852,7 @@ class CampanhaMidiaController extends Controller
         $json = json_encode($value, JSON_UNESCAPED_UNICODE);
         if ($json === false) return null;
 
-        $jsonEscaped = str_replace("'", "''", $json);
-        return DB::raw("'{$jsonEscaped}'::jsonb");
+        return $json;
     }
 
     private function buildFieldChanges(array $before, $afterObj): array

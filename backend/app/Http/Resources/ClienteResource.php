@@ -29,11 +29,19 @@ class ClienteResource extends JsonResource
             if (Str::startsWith($path, ['http://', 'https://'])) {
                 return $path;
             }
+            
+            $cleanPath = ltrim($path, '/');
+
+            // Se for um caminho legado (não está no padrão clientes/ do Supabase)
+            if (!Str::startsWith($cleanPath, ['clientes/', 'temp/', 'v1/object/public/'])) {
+                $legacyBase = env('LEGACY_STORAGE_URL', 'https://api.overmelhinho.com.br/storage/');
+                return rtrim($legacyBase, '/') . '/' . $cleanPath;
+            }
+
             $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');
             $bucket = env('SUPABASE_BUCKET', 'clientes-media');
             
             // Fix double path if it already has v1/object/public/
-            $cleanPath = ltrim($path, '/');
             if (Str::startsWith($cleanPath, 'v1/object/public/')) {
                 return "{$supabaseUrl}/storage/{$cleanPath}";
             }
