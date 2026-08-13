@@ -110,8 +110,9 @@ class ClienteController extends Controller
                 ->first();
             
             $effectiveQ = $learned ? $learned->correction : $normalizedQ;
+            $variations = $this->generatePtBrVariations($effectiveQ);
 
-            $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSimilarity, $hasMovelWord) {
+            $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSimilarity, $hasMovelWord, $variations) {
                 if ($hasMovelWord) {
                     // Custom logic for móvel/móveis to prevent matching automóvel/automóveis
                     $sub->where(function ($w) use ($q) {
@@ -126,6 +127,11 @@ class ClienteController extends Controller
                 } else {
                     $sub->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$q}%"])
                         ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$q}%"]);
+                        
+                    foreach ($variations as $var) {
+                        $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$var}%"])
+                            ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$var}%"]);
+                    }
                 }
 
                 if ($effectiveQ !== $normalizedQ) {
@@ -153,6 +159,10 @@ class ClienteController extends Controller
                 } else {
                     $sub->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$q}%"])
                         ->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+                        
+                    foreach ($variations as $var) {
+                        $sub->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$var}%"]);
+                    }
                 }
 
                 // 1.5 Busca Space-Blind (Ignora espaços no banco quando o usuário digita uma palavra única)
@@ -197,7 +207,7 @@ class ClienteController extends Controller
                 }
 
                 // 3. Busca em Segmentos e Endereços
-                $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ, $canUseSimilarity, $normalizedQ, $hasMovelWord) {
+                $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ, $canUseSimilarity, $normalizedQ, $hasMovelWord, $variations) {
                         if ($hasMovelWord) {
                             $sq->where(function ($w) use ($q) {
                                 $w->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
@@ -211,6 +221,10 @@ class ClienteController extends Controller
                         } else {
                             $sq->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
                                ->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"]);
+                               
+                            foreach ($variations as $var) {
+                                $sq->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$var}%"]);
+                            }
                                
                             if ($canUseSimilarity) {
                                 $sq->orWhereRaw("word_similarity(?, segmentos.nome) > 0.5", [$normalizedQ]);
@@ -290,21 +304,31 @@ class ClienteController extends Controller
         }
 
         // Condição de Match Exato (Ouro)
-        $ouroCondition = "
-            {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
-            {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) OR
-            {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
-            {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) OR
-            {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
-            EXISTS (
-                SELECT 1 FROM cliente_segmento cs 
-                JOIN segmentos s ON cs.segmento_id = s.id 
-                WHERE cs.cliente_id = clientes.id 
-                AND {$unaccentFunc}(s.nome) ilike {$unaccentFunc}(?)
-            )
-        ";
+        $ouroConditionsArr = [];
+        $ouroBindings = [];
+        
+        $termsToMatch = array_unique(array_merge([$q], $variations ?? []));
+        foreach ($termsToMatch as $term) {
+            if (empty(trim($term))) continue;
+            
+            $ouroConditionsArr[] = "(
+                {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
+                {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) OR
+                {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
+                {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) OR
+                {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
+                {$unaccentFunc}(seo_keywords::text) ilike {$unaccentFunc}(?) OR
+                EXISTS (
+                    SELECT 1 FROM cliente_segmento cs 
+                    JOIN segmentos s ON cs.segmento_id = s.id 
+                    WHERE cs.cliente_id = clientes.id 
+                    AND {$unaccentFunc}(s.nome) ilike {$unaccentFunc}(?)
+                )
+            )";
+            array_push($ouroBindings, $term, $term, "{$term} %", "{$term} %", "%{$term}%", "%{$term}%", "%{$term}%");
+        }
 
-        $ouroBindings = [$q, $q, "{$q} %", "{$q} %", "%{$q}%", "%{$q}%"];
+        $ouroCondition = !empty($ouroConditionsArr) ? implode(' OR ', $ouroConditionsArr) : "1=0";
 
         // Mescla todos os bindings necessários
         $allBindings = array_merge(
@@ -3682,6 +3706,53 @@ if (Schema::hasColumn('clientes', 'portfolio_url')) {
             }
         }
         return $q;
+    }
+
+    /**
+     * ✅ Gera variações de plural e singular para aumentar a conversão da busca.
+     */
+    private function generatePtBrVariations(string $query): array
+    {
+        $variations = [];
+        $words = explode(' ', trim($query));
+        if (count($words) === 0) return $variations;
+        
+        $word = mb_strtolower(end($words), 'UTF-8');
+        if (strlen($word) < 3) return $variations;
+
+        if (preg_match('/ns$/', $word)) $variations[] = preg_replace('/ns$/', 'm', $word);
+        elseif (preg_match('/ões$/', $word)) $variations[] = preg_replace('/ões$/', 'ão', $word);
+        elseif (preg_match('/eis$/', $word)) $variations[] = preg_replace('/eis$/', 'el', $word);
+        elseif (preg_match('/is$/', $word)) $variations[] = preg_replace('/is$/', 'il', $word);
+        elseif (preg_match('/res$/', $word)) $variations[] = preg_replace('/res$/', 'r', $word);
+        elseif (preg_match('/zes$/', $word)) $variations[] = preg_replace('/zes$/', 'z', $word);
+        elseif (preg_match('/as$/', $word)) $variations[] = preg_replace('/as$/', 'a', $word);
+        elseif (preg_match('/es$/', $word)) $variations[] = preg_replace('/es$/', 'e', $word);
+        elseif (preg_match('/os$/', $word)) $variations[] = preg_replace('/os$/', 'o', $word);
+
+        if (preg_match('/m$/', $word)) $variations[] = preg_replace('/m$/', 'ns', $word);
+        elseif (preg_match('/ão$/', $word)) {
+            $variations[] = preg_replace('/ão$/', 'ões', $word);
+            $variations[] = preg_replace('/ão$/', 'ãos', $word);
+        }
+        elseif (preg_match('/el$/', $word)) $variations[] = preg_replace('/el$/', 'eis', $word);
+        elseif (preg_match('/il$/', $word)) $variations[] = preg_replace('/il$/', 'is', $word);
+        elseif (preg_match('/r$/', $word)) $variations[] = preg_replace('/r$/', 'res', $word);
+        elseif (preg_match('/z$/', $word)) $variations[] = preg_replace('/z$/', 'zes', $word);
+        elseif (preg_match('/a$/', $word)) $variations[] = preg_replace('/a$/', 'as', $word);
+        elseif (preg_match('/e$/', $word)) $variations[] = preg_replace('/e$/', 'es', $word);
+        elseif (preg_match('/o$/', $word)) $variations[] = preg_replace('/o$/', 'os', $word);
+
+        if (empty($variations)) return [];
+
+        $results = [];
+        foreach (array_unique($variations) as $var) {
+            $newWords = $words;
+            $newWords[count($newWords) - 1] = $var;
+            $results[] = implode(' ', $newWords);
+        }
+        
+        return $results;
     }
 }
 

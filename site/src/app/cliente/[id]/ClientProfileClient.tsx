@@ -762,7 +762,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
 
 
             {/* 📸 HERO / COVER */}
-            <section className={`relative overflow-hidden ${client.banner_url && isPagante ? 'h-[32vh] md:h-[46vh]' : 'h-[20vh] md:h-[30vh]'}`}>
+            <section className={`relative overflow-hidden ${(client.banner_url || client.galeria?.[0]?.url) && isPagante ? 'h-[32vh] md:h-[46vh]' : 'h-[20vh] md:h-[30vh]'}`}>
                 {/* 📱 MOBILE ACTIONS (Absolute instead of Fixed to avoid logo overlap) */}
                 <div className="md:hidden absolute top-4 left-0 right-0 z-[100] px-6 flex justify-between pointer-events-none">
                     <button onClick={() => router.back()} className="w-10 h-10 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/30 text-white flex items-center justify-center shadow-2xl active:scale-75 transition-all pointer-events-auto cursor-pointer">
@@ -784,9 +784,9 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                     </div>
                 </div>
 
-                {client.banner_url && isPagante ? (
+                {(client.banner_url || client.galeria?.[0]?.url) && isPagante ? (
                     <Image
-                        src={client.banner_url}
+                        src={client.banner_url || client.galeria[0].url}
                         className="object-cover object-left md:object-center"
                         alt={client.nome_fantasia}
                         fill
