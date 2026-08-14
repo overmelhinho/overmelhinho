@@ -136,8 +136,8 @@ export default function TabGoogleReviews() {
     };
 
     const handleAddManual = () => {
-        if (!manualReview.author_name || !manualReview.text) {
-            toast.error("Preencha o nome e o depoimento.");
+        if (!manualReview.author_name) {
+            toast.error("Preencha o nome do autor.");
             return;
         }
 

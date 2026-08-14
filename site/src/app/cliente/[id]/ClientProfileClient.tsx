@@ -419,13 +419,10 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
     // A regra para RECEBER e-mail de orçamento mudou: agora recebe mesmo que exibir_email seja falso
     const canReceiveEmailQuote = contactInfo ? !!contactInfo.email_principal : false;
     
-    // A regra para o WhatsApp (Fila de Foco) é: deve ser pagante e ter algum telefone
-    const canReceiveWhatsappQuote = isPagante && hasPhoneContact;
-
-    const isFormByEmail = !hasPhoneContact && canReceiveEmailQuote;
-    
-    // O formulário de orçamento SÓ aparece se houver como entregar (e-mail ou whats manual)
-    const showQuoteForm = client.quotes_enabled && (canReceiveEmailQuote || canReceiveWhatsappQuote);
+    // Se tiver WhatsApp configurado, mostramos o botão do WhatsApp.
+    // Se NÃO tiver WhatsApp, mas tiver e-mail, mostramos o formulário de orçamento que vai pro e-mail.
+    const showQuoteForm = client.quotes_enabled && !hasWhatsApp && canReceiveEmailQuote;
+    const isFormByEmail = true;
 
     const handleScrollToQuoteForm = () => {
         const element = document.getElementById('quote-form');
@@ -762,7 +759,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
 
 
             {/* 📸 HERO / COVER */}
-            <section className={`relative overflow-hidden ${(client.banner_url || client.galeria?.[0]?.url) && isPagante ? 'h-[32vh] md:h-[46vh]' : 'h-[20vh] md:h-[30vh]'}`}>
+            <section className={`relative overflow-hidden ${client.banner_url && isPagante ? 'h-[32vh] md:h-[46vh]' : 'h-[20vh] md:h-[30vh]'}`}>
                 {/* 📱 MOBILE ACTIONS (Absolute instead of Fixed to avoid logo overlap) */}
                 <div className="md:hidden absolute top-4 left-0 right-0 z-[100] px-6 flex justify-between pointer-events-none">
                     <button onClick={() => router.back()} className="w-10 h-10 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/30 text-white flex items-center justify-center shadow-2xl active:scale-75 transition-all pointer-events-auto cursor-pointer">
@@ -784,9 +781,9 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                     </div>
                 </div>
 
-                {(client.banner_url || client.galeria?.[0]?.url) && isPagante ? (
+                {client.banner_url && isPagante ? (
                     <Image
-                        src={client.banner_url || client.galeria[0].url}
+                        src={client.banner_url}
                         className="object-cover object-left md:object-center"
                         alt={client.nome_fantasia}
                         fill
@@ -1006,7 +1003,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                     <p className="text-xs font-bold text-gray-800">{client.registro_profissional}</p>
                                                 </div>
                                             )}
-                                            {client.segmentos?.length > 0 && isPagante && (
+                                            {client.segmentos?.length > 0 && (
                                                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 col-span-2">
                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
                                                     <div className="flex flex-wrap gap-1.5">

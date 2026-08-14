@@ -17,9 +17,9 @@ class GaleriaImagemResource extends JsonResource
             
             $cleanPath = ltrim($path, '/');
 
-            if (!Str::startsWith($cleanPath, ['clientes/', 'temp/', 'v1/object/public/', 'logos/', 'capas/', 'portfolio/', 'galeria/'])) {
-                $legacyBase = env('LEGACY_STORAGE_URL', 'https://api.overmelhinho.com.br/storage/');
-                return rtrim($legacyBase, '/') . '/' . $cleanPath;
+            // Verifica se o arquivo existe fisicamente no servidor legado (local)
+            if (file_exists(public_path('storage/' . $cleanPath))) {
+                return rtrim(env('APP_URL'), '/') . '/storage/' . $cleanPath;
             }
 
             $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');

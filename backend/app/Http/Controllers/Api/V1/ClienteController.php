@@ -1891,8 +1891,6 @@ class ClienteController extends Controller
                         $clienteData['logo_url'] = null;
                     } elseif (!empty($logoInput)) {
                         $cleanLogo = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $logoInput);
-                        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
-                        $cleanLogo = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanLogo);
                         $clienteData['logo_url'] = ltrim($cleanLogo, '/');
                     }
                 }
@@ -1905,8 +1903,6 @@ class ClienteController extends Controller
                         $clienteData['banner_url'] = null;
                     } elseif (!empty($bannerInput)) {
                         $cleanBanner = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $bannerInput);
-                        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
-                        $cleanBanner = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanBanner);
                         $clienteData['banner_url'] = ltrim($cleanBanner, '/');
                     }
                 }
@@ -1930,8 +1926,6 @@ class ClienteController extends Controller
                         $clienteData['portfolio_url'] = null;
                     } elseif (!empty($portfolioInput)) {
                         $cleanPortfolio = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $portfolioInput);
-                        $bucket = env('SUPABASE_BUCKET', 'clientes-media');
-                        $cleanPortfolio = preg_replace('/^v1\/object\/public\/' . preg_quote($bucket, '\/') . '\//', '', $cleanPortfolio);
                         $clienteData['portfolio_url'] = ltrim($cleanPortfolio, '/');
                     }
                 }

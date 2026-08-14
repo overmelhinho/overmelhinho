@@ -32,16 +32,17 @@ class ClienteResource extends JsonResource
             
             $cleanPath = ltrim($path, '/');
 
-            // Se for um caminho legado (não está no padrão clientes/ do Supabase)
-            if (!Str::startsWith($cleanPath, ['clientes/', 'temp/', 'v1/object/public/', 'logos/', 'capas/', 'portfolio/'])) {
-                $legacyBase = env('LEGACY_STORAGE_URL', 'https://api.overmelhinho.com.br/storage/');
-                return rtrim($legacyBase, '/') . '/' . $cleanPath;
+            // Verifica se o arquivo existe fisicamente no servidor legado (local)
+            // Se existir, priorizamos o local para não quebrar imagens antigas
+            if (file_exists(public_path('storage/' . $cleanPath))) {
+                return rtrim(env('APP_URL'), '/') . '/storage/' . $cleanPath;
             }
 
+            // Se não existir localmente, tratamos como arquivo do Supabase
             $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');
             $bucket = env('SUPABASE_BUCKET', 'clientes-media');
             
-            // Fix double path if it already has v1/object/public/
+            // Corrige se já vier com v1/object/public/
             if (Str::startsWith($cleanPath, 'v1/object/public/')) {
                 return "{$supabaseUrl}/storage/{$cleanPath}";
             }
@@ -97,7 +98,7 @@ class ClienteResource extends JsonResource
             
             'quotes_enabled' => $this->relationLoaded('contatos') 
                 ? ($this->contatos->whereNotNull('celular')->count() > 0 || 
-                   $this->contatos->where('exibir_email', true)->whereNotNull('email_principal')->count() > 0)
+                   $this->contatos->whereNotNull('email_principal')->count() > 0)
                 : false,
 
             'segmentos' => SegmentoResource::collection($this->whenLoaded('segmentos')),
