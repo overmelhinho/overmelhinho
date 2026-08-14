@@ -35,7 +35,7 @@ class ClienteResource extends JsonResource
             // Verifica se o arquivo existe fisicamente no servidor legado (local)
             // Se existir, priorizamos o local para não quebrar imagens antigas
             if (file_exists(public_path('storage/' . $cleanPath))) {
-                return rtrim(env('APP_URL'), '/') . '/storage/' . $cleanPath;
+                return asset('storage/' . $cleanPath);
             }
 
             // Se não existir localmente, tratamos como arquivo do Supabase

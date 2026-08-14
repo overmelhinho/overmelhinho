@@ -19,7 +19,7 @@ class GaleriaImagemResource extends JsonResource
 
             // Verifica se o arquivo existe fisicamente no servidor legado (local)
             if (file_exists(public_path('storage/' . $cleanPath))) {
-                return rtrim(env('APP_URL'), '/') . '/storage/' . $cleanPath;
+                return asset('storage/' . $cleanPath);
             }
 
             $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');

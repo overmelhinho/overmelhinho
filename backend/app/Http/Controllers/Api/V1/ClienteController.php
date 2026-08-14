@@ -70,13 +70,24 @@ class ClienteController extends Controller
 
         // ✅ Detecta se o termo de busca contém o nome de alguma cidade
         if ($q !== '') {
-            $cityInQuery = $this->detectCityInQuery($q);
-            if ($cityInQuery) {
-                $cityId = $cityInQuery->id;
-                $cityName = $cityInQuery->nome;
-                $q = trim(preg_replace('/\b' . preg_quote($cityInQuery->nome, '/') . '\b/i', '', $q));
-                $q = trim(preg_replace('/\b(em|de|do|da)\b/i', '', $q));
-                $q = preg_replace('/\s+/', ' ', $q);
+            // Evita extrair o nome da cidade se o usuário estiver buscando EXATAMENTE por uma empresa com esse nome (ex: Chaveiro do Progresso)
+            $isExactBusiness = false;
+            if (strlen($q) > 2) {
+                $isExactBusiness = \App\Models\Cliente::where(function($sq) use ($q) {
+                    $sq->where('nome_fantasia', 'ilike', "%{$q}%")
+                       ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+                })->exists();
+            }
+
+            if (!$isExactBusiness) {
+                $cityInQuery = $this->detectCityInQuery($q);
+                if ($cityInQuery) {
+                    $cityId = $cityInQuery->id;
+                    $cityName = $cityInQuery->nome;
+                    $q = trim(preg_replace('/\b' . preg_quote($cityInQuery->nome, '/') . '\b/i', '', $q));
+                    $q = trim(preg_replace('/\b(em|de|do|da)\b/i', '', $q));
+                    $q = preg_replace('/\s+/', ' ', $q);
+                }
             }
         }
         
@@ -434,12 +445,23 @@ class ClienteController extends Controller
 
         // ✅ Detecta se o termo de busca contém o nome de alguma cidade
         if ($q !== '') {
-            $cityInQuery = $this->detectCityInQuery($q);
-            if ($cityInQuery) {
-                $cityId = $cityInQuery->id;
-                $q = trim(preg_replace('/\b' . preg_quote($cityInQuery->nome, '/') . '\b/i', '', $q));
-                $q = trim(preg_replace('/\b(em|de|do|da)\b/i', '', $q));
-                $q = preg_replace('/\s+/', ' ', $q);
+            // Evita extrair o nome da cidade se o usuário estiver buscando EXATAMENTE por uma empresa com esse nome (ex: Chaveiro do Progresso)
+            $isExactBusiness = false;
+            if (strlen($q) > 2) {
+                $isExactBusiness = \App\Models\Cliente::where(function($sq) use ($q) {
+                    $sq->where('nome_fantasia', 'ilike', "%{$q}%")
+                       ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
+                })->exists();
+            }
+
+            if (!$isExactBusiness) {
+                $cityInQuery = $this->detectCityInQuery($q);
+                if ($cityInQuery) {
+                    $cityId = $cityInQuery->id;
+                    $q = trim(preg_replace('/\b' . preg_quote($cityInQuery->nome, '/') . '\b/i', '', $q));
+                    $q = trim(preg_replace('/\b(em|de|do|da)\b/i', '', $q));
+                    $q = preg_replace('/\s+/', ' ', $q);
+                }
             }
         }
         if (strlen($q) < 2) return response()->json(['results' => [], 'categories' => []]);
@@ -552,6 +574,19 @@ class ClienteController extends Controller
             'results' => $clientes->map(function($c) use ($cityId) {
                 $isPagante = ($c->tipo_cliente === 'pagante' && in_array($c->status_assinatura, ['ativa', 'ativo', 'inadimplente']));
                 
+                $formatStorageUrl = function(?string $path) {
+                    if (!$path) return null;
+                    if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])) return $path;
+                    $cleanPath = ltrim($path, '/');
+                    if (file_exists(public_path('storage/' . $cleanPath))) {
+                        return asset('storage/' . $cleanPath);
+                    }
+                    $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');
+                    $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+                    if (\Illuminate\Support\Str::startsWith($cleanPath, 'v1/object/public/')) return "{$supabaseUrl}/storage/{$cleanPath}";
+                    return "{$supabaseUrl}/storage/v1/object/public/{$bucket}/{$cleanPath}";
+                };
+
                 // Gerar SEO URL
                 $seoUrl = null;
                 $segmento = $c->segmentos->first();
@@ -584,7 +619,7 @@ class ClienteController extends Controller
                     'id' => $c->id,
                     'slug' => $c->slug,
                     'title' => $c->nome_fantasia,
-                    'image' => $isPagante && $c->logo_url ? (\Illuminate\Support\Str::startsWith($c->logo_url, ['http://', 'https://']) ? $c->logo_url : asset('storage/' . $c->logo_url)) : null,
+                    'image' => $isPagante && $c->logo_url ? $formatStorageUrl($c->logo_url) : null,
                     'type' => 'client',
                     'priority' => $isPagante,
                     'seo_url' => $seoUrl ?: ("/cliente/" . ($c->slug ?: $c->id)),
