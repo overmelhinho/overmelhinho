@@ -355,4 +355,48 @@ class ClientAiService
             return [];
         }
     }
+
+    /**
+     * Gera palavras-chave semente para clientes novos que ainda não possuem dados no Google Search Console.
+     */
+    public function generateSeedKeywords(string $nomeFantasia, string $cidade, ?string $segmento = null): array
+    {
+        if (!$this->openaiKey) return [];
+
+        $context = "Empresa: {$nomeFantasia}. Cidade: {$cidade}.";
+        if ($segmento) $context .= " Segmento: {$segmento}.";
+
+        $prompt = "Gere 3 palavras-chave de SEO extremamente focadas na intenção de busca local para o cliente abaixo.\n" .
+                  "CONTEXTO: {$context}\n\n" .
+                  "Instruções:\n" .
+                  "- Imagine o que o cliente ideal digitaria no Google para encontrar essa empresa.\n" .
+                  "- Exemplo para nutróloga em SP: 'nutrologa em sao paulo', 'clinica de nutrologia sp', 'medico nutrologo sao paulo'.\n" .
+                  "- Retorne APENAS um JSON plano contendo uma chave 'keywords' com o array de strings.\n" .
+                  "- Não retorne aspas simples, ou formatação adicional fora do JSON.";
+
+        try {
+            $response = Http::withToken($this->openaiKey)
+                ->timeout(30)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'Você é um especialista em SEO focado em buscas de negócios locais (Local SEO).'],
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature' => 0.5
+                ]);
+
+            if (!$response->successful()) return [];
+
+            $json = $response->json('choices.0.message.content');
+            $data = is_string($json) ? json_decode($json, true) : $json;
+
+            return (isset($data['keywords']) && is_array($data['keywords'])) ? $data['keywords'] : [];
+
+        } catch (\Throwable $e) {
+            Log::error('[ClientAiService] Erro na geração de Seed Keywords', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
 }

@@ -74,4 +74,50 @@ class SerperService
             return [];
         }
     }
+
+    /**
+     * Fetch SERP results and find the exact position of a target URL.
+     * 
+     * @param string $keyword
+     * @param string $targetUrlSlug
+     * @param int $limit
+     * @return int|null Returns the position (1-based) or null if not found.
+     */
+    public function findUrlPosition(string $keyword, string $targetUrlSlug, int $limit = 50): ?int
+    {
+        if (!$this->apiKey) return null;
+
+        try {
+            $response = Http::withHeaders([
+                'X-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])
+            ->timeout(20)
+            ->post('https://google.serper.dev/search', [
+                'q' => $keyword,
+                'gl' => 'br',
+                'hl' => 'pt-br',
+                'num' => $limit,
+            ]);
+
+            if (!$response->successful()) return null;
+
+            $data = $response->json();
+            $organicResults = $data['organic'] ?? [];
+            
+            foreach ($organicResults as $index => $result) {
+                if (isset($result['link']) && str_contains($result['link'], $targetUrlSlug)) {
+                    return $index + 1; // 1-based position
+                }
+            }
+
+            return null;
+
+        } catch (\Throwable $e) {
+            Log::error('Exception caught while finding URL position from Serper.dev', [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
 }

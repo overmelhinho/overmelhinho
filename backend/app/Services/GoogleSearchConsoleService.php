@@ -86,4 +86,60 @@ class GoogleSearchConsoleService
             return null;
         }
     }
+
+    /**
+     * Busca as palavras-chave reais pelas quais uma página específica está ranqueando no GSC.
+     */
+    public function getKeywordsByPage(string $urlSlug, int $days = 30)
+    {
+        if (!$this->service) {
+            return null;
+        }
+
+        $request = new SearchAnalyticsQueryRequest();
+        $request->setStartDate(now()->subDays($days + 2)->format('Y-m-d'));
+        $request->setEndDate(now()->subDays(2)->format('Y-m-d'));
+        $request->setDimensions(['query', 'page']);
+        
+        $request->setDimensionFilterGroups([
+            [
+                'filters' => [
+                    [
+                        'dimension' => 'page',
+                        'operator' => 'contains',
+                        'expression' => $urlSlug
+                    ]
+                ]
+            ]
+        ]);
+
+        try {
+            $response = $this->service->searchanalytics->query($this->siteUrl, $request);
+            $rows = $response->getRows();
+
+            $results = [];
+            if (!empty($rows)) {
+                foreach ($rows as $row) {
+                    $keys = $row->getKeys();
+                    $keyword = isset($keys[0]) ? $keys[0] : null;
+                    $url = isset($keys[1]) ? $keys[1] : null;
+
+                    if ($keyword) {
+                        $results[$keyword] = [
+                            'position' => round($row->getPosition(), 1),
+                            'clicks' => $row->getClicks(),
+                            'impressions' => $row->getImpressions(),
+                            'ctr' => round($row->getCtr() * 100, 2),
+                            'url' => $url,
+                        ];
+                    }
+                }
+            }
+
+            return $results;
+        } catch (\Exception $e) {
+            \Log::error("Search Console API Error (getKeywordsByPage): " . $e->getMessage());
+            return null;
+        }
+    }
 }

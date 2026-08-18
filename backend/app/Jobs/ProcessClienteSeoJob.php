@@ -35,23 +35,42 @@ class ProcessClienteSeoJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("Iniciando SEO Check Job para Cliente ID: {$this->cliente->id}");
+        Log::info("Iniciando SEO Check Job (Smart Motor) para Cliente ID: {$this->cliente->id}");
         
         $gsc = new GoogleSearchConsoleService();
+        $serper = new \App\Services\SerperService();
+        $aiService = new ClientAiService();
         
-        $registeredKeywords = $this->cliente->seo_keywords;
+        $urlSlug = $this->cliente->slug;
+        $insightUrl = 'https://www.overmelhinho.com.br/empresa/' . $urlSlug;
+
+        // 1. Descobrir Palavras Reais via GSC (Source of Truth)
+        $gscData = $gsc->getKeywordsByPage($urlSlug) ?: [];
+        $gscKeywords = array_keys($gscData);
+
+        // 2. Garantir Palavras-Chave (Fallback para IA se não houver dados no GSC nem no banco)
+        $dbKeywords = $this->cliente->seo_keywords ?: [];
         
-        if (empty($registeredKeywords) || !is_array($registeredKeywords)) {
-            $keywords = [
-                $this->cliente->nome_fantasia ?: $this->cliente->razao_social,
-            ];
-        } else {
-            $keywords = $registeredKeywords;
+        if (empty($gscKeywords) && empty($dbKeywords)) {
+            // Cliente novo sem tráfego e sem palavras: IA gera as sementes
+            $cidade = 'Farroupilha'; // Ideal seria pegar do endereço do cliente, mas por ora fixamos ou pegamos do DB
+            $seedKeywords = $aiService->generateSeedKeywords($this->cliente->nome_fantasia ?: $this->cliente->razao_social, $cidade);
+            
+            if (empty($seedKeywords)) {
+                $seedKeywords = [$this->cliente->nome_fantasia ?: $this->cliente->razao_social];
+            }
+            
+            $this->cliente->seo_keywords = $seedKeywords;
+            $this->cliente->save();
+            $dbKeywords = $seedKeywords;
         }
 
-        // Pré-carrega a última posição de todas as palavras-chave do cliente de uma só vez (N+1 fix)
+        // Fundir as palavras (O que tem no DB + O que o GSC descobriu sozinho)
+        $allKeywords = array_unique(array_merge($dbKeywords, $gscKeywords));
+
+        // Pré-carrega histórico
         $latestRankings = SeoRanking::where('cliente_id', $this->cliente->id)
-            ->whereIn('keyword', $keywords)
+            ->whereIn('keyword', $allKeywords)
             ->orderBy('created_at', 'desc')
             ->get()
             ->unique('keyword')
@@ -59,157 +78,124 @@ class ProcessClienteSeoJob implements ShouldQueue
 
         $ignoredKeywords = [];
 
-        foreach ($keywords as $keyword) {
-            // Pegamos o registro da memória (O(1)) sem bater no banco
+        foreach ($allKeywords as $keyword) {
             $lastRecord = $latestRankings->get($keyword);
             $previousPosition = $lastRecord ? $lastRecord->position : null;
 
-            // Tenta buscar dado real
-            $metrics = $gsc->getKeywordMetrics($keyword);
-            $isSimulated = false;
-            $url = null;
+            // 3. Obter Métricas
+            // A prioridade para a Posição é a SERP em tempo real (Serper.dev), pois o GSC tem delay de 48h
+            $serpPosition = $serper->findUrlPosition($keyword, $urlSlug, 50);
+            
+            $impressions = 0;
+            $clicks = 0;
+            $ctr = 0;
+            $position = 0;
 
-            if ($metrics) {
-                // Arredonda para inteiro para evitar erro de float em colunas integer no Postgres
-                $newPosition = (int) round($metrics['position']);
-                $clicks = (int) round($metrics['clicks']);
-                $impressions = (int) round($metrics['impressions']);
-                $ctr = $metrics['ctr'];
-                $url = $metrics['url'] ?? null;
-            } else {
-                // Fallback para Simulação se API não estiver pronta
-                $isSimulated = true;
-                
-                if (!$previousPosition) {
-                    $newPosition = rand(1, 40);
-                } else {
-                    $oscilation = rand(-3, 3);
-                    $newPosition = max(1, $previousPosition + $oscilation);
-                }
-                $clicks = rand(0, 50);
-                $impressions = rand(100, 1000);
-                $ctr = ($impressions > 0) ? round(($clicks / $impressions) * 100, 2) : 0;
+            if (isset($gscData[$keyword])) {
+                $impressions = (int) round($gscData[$keyword]['impressions']);
+                $clicks = (int) round($gscData[$keyword]['clicks']);
+                $ctr = $gscData[$keyword]['ctr'];
+                $position = (int) round($gscData[$keyword]['position']);
             }
 
-            // Salvar histórico de métricas
+            // Sobrescreve com a posição Real-Time da SERP se a encontrarmos
+            if ($serpPosition !== null) {
+                $position = $serpPosition;
+            }
+
+            // Não simulamos mais nada. Se não rankeia, fica tudo zero e não gera insights.
+            $isSimulated = false;
+
             SeoRanking::create([
                 'cliente_id' => $this->cliente->id,
                 'keyword' => $keyword,
-                'position' => $newPosition,
+                'position' => $position,
                 'previous_position' => $previousPosition,
                 'clicks' => $clicks,
                 'impressions' => $impressions,
                 'ctr' => $ctr,
-                'is_simulated' => $isSimulated,
+                'is_simulated' => false,
                 'checked_at' => now(),
             ]);
 
             // Motor de Insights (SeoInsights Proativo)
-            // Apenas geramos insights para dados reais (não simulados)
-            if (!$isSimulated) {
-                $insightType = null;
-                $insightUrl = $url ?: 'https://www.overmelhinho.com.br/';
-                
-                // 1. Regra de CTR Baixo (Deixando dinheiro na mesa)
-                // Flexibilizado para pequenos negócios locais (> 30 imp)
+            $insightType = null;
+            
+            // Só gera insight se a palavra realmente estiver rankeando no top 50
+            if ($position > 0) {
+                // Regra de CTR Baixo
                 if ($impressions > 30 && $ctr < 2.0) {
                     $insightType = 'low_ctr';
                 }
-                // 2. Regra Quase Lá (Páginas 2 e 3)
-                elseif ($newPosition >= 11 && $newPosition <= 30) {
+                // Regra Quase Lá (Página 2 ou 3)
+                elseif ($position >= 11 && $position <= 30) {
                     $insightType = 'page_2';
-                }
-                
-                if ($insightType) {
-                    // Check Cooldown: Foi resolvido/auto_applied nos últimos 30 dias para essa keyword?
-                    $recentOptimization = SeoInsight::where('cliente_id', $this->cliente->id)
-                        ->where('keyword', $keyword)
-                        ->whereIn('status', ['resolved', 'auto_applied'])
-                        ->where('updated_at', '>=', now()->subDays(30))
-                        ->first();
-
-                    if ($recentOptimization) {
-                        Log::info("Cliente {$this->cliente->id} em período de quarentena SEO para '{$keyword}'. Otimização ignorada.");
-                        $ignoredKeywords[] = $keyword;
-                    } else {
-                        // Fully Autonomous (Zero-Touch)
-                        $aiService = new ClientAiService();
-                        $suggestion = $aiService->generateSeoSuggestions($keyword, $url, $insightType);
-
-                        if (!empty($suggestion) && isset($suggestion['title'])) {
-                            // Salva direto no Cliente
-                            $this->cliente->update([
-                                'seo_title' => $suggestion['title'],
-                                'seo_description' => $suggestion['description']
-                            ]);
-
-                            // Cria o Insight já como 'auto_applied'
-                            SeoInsight::create([
-                                'cliente_id' => $this->cliente->id,
-                                'keyword' => $keyword,
-                                'url' => $insightUrl,
-                                'insight_type' => $insightType,
-                                'position' => $newPosition,
-                                'impressions' => $impressions,
-                                'clicks' => $clicks,
-                                'ctr' => $ctr,
-                                'status' => 'auto_applied',
-                                'suggested_changes' => json_encode([
-                                    'title' => $suggestion['title'],
-                                    'description' => $suggestion['description']
-                                ])
-                            ]);
-
-                            Log::info("Zero-Touch SEO aplicado para Cliente {$this->cliente->id} na keyword '{$keyword}'.");
-                        } else {
-                            // Se a IA falhar (ex: Serper sem chave e ChatGPT erro), cria o Insight pendente para ação manual
-                            SeoInsight::updateOrCreate(
-                                [
-                                    'cliente_id' => $this->cliente->id,
-                                    'keyword' => $keyword,
-                                    'status' => 'pending'
-                                ],
-                                [
-                                    'url' => $insightUrl,
-                                    'insight_type' => $insightType,
-                                    'position' => $newPosition,
-                                    'impressions' => $impressions,
-                                    'clicks' => $clicks,
-                                    'ctr' => $ctr
-                                ]
-                            );
-                        }
-                    }
-                } else {
-                    // Guarda para ignorar todas em um só comando SQL depois do loop
-                    $ignoredKeywords[] = $keyword;
                 }
             }
 
-            // Regra de Negócio: Alerta de Incidente se cair mais de 3 posições
-            if (!$isSimulated && $previousPosition && ($newPosition > $previousPosition + 3)) {
-                $this->createAlertTicket($keyword, $previousPosition, $newPosition);
-                
-                // Opcional: Adicionar também à tabela de insights
+            if ($insightType) {
+                // Check Cooldown
+                $recentOptimization = SeoInsight::where('cliente_id', $this->cliente->id)
+                    ->where('keyword', $keyword)
+                    ->whereIn('status', ['resolved', 'auto_applied'])
+                    ->where('updated_at', '>=', now()->subDays(30))
+                    ->first();
+
+                if ($recentOptimization) {
+                    Log::info("Cliente {$this->cliente->id} em quarentena SEO para '{$keyword}'.");
+                    $ignoredKeywords[] = $keyword;
+                } else {
+                    $suggestion = $aiService->generateSeoSuggestions($keyword, $insightUrl, $insightType);
+
+                    if (!empty($suggestion) && isset($suggestion['title'])) {
+                        $this->cliente->update([
+                            'seo_title' => $suggestion['title'],
+                            'seo_description' => $suggestion['description']
+                        ]);
+
+                        SeoInsight::create([
+                            'cliente_id' => $this->cliente->id,
+                            'keyword' => $keyword,
+                            'url' => $insightUrl,
+                            'insight_type' => $insightType,
+                            'position' => $position,
+                            'impressions' => $impressions,
+                            'clicks' => $clicks,
+                            'ctr' => $ctr,
+                            'status' => 'auto_applied',
+                            'suggested_changes' => json_encode([
+                                'title' => $suggestion['title'],
+                                'description' => $suggestion['description']
+                            ])
+                        ]);
+                    } else {
+                        SeoInsight::updateOrCreate(
+                            ['cliente_id' => $this->cliente->id, 'keyword' => $keyword, 'status' => 'pending'],
+                            [
+                                'url' => $insightUrl,
+                                'insight_type' => $insightType,
+                                'position' => $position,
+                                'impressions' => $impressions,
+                                'clicks' => $clicks,
+                                'ctr' => $ctr
+                            ]
+                        );
+                    }
+                }
+            } else {
+                $ignoredKeywords[] = $keyword;
+            }
+
+            // Alerta de Queda
+            if ($previousPosition && $position > 0 && ($position > $previousPosition + 3)) {
+                $this->createAlertTicket($keyword, $previousPosition, $position);
                 SeoInsight::updateOrCreate(
-                    [
-                        'cliente_id' => $this->cliente->id,
-                        'keyword' => $keyword,
-                        'status' => 'pending'
-                    ],
-                    [
-                        'url' => $url ?? '',
-                        'insight_type' => 'drop',
-                        'position' => $newPosition,
-                        'impressions' => $impressions,
-                        'clicks' => $clicks,
-                        'ctr' => $ctr
-                    ]
+                    ['cliente_id' => $this->cliente->id, 'keyword' => $keyword, 'status' => 'pending'],
+                    ['url' => $insightUrl, 'insight_type' => 'drop', 'position' => $position, 'impressions' => $impressions, 'clicks' => $clicks, 'ctr' => $ctr]
                 );
             }
         }
 
-        // Realiza um único UPDATE massivo para os insights ignorados (N+1 fix)
         if (!empty($ignoredKeywords)) {
             SeoInsight::where('cliente_id', $this->cliente->id)
                 ->whereIn('keyword', $ignoredKeywords)
