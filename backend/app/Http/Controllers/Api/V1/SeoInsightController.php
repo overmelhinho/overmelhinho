@@ -152,9 +152,15 @@ class SeoInsightController extends Controller
 
         $cliente = Cliente::findOrFail($request->cliente_id);
 
-        if (!$cliente->seo_enabled) {
+        if (empty($cliente->slug)) {
             return response()->json([
-                'error' => 'SEO não está ativado para este cliente.'
+                'error' => 'Este cliente não possui um Slug (URL) cadastrado para verificar o SEO.'
+            ], 400);
+        }
+
+        if (!$cliente->exibir_no_site) {
+            return response()->json([
+                'error' => 'Este cliente não está visível no site principal (exibir_no_site = false).'
             ], 400);
         }
 
