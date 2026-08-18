@@ -17,7 +17,10 @@ class SeoInsightController extends Controller
         $query = SeoInsight::with('cliente:id,nome_fantasia,slug');
 
         if ($request->has('status') && !empty($request->status)) {
-            $query->where('status', $request->status);
+            if ($request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+            // se for 'all', não aplica filtro de status
         } else {
             $query->where('status', 'pending');
         }
@@ -106,15 +109,33 @@ class SeoInsightController extends Controller
         }
 
         $aiService = new ClientAiService();
-        $suggestions = $aiService->generateSeoSuggestions($insight->keyword, $insight->url, $insight->insight_type);
+        $suggestion = $aiService->generateSeoSuggestions($insight->keyword, $insight->url, $insight->insight_type);
 
-        if (empty($suggestions)) {
-            return response()->json(['error' => 'Falha ao gerar sugestões com IA. Tente novamente mais tarde.'], 500);
+        if (empty($suggestion) || !isset($suggestion['title'])) {
+            return response()->json(['error' => 'Falha ao gerar otimização com IA. Tente novamente mais tarde.'], 500);
         }
 
+        // 1-Click Auto Apply
+        $cliente = $insight->cliente;
+        if ($cliente) {
+            $cliente->update([
+                'seo_title' => $suggestion['title'],
+                'seo_description' => $suggestion['description']
+            ]);
+        }
+
+        $insight->update([
+            'status' => 'resolved',
+            'suggested_changes' => json_encode([
+                'title' => $suggestion['title'],
+                'description' => $suggestion['description']
+            ])
+        ]);
+
         return response()->json([
+            'message' => 'Otimizado com sucesso!',
             'insight' => $insight,
-            'suggestions' => $suggestions
+            'suggestion' => $suggestion
         ]);
     }
 }

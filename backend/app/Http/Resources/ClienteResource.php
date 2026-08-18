@@ -93,6 +93,8 @@ class ClienteResource extends JsonResource
             'seo_keywords' => $this->seo_keywords ?? [],
             'seo_keywords_source' => $this->seo_keywords_source ?? 'generated',
             'seo_keywords_updated_at' => $this->seo_keywords_updated_at ? (is_string($this->seo_keywords_updated_at) ? $this->seo_keywords_updated_at : $this->seo_keywords_updated_at->toIso8601String()) : null,
+            'seo_title' => $this->seo_title,
+            'seo_description' => $this->seo_description,
 
             'galeria_imagens_count' => $this->galeria_imagens_count ?? ($this->relationLoaded('galeriaImagens') ? $this->galeriaImagens->count() : 0),
             

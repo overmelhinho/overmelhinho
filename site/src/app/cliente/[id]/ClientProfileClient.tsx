@@ -643,88 +643,9 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
     const breadcrumbSegmentName = client.segmentos?.[0]?.nome || 'Categoria';
     const canonicalUrl = `https://www.overmelhinho.com.br/${breadcrumbCitySlug}/${breadcrumbSegmentSlug}/${client.slug || client.id}`;
 
-    // 🧠 JSON-LD Structured Data for SEO
-    const schemaData = {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": client.nome_fantasia,
-        "image": client.logotipo_url || client.banner_url,
-        "@id": canonicalUrl,
-        "url": canonicalUrl,
-        "telephone": contactInfo?.telefone_principal || contactInfo?.celular,
-        "address": client.enderecos?.[0] ? {
-            "@type": "PostalAddress",
-            "streetAddress": client.enderecos[0].exibir_apenas_cidade ? undefined : `${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}, ${client.enderecos[0].numero}${client.enderecos[0].complemento ? `, ${client.enderecos[0].complemento}` : ''}`,
-            "addressLocality": client.enderecos[0].cidade,
-            "addressRegion": client.enderecos[0].estado,
-            "postalCode": client.enderecos[0].exibir_apenas_cidade ? undefined : client.enderecos[0].cep,
-            "addressCountry": "BR"
-        } : undefined,
-        "geo": (client.enderecos?.[0]?.latitude && !client.enderecos[0].exibir_apenas_cidade) ? {
-            "@type": "GeoCoordinates",
-            "latitude": client.enderecos[0].latitude,
-            "longitude": client.enderecos[0].longitude
-        } : undefined,
-        "openingHoursSpecification": schedule.map((s: any) => ({
-            "@type": "OpeningHoursSpecification",
-            "dayOfWeek": [
-                "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
-            ][s.day - 1],
-            "opens": s.open,
-            "closes": s.close
-        })),
-        "aggregateRating": client.google_rating ? {
-            "@type": "AggregateRating",
-            "ratingValue": client.google_rating,
-            "reviewCount": client.reviews_count || 1
-        } : undefined,
-        "keywords": client.seo_keywords?.join(", "),
-        "sameAs": client.redes_sociais?.map((r: any) => r.url) || [],
-        "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
-            "@type": "City",
-            "name": c.nome,
-            "addressRegion": c.uf || "RS",
-            "addressCountry": "BR"
-        })) : undefined
-    };
-
-    const breadcrumbData = {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-            {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Início",
-                "item": "https://www.overmelhinho.com.br"
-            },
-            {
-                "@type": "ListItem",
-                "position": 2,
-                "name": `${breadcrumbSegmentName} em ${breadcrumbCityName}`,
-                "item": `https://www.overmelhinho.com.br/${breadcrumbCitySlug}/${breadcrumbSegmentSlug}`
-            },
-            {
-                "@type": "ListItem",
-                "position": 3,
-                "name": client.nome_fantasia,
-                "item": canonicalUrl
-            }
-        ]
-    };
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24 md:pb-0 overflow-x-hidden w-full max-w-[100vw]">
-            {/* 🤖 SEO Structured Data */}
-            <script
-                type="application/ld+json"
-                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(schemaData).replace(/</g, '\\u003c') } }}
-            />
-            <script
-                type="application/ld+json"
-                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(breadcrumbData).replace(/</g, '\\u003c') } }}
-            />
-
             {/* 📍 Banner de Atendimento Local (SEO Context) */}
             {cityNameContext && (
                 <div className="bg-brand-red/5 border-b border-brand-red/10 py-2 px-4 text-center">

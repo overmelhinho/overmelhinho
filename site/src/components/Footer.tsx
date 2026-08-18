@@ -53,7 +53,7 @@ export default function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-16 lg:gap-8 mb-20">
 
                     {/* Brand Section */}
-                    <div className="lg:col-span-4 space-y-8">
+                    <div className="lg:col-span-3 space-y-8">
                         <div className="cursor-pointer" onClick={() => router.push('/')}>
                             <Logo />
                         </div>
@@ -82,12 +82,29 @@ export default function Footer() {
                     </div>
 
                     {/* Links Grid */}
-                    <div className="lg:col-span-1 hidden lg:block"></div>
-
-                    <div className="lg:col-span-3 space-y-6 text-left">
+                    <div className="lg:col-span-2 space-y-6 text-left">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-300">Acesso Rápido</h4>
                         <ul className="space-y-4">
                             {navLinks.map((link, i) => (
+                                <li key={i}>
+                                    <a href={link.href} className="text-gray-500 hover:text-brand-red text-sm font-bold flex items-center group transition-colors">
+                                        <ChevronRight size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all mr-1" />
+                                        {link.label}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="lg:col-span-3 space-y-6 text-left">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-300">Destaques</h4>
+                        <ul className="space-y-4">
+                            {[
+                                { label: 'Saúde em Farroupilha', href: '/farroupilha/saude' },
+                                { label: 'Serviços em Caxias do Sul', href: '/caxias-do-sul/servicos' },
+                                { label: 'Gastronomia em Bento', href: '/bento-goncalves/gastronomia' },
+                                { label: 'Vagas na Serra Gaúcha', href: '/vagas' },
+                            ].map((link, i) => (
                                 <li key={i}>
                                     <a href={link.href} className="text-gray-500 hover:text-brand-red text-sm font-bold flex items-center group transition-colors">
                                         <ChevronRight size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all mr-1" />

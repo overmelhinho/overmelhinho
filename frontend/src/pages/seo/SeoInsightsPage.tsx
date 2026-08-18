@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import api from "@/services/api";
-import { Loader, Zap, Search, AlertTriangle, TrendingUp, CheckCircle, XCircle, Sparkles, Filter, CheckSquare } from "lucide-react";
+import { Loader, Zap, Search, AlertTriangle, TrendingUp, CheckCircle, XCircle, Sparkles, Filter, CheckSquare, Info, ChevronDown, ChevronUp, Calendar, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PaginationData {
@@ -32,6 +32,10 @@ export default function SeoInsightsPage() {
   const [loadingAiId, setLoadingAiId] = useState<number | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<Record<number, any[]>>({});
   const [selectedInsightForAi, setSelectedInsightForAi] = useState<any | null>(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  
+  // Linhas expandidas
+  const [expandedRows, setExpandedRows] = useState<number[]>([]);
 
   const fetchInsights = useCallback(async () => {
     setLoading(true);
@@ -169,6 +173,9 @@ export default function SeoInsightsPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Zap className="text-yellow-500 w-6 h-6" />
               Oportunidades SEO Proativas
+              <button onClick={() => setShowInfoModal(true)} className="text-gray-400 hover:text-purple-600 transition-colors ml-2" title="Entenda as Regras de IA">
+                <Info className="w-5 h-5" />
+              </button>
             </h1>
             <p className="text-gray-500 mt-1">
               Gerencie e otimize os alertas detectados pelo motor do Vermelhinho em larga escala.
@@ -201,8 +208,10 @@ export default function SeoInsightsPage() {
                 setPage(1);
               }}
             >
+              <option value="all">Todos</option>
               <option value="pending">Pendentes</option>
-              <option value="applied">Aplicados</option>
+              <option value="applied">Aplicados (Manuais)</option>
+              <option value="auto_applied">Auto-Aplicados (Zero-Touch)</option>
               <option value="ignored">Ignorados</option>
             </select>
             
@@ -293,6 +302,7 @@ export default function SeoInsightsPage() {
                   <th scope="col" className="px-6 py-3 text-right font-semibold text-gray-500 uppercase tracking-wider">
                     Ação (IA)
                   </th>
+                  <th scope="col" className="px-4 py-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -314,76 +324,199 @@ export default function SeoInsightsPage() {
                   insights.map((insight) => {
                     const isLowCtr = insight.insight_type === 'low_ctr';
                     const hasAi = !!aiSuggestions[insight.id];
+                    const isExpanded = expandedRows.includes(insight.id);
+                    const suggestedChanges = typeof insight.suggested_changes === 'string' 
+                                            ? JSON.parse(insight.suggested_changes) 
+                                            : insight.suggested_changes;
 
                     return (
-                      <tr key={insight.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(insight.id) ? 'bg-purple-50/50' : ''}`}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-                            checked={selectedIds.includes(insight.id)}
-                            onChange={() => handleSelectRow(insight.id)}
-                          />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-gray-900">{insight.cliente?.nome_fantasia || 'Cliente Removido'}</div>
-                          <a href={insight.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate max-w-[200px] block" title={insight.url}>
-                            {insight.url}
-                          </a>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="bg-blue-100 text-blue-800 font-medium px-2.5 py-0.5 rounded text-xs border border-blue-200">
-                            {insight.keyword}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {isLowCtr ? (
-                            <span className="flex items-center gap-1 text-red-600 text-xs font-semibold">
-                              <AlertTriangle className="w-3 h-3" /> CTR Baixo
+                      <React.Fragment key={insight.id}>
+                        <tr className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(insight.id) ? 'bg-purple-50/50' : ''}`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                              checked={selectedIds.includes(insight.id)}
+                              onChange={() => handleSelectRow(insight.id)}
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-gray-900">{insight.cliente?.nome_fantasia || 'Cliente Removido'}</div>
+                            <a href={insight.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline truncate max-w-[200px] block" title={insight.url}>
+                              {insight.url}
+                            </a>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="bg-blue-100 text-blue-800 font-medium px-2.5 py-0.5 rounded text-xs border border-blue-200">
+                              {insight.keyword}
                             </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-orange-600 text-xs font-semibold">
-                              <TrendingUp className="w-3 h-3" /> Quase na Pg 1
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex gap-4">
-                            <div>
-                              <p className="text-[10px] text-gray-400 uppercase font-bold">Posição</p>
-                              <p className="font-semibold text-gray-900">#{insight.position}</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] text-gray-400 uppercase font-bold">CTR</p>
-                              <p className={`font-semibold ${isLowCtr ? 'text-red-600' : 'text-gray-900'}`}>{insight.ctr}%</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] text-gray-400 uppercase font-bold">Impr.</p>
-                              <p className="font-semibold text-gray-900">{insight.impressions}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <div className="flex flex-col items-end gap-2">
-                            {hasAi ? (
-                              <div className="flex gap-2">
-                                <button onClick={() => handleAction(insight.id, 'applied')} className="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded font-semibold border border-green-200">Aplicado</button>
-                                <button onClick={() => handleAction(insight.id, 'ignored')} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 rounded font-semibold border border-gray-200">Ignorar</button>
-                                <button onClick={() => setSelectedInsightForAi(insight)} className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 px-2 py-1 rounded font-semibold border border-purple-200">Ver IA</button>
-                              </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isLowCtr ? (
+                              <span className="flex items-center gap-1 text-red-600 text-xs font-semibold">
+                                <AlertTriangle className="w-3 h-3" /> CTR Baixo
+                              </span>
                             ) : (
-                              <button
-                                onClick={() => handleGenerateAi(insight)}
-                                disabled={loadingAiId === insight.id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded text-xs font-semibold hover:from-purple-700 hover:to-indigo-700 transition-colors disabled:opacity-50"
-                              >
-                                {loadingAiId === insight.id ? <Loader className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                Gerar IA
-                              </button>
+                              <span className="flex items-center gap-1 text-orange-600 text-xs font-semibold">
+                                <TrendingUp className="w-3 h-3" /> Quase na Pg 1
+                              </span>
                             )}
-                          </div>
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex gap-4">
+                              <div>
+                                <p className="text-[10px] text-gray-400 uppercase font-bold">Posição</p>
+                                <p className="font-semibold text-gray-900">#{insight.position}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-gray-400 uppercase font-bold">CTR</p>
+                                <p className={`font-semibold ${isLowCtr ? 'text-red-600' : 'text-gray-900'}`}>{insight.ctr}%</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-gray-400 uppercase font-bold">Impr.</p>
+                                <p className="font-semibold text-gray-900">{insight.impressions}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="flex flex-col items-end gap-2">
+                              {insight.status === 'auto_applied' ? (
+                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-semibold border border-purple-200 flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3" /> Auto-Apply
+                                </span>
+                              ) : insight.status === 'applied' ? (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-semibold border border-green-200">
+                                  Aplicado (Manual)
+                                </span>
+                              ) : hasAi ? (
+                                <div className="flex gap-2">
+                                  <button onClick={() => handleAction(insight.id, 'applied')} className="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded font-semibold border border-green-200">Aplicar</button>
+                                  <button onClick={() => handleAction(insight.id, 'ignored')} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 rounded font-semibold border border-gray-200">Ignorar</button>
+                                  <button onClick={() => setSelectedInsightForAi(insight)} className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 px-2 py-1 rounded font-semibold border border-purple-200">Ver IA</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleGenerateAi(insight)}
+                                  disabled={loadingAiId === insight.id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded text-xs font-semibold hover:from-purple-700 hover:to-indigo-700 transition-colors disabled:opacity-50"
+                                >
+                                  {loadingAiId === insight.id ? <Loader className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                  Gerar IA
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-right">
+                            <button
+                              onClick={() => setExpandedRows(prev => prev.includes(insight.id) ? prev.filter(id => id !== insight.id) : [...prev, insight.id])}
+                              className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                              title="Ver Detalhes e Linha do Tempo"
+                            >
+                              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                            </button>
+                          </td>
+                        </tr>
+                        
+                        {/* Linha Expandida (Detalhes) */}
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={7} className="p-0 border-b border-gray-200 bg-gray-50/50">
+                              <div className="p-6 animate-fade-in">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                  
+                                  {/* Linha do Tempo */}
+                                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                    <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                      <Clock className="w-4 h-4 text-gray-500" /> Linha do Tempo
+                                    </h4>
+                                    <div className="space-y-4">
+                                      <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                          <Search className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Varredura</p>
+                                          <p className="text-sm font-medium text-gray-900">{new Date(insight.created_at).toLocaleDateString('pt-BR')}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      {(insight.status === 'auto_applied' || insight.status === 'applied') && (
+                                        <div className="flex items-start gap-3">
+                                          <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                                            <CheckCircle className="w-4 h-4" />
+                                          </div>
+                                          <div>
+                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Implementado em</p>
+                                            <p className="text-sm font-medium text-gray-900">{new Date(insight.updated_at).toLocaleDateString('pt-BR')}</p>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                          <Calendar className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Próxima Varredura</p>
+                                          <p className="text-sm font-medium text-gray-900">
+                                            {(insight.status === 'auto_applied' || insight.status === 'applied')
+                                              ? new Date(new Date(insight.updated_at).setDate(new Date(insight.updated_at).getDate() + 30)).toLocaleDateString('pt-BR')
+                                              : 'Diária'}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* O que foi alterado */}
+                                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm lg:col-span-1">
+                                    <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                      <Sparkles className="w-4 h-4 text-purple-500" /> Alterações Sugeridas (IA)
+                                    </h4>
+                                    {suggestedChanges ? (
+                                      <div className="space-y-3">
+                                        <div>
+                                          <span className="text-[10px] font-bold text-gray-400 uppercase">Novo Título SEO</span>
+                                          <p className="text-sm text-gray-900 font-medium leading-tight mt-0.5">{suggestedChanges.title}</p>
+                                        </div>
+                                        <div>
+                                          <span className="text-[10px] font-bold text-gray-400 uppercase">Nova Descrição SEO</span>
+                                          <p className="text-xs text-gray-600 leading-snug mt-0.5">{suggestedChanges.description}</p>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500 italic py-4">As alterações não foram geradas ou registradas ainda.</p>
+                                    )}
+                                  </div>
+
+                                  {/* O que é esperado */}
+                                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm lg:col-span-1">
+                                    <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                      <Zap className="w-4 h-4 text-yellow-500" /> Expectativa de Resultado
+                                    </h4>
+                                    {isLowCtr ? (
+                                      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                                        <p className="text-sm text-blue-800 leading-relaxed">
+                                          <strong>Aumento de Cliques:</strong> Esperamos um aumento imediato de acessos (Tráfego) e melhoria na taxa de CTR, 
+                                          utilizando técnicas de Copywriting para roubar cliques dos concorrentes que já estão posicionados próximos.
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <div className="bg-orange-50 border border-orange-100 rounded-lg p-3">
+                                        <p className="text-sm text-orange-800 leading-relaxed">
+                                          <strong>Sair da Página 2:</strong> Esperamos um aumento de posições no ranking do Google (da Pg 2 para a Pg 1). 
+                                          A alteração injetou alta densidade de palavras-chave e autoridade local na tag para forçar a subida.
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })
                 )}
@@ -478,6 +611,48 @@ export default function SeoInsightsPage() {
                   Nenhuma sugestão encontrada. Tente gerar novamente.
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Informação */}
+      {showInfoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
+            <div className="bg-gray-50 border-b border-gray-200 p-5 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Info className="w-5 h-5 text-purple-600" />
+                Como o Robô Pensa? (Regras)
+              </h2>
+              <button onClick={() => setShowInfoModal(false)} className="text-gray-400 hover:text-gray-600">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-sm text-gray-700">
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                <h3 className="font-bold text-blue-800 flex items-center gap-1 text-base mb-1"><AlertTriangle className="w-4 h-4"/> 1. CTR Baixo (Auto-Apply)</h3>
+                <p className="text-blue-700 leading-relaxed">A página tem visualizações, mas poucos cliques (&lt; 2%). A IA espiona os 5 primeiros do Google e cria um Título matador para roubar os cliques deles.</p>
+              </div>
+              
+              <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl">
+                <h3 className="font-bold text-orange-800 flex items-center gap-1 text-base mb-1"><TrendingUp className="w-4 h-4"/> 2. Quase na Pg 1 (Auto-Apply)</h3>
+                <p className="text-orange-700 leading-relaxed">O cliente está travado entre a 11ª e 30ª posição. A IA reescreve a tag injetando palavras de autoridade local para empurrar o link para a primeira página.</p>
+              </div>
+
+              <div className="bg-red-50 border border-red-100 p-4 rounded-xl">
+                <h3 className="font-bold text-red-800 flex items-center gap-1 text-base mb-1"><AlertTriangle className="w-4 h-4"/> 3. Queda Brusca (Incidente)</h3>
+                <p className="text-red-700 leading-relaxed">O cliente perdeu 3 ou mais posições de uma vez. <strong>A IA não age sozinha.</strong> O sistema abre um Ticket Urgente para a equipe de Marketing investigar.</p>
+              </div>
+
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 border border-gray-200">
+                <strong className="text-gray-700">Período de Quarentena:</strong> Após aplicar a regra 1 ou 2, a IA entra em cooldown de 30 dias para aquele cliente/palavra, dando tempo para o Google reindexar e trazer resultados reais.
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-end">
+              <button onClick={() => setShowInfoModal(false)} className="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors">
+                Entendi, fechar
+              </button>
             </div>
           </div>
         </div>

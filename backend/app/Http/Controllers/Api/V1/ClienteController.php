@@ -33,6 +33,11 @@ class ClienteController extends Controller
                         ->orWhere('tipo_cliente', 'gratuito');
                 })
                 ->where('exibir_no_site', 'true')
+                ->with([
+                    'enderecos' => function ($q) { $q->select(['id', 'cliente_id', 'cidade', 'estado']); },
+                    'cidadesAtendidas' => function ($q) { $q->select(['cidades.id', 'nome', 'uf']); },
+                    'segmentos' => function ($q) { $q->select(['segmentos.id', 'nome']); }
+                ])
                 ->get();
         });
     }

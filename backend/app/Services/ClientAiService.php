@@ -292,27 +292,42 @@ class ClientAiService
 
         $context = "";
         if ($insightType === 'low_ctr') {
-            $context = "O problema atual é que a página tem muitas impressões mas pouquíssimos cliques (CTR baixo). Precisamos de títulos e descrições extremamente chamativos e persuasivos (gatilhos mentais).";
+            $context = "O problema atual é que a página tem muitas impressões mas pouquíssimos cliques (CTR baixo). Precisamos de um título e descrição extremamente chamativos e persuasivos (gatilhos mentais).";
         } elseif ($insightType === 'page_2') {
-            $context = "A página está presa na Página 2 do Google. Precisamos de títulos e descrições super otimizados exatamente para a palavra-chave para dar o empurrão final para a Página 1.";
+            $context = "A página está presa na Página 2 do Google. Precisamos de um título e descrição super otimizados usando a palavra-chave exata para dar o empurrão final para a Página 1.";
         }
 
-        $prompt = "Gere 3 opções de <title> e <meta description> otimizadas para SEO.\n" .
+        // Busca Concorrentes (SERP)
+        $serper = new SerperService();
+        $competitors = $serper->getTopCompetitors($keyword);
+        
+        $competitorsContext = "Nenhum concorrente encontrado.";
+        if (!empty($competitors)) {
+            $competitorsContext = "TÍTULOS E DESCRIÇÕES DOS TOP 5 CONCORRENTES NA PÁGINA 1:\n";
+            foreach ($competitors as $index => $comp) {
+                $pos = $index + 1;
+                $competitorsContext .= "{$pos}. Título: {$comp['title']}\n   Descrição: {$comp['snippet']}\n";
+            }
+            $competitorsContext .= "\nSUA MISSÃO: Analise os concorrentes acima. Encontre brechas (o que falta neles? ex: gatilho de urgência, autoridade, etc). Crie 1 única opção que SE DESTAQUE no meio deles e garanta o clique para o nosso cliente.";
+        }
+
+        $prompt = "Gere a MELHOR e ÚNICA opção de <title> e <meta description> otimizada para SEO.\n" .
                   "Palavra-chave foco: '{$keyword}'\n" .
                   "URL Alvo: '{$url}'\n\n" .
                   "Contexto/Objetivo: {$context}\n\n" .
+                  "{$competitorsContext}\n\n" .
                   "Instruções Técnicas:\n" .
                   "- O Title deve ter no máximo 60 caracteres.\n" .
                   "- A Meta Description deve ter no máximo 155 caracteres.\n" .
-                  "- Retorne APENAS um JSON contendo a chave 'suggestions' com um array de 3 objetos. Cada objeto deve ter as chaves 'title' e 'description'.\n";
+                  "- Retorne APENAS um JSON contendo as chaves 'title' e 'description'. Nenhuma palavra a mais.\n";
 
         try {
             $response = Http::withToken($this->openaiKey)
-                ->timeout(30)
+                ->timeout(45)
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model' => 'gpt-4o-mini',
                     'messages' => [
-                        ['role' => 'system', 'content' => 'Você é um especialista em SEO técnico e copywriting voltado para conversão (aumento de CTR no Google).'],
+                        ['role' => 'system', 'content' => 'Você é um especialista em SEO técnico e copywriting focado em bater concorrentes e maximizar CTR.'],
                         ['role' => 'user', 'content' => $prompt]
                     ],
                     'response_format' => ['type' => 'json_object'],
@@ -324,7 +339,16 @@ class ClientAiService
             $json = $response->json('choices.0.message.content');
             $data = is_string($json) ? json_decode($json, true) : $json;
 
-            return (isset($data['suggestions']) && is_array($data['suggestions'])) ? $data['suggestions'] : [];
+            // Transforma o formato antigo de "suggestions" para devolver direto o title/description
+            // Para manter a assinatura de retorno em array do método:
+            if (isset($data['title']) && isset($data['description'])) {
+                return [
+                    'title' => $data['title'],
+                    'description' => $data['description']
+                ];
+            }
+
+            return [];
 
         } catch (\Throwable $e) {
             Log::error('[ClientAiService] Erro na geração de SEO Suggestions', ['error' => $e->getMessage()]);

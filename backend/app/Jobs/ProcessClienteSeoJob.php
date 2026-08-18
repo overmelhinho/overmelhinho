@@ -13,6 +13,7 @@ use App\Models\SeoInsight;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\GoogleSearchConsoleService;
+use App\Services\ClientAiService;
 use Illuminate\Support\Facades\Log;
 
 class ProcessClienteSeoJob implements ShouldQueue
@@ -69,9 +70,10 @@ class ProcessClienteSeoJob implements ShouldQueue
             $url = null;
 
             if ($metrics) {
-                $newPosition = $metrics['position'];
-                $clicks = $metrics['clicks'];
-                $impressions = $metrics['impressions'];
+                // Arredonda para inteiro para evitar erro de float em colunas integer no Postgres
+                $newPosition = (int) round($metrics['position']);
+                $clicks = (int) round($metrics['clicks']);
+                $impressions = (int) round($metrics['impressions']);
                 $ctr = $metrics['ctr'];
                 $url = $metrics['url'] ?? null;
             } else {
@@ -108,30 +110,75 @@ class ProcessClienteSeoJob implements ShouldQueue
                 $insightType = null;
                 
                 // 1. Regra de CTR Baixo (Deixando dinheiro na mesa)
-                if ($impressions > 100 && $ctr < 2.0) {
+                // Flexibilizado para pequenos negócios locais (> 30 imp)
+                if ($impressions > 30 && $ctr < 2.0) {
                     $insightType = 'low_ctr';
                 }
-                // 2. Regra Quase Lá (Página 2)
-                elseif ($newPosition >= 11 && $newPosition <= 20) {
+                // 2. Regra Quase Lá (Páginas 2 e 3)
+                elseif ($newPosition >= 11 && $newPosition <= 30) {
                     $insightType = 'page_2';
                 }
                 
                 if ($insightType) {
-                    SeoInsight::updateOrCreate(
-                        [
-                            'cliente_id' => $this->cliente->id,
-                            'keyword' => $keyword,
-                            'status' => 'pending'
-                        ],
-                        [
-                            'url' => $url,
-                            'insight_type' => $insightType,
-                            'position' => $newPosition,
-                            'impressions' => $impressions,
-                            'clicks' => $clicks,
-                            'ctr' => $ctr
-                        ]
-                    );
+                    // Check Cooldown: Foi resolvido/auto_applied nos últimos 30 dias para essa keyword?
+                    $recentOptimization = SeoInsight::where('cliente_id', $this->cliente->id)
+                        ->where('keyword', $keyword)
+                        ->whereIn('status', ['resolved', 'auto_applied'])
+                        ->where('updated_at', '>=', now()->subDays(30))
+                        ->first();
+
+                    if ($recentOptimization) {
+                        Log::info("Cliente {$this->cliente->id} em período de quarentena SEO para '{$keyword}'. Otimização ignorada.");
+                        $ignoredKeywords[] = $keyword;
+                    } else {
+                        // Fully Autonomous (Zero-Touch)
+                        $aiService = new ClientAiService();
+                        $suggestion = $aiService->generateSeoSuggestions($keyword, $url, $insightType);
+
+                        if (!empty($suggestion) && isset($suggestion['title'])) {
+                            // Salva direto no Cliente
+                            $this->cliente->update([
+                                'seo_title' => $suggestion['title'],
+                                'seo_description' => $suggestion['description']
+                            ]);
+
+                            // Cria o Insight já como 'auto_applied'
+                            SeoInsight::create([
+                                'cliente_id' => $this->cliente->id,
+                                'keyword' => $keyword,
+                                'url' => $url,
+                                'insight_type' => $insightType,
+                                'position' => $newPosition,
+                                'impressions' => $impressions,
+                                'clicks' => $clicks,
+                                'ctr' => $ctr,
+                                'status' => 'auto_applied',
+                                'suggested_changes' => json_encode([
+                                    'title' => $suggestion['title'],
+                                    'description' => $suggestion['description']
+                                ])
+                            ]);
+
+                            Log::info("Zero-Touch SEO aplicado para Cliente {$this->cliente->id} na keyword '{$keyword}'.");
+                        } else {
+                            // Se a IA falhar (ex: Serper sem chave e ChatGPT erro), cria o Insight pendente para ação manual
+                            SeoInsight::updateOrCreate(
+                                [
+                                    'cliente_id' => $this->cliente->id,
+                                    'keyword' => $keyword,
+                                    'status' => 'pending'
+                                ],
+                                [
+                                    'url' => $url,
+                                    'insight_type' => $insightType,
+                                    'position' => $newPosition,
+                                    'impressions' => $impressions,
+                                    'clicks' => $clicks,
+                                    'ctr' => $ctr
+                                ]
+                            );
+                        }
+                    }
                 } else {
                     // Guarda para ignorar todas em um só comando SQL depois do loop
                     $ignoredKeywords[] = $keyword;

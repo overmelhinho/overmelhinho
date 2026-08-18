@@ -79,9 +79,9 @@ export async function generateMetadata({ params }: { params: Promise<{ citySlug:
 
     const canonicalSegmentSlug = client.segmentos?.[0] ? slugify(client.segmentos[0].nome) : segmentSlug;
     
-    // Padrão Exigido: [Categoria] em [Cidade] - [UF]: [Nome da Empresa] | O Vermelhinho
-    const title = `${segmentName} em ${targetCityName} - ${uf}: ${client.nome_fantasia} | O Vermelhinho`;
-    const description = `Precisando de ${segmentName} em ${targetCityName}? Conheça a ${client.nome_fantasia}. Confira endereços, telefones e horários no portal O Vermelhinho.`;
+    // Padrão Exigido: [Categoria] em [Cidade] - [UF]: [Nome da Empresa] | O Vermelhinho (Ou Overrides de IA)
+    const title = client.seo_title || `${segmentName} em ${targetCityName} - ${uf}: ${client.nome_fantasia} | O Vermelhinho`;
+    const description = client.seo_description || `Precisando de ${segmentName} em ${targetCityName}? Conheça a ${client.nome_fantasia}. Confira endereços, telefones e horários no portal O Vermelhinho.`;
 
     return {
         title,
@@ -131,10 +131,78 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
 
     const h1Title = `${segmentName} em ${targetCityName} - ${uf}: ${client.nome_fantasia}`;
 
+    // Esquemas JSON-LD para SEO
+    const breadcrumbJsonLd = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": SITE_URL
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": segmentName || "Empresas",
+                "item": `${SITE_URL}/busca?segmento=${client.segmentos?.[0]?.id || ''}`
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
+                "name": client.nome_fantasia,
+                "item": `${SITE_URL}/${citySlug}/${segmentSlug}/${client.slug || client.id}`
+            }
+        ]
+    };
+
+    const localBusinessJsonLd = client.enderecos?.length > 0 
+        ? client.enderecos.map((end: any, index: number) => ({
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            "name": client.enderecos.length > 1 ? `${client.nome_fantasia} - ${end.nome_unidade || `Unidade ${index + 1}`}` : client.nome_fantasia,
+            "image": client.logotipo_url || client.galeria?.[0]?.url,
+            "description": client.descricao,
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": end.exibir_apenas_cidade ? undefined : `${end.rua || ''}, ${end.numero || ''}${end.complemento ? `, ${end.complemento}` : ''}`,
+                "addressLocality": end.cidade || '',
+                "addressRegion": end.estado || '',
+                "postalCode": end.exibir_apenas_cidade ? undefined : (end.cep || ''),
+                "addressCountry": "BR"
+            },
+            "geo": (end.latitude && !end.exibir_apenas_cidade) ? {
+                "@type": "GeoCoordinates",
+                "latitude": end.latitude,
+                "longitude": end.longitude
+            } : undefined,
+            "url": `${SITE_URL}/${citySlug}/${segmentSlug}/${client.slug || client.id}`,
+            "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone),
+            "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
+                "@type": "City",
+                "name": c.nome,
+                "addressRegion": c.uf || "RS",
+                "addressCountry": "BR"
+            })) : undefined,
+        }))
+        : null;
+
     // Passamos o contexto da cidade via URL se necessário no futuro
     // Por enquanto, o ClientProfileClient já gerencia o estado via id/slug
     return (
         <>
+            <script
+                type="application/ld+json"
+                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, '\\u003c') } }}
+            />
+            {localBusinessJsonLd && (
+                <script
+                    type="application/ld+json"
+                    {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') } }}
+                />
+            )}
+            
             {/* H1 Oculto visualmente focado em SEO Local Dinâmico */}
             <h1 className="sr-only">{h1Title}</h1>
             <ClientProfileClient initialClient={client} />

@@ -141,19 +141,36 @@ export default function Home() {
         }
     }, [scrollyAd, trackedHomeAd]);
 
+    const websiteJsonLd = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "O Vermelhinho",
+        "url": "https://www.overmelhinho.com.br/",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://www.overmelhinho.com.br/busca?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    };
+
     return (
         <div className="min-h-screen bg-cloud-dancer pb-0 font-sans">
+            <script
+                type="application/ld+json"
+                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(websiteJsonLd).replace(/</g, '\\u003c') } }}
+            />
             <main className="px-4 pt-10 pb-0 max-w-6xl mx-auto space-y-20 md:px-6">
                 {/* 2. HERO & VUI (Busca Conversacional) */}
                 <section className="text-center space-y-10 py-10 md:py-16 relative">
                     <div className="space-y-3">
-                        <h1 className="text-3xl md:text-5xl text-gray-800 tracking-tighter leading-tight italic font-serif">
+                        <h1 className="sr-only">O Vermelhinho | Maior Guia de Empresas e Negócios da Serra Gaúcha</h1>
+                        <div aria-hidden="true" className="text-3xl md:text-5xl text-gray-800 tracking-tighter leading-tight italic font-serif">
                             <span className="font-normal">Encontre o melhor</span><br />
                             <span className="text-brand-red font-black relative inline-block min-h-[1em]">
                                 {currentPhrase || '\u200B'}
                                 <span className="absolute -right-1.5 top-1 bottom-1 w-1.5 bg-brand-red/70 animate-pulse"></span>
                             </span>
-                        </h1>
+                        </div>
                         <p className="text-gray-400 font-normal text-xs md:text-sm max-w-xl mx-auto leading-relaxed font-sans tracking-wide">Milhares de empresas, serviços e profissionais perto de você em um só clique.</p>
                     </div>
 
@@ -237,7 +254,7 @@ export default function Home() {
                                 <div key={idx} className="snap-center min-w-[85%] md:min-w-0 bg-white rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border-4 border-white flex flex-col gummy-card group">
                                     <Link href={clientLink} className="relative h-48 overflow-hidden block bg-gray-50 flex items-center justify-center">
                                         {item.img ? (
-                                            <img src={item.img} alt={item.name} className="w-full h-full object-contain p-4 md:p-6 group-hover:scale-110 transition-transform duration-1000" />
+                                            <img src={item.img} alt={`Logo da empresa ${item.name}`} className="w-full h-full object-contain p-4 md:p-6 group-hover:scale-110 transition-transform duration-1000" />
                                         ) : (
                                             <div className="flex flex-col items-center justify-center text-gray-200">
                                                 <Building2 size={48} className="opacity-20" />

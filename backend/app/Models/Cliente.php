@@ -66,6 +66,8 @@ class Cliente extends Model
         'seo_keywords',
         'seo_keywords_source',
         'seo_keywords_updated_at',
+        'seo_title',
+        'seo_description',
         'tiny_id',
         'status_assinatura',
         'tipo_cliente',

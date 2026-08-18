@@ -22,6 +22,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\SendDailyQuotesReport::class,
         \App\Console\Commands\PopulateIndexingQueue::class,
         \App\Console\Commands\ProcessIndexingQueue::class,
+        \App\Console\Commands\PruneSeoRankings::class,
     ];
 
     /**
@@ -58,6 +59,12 @@ class Kernel extends ConsoleKernel
 
         // 📡 Envia URLs pendentes para a Google Indexing API diariamente às 02:00
         $schedule->command('seo:process-indexing-queue')->dailyAt('02:00');
+        
+        // 📈 Rastreamento de posições no Google Search Console (Fracionado, apenas ativos) diariamente
+        $schedule->command('seo:check-rankings')->dailyAt('02:30');
+        
+        // 🧹 Limpeza de banco de dados do histórico do GSC (Todo Domingo às 04:00)
+        $schedule->command('seo:prune-rankings')->weeklyOn(0, '04:00');
     }
 
     /**

@@ -36,10 +36,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const clientsRes = await fetch(`${apiUrl}/public/sitemap-data`, { cache: 'no-store' });
     if (clientsRes.ok) {
       const clients = await clientsRes.json();
-      clients.forEach((client: { id: string | number, slug: string | null, updated_at: string }) => {
+      clients.forEach((client: any) => {
         const slug = client.slug || client.id;
+        
+        const address = client.enderecos?.[0] || {};
+        const addressCity = address.cidade || '';
+        const citiesServed = client.cidades_atendidas || [];
+        
+        let targetCity = addressCity;
+        if (citiesServed.length > 0) {
+            const hasAddressCityInServed = citiesServed.some((c: any) => 
+                c.nome.toLowerCase().trim() === addressCity.toLowerCase().trim()
+            );
+            if (!hasAddressCityInServed) {
+                targetCity = citiesServed[0].nome;
+            }
+        }
+        
+        const citySlug = targetCity ? slugify(targetCity) : 'cidade';
+        const segmentName = client.segmentos?.[0]?.nome || 'segmento';
+        const segmentSlug = slugify(segmentName);
+
         sitemapData.push({
-          url: `${baseUrl}/cliente/${slug}`,
+          url: `${baseUrl}/${citySlug}/${segmentSlug}/${slug}`,
           lastModified: new Date(client.updated_at),
           changeFrequency: 'weekly',
           priority: 0.7,

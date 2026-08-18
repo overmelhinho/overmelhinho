@@ -92,76 +92,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     // Padrão H1: Idêntico ao Title para relevância máxima
     const h1Title = `${segment} em ${city} - ${uf}: ${client.nome_fantasia}`;
     
-    // Esquemas JSON-LD para SEO
-    const breadcrumbJsonLd = {
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-            {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Home",
-                "item": SITE_URL
-            },
-            {
-                "@type": "ListItem",
-                "position": 2,
-                "name": segment || "Empresas",
-                "item": `${SITE_URL}/busca?segmento=${client.segmentos?.[0]?.id || ''}`
-            },
-            {
-                "@type": "ListItem",
-                "position": 3,
-                "name": client.nome_fantasia,
-                "item": `${SITE_URL}/cliente/${client.slug || client.id}`
-            }
-        ]
-    };
-
-    const localBusinessJsonLd = client.enderecos?.length > 0 
-        ? client.enderecos.map((end: any, index: number) => ({
-            "@context": "https://schema.org",
-            "@type": "LocalBusiness",
-            "name": client.enderecos.length > 1 ? `${client.nome_fantasia} - ${end.nome_unidade || `Unidade ${index + 1}`}` : client.nome_fantasia,
-            "image": client.logotipo_url || client.galeria?.[0]?.url,
-            "description": client.descricao,
-            "address": {
-                "@type": "PostalAddress",
-                "streetAddress": end.exibir_apenas_cidade ? undefined : `${end.rua || ''}, ${end.numero || ''}${end.complemento ? `, ${end.complemento}` : ''}`,
-                "addressLocality": end.cidade || '',
-                "addressRegion": end.estado || '',
-                "postalCode": end.exibir_apenas_cidade ? undefined : (end.cep || ''),
-                "addressCountry": "BR"
-            },
-            "geo": (end.latitude && !end.exibir_apenas_cidade) ? {
-                "@type": "GeoCoordinates",
-                "latitude": end.latitude,
-                "longitude": end.longitude
-            } : undefined,
-            "url": `${SITE_URL}/cliente/${client.slug || client.id}`,
-            "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone),
-            "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
-                "@type": "City",
-                "name": c.nome,
-                "addressRegion": c.uf || "RS",
-                "addressCountry": "BR"
-            })) : undefined,
-        }))
-        : null;
-
     return (
         <>
-            <script
-                type="application/ld+json"
-                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, '\\u003c') } }}
-            />
-            {localBusinessJsonLd && (
-                <script
-                    type="application/ld+json"
-                    {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') } }}
-                />
-            )}
-            
             {/* H1 Oculto visualmente ou passado para o componente para garantir SEO */}
             <h1 className="sr-only">{h1Title}</h1>
             
