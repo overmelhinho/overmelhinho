@@ -175,6 +175,7 @@ class SeoInsightController extends Controller
                 'status' => 'processing',
                 'position' => 0,
                 'impressions' => 0,
+                'clicks' => 0,
                 'ctr' => 0
             ]
         );
