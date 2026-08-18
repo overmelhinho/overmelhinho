@@ -77,6 +77,7 @@ class ProcessClienteSeoJob implements ShouldQueue
             ->keyBy('keyword');
 
         $ignoredKeywords = [];
+        $hasAnomalies = false;
 
         foreach ($allKeywords as $keyword) {
             $lastRecord = $latestRankings->get($keyword);
@@ -148,6 +149,7 @@ class ProcessClienteSeoJob implements ShouldQueue
                     $suggestion = $aiService->generateSeoSuggestions($keyword, $insightUrl, $insightType);
 
                     if (!empty($suggestion) && isset($suggestion['title'])) {
+                        $hasAnomalies = true;
                         $this->cliente->update([
                             'seo_title' => $suggestion['title'],
                             'seo_description' => $suggestion['description']
@@ -169,6 +171,7 @@ class ProcessClienteSeoJob implements ShouldQueue
                             ])
                         ]);
                     } else {
+                        $hasAnomalies = true;
                         SeoInsight::updateOrCreate(
                             ['cliente_id' => $this->cliente->id, 'keyword' => $keyword, 'status' => 'pending'],
                             [
@@ -188,6 +191,7 @@ class ProcessClienteSeoJob implements ShouldQueue
 
             // Alerta de Queda
             if ($previousPosition && $position > 0 && ($position > $previousPosition + 3)) {
+                $hasAnomalies = true;
                 $this->createAlertTicket($keyword, $previousPosition, $position);
                 SeoInsight::updateOrCreate(
                     ['cliente_id' => $this->cliente->id, 'keyword' => $keyword, 'status' => 'pending'],
@@ -201,6 +205,25 @@ class ProcessClienteSeoJob implements ShouldQueue
                 ->whereIn('keyword', $ignoredKeywords)
                 ->where('status', 'pending')
                 ->update(['status' => 'ignored']);
+        }
+        
+        // Finaliza o registro de scan_progress
+        $progressRecord = SeoInsight::where('cliente_id', $this->cliente->id)
+            ->where('insight_type', 'scan_progress')
+            ->first();
+
+        if ($progressRecord) {
+            if ($hasAnomalies) {
+                // Se achou problemas reais, limpa a mensagem temporária
+                $progressRecord->delete();
+            } else {
+                // Se está tudo saudável, transforma a linha em um check de auditoria
+                $progressRecord->update([
+                    'insight_type' => 'scan_ok',
+                    'status' => 'healthy',
+                    'keyword' => 'Varredura finalizada. Tudo 100% saudável!'
+                ]);
+            }
         }
         
         Log::info("Finalizado SEO Check Job para Cliente ID: {$this->cliente->id}");

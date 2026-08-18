@@ -414,6 +414,10 @@ export default function SeoInsightsPage() {
                                 <span className="flex items-center gap-1 text-purple-600 text-xs font-semibold animate-pulse">
                                   <Loader className="w-3 h-3 animate-spin" /> Buscando no Google...
                                 </span>
+                            ) : insight.status === 'healthy' ? (
+                                <span className="flex items-center gap-1 text-green-600 text-xs font-semibold">
+                                  <CheckCircle className="w-3 h-3" /> SEO Saudável
+                                </span>
                             ) : isLowCtr ? (
                               <span className="flex items-center gap-1 text-red-600 text-xs font-semibold">
                                 <AlertTriangle className="w-3 h-3" /> CTR Baixo
@@ -428,6 +432,10 @@ export default function SeoInsightsPage() {
                             {insight.status === 'processing' ? (
                                 <div className="text-[10px] text-gray-400 font-bold uppercase animate-pulse">
                                   Aguarde...
+                                </div>
+                            ) : insight.status === 'healthy' ? (
+                                <div className="text-[10px] text-gray-400 font-bold uppercase">
+                                  Nenhuma anomalia de CTR ou Posição
                                 </div>
                             ) : (
                               <div className="flex gap-4">
@@ -452,6 +460,13 @@ export default function SeoInsightsPage() {
                                 <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded font-semibold border border-gray-200 flex items-center gap-1">
                                   <Clock className="w-3 h-3" /> Processando
                                 </span>
+                              ) : insight.status === 'healthy' ? (
+                                <div className="flex gap-2">
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-semibold border border-green-200 flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3" /> Auditado hoje
+                                  </span>
+                                  <button onClick={() => handleAction(insight.id, 'ignored')} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 rounded font-semibold border border-gray-200" title="Ciente">Ok / Limpar</button>
+                                </div>
                               ) : insight.status === 'auto_applied' ? (
                                 <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-semibold border border-purple-200 flex items-center gap-1">
                                   <Sparkles className="w-3 h-3" /> Auto-Apply

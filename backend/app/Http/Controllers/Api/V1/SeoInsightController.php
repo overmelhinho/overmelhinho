@@ -164,23 +164,28 @@ class SeoInsightController extends Controller
             ], 400);
         }
 
+        $tempInsight = \App\Models\SeoInsight::updateOrCreate(
+            [
+                'cliente_id' => $cliente->id,
+                'insight_type' => 'scan_progress'
+            ],
+            [
+                'keyword' => 'Buscando dados no Google...',
+                'url' => 'https://www.overmelhinho.com.br/' . $cliente->slug,
+                'status' => 'processing',
+                'position' => 0,
+                'impressions' => 0,
+                'ctr' => 0
+            ]
+        );
+        $tempInsight->load('cliente:id,nome_fantasia,slug');
+
         // Dispara o Job em background
         ProcessClienteSeoJob::dispatch($cliente);
 
         return response()->json([
             'message' => 'Varredura SEO iniciada com sucesso. Os resultados aparecerão em breve.',
-            'temp_insight' => [
-                'id' => 'temp_' . time(),
-                'cliente_id' => $cliente->id,
-                'cliente' => ['id' => $cliente->id, 'nome_fantasia' => $cliente->nome_fantasia, 'slug' => $cliente->slug],
-                'keyword' => 'Em andamento...',
-                'url' => 'https://www.overmelhinho.com.br/' . $cliente->slug,
-                'insight_type' => 'scanning',
-                'status' => 'processing',
-                'position' => 0,
-                'impressions' => 0,
-                'ctr' => 0,
-            ]
+            'temp_insight' => $tempInsight
         ]);
     }
 }
