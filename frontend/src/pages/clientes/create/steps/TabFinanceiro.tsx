@@ -1552,7 +1552,10 @@ export default function TabFinanceiro() {
                     setAuthToEdit(null);
                 }}
                 autorizacao={authToEdit}
-                onSuccess={refetchAuths}
+                onSuccess={() => {
+                    refetchAuths();
+                    refetchInvoices();
+                }}
             />
 
             <TransferAutorizacaoModal

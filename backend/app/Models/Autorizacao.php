@@ -153,6 +153,63 @@ class Autorizacao extends Model
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /**
+     * Sincroniza as parcelas do contrato (AutorizacaoParcela) com as faturas reais (Invoice).
+     * E regenera o PDF mantendo o mesmo número e caminho.
+     */
+    public static function syncParcelasWithInvoices(int $autorizacaoId)
+    {
+        $autorizacao = self::with(['parcelas'])->find($autorizacaoId);
+        if (!$autorizacao) {
+            return;
+        }
+
+        // Busca as faturas desta autorização
+        $invoices = \App\Models\Invoice::where('group_id', 'autorizacao-' . $autorizacaoId)
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return; // Evita apagar tudo se der erro ou se não houver faturas
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($autorizacao, $invoices) {
+            // Apaga as parcelas antigas
+            $autorizacao->parcelas()->delete();
+
+            $numero = 1;
+            $totalParcels = $invoices->count();
+
+            foreach ($invoices as $invoice) {
+                $autorizacao->parcelas()->create([
+                    'numero' => $numero++,
+                    'vencimento' => $invoice->due_date,
+                    'valor' => $invoice->amount,
+                    'payable_amount' => $invoice->payable_amount ?: $invoice->amount,
+                    'invoice_id' => $invoice->id,
+                ]);
+            }
+
+            // Opcional: Atualizar num_parcelas na autorização se mudou
+            if ($autorizacao->num_parcelas != $totalParcels) {
+                $autorizacao->updateQuietly(['num_parcelas' => $totalParcels]);
+            }
+        });
+
+        // Regenerar o PDF
+        $autorizacao->load(['cliente.enderecos', 'cliente.contatos', 'vendedor', 'parcelas']);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.autorizacao', ['autorizacao' => $autorizacao])
+            ->setPaper('a4', 'portrait')
+            ->setOption(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'defaultFont' => 'sans-serif']);
+
+        $filename = "autorizacoes/autorizacao-{$autorizacao->numero}.pdf";
+        \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $pdf->output());
+        
+        $autorizacao->updateQuietly(['pdf_path' => $filename]);
+    }
+
+    /**
      * Gera o próximo número sequencial de autorização.
      */
     public static function proximoNumero(): string

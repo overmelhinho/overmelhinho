@@ -42,7 +42,7 @@ class AutorizacaoController extends Controller
             $healed = true;
         }
 
-        $query = Autorizacao::with(['cliente:id,nome_fantasia,cpf_cnpj', 'vendedor:id,name', 'plan'])
+        $query = Autorizacao::with(['cliente:id,nome_fantasia,cpf_cnpj', 'vendedor:id,name', 'plan', 'parcelas.invoice'])
             ->orderByDesc('id');
 
         if ($request->filled('status')) {
@@ -678,6 +678,7 @@ class AutorizacaoController extends Controller
     {
         $createdIds = [];
         $syncedIds = [];
+        $processedInvoiceIds = [];
 
         foreach ($autorizacao->parcelas as $parcela) {
             $invoice = null;
@@ -686,8 +687,7 @@ class AutorizacaoController extends Controller
                 $invoice = Invoice::find($parcela->invoice_id);
             }
 
-            // Proteção contra duplicidade: Se a fatura já existe (ex: foi preservada por estar paga), 
-            // vinculamos a parcela a ela em vez de criar uma duplicata
+            // Proteção contra duplicidade: Se a fatura já existe, vinculamos a parcela a ela
             if (!$invoice) {
                 $invoice = Invoice::where(function($q) use ($autorizacao) {
                     $q->where('group_id', 'autorizacao-' . $autorizacao->id)
@@ -695,13 +695,19 @@ class AutorizacaoController extends Controller
                 })
                 ->where('parcel_number', $parcela->numero)
                 ->first();
-
-                if ($invoice) {
-                    $parcela->update(['invoice_id' => $invoice->id]);
-                }
             }
 
-            if (!$invoice) {
+            if ($invoice) {
+                // Atualiza a fatura existente (usando updateQuietly para não disparar o InvoiceObserver e gerar loop)
+                $invoice->updateQuietly([
+                    'amount'         => $parcela->valor,
+                    'payable_amount' => $parcela->payable_amount,
+                    'due_date'       => $parcela->vencimento,
+                    'total_parcels'  => $autorizacao->num_parcelas,
+                ]);
+                $parcela->update(['invoice_id' => $invoice->id]);
+                $processedInvoiceIds[] = $invoice->id;
+            } else {
                 $invoice = Invoice::create([
                     'client_id'      => $autorizacao->cliente_id,
                     'plan_id'        => $autorizacao->plan_id,
@@ -719,6 +725,7 @@ class AutorizacaoController extends Controller
                 ]);
                 $parcela->update(['invoice_id' => $invoice->id, 'status' => 'pendente']);
                 $createdIds[] = $invoice->id;
+                $processedInvoiceIds[] = $invoice->id;
             }
 
             // Envia ao Tiny se ainda não tiver ID lá
@@ -739,10 +746,24 @@ class AutorizacaoController extends Controller
             }
         }
 
+        // Remove faturas órfãs (caso o número de parcelas tenha sido reduzido no contrato)
+        if (!empty($processedInvoiceIds)) {
+            $orphans = Invoice::where(function($q) use ($autorizacao) {
+                $q->where('group_id', 'autorizacao-' . $autorizacao->id)
+                  ->orWhere('group_id', (string)$autorizacao->id);
+            })->whereNotIn('id', $processedInvoiceIds)->get();
+
+            foreach ($orphans as $orphan) {
+                if ($orphan->status !== 'paid') {
+                    $orphan->delete();
+                }
+            }
+        }
+
         return [
             'created' => $createdIds,
             'synced'  => $syncedIds,
-            'total_processed' => count($createdIds) + count($syncedIds)
+            'total_processed' => count($processedInvoiceIds)
         ];
     }
     

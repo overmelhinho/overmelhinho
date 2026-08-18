@@ -215,35 +215,75 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
             if (parts.length !== 3) return;
 
             const [y, m, d] = parts.map(Number);
-            const start = new Date(y, m - 1, d);
+            let dateCursor = new Date(y, m - 1, d);
             
-            if (isNaN(start.getTime())) return;
+            if (isNaN(dateCursor.getTime())) return;
 
-            const finalPayable = totals.finalPayable;
+            let remainingPayable = totals.finalPayable;
+            let remainingCount = num;
+            const newParcelas: any[] = [];
+            const originalParcelas = autorizacao?.parcelas || [];
 
-            if (finalPayable <= 0) {
-                setParcelasPreview([{ numero: 1, vencimento: form.data_primeira_parcela, label: format(start, "dd/MM/yyyy"), valor: "0.00" }]);
-                return;
+            // 1. Resgatar as parcelas originais que estão pagas
+            for (let i = 0; i < num; i++) {
+                const orig = originalParcelas[i];
+                const isPaid = orig && (orig.status === 'pago' || orig.status === 'paid' || (orig.invoice && orig.invoice.status === 'paid'));
+                
+                if (isPaid) {
+                    const valStr = String(orig.valor || orig.payable_amount || "0");
+                    const val = parseFloat(valStr) || 0;
+                    remainingPayable -= val;
+                    remainingCount--;
+
+                    let label = "Data Inválida";
+                    let venc = orig.vencimento;
+                    try {
+                        const dateStr = orig.vencimento.split('T')[0];
+                        venc = dateStr;
+                        const date = new Date(dateStr + 'T12:00:00');
+                        label = format(date, "dd/MM/yyyy");
+                    } catch (e) {}
+
+                    newParcelas.push({
+                        numero: i + 1,
+                        vencimento: venc,
+                        label: label,
+                        valor: val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                        isPaid: true
+                    });
+                } else {
+                    newParcelas.push(null);
+                }
             }
 
-            const baseVal = Math.floor((finalPayable / num) * 100) / 100;
-            const diff = finalPayable - (baseVal * num);
+            // 2. Distribuir o saldo restante nas parcelas pendentes
+            if (remainingPayable < 0) remainingPayable = 0;
+            
+            if (remainingCount > 0) {
+                const baseVal = Math.floor((remainingPayable / remainingCount) * 100) / 100;
+                let diff = remainingPayable - (baseVal * remainingCount);
 
-            const newParcelas = Array.from({ length: num }).map((_, i) => {
-                const date = addMonths(start, i);
-                return {
-                    numero: i + 1,
-                    vencimento: format(date, "yyyy-MM-dd"),
-                    label: format(date, "dd/MM/yyyy"),
-                    valor: (i === num - 1 ? (baseVal + diff) : baseVal).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                };
-            });
-            setParcelasPreview(newParcelas);
+                for (let i = 0; i < num; i++) {
+                    if (newParcelas[i] === null) {
+                        newParcelas[i] = {
+                            numero: i + 1,
+                            vencimento: format(dateCursor, "yyyy-MM-dd"),
+                            label: format(dateCursor, "dd/MM/yyyy"),
+                            valor: (diff !== 0 ? (baseVal + diff) : baseVal).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                            isPaid: false
+                        };
+                        diff = 0;
+                    }
+                    dateCursor = addMonths(dateCursor, 1);
+                }
+            }
+
+            setParcelasPreview(newParcelas as any[]);
         } catch (error) {
             console.error("Erro ao gerar preview de parcelas:", error);
             setParcelasPreview([]);
         }
-    }, [form.valor_total, form.taxa_cadastro, form.num_parcelas, form.data_primeira_parcela, form.desconto_valor, form.desconto_tipo, form.is_permuta, form.permuta_amount]);
+    }, [form.valor_total, form.taxa_cadastro, form.num_parcelas, form.data_primeira_parcela, form.desconto_valor, form.desconto_tipo, form.is_permuta, form.permuta_amount, autorizacao]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -361,23 +401,6 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                                 </span>
                             </div>
                         </div>
-                        {autorizacao?.status === 'assinado' && (
-                            <div className="mb-8 p-6 bg-yellow-50 border border-yellow-200 rounded-[24px]">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-2xl flex items-center justify-center shrink-0">
-                                        <AlertTriangle size={24} />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-lg font-black text-yellow-900 tracking-tight">Contrato Assinado</h4>
-                                        <p className="text-sm font-medium text-yellow-800/90 mt-1 leading-relaxed">
-                                            Este contrato já está assinado. As alterações serão salvas mantendo a assinatura válida e atual.<br/><br/>
-                                            <span className="font-bold">Atenção:</span> Se você alterar o financeiro (valores ou parcelas), novas faturas serão geradas e <span className="font-bold underline decoration-yellow-400 underline-offset-2">você precisará cancelar manualmente as faturas antigas no Tiny ERP.</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                             {/* COLUNA ESQUERDA: PUBLICIDADE E ASSINATURA */}
                             <div className="space-y-10">
@@ -666,25 +689,27 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                             
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {parseInt(form.num_parcelas) > 0 && parcelasPreview.length > 0 && parcelasPreview.map((p, idx) => (
-                                    <div key={idx} className="bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                    <div key={idx} className={cn("p-2 rounded-xl border", p.isPaid ? "bg-green-50 border-green-100 opacity-80" : "bg-gray-50 border-gray-100")}>
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="text-[9px] font-black text-gray-400 uppercase">{p.numero}ª Parcela</span>
+                                            <span className="text-[9px] font-black text-gray-400 uppercase">{p.numero}ª Parcela {p.isPaid && <span className="text-green-600 bg-green-100 px-1 rounded">(PAGA)</span>}</span>
                                         </div>
                                         <div className="space-y-2">
                                             <div className="relative">
-                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-[10px]">R$</span>
+                                                <span className={cn("absolute left-2 top-1/2 -translate-y-1/2 font-bold text-[10px]", p.isPaid ? "text-green-600" : "text-gray-400")}>R$</span>
                                                 <Input
                                                     type="text"
                                                     value={p.valor}
+                                                    disabled={p.isPaid}
                                                     onChange={(e) => handleParcelaValorChange(idx, e.target.value)}
-                                                    className="h-7 text-xs font-bold border-gray-200 rounded-lg pl-7 pr-2 focus:ring-blue-500 transition-all"
+                                                    className={cn("h-7 text-xs font-bold rounded-lg pl-7 pr-2 transition-all", p.isPaid ? "border-green-200 bg-green-50/50 text-green-700 cursor-not-allowed" : "border-gray-200 focus:ring-blue-500")}
                                                 />
                                             </div>
                                             <Input
                                                 type="date"
                                                 value={p.vencimento}
+                                                disabled={p.isPaid}
                                                 onChange={(e) => handleParcelaDateChange(idx, e.target.value)}
-                                                className="h-7 text-xs font-bold border-gray-200 rounded-lg px-2 w-full focus:ring-blue-500 transition-all"
+                                                className={cn("h-7 text-xs font-bold rounded-lg px-2 w-full transition-all", p.isPaid ? "border-green-200 bg-green-50/50 text-green-700 cursor-not-allowed" : "border-gray-200 focus:ring-blue-500")}
                                             />
                                         </div>
                                     </div>
