@@ -5,6 +5,13 @@ import JobDetailClient from './JobDetailClient';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
 
+const formatStorageUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('v1/object/public/')) return `https://spefwgjsltjryxcizype.supabase.co/storage/${url}`;
+    return `https://api.overmelhinho.com.br/storage/${url}`;
+};
+
 interface Job {
     id: number;
     title: string;
@@ -82,9 +89,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             description,
             type: 'website',
             images: job.client?.logo_url ? [
-                job.client.logo_url.startsWith('http') 
-                    ? job.client.logo_url 
-                    : `https://api.overmelhinho.com.br/storage/${job.client.logo_url}`
+                formatStorageUrl(job.client.logo_url) as string
             ] : [],
         },
         alternates: {
@@ -139,7 +144,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         requirements: j.experience_required ? [j.experience_required] : [],
         benefits: [],
         contact: j.contact_whatsapp || j.contact_email || 'Não informado',
-        logo: j.client?.logo_url ? (j.client.logo_url.startsWith('http') ? j.client.logo_url : `https://api.overmelhinho.com.br/storage/${j.client.logo_url}`) : undefined,
+        logo: formatStorageUrl(j.client?.logo_url),
         clientSlug: j.client?.slug,
         whatsapp: (j.contact_whatsapp) || (j.client?.contatos?.[0]?.whatsapp_selected) || (j.client?.contatos?.[0]?.exibir_tel_principal && j.client?.contatos?.[0]?.has_whatsapp_principal ? j.client?.contatos?.[0]?.telefone_principal : null) || (j.client?.contatos?.[0]?.exibir_celular && j.client?.contatos?.[0]?.has_whatsapp_celular ? j.client?.contatos?.[0]?.celular : null) || null,
     };
@@ -223,14 +228,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     return (
         <>
             {/* 🤖 Dados Estruturados para o Google */}
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingJsonLd) }}
-            />
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-            />
+            <script type="application/ld+json">
+                {JSON.stringify(jobPostingJsonLd)}
+            </script>
+            <script type="application/ld+json">
+                {JSON.stringify(breadcrumbJsonLd)}
+            </script>
 
             {/* H1 para semântica do Google SEO */}
             <h1 className="sr-only">{h1Title}</h1>

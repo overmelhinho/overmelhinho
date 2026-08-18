@@ -21,6 +21,13 @@ import { useRouter } from 'next/navigation';
 import { slugify } from '@/utils/slugify';
 
 // ── TIPOS ─────────────────────────────────────────────────────────
+const formatStorageUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('v1/object/public/')) return `https://spefwgjsltjryxcizype.supabase.co/storage/${url}`;
+    return `https://api.overmelhinho.com.br/storage/${url}`;
+};
+
 interface Job {
     id: number;
     title: string;
@@ -117,7 +124,7 @@ export default function VagasPage() {
                     requirements: j.experience_required ? [j.experience_required] : [],
                     benefits: [], // TODO: Mapear se houver no backend
                     contact: j.contact_whatsapp || j.contact_email || 'Não informado',
-                    logo: j.client?.logo_url ? (j.client.logo_url.startsWith('http') ? j.client.logo_url : `https://api.overmelhinho.com.br/storage/${j.client.logo_url}`) : undefined,
+                    logo: formatStorageUrl(j.client?.logo_url),
                     clientSlug: j.client?.slug,
                     whatsapp: (j.contact_whatsapp) || (j.client?.contatos?.[0]?.whatsapp_selected) || (j.client?.contatos?.[0]?.exibir_tel_principal && j.client?.contatos?.[0]?.has_whatsapp_principal ? j.client?.contatos?.[0]?.telefone_principal : null) || (j.client?.contatos?.[0]?.exibir_celular && j.client?.contatos?.[0]?.has_whatsapp_celular ? j.client?.contatos?.[0]?.celular : null) || null,
                 }));

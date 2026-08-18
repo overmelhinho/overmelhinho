@@ -233,9 +233,9 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                                             <div key={client.id} className="bg-white rounded-[2rem] md:rounded-[2rem] shadow-xl border border-white group overflow-hidden flex flex-col hover:shadow-2xl transition-all duration-300">
                                                 <Link href={seoUrl} className="flex flex-col flex-1 relative">
                                                     <div className="h-48 relative overflow-hidden bg-gray-50">
-                                                        {client.banner_url || client.galeria?.[0]?.url ? (
+                                                        {client.banner_url ? (
                                                             <Image 
-                                                                src={client.banner_url || client.galeria[0].url} 
+                                                                src={client.banner_url} 
                                                                 alt={client.nome_fantasia} 
                                                                 fill
                                                                 sizes="(max-width: 768px) 100vw, 33vw"

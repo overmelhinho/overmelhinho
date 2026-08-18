@@ -625,9 +625,9 @@ function SearchContent() {
                                 >
                                     {matchPerfeito.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(matchPerfeito.status_assinatura) && (
                                         <div className="w-full md:w-2/5 h-40 md:h-auto relative overflow-hidden flex-shrink-0">
-                                            {matchPerfeito.banner_url || matchPerfeito.galeria?.[0]?.url ? (
+                                            {matchPerfeito.banner_url ? (
                                                 <Image 
-                                                    src={matchPerfeito.banner_url || matchPerfeito.galeria[0].url} 
+                                                    src={matchPerfeito.banner_url} 
                                                     fill
                                                     sizes="(max-width: 768px) 100vw, 50vw"
                                                     priority
@@ -752,9 +752,9 @@ function SearchContent() {
                                                 className="bg-white rounded-[2rem] md:rounded-[2rem] shadow-xl border border-white gummy-card group overflow-hidden cursor-pointer flex flex-col"
                                             >
                                                 <div className="h-20 md:h-24 overflow-hidden relative flex-shrink-0">
-                                                    {item.banner_url || item.galeria?.[0]?.url ? (
+                                                    {item.banner_url ? (
                                                         <Image 
-                                                            src={item.banner_url || item.galeria[0].url} 
+                                                            src={item.banner_url} 
                                                             fill
                                                             sizes="(max-width: 768px) 100vw, 33vw"
                                                             priority={blockIdx === 0 && itemIdx < 2}
