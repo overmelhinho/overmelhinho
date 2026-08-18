@@ -20,7 +20,7 @@ export default function SeoInsightsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [insightType, setInsightType] = useState("");
-  const [status, setStatus] = useState("pending");
+  const [status, setStatus] = useState("all");
   const [sortBy, setSortBy] = useState("impressions");
   const [sortOrder, setSortOrder] = useState("desc");
 
@@ -36,6 +36,14 @@ export default function SeoInsightsPage() {
   
   // Linhas expandidas
   const [expandedRows, setExpandedRows] = useState<number[]>([]);
+
+  // Estado para Forçar Varredura
+  const [showForceScanModal, setShowForceScanModal] = useState(false);
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [clientSearchResults, setClientSearchResults] = useState<any[]>([]);
+  const [isSearchingClients, setIsSearchingClients] = useState(false);
+  const [selectedClientToScan, setSelectedClientToScan] = useState<any | null>(null);
+  const [isForcingScan, setIsForcingScan] = useState(false);
 
   const fetchInsights = useCallback(async () => {
     setLoading(true);
@@ -69,6 +77,25 @@ export default function SeoInsightsPage() {
   useEffect(() => {
     fetchInsights();
   }, [fetchInsights]);
+
+  useEffect(() => {
+    if (!clientSearchQuery || clientSearchQuery.length < 2) {
+      setClientSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingClients(true);
+      try {
+        const { data } = await api.get(`/v1/clientes?q=${clientSearchQuery}&lite=1`);
+        setClientSearchResults(data.data || []);
+      } catch (err) {
+        console.error("Erro ao buscar clientes", err);
+      } finally {
+        setIsSearchingClients(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [clientSearchQuery]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -132,6 +159,22 @@ export default function SeoInsightsPage() {
     }
   };
 
+  const handleForceScan = async () => {
+    if (!selectedClientToScan) return;
+    setIsForcingScan(true);
+    try {
+      await api.post('/v1/seo-insights/force-scan', { cliente_id: selectedClientToScan.id });
+      toast.success("Varredura SEO iniciada em background! Isso pode levar alguns minutos.");
+      setShowForceScanModal(false);
+      setSelectedClientToScan(null);
+      setClientSearchQuery("");
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Erro ao iniciar a varredura SEO.");
+    } finally {
+      setIsForcingScan(false);
+    }
+  };
+
   const renderPagination = () => {
     if (!pagination || pagination.last_page <= 1) return null;
     return (
@@ -180,6 +223,15 @@ export default function SeoInsightsPage() {
             <p className="text-gray-500 mt-1">
               Gerencie e otimize os alertas detectados pelo motor do Vermelhinho em larga escala.
             </p>
+          </div>
+          <div className="mt-4 md:mt-0">
+            <button 
+              onClick={() => setShowForceScanModal(true)}
+              className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors flex items-center gap-2"
+            >
+              <Zap className="w-4 h-4 text-yellow-400" />
+              Forçar Varredura Manual
+            </button>
           </div>
         </div>
 
@@ -653,6 +705,79 @@ export default function SeoInsightsPage() {
               <button onClick={() => setShowInfoModal(false)} className="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors">
                 Entendi, fechar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Forçar Varredura */}
+      {showForceScanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
+            <div className="bg-gray-900 border-b border-gray-800 p-5 flex justify-between items-center text-white">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-400" />
+                Forçar Varredura Manual
+              </h2>
+              <button onClick={() => setShowForceScanModal(false)} className="text-gray-400 hover:text-white">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-500 mb-4">
+                Selecione um cliente para forçar o motor SEO a rodar instantaneamente. Ele irá ler o Google Search Console e o Serper.dev para detectar oportunidades de melhoria.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-700 mb-1">Buscar Cliente</label>
+                <div className="relative">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                  <input 
+                    type="text" 
+                    placeholder="Digite o nome fantasia..." 
+                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                    value={clientSearchQuery}
+                    onChange={(e) => setClientSearchQuery(e.target.value)}
+                  />
+                </div>
+                
+                {/* Resultados da Busca */}
+                {isSearchingClients ? (
+                  <div className="mt-2 text-center text-sm text-gray-500 py-2"><Loader className="w-4 h-4 animate-spin inline-block mr-1"/> Buscando...</div>
+                ) : clientSearchResults.length > 0 ? (
+                  <div className="mt-2 border border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-sm">
+                    {clientSearchResults.map(client => (
+                      <div 
+                        key={client.id}
+                        className={`px-4 py-2 text-sm cursor-pointer border-b last:border-b-0 flex items-center justify-between ${selectedClientToScan?.id === client.id ? 'bg-purple-50 text-purple-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}
+                        onClick={() => setSelectedClientToScan(client)}
+                      >
+                        {client.nome_fantasia}
+                        {selectedClientToScan?.id === client.id && <CheckCircle className="w-4 h-4 text-purple-600" />}
+                      </div>
+                    ))}
+                  </div>
+                ) : clientSearchQuery.length >= 2 ? (
+                  <div className="mt-2 text-center text-sm text-gray-500 py-2">Nenhum cliente encontrado.</div>
+                ) : null}
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button 
+                  onClick={() => setShowForceScanModal(false)} 
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleForceScan} 
+                  disabled={!selectedClientToScan || isForcingScan}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isForcingScan ? <Loader className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 text-yellow-400" />}
+                  Iniciar Varredura
+                </button>
+              </div>
             </div>
           </div>
         </div>

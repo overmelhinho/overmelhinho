@@ -133,6 +133,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Insights de SEO Proativo
     Route::get('/seo-insights', [SeoInsightController::class, 'index']);
     Route::post('/seo-insights/bulk-action', [SeoInsightController::class, 'bulkAction']);
+    Route::post('/seo-insights/force-scan', [SeoInsightController::class, 'forceScan']);
     Route::post('/seo-insights/{id}/action', [SeoInsightController::class, 'updateAction']);
     Route::post('/seo-insights/{id}/generate-ai', [SeoInsightController::class, 'generateAi']);
 

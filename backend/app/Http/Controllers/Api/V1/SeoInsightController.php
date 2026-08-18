@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SeoInsight;
+use App\Models\Cliente;
 use App\Services\ClientAiService;
+use App\Jobs\ProcessClienteSeoJob;
 
 class SeoInsightController extends Controller
 {
@@ -136,6 +138,31 @@ class SeoInsightController extends Controller
             'message' => 'Otimizado com sucesso!',
             'insight' => $insight,
             'suggestion' => $suggestion
+        ]);
+    }
+
+    /**
+     * Força a varredura (SEO Job) para um cliente específico.
+     */
+    public function forceScan(Request $request)
+    {
+        $request->validate([
+            'cliente_id' => 'required|integer|exists:clientes,id'
+        ]);
+
+        $cliente = Cliente::findOrFail($request->cliente_id);
+
+        if (!$cliente->seo_enabled) {
+            return response()->json([
+                'error' => 'SEO não está ativado para este cliente.'
+            ], 400);
+        }
+
+        // Dispara o Job em background
+        ProcessClienteSeoJob::dispatch($cliente);
+
+        return response()->json([
+            'message' => 'Varredura SEO iniciada com sucesso. Os resultados aparecerão em breve.'
         ]);
     }
 }
