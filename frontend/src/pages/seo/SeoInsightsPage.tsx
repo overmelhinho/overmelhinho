@@ -465,7 +465,6 @@ export default function SeoInsightsPage() {
                                   <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-semibold border border-green-200 flex items-center gap-1">
                                     <CheckCircle className="w-3 h-3" /> Auditado hoje
                                   </span>
-                                  <button onClick={() => handleAction(insight.id, 'ignored')} className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 rounded font-semibold border border-gray-200" title="Ciente">Ok / Limpar</button>
                                 </div>
                               ) : insight.status === 'auto_applied' ? (
                                 <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-semibold border border-purple-200 flex items-center gap-1">
@@ -494,13 +493,15 @@ export default function SeoInsightsPage() {
                             </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-right">
-                            <button
-                              onClick={() => setExpandedRows(prev => prev.includes(insight.id) ? prev.filter(id => id !== insight.id) : [...prev, insight.id])}
-                              className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                              title="Ver Detalhes e Linha do Tempo"
-                            >
-                              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                            </button>
+                            {insight.status !== 'healthy' && insight.status !== 'processing' && (
+                              <button
+                                onClick={() => setExpandedRows(prev => prev.includes(insight.id) ? prev.filter(id => id !== insight.id) : [...prev, insight.id])}
+                                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                                title="Ver Detalhes e Linha do Tempo"
+                              >
+                                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                              </button>
+                            )}
                           </td>
                         </tr>
                         
