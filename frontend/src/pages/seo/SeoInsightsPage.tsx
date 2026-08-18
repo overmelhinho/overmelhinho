@@ -163,9 +163,15 @@ export default function SeoInsightsPage() {
     if (!selectedClientToScan) return;
     setIsForcingScan(true);
     try {
-      await api.post('/v1/seo-insights/force-scan', { cliente_id: selectedClientToScan.id });
+      const response = await api.post('/v1/seo-insights/force-scan', { cliente_id: selectedClientToScan.id });
       toast.success("Varredura SEO iniciada em background! Isso pode levar alguns minutos.");
       setShowForceScanModal(false);
+      
+      // Adiciona o insight temporário ao topo da tabela
+      if (response.data.temp_insight) {
+        setInsights(prev => [response.data.temp_insight, ...prev]);
+      }
+
       setSelectedClientToScan(null);
       setClientSearchQuery("");
     } catch (error: any) {
@@ -404,7 +410,11 @@ export default function SeoInsightsPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {isLowCtr ? (
+                            {insight.status === 'processing' ? (
+                                <span className="flex items-center gap-1 text-purple-600 text-xs font-semibold animate-pulse">
+                                  <Loader className="w-3 h-3 animate-spin" /> Buscando no Google...
+                                </span>
+                            ) : isLowCtr ? (
                               <span className="flex items-center gap-1 text-red-600 text-xs font-semibold">
                                 <AlertTriangle className="w-3 h-3" /> CTR Baixo
                               </span>
@@ -415,24 +425,34 @@ export default function SeoInsightsPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex gap-4">
-                              <div>
-                                <p className="text-[10px] text-gray-400 uppercase font-bold">Posição</p>
-                                <p className="font-semibold text-gray-900">#{insight.position}</p>
+                            {insight.status === 'processing' ? (
+                                <div className="text-[10px] text-gray-400 font-bold uppercase animate-pulse">
+                                  Aguarde...
+                                </div>
+                            ) : (
+                              <div className="flex gap-4">
+                                <div>
+                                  <p className="text-[10px] text-gray-400 uppercase font-bold">Posição</p>
+                                  <p className="font-semibold text-gray-900">#{insight.position}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-gray-400 uppercase font-bold">CTR</p>
+                                  <p className={`font-semibold ${isLowCtr ? 'text-red-600' : 'text-gray-900'}`}>{insight.ctr}%</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-gray-400 uppercase font-bold">Impr.</p>
+                                  <p className="font-semibold text-gray-900">{insight.impressions}</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-[10px] text-gray-400 uppercase font-bold">CTR</p>
-                                <p className={`font-semibold ${isLowCtr ? 'text-red-600' : 'text-gray-900'}`}>{insight.ctr}%</p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] text-gray-400 uppercase font-bold">Impr.</p>
-                                <p className="font-semibold text-gray-900">{insight.impressions}</p>
-                              </div>
-                            </div>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="flex flex-col items-end gap-2">
-                              {insight.status === 'auto_applied' ? (
+                              {insight.status === 'processing' ? (
+                                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded font-semibold border border-gray-200 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" /> Processando
+                                </span>
+                              ) : insight.status === 'auto_applied' ? (
                                 <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-semibold border border-purple-200 flex items-center gap-1">
                                   <Sparkles className="w-3 h-3" /> Auto-Apply
                                 </span>
