@@ -1,4 +1,4 @@
-﻿<RULE[safe_git_push]>
+<RULE[safe_git_push]>
 REGRA DE PUSH SEGURO (O Vermelhinho): Sempre que o usuário solicitar explicitamente 'suba para o github' ou 'deploy':
 1. Antes de realizar o commit, o agente DEVE revisar os arquivos que serão enviados (rodando 'git status') para garantir que não existem arquivos de dados (como backups .sql, logs, dumps ou pastas de scratch) que estejam aguardando upload.
 2. Se houver arquivos sensíveis ou grandes, adicione-os ao .gitignore antes de executar o 'git add .'.
@@ -21,6 +21,13 @@ pm run dev.
 </RULE[local_environment]>
 - O site principal (Next.js) deve ser iniciado na pasta site rodando 
 pm run dev (Porta 3000).
+
+<RULE[strict_local_validation]>
+**VALIDAÇÃO LOCAL OBRIGATÓRIA (TDD/Tinker)**: O agente está terminantemente PROIBIDO de realizar um `git push` ou dar uma tarefa de Backend/API como concluída sem antes testá-la no ambiente local.
+1. Se for uma nova Rota ou Controller, o agente DEVE fazer uma requisição real localmente (via `curl`, `Invoke-RestMethod` ou Script PHP) para provar que retorna 200 OK e não um Erro 500.
+2. Se for um Job ou lógica de Banco de Dados, o agente DEVE rodá-la via `php artisan tinker` e verificar o output.
+3. Não presuma que o código está certo apenas por inspeção visual. Falhas de banco de dados e campos nulos só aparecem ao rodar.
+</RULE[strict_local_validation]>
 
 <RULE[security_scanning_policy]>
 **Fluxo de Trabalho DevSecOps Obrigatório**:

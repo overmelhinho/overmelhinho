@@ -41,8 +41,10 @@ class ProcessClienteSeoJob implements ShouldQueue
         $serper = new \App\Services\SerperService();
         $aiService = new ClientAiService();
         
+        $cidadeSlug = \Illuminate\Support\Str::slug($this->cliente->cidadesAtendidas->first()?->nome ?? 'brasil');
+        $segmentoSlug = $this->cliente->segmentos->first()?->slug ?? 'servicos';
         $urlSlug = $this->cliente->slug;
-        $insightUrl = 'https://www.overmelhinho.com.br/empresa/' . $urlSlug;
+        $insightUrl = "https://www.overmelhinho.com.br/{$cidadeSlug}/{$segmentoSlug}/{$urlSlug}";
 
         // 1. Descobrir Palavras Reais via GSC (Source of Truth)
         $gscData = $gsc->getKeywordsByPage($urlSlug) ?: [];

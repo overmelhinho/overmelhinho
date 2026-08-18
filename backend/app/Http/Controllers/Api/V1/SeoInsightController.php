@@ -164,6 +164,10 @@ class SeoInsightController extends Controller
             ], 400);
         }
 
+        $cidadeSlug = \Illuminate\Support\Str::slug($cliente->cidadesAtendidas->first()?->nome ?? 'brasil');
+        $segmentoSlug = $cliente->segmentos->first()?->slug ?? 'servicos';
+        $fullUrl = "https://www.overmelhinho.com.br/{$cidadeSlug}/{$segmentoSlug}/{$cliente->slug}";
+
         $tempInsight = \App\Models\SeoInsight::updateOrCreate(
             [
                 'cliente_id' => $cliente->id,
@@ -171,7 +175,7 @@ class SeoInsightController extends Controller
             ],
             [
                 'keyword' => 'Buscando dados no Google...',
-                'url' => 'https://www.overmelhinho.com.br/' . $cliente->slug,
+                'url' => $fullUrl,
                 'status' => 'processing',
                 'position' => 0,
                 'impressions' => 0,
