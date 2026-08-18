@@ -106,8 +106,9 @@ class ProcessClienteSeoJob implements ShouldQueue
 
             // Motor de Insights (SeoInsights Proativo)
             // Apenas geramos insights para dados reais (não simulados)
-            if (!$isSimulated && $url) {
+            if (!$isSimulated) {
                 $insightType = null;
+                $insightUrl = $url ?: 'https://www.overmelhinho.com.br/';
                 
                 // 1. Regra de CTR Baixo (Deixando dinheiro na mesa)
                 // Flexibilizado para pequenos negócios locais (> 30 imp)
@@ -146,7 +147,7 @@ class ProcessClienteSeoJob implements ShouldQueue
                             SeoInsight::create([
                                 'cliente_id' => $this->cliente->id,
                                 'keyword' => $keyword,
-                                'url' => $url,
+                                'url' => $insightUrl,
                                 'insight_type' => $insightType,
                                 'position' => $newPosition,
                                 'impressions' => $impressions,
@@ -169,7 +170,7 @@ class ProcessClienteSeoJob implements ShouldQueue
                                     'status' => 'pending'
                                 ],
                                 [
-                                    'url' => $url,
+                                    'url' => $insightUrl,
                                     'insight_type' => $insightType,
                                     'position' => $newPosition,
                                     'impressions' => $impressions,
