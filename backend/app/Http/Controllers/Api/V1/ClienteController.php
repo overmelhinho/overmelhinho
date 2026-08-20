@@ -81,7 +81,13 @@ class ClienteController extends Controller implements HasMiddleware
         $cityId = $request->input('city_id');
         $cityName = $request->input('city_name');
         $preferredSegments = $request->input('preferred_segments');
+        $page = (int) ($request->input('page') ?? 1);
 
+        $cacheKey = "public_search_" . md5(json_encode([$q, $perPage, $cityId, $cityName, $preferredSegments, $page]));
+        
+        // Cache search results for 15 minutes to dramatically improve latency
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(15), function () use ($q, $perPage, $cityId, $cityName, $preferredSegments) {
+            
         // ✅ Detecta se o termo de busca contém o nome de alguma cidade
         if ($q !== '') {
             // Evita extrair o nome da cidade se o usuário estiver buscando EXATAMENTE por uma empresa com esse nome (ex: Chaveiro do Progresso)
@@ -113,155 +119,31 @@ class ClienteController extends Controller implements HasMiddleware
                     ->orWhere('tipo_cliente', 'gratuito');
             });
 
-        // ✅ Verificação de Similaridade (pg_trgm) - Disponível para todo o escopo
-        static $canUseSimilarity = null;
-        if ($canUseSimilarity === null) {
-            try {
-                DB::select('SELECT similarity(\'a\', \'b\')');
-                $canUseSimilarity = true;
-            } catch (\Exception $e) { $canUseSimilarity = false; }
-        }
-
-        $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
-
-        // ✅ Busca Inteligente (Fuzzy + Aprendizado de Typos)
+        // ✅ Busca Ultra Rápida com TSVECTOR
         if ($q !== '') {
-            $asciiQ = strtolower(Str::ascii($q));
-            $hasMovelWord = (bool) preg_match('/\b(movel|moveis)\b/', $asciiQ);
+            $normalizedQ = trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
             
-            // 1. Verifica se existe uma correção aprendida pelo sistema (Learning Logic)
+            // 1. Verifica se existe correção aprendida (Typos)
             $learned = \App\Models\SearchCorrection::where('typo', mb_strtolower($normalizedQ, 'UTF-8'))
                 ->orderByDesc('hit_count')
                 ->first();
-            
             $effectiveQ = $learned ? $learned->correction : $normalizedQ;
-            $variations = $this->generatePtBrVariations($effectiveQ);
 
-            $query->where(function ($sub) use ($q, $normalizedQ, $effectiveQ, $canUseSimilarity, $hasMovelWord, $variations) {
-                if ($hasMovelWord) {
-                    // Custom logic for móvel/móveis to prevent matching automóvel/automóveis
-                    $sub->where(function ($w) use ($q) {
-                        $w->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$q}%"])
-                          ->whereRaw('unaccent(nome_fantasia) !~* \'automovel|automoveis\'');
-                    })->orWhereRaw('unaccent(nome_fantasia) ~* \'\\y(movel|moveis)\\y\'');
-                    
-                    $sub->orWhere(function ($w) use ($q) {
-                        $w->whereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$q}%"])
-                          ->whereRaw('unaccent(nome_alternativo) !~* \'automovel|automoveis\'');
-                    })->orWhereRaw('unaccent(nome_alternativo) ~* \'\\y(movel|moveis)\\y\'');
-                } else {
-                    $sub->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$q}%"])
-                        ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$q}%"]);
-                        
-                    foreach ($variations as $var) {
-                        $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$var}%"])
-                            ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$var}%"]);
-                    }
+            $query->where(function ($sub) use ($q, $effectiveQ) {
+                // Formata termo para tsquery (ex: "Limpeza de Pele" -> "Limpeza:* & Pele:*")
+                $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($effectiveQ)));
+                $tsQueryStr = implode(' | ', array_map(fn($w) => $w . ':*', $words));
+
+                if ($tsQueryStr) {
+                    $sub->whereRaw("search_vector @@ to_tsquery('portuguese', ?)", [$tsQueryStr])
+                        ->orWhereRaw("search_vector @@ plainto_tsquery('portuguese', ?)", [\Illuminate\Support\Str::ascii($effectiveQ)]);
                 }
 
-                if ($effectiveQ !== $normalizedQ) {
-                    if ($hasMovelWord) {
-                        $sub->orWhere(function ($w) use ($effectiveQ) {
-                            $w->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$effectiveQ}%"])
-                              ->whereRaw('unaccent(nome_fantasia) !~* \'automovel|automoveis\'');
-                        })->orWhereRaw('unaccent(nome_fantasia) ~* \'\\y(movel|moveis)\\y\'');
-                    } else {
-                        $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$effectiveQ}%"]);
-                    }
-                }
-
-                // Busca exata nas Palavras Chave Geradas por IA
-                if ($hasMovelWord) {
-                    $sub->orWhere(function ($w) use ($q) {
-                        $w->whereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$q}%"])
-                          ->whereRaw('unaccent(seo_keywords::text) !~* \'automovel|automoveis\'');
-                    })->orWhereRaw('unaccent(seo_keywords::text) ~* \'\\y(movel|moveis)\\y\'');
-                    
-                    $sub->orWhere(function ($w) use ($effectiveQ) {
-                        $w->whereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$effectiveQ}%"])
-                          ->whereRaw('unaccent(seo_keywords::text) !~* \'automovel|automoveis\'');
-                    })->orWhereRaw('unaccent(seo_keywords::text) ~* \'\\y(movel|moveis)\\y\'');
-                } else {
-                    $sub->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$q}%"])
-                        ->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$effectiveQ}%"]);
-                        
-                    foreach ($variations as $var) {
-                        $sub->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$var}%"]);
-                    }
-                }
-
-                // 1.5 Busca Space-Blind (Ignora espaços no banco quando o usuário digita uma palavra única)
-                if (!str_contains(trim($q), ' ')) {
-                    $sub->orWhereRaw("replace(unaccent(nome_fantasia), ' ', '') ilike unaccent(?)", ["%{$q}%"])
-                        ->orWhereRaw("replace(unaccent(nome_alternativo), ' ', '') ilike unaccent(?)", ["%{$q}%"]);
-                }
-
-                // 2. Busca por Similaridade (Tolerância a Typos via pg_trgm)
-                if ($canUseSimilarity && !$hasMovelWord) {
-                    // Threshold seguro (0.5) para evitar falsos positivos
-                    $sub->orWhereRaw("word_similarity(?, nome_fantasia) > 0.5", [$normalizedQ])
-                        ->orWhereRaw("word_similarity(?, nome_alternativo) > 0.5", [$normalizedQ]);
-                } elseif (!$canUseSimilarity) {
-                    // Fallback agressivo por palavras (OR) se não tiver similaridade
-                    $words = explode(' ', $normalizedQ);
-                    foreach ($words as $word) {
-                        if (strlen($word) > 2) {
-                            if ($hasMovelWord && in_array(strtolower(Str::ascii($word)), ['movel', 'moveis'])) {
-                                $sub->orWhereRaw('unaccent(nome_fantasia) ~* \'\\y(movel|moveis)\\y\'');
-                            } else {
-                                $sub->orWhereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$word}%"]);
-                            }
-                        }
-                    }
-                }
-
-                // 2.5 Busca Multi-Palavra Obrigatória (AND) - Resolve "evelize psicologa" para "Evelize Perottoni - Psicóloga"
-                if (str_contains(trim($normalizedQ), ' ')) {
-                    $words = explode(' ', trim($normalizedQ));
-                    $sub->orWhere(function ($multiWordSub) use ($words) {
-                        foreach ($words as $word) {
-                            if (strlen($word) > 2) {
-                                $multiWordSub->where(function ($wSub) use ($word) {
-                                    $wSub->whereRaw('unaccent(nome_fantasia) ilike unaccent(?)', ["%{$word}%"])
-                                         ->orWhereRaw('unaccent(nome_alternativo) ilike unaccent(?)', ["%{$word}%"])
-                                         ->orWhereRaw('unaccent(seo_keywords::text) ilike unaccent(?)', ["%{$word}%"]);
-                                });
-                            }
-                        }
-                    });
-                }
-
-                // 3. Busca em Segmentos e Endereços
-                $sub->orWhereHas('segmentos', function ($sq) use ($q, $effectiveQ, $canUseSimilarity, $normalizedQ, $hasMovelWord, $variations) {
-                        if ($hasMovelWord) {
-                            $sq->where(function ($w) use ($q) {
-                                $w->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
-                                  ->whereRaw('unaccent(segmentos.nome) !~* \'automovel|automoveis\'');
-                            })->orWhereRaw('unaccent(segmentos.nome) ~* \'\\y(movel|moveis)\\y\'');
-                            
-                            $sq->orWhere(function ($w) use ($effectiveQ) {
-                                $w->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"])
-                                  ->whereRaw('unaccent(segmentos.nome) !~* \'automovel|automoveis\'');
-                            })->orWhereRaw('unaccent(segmentos.nome) ~* \'\\y(movel|moveis)\\y\'');
-                        } else {
-                            $sq->whereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$q}%"])
-                               ->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$effectiveQ}%"]);
-                               
-                            foreach ($variations as $var) {
-                                $sq->orWhereRaw('unaccent(segmentos.nome) ilike unaccent(?)', ["%{$var}%"]);
-                            }
-                               
-                            if ($canUseSimilarity) {
-                                $sq->orWhereRaw("word_similarity(?, segmentos.nome) > 0.5", [$normalizedQ]);
-                            }
-                        }
-                    })
-                    ->orWhereHas('enderecos', function ($eq) use ($q, $effectiveQ) {
-                        $eq->whereRaw('unaccent(bairro) ilike unaccent(?)', ["%{$q}%"])
-                           ->orWhereRaw('unaccent(cidade) ilike unaccent(?)', ["%{$q}%"])
-                           ->orWhereRaw('unaccent(rua) ilike unaccent(?)', ["%{$q}%"])
-                           ->orWhereRaw('unaccent(bairro) ilike unaccent(?)', ["%{$effectiveQ}%"]);
-                    });
+                // Mantém a busca por endereço (bairro/rua)
+                $sub->orWhereHas('enderecos', function ($eq) use ($q, $effectiveQ) {
+                    $eq->whereRaw('unaccent(bairro) ilike unaccent(?)', ["%{$q}%"])
+                       ->orWhereRaw('unaccent(rua) ilike unaccent(?)', ["%{$q}%"]);
+                });
             });
         }
 
@@ -292,80 +174,13 @@ class ClienteController extends Controller implements HasMiddleware
         $query->with(['enderecos', 'segmentos', 'cidadesAtendidas', 'contatos']);
         $query->withCount(['reviews']);
         
-        // ✅ ORDENAÇÃO INTELIGENTE (NEGÓCIO + RELEVÂNCIA)
-        // Hierarquia: Match Exato > Pagante Local > Pagante Geral > Similaridade > Gratuito
-        $qParam = $normalizedQ;
-        // Verificação de disponibilidade do unaccent (cacheada estaticamente)
-        static $unaccentExistsGlobal = null;
-        if ($unaccentExistsGlobal === null) {
-            try {
-                DB::select('SELECT unaccent(\'a\')');
-                $unaccentExistsGlobal = true;
-            } catch (\Exception $e) {
-                $unaccentExistsGlobal = false;
-            }
-        }
-
+        // ✅ ORDENAÇÃO INTELIGENTE (NEGÓCIO + RELEVÂNCIA TSVECTOR)
         $orderCityId = $cityId ?: 0;
-
-        $unaccentFunc = $unaccentExistsGlobal ? 'unaccent' : '';
-
-        // ✅ 0. Smart Match Perfeito (Navegação do Usuário)
-        if ($q === '' && !empty($preferredSegments)) {
-            $segIds = array_filter(explode(',', $preferredSegments), 'is_numeric');
-            if (count($segIds) > 0) {
-                $segIdsStr = implode(',', $segIds);
-                $query->orderByRaw("
-                    CASE 
-                        WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
-                            SELECT 1 FROM cliente_segmento cs 
-                            WHERE cs.cliente_id = clientes.id 
-                            AND cs.segmento_id IN ({$segIdsStr})
-                        ) THEN 0
-                        ELSE 1
-                    END ASC
-                ");
-            }
-        }
-
-        // Condição de Match Exato (Ouro)
-        $ouroConditionsArr = [];
-        $ouroBindings = [];
         
-        $termsToMatch = array_unique(array_merge([$q], $variations ?? []));
-        foreach ($termsToMatch as $term) {
-            if (empty(trim($term))) continue;
-            
-            $ouroConditionsArr[] = "(
-                {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
-                {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) OR
-                {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
-                {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) OR
-                {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) OR
-                {$unaccentFunc}(seo_keywords::text) ilike {$unaccentFunc}(?) OR
-                EXISTS (
-                    SELECT 1 FROM cliente_segmento cs 
-                    JOIN segmentos s ON cs.segmento_id = s.id 
-                    WHERE cs.cliente_id = clientes.id 
-                    AND {$unaccentFunc}(s.nome) ilike {$unaccentFunc}(?)
-                )
-            )";
-            array_push($ouroBindings, $term, $term, "{$term} %", "{$term} %", "%{$term}%", "%{$term}%", "%{$term}%");
-        }
-
-        $ouroCondition = !empty($ouroConditionsArr) ? implode(' OR ', $ouroConditionsArr) : "1=0";
-
-        // Mescla todos os bindings necessários
-        $allBindings = array_merge(
-            $ouroBindings, [$orderCityId, $orderCityId], // 0. Ouro Pagante Cidade
-            $ouroBindings, // 1. Ouro Pagante Geral
-            $ouroBindings  // 2. Ouro Gratuito
-        );
-
+        // 1. Prioridade Comercial: Pagante Local > Pagante Geral > Gratuito
         $query->orderByRaw("
             CASE 
-                -- NÍVEL 1 (OURO) + PAGANTE NA CIDADE
-                WHEN ($ouroCondition) AND tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
                     SELECT 1 FROM enderecos 
                     WHERE enderecos.cliente_id = clientes.id 
                     AND (
@@ -373,59 +188,21 @@ class ClienteController extends Controller implements HasMiddleware
                         OR EXISTS (SELECT 1 FROM cliente_cidade cc WHERE cc.cliente_id = clientes.id AND cc.cidade_id = ?)
                     )
                 ) THEN 0
-
-                -- NÍVEL 1 (OURO) + PAGANTE GERAL
-                WHEN ($ouroCondition) AND tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
-
-                -- NÍVEL 2 (OURO) + GRATUITO (Match perfeito tem prioridade sobre match parcial)
-                WHEN ($ouroCondition) THEN 2
-
-                -- NÍVEL 3 (PRATA) - PAGANTES PARCIAIS
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 3
-
-                -- NÍVEL 4 (BRONZE) - GRATUITOS PARCIAIS
-                ELSE 4
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
+                ELSE 2
             END ASC
-        ", $allBindings);
+        ", [$orderCityId, $orderCityId]);
 
-        // Verifica se a busca bate com algum segmento ou é uma palavra muito comum (genérica) para forçar ordem alfabética
-        $isSegmentQuery = false;
-        if ($q !== '' && strlen(trim($q)) >= 3) {
-            // 1. Tenta achar na tabela de segmentos
-            $isSegmentQuery = \Illuminate\Support\Facades\DB::table('segmentos')
-                ->whereRaw("{$unaccentFunc}(nome) ilike {$unaccentFunc}(?)", ["%" . trim($q) . "%"])
-                ->exists();
-                
-            // 2. Fallback: Se a palavra aparece no nome de 3+ clientes pagantes, é uma categoria/termo genérico
-            if (!$isSegmentQuery) {
-                $isSegmentQuery = \Illuminate\Support\Facades\DB::table('clientes')
-                    ->where('tipo_cliente', 'pagante')
-                    ->whereRaw("{$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?)", ["%" . trim($q) . "%"])
-                    ->count() >= 3;
-            }
-        }
-
-        if (!$isSegmentQuery) {
-            // Desempate secundário (Dentro do mesmo Nível, prefere Match Absoluto > Começa Com > Contém)
-            $query->orderByRaw("
-                CASE 
-                    -- A. Match Exato
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 0
-                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 0
-                    
-                    -- B. Começa com a palavra exata
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 1
-                    WHEN {$unaccentFunc}(nome_alternativo) ilike {$unaccentFunc}(?) THEN 1
-                    
-                    -- C. Contém a palavra em qualquer lugar
-                    WHEN {$unaccentFunc}(nome_fantasia) ilike {$unaccentFunc}(?) THEN 2
-                    ELSE 3
-                END ASC
-            ", [$q, $q, "{$q} %", "{$q} %", "%{$q}%"]);
-
-            // Desempate por similaridade fonética
-            if ($canUseSimilarity) {
-                $query->orderByRaw("similarity(nome_fantasia, ?) DESC", [$normalizedQ]);
+        // 2. Relevância Textual (TS_RANK do Postgres)
+        if ($q !== '') {
+            $effectiveQ = \App\Models\SearchCorrection::where('typo', mb_strtolower(trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q)), 'UTF-8'))
+                ->value('correction') ?: trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
+            
+            $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($effectiveQ)));
+            $tsQueryStr = implode(' | ', array_map(fn($w) => $w . ':*', $words));
+            
+            if ($tsQueryStr) {
+                $query->orderByRaw("ts_rank(search_vector, to_tsquery('portuguese', ?)) DESC", [$tsQueryStr]);
             }
         }
         
@@ -433,18 +210,10 @@ class ClienteController extends Controller implements HasMiddleware
 
         $clientes = $query->paginate($perPage);
 
-        Log::info("BUSCA_PUBLIC DEBUG", [
-            'q' => $q,
-            'normQ' => $qParam ?? null,
-            'city_id' => $cityId,
-            'city_name' => $cityName,
-            'count' => $clientes->count(),
-            'total' => $clientes->total(),
-            'sql' => $query->toSql(),
-            'bindings' => $query->getBindings()
-        ]);
+        return ClienteResource::collection($clientes)->response()->getData(true);
+        });
 
-        return ClienteResource::collection($clientes);
+        return response()->json($data);
     }
 
     /**

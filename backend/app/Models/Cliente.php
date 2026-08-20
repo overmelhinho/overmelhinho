@@ -35,6 +35,27 @@ class Cliente extends Model
                 $cliente->slug = $slug;
             }
         });
+
+        static::saved(function ($cliente) {
+            $cliente->syncSearchVector();
+        });
+    }
+
+    public function syncSearchVector(): void
+    {
+        $text = collect([
+            $this->nome_fantasia,
+            $this->nome_alternativo,
+            is_array($this->seo_keywords) ? implode(' ', $this->seo_keywords) : $this->seo_keywords,
+            $this->segmentos()->pluck('nome')->implode(' ')
+        ])->filter()->join(' ');
+
+        $text = \Illuminate\Support\Str::ascii($text);
+        
+        \Illuminate\Support\Facades\DB::statement(
+            'UPDATE clientes SET search_vector = to_tsvector(\'portuguese\', ?) WHERE id = ?',
+            [$text, $this->id]
+        );
     }
 
     protected string $auditEntityType = 'cliente';
