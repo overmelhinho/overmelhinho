@@ -7,7 +7,7 @@ use App\Models\Cliente;
 use App\Models\GaleriaImagem;
 use App\Http\Requests\GaleriaImagemRequest;
 use App\Http\Resources\GaleriaImagemResource;
-use App\Services\HistoricoAlteracaoService;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
@@ -51,14 +51,26 @@ class GaleriaImagemController extends Controller
             $imagem->update($updates);
             $after = $imagem->fresh()->toArray();
 
-            HistoricoAlteracaoService::logAction($clienteId, 'galeria_update', $after, $before);
+            app(AuditLogger::class)->log(
+                'galeria_update',
+                'cliente',
+                $clienteId,
+                ['galeria' => ['old' => $before, 'new' => $after]],
+                ['cliente_id' => $clienteId]
+            );
         } else {
-            HistoricoAlteracaoService::logAction($clienteId, 'galeria_add', [
-                'id' => $imagem->id,
-                'url' => $imagem->url,
-                'thumb_url' => $imagem->thumb_url,
-                'legenda' => $imagem->legenda,
-            ]);
+            app(AuditLogger::class)->log(
+                'galeria_add',
+                'cliente',
+                $clienteId,
+                ['galeria' => ['old' => null, 'new' => [
+                    'id' => $imagem->id,
+                    'url' => $imagem->url,
+                    'thumb_url' => $imagem->thumb_url,
+                    'legenda' => $imagem->legenda,
+                ]]],
+                ['cliente_id' => $clienteId]
+            );
         }
 
         return new GaleriaImagemResource($imagem);
@@ -78,7 +90,13 @@ class GaleriaImagemController extends Controller
         $imagem->update($request->validated());
         $after = $imagem->fresh()->toArray();
 
-        HistoricoAlteracaoService::logAction($clienteId, 'galeria_update', $after, $before);
+        app(AuditLogger::class)->log(
+            'galeria_update',
+            'cliente',
+            $clienteId,
+            ['galeria' => ['old' => $before, 'new' => $after]],
+            ['cliente_id' => $clienteId]
+        );
 
         return new GaleriaImagemResource($imagem);
     }
@@ -87,11 +105,17 @@ class GaleriaImagemController extends Controller
     {
         $imagem = GaleriaImagem::where('cliente_id', $clienteId)->findOrFail($imagemId);
 
-        HistoricoAlteracaoService::logAction($clienteId, 'galeria_delete', [
-            'id' => $imagem->id,
-            'url' => $imagem->url,
-            'thumb_url' => $imagem->thumb_url,
-        ]);
+        app(AuditLogger::class)->log(
+            'galeria_delete',
+            'cliente',
+            $clienteId,
+            ['galeria' => ['old' => [
+                'id' => $imagem->id,
+                'url' => $imagem->url,
+                'thumb_url' => $imagem->thumb_url,
+            ], 'new' => null]],
+            ['cliente_id' => $clienteId]
+        );
 
         // Deleta imagem principal
         $storagePath = str_replace('/storage/', '', parse_url($imagem->url, PHP_URL_PATH));
@@ -130,10 +154,16 @@ class GaleriaImagemController extends Controller
             'ordem'   => $request->ordem ?? 0,
         ]);
 
-        HistoricoAlteracaoService::logAction($clienteId, 'galeria_add', [
-            'id' => $imagem->id,
-            'url' => $imagem->url,
-        ]);
+        app(AuditLogger::class)->log(
+            'galeria_add',
+            'cliente',
+            $clienteId,
+            ['galeria' => ['old' => null, 'new' => [
+                'id' => $imagem->id,
+                'url' => $imagem->url,
+            ]]],
+            ['cliente_id' => $clienteId]
+        );
 
         return new GaleriaImagemResource($imagem);
     }
@@ -163,11 +193,17 @@ class GaleriaImagemController extends Controller
                 'thumb_url' => $thumbPath ? Storage::url($thumbPath) : null,
             ]);
 
-            HistoricoAlteracaoService::logAction($clienteId, 'galeria_add', [
-                'id' => $imagem->id,
-                'url' => $imagem->url,
-                'thumb_url' => $imagem->thumb_url,
-            ]);
+            app(AuditLogger::class)->log(
+                'galeria_add',
+                'cliente',
+                $clienteId,
+                ['galeria' => ['old' => null, 'new' => [
+                    'id' => $imagem->id,
+                    'url' => $imagem->url,
+                    'thumb_url' => $imagem->thumb_url,
+                ]]],
+                ['cliente_id' => $clienteId]
+            );
 
             $imagensCriadas[] = new GaleriaImagemResource($imagem);
         }
@@ -279,7 +315,13 @@ class GaleriaImagemController extends Controller
                 $img->update(['url' => $finalUrl]);
 
                 // ✅ LOG
-                HistoricoAlteracaoService::logAction($clienteId, 'galeria_commit', $finalUrl, $beforeUrl);
+                app(AuditLogger::class)->log(
+                    'galeria_commit',
+                    'cliente',
+                    $clienteId,
+                    ['galeria_url' => ['old' => $beforeUrl, 'new' => $finalUrl]],
+                    ['cliente_id' => $clienteId]
+                );
 
                 $updated[] = $img->id;
             } catch (\Throwable $e) {
