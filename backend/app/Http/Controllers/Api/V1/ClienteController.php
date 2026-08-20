@@ -730,49 +730,63 @@ class ClienteController extends Controller implements HasMiddleware
 
     public function showPublic($id)
     {
-        $query = Cliente::with([
-            'enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews',
-            'jobOpportunities' => function($q) {
-                $q->where('is_active', 'true')
-                  ->where('status', 'Published')
-                  ->where(function($sub) {
-                      $sub->whereNull('expires_at')
-                          ->orWhere('expires_at', '>=', now());
-                  });
-            }
-        ]);
-        
-        if (is_numeric($id)) {
-            $cliente = $query->find($id);
-        } else {
-            $cliente = $query->where('slug', $id)->first();
-        }
+        $cacheKey = "public_cliente_" . (is_numeric($id) ? "id_" : "slug_") . $id;
 
-        if (!$cliente) {
-            return response()->json(['message' => 'Cliente não encontrado'], 404);
-        }
-
-        if (!in_array($cliente->exibir_no_site, ['true', true, 1, '1'], true)) {
-            $citySlug = null;
-            $segmentSlug = null;
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(24), function () use ($id) {
+            $query = Cliente::with([
+                'enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews',
+                'jobOpportunities' => function($q) {
+                    $q->where('is_active', 'true')
+                      ->where('status', 'Published')
+                      ->where(function($sub) {
+                          $sub->whereNull('expires_at')
+                              ->orWhere('expires_at', '>=', now());
+                      });
+                }
+            ]);
             
-            if ($cliente->enderecos->isNotEmpty() && !empty($cliente->enderecos[0]->cidade)) {
-                $citySlug = \Illuminate\Support\Str::slug($cliente->enderecos[0]->cidade);
-            }
-            if ($cliente->segmentos->isNotEmpty()) {
-                $segmentSlug = \Illuminate\Support\Str::slug($cliente->segmentos[0]->nome);
+            if (is_numeric($id)) {
+                $cliente = $query->find($id);
+            } else {
+                $cliente = $query->where('slug', $id)->first();
             }
 
-            return response()->json([
-                'message' => 'Cliente inativo',
-                'redirect_suggestion' => ($citySlug && $segmentSlug) ? [
-                    'city_slug' => $citySlug,
-                    'segment_slug' => $segmentSlug
-                ] : null
-            ], 404);
+            if (!$cliente) {
+                return ['error' => 'not_found', 'message' => 'Cliente não encontrado', 'code' => 404];
+            }
+
+            if (!in_array($cliente->exibir_no_site, ['true', true, 1, '1'], true)) {
+                $citySlug = null;
+                $segmentSlug = null;
+                
+                if ($cliente->enderecos->isNotEmpty() && !empty($cliente->enderecos[0]->cidade)) {
+                    $citySlug = \Illuminate\Support\Str::slug($cliente->enderecos[0]->cidade);
+                }
+                if ($cliente->segmentos->isNotEmpty()) {
+                    $segmentSlug = \Illuminate\Support\Str::slug($cliente->segmentos[0]->nome);
+                }
+
+                return [
+                    'error' => 'inactive',
+                    'message' => 'Cliente inativo',
+                    'redirect_suggestion' => ($citySlug && $segmentSlug) ? [
+                        'city_slug' => $citySlug,
+                        'segment_slug' => $segmentSlug
+                    ] : null,
+                    'code' => 404
+                ];
+            }
+
+            return (new ClienteResource($cliente))->response()->getData(true);
+        });
+
+        if (isset($data['error'])) {
+            $code = $data['code'] ?? 404;
+            unset($data['error'], $data['code']);
+            return response()->json($data, $code);
         }
 
-        return new ClienteResource($cliente);
+        return response()->json($data);
     }
 
     /**
@@ -780,70 +794,85 @@ class ClienteController extends Controller implements HasMiddleware
      */
     public function recommendations($id)
     {
-        if (is_numeric($id)) {
-            $cliente = Cliente::with(['segmentos', 'enderecos'])->find($id);
-        } else {
-            $cliente = Cliente::with(['segmentos', 'enderecos'])->where('slug', $id)->first();
-        }
-        
-        if (!$cliente) return response()->json([], 404);
 
-        $segmentIds = $cliente->segmentos->pluck('id')->toArray();
-        $cidade = $cliente->enderecos->first()?->cidade;
+        $cacheKey = "recommendations_" . $id;
 
-        // Base da query: Clientes que NÃO são o atual e NÃO pertencem aos mesmos segmentos
-        $baseQuery = Cliente::with(['enderecos', 'segmentos'])
-            ->where('id', '!=', $cliente->id)
-            ->where('exibir_no_site', 'true')
-            ->where('tipo_cliente', 'pagante')
-            ->whereIn('status_assinatura', ['ativa', 'ativo', 'inadimplente'])
-            ->whereDoesntHave('segmentos', function($q) {
-                $q->whereIn('segmentos.slug', [
-                    'acompanhantes',
-                    'bordel',
-                    'garotas-de-programa',
-                    'sexo',
-                    'agencia-de-acompanhantes',
-                    'casas-de-massagem',
-                ]);
-            })
-            ->where(function($q) {
-                $q->whereNull('nome_fantasia')
-                  ->orWhere(function($sub) {
-                      $sub->where('nome_fantasia', 'not ilike', '%night club%')
-                          ->where('nome_fantasia', 'not ilike', '%gatas club%')
-                          ->where('nome_fantasia', 'not ilike', '%acompanhante%');
-                  });
-            })
-            ->whereDoesntHave('segmentos', function($q) use ($segmentIds) {
-                $q->whereIn('segmentos.id', $segmentIds);
-            });
-
-        // 1. Tentar buscar na mesma cidade primeiro
-        $recommendations = (clone $baseQuery);
-        if ($cidade) {
-            $recommendations->whereHas('enderecos', function($q) use ($cidade) {
-                $q->where('cidade', 'ilike', "%{$cidade}%");
-            });
-        }
-        
-        $results = $recommendations->inRandomOrder()->limit(4)->get();
-
-        // 2. Se não deu 4, completa com outros random (ainda sem os concorrentes)
-        if ($results->count() < 4) {
-            $excludeIds = $results->pluck('id')->toArray();
-            $excludeIds[] = $cliente->id;
-
-            $others = (clone $baseQuery)
-                ->whereNotIn('id', $excludeIds)
-                ->inRandomOrder()
-                ->limit(4 - $results->count())
-                ->get();
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () use ($id) {
+            if (is_numeric($id)) {
+                $cliente = Cliente::with(['segmentos', 'enderecos'])->find($id);
+            } else {
+                $cliente = Cliente::with(['segmentos', 'enderecos'])->where('slug', $id)->first();
+            }
             
-            $results = $results->concat($others);
-        }
+            if (!$cliente) return [];
 
-        return ClienteResource::collection($results);
+            $segmentIds = $cliente->segmentos->pluck('id')->toArray();
+            $cidade = $cliente->enderecos->first()?->cidade;
+
+            // Base da query: Clientes que NÃO são o atual e NÃO pertencem aos mesmos segmentos
+            $baseQuery = Cliente::with(['enderecos', 'segmentos'])
+                ->where('id', '!=', $cliente->id)
+                ->where('exibir_no_site', 'true')
+                ->where('tipo_cliente', 'pagante')
+                ->whereIn('status_assinatura', ['ativa', 'ativo', 'inadimplente'])
+                ->whereDoesntHave('segmentos', function($q) {
+                    $q->whereIn('segmentos.slug', [
+                        'acompanhantes',
+                        'bordel',
+                        'garotas-de-programa',
+                        'sexo',
+                        'agencia-de-acompanhantes',
+                        'casas-de-massagem',
+                    ]);
+                })
+                ->where(function($q) {
+                    $q->whereNull('nome_fantasia')
+                      ->orWhere(function($sub) {
+                          $sub->where('nome_fantasia', 'not ilike', '%night club%')
+                              ->where('nome_fantasia', 'not ilike', '%gatas club%')
+                              ->where('nome_fantasia', 'not ilike', '%acompanhante%');
+                      });
+                })
+                ->whereDoesntHave('segmentos', function($q) use ($segmentIds) {
+                    $q->whereIn('segmentos.id', $segmentIds);
+                });
+
+            // 1. Tentar buscar na mesma cidade primeiro
+            $recommendations = (clone $baseQuery);
+            if ($cidade) {
+                $recommendations->whereHas('enderecos', function($q) use ($cidade) {
+                    $q->where('cidade', 'ilike', "%{$cidade}%");
+                });
+            }
+            
+            $results = $recommendations->inRandomOrder()->limit(4)->get();
+
+            // 2. Se não deu 4, completa com outros random (ainda sem os concorrentes)
+            if ($results->count() < 4) {
+                $excludeIds = $results->pluck('id')->toArray();
+                $excludeIds[] = $cliente->id;
+
+                $others = (clone $baseQuery)
+                    ->whereNotIn('id', $excludeIds)
+                    ->inRandomOrder()
+                    ->limit(4 - $results->count())
+                    ->get();
+                
+                $results = $results->concat($others);
+            }
+
+            return $results->map(function($c) {
+                return [
+                    'id' => $c->id,
+                    'slug' => $c->slug,
+                    'nome_fantasia' => $c->nome_fantasia,
+                    'logo' => $c->logo ? ltrim($c->logo, '/') : null,
+                    'city' => $c->enderecos->first()?->cidade,
+                    'segment' => $c->segmentos->first()?->nome,
+                    'rating' => $c->reviews_avg_rating ?? 5.0,
+                ];
+            });
+        });
     }
 
 

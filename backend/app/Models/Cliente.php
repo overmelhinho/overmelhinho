@@ -38,6 +38,10 @@ class Cliente extends Model
 
         static::saved(function ($cliente) {
             $cliente->syncSearchVector();
+            \Illuminate\Support\Facades\Cache::forget("public_cliente_slug_" . $cliente->slug);
+            \Illuminate\Support\Facades\Cache::forget("public_cliente_id_" . $cliente->id);
+            \Illuminate\Support\Facades\Cache::forget("recommendations_" . $cliente->slug);
+            \Illuminate\Support\Facades\Cache::forget("recommendations_" . $cliente->id);
         });
     }
 
