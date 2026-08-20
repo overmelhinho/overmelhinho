@@ -199,7 +199,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
         queryKey: ['client', id],
         queryFn: async () => {
             const res = await api.get(`/public/clientes/${id}`);
-            return res.data.data;
+            return res.data?.data || res.data;
         },
         initialData: initialClient,
         enabled: !!id
@@ -209,7 +209,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
         queryKey: ['recommendations', id],
         queryFn: async () => {
             const res = await api.get(`/public/clientes/${id}/recommendations`);
-            return res.data.data;
+            return res.data?.data || res.data;
         },
         enabled: !!id
     });
