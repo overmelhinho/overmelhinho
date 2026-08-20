@@ -51,7 +51,8 @@ class Cliente extends Model
             $this->nome_fantasia,
             $this->nome_alternativo,
             is_array($this->seo_keywords) ? implode(' ', $this->seo_keywords) : $this->seo_keywords,
-            $this->segmentos()->pluck('nome')->implode(' ')
+            $this->segmentos()->pluck('nome')->implode(' '),
+            $this->descricao
         ])->filter()->join(' ');
 
         $text = \Illuminate\Support\Str::ascii($text);
