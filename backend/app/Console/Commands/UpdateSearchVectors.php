@@ -43,7 +43,8 @@ class UpdateSearchVectors extends Command
                 COALESCE(c.nome_fantasia, '') || ' ' || 
                 COALESCE(c.nome_alternativo, '') || ' ' || 
                 COALESCE(c.seo_keywords::text, '') || ' ' || 
-                COALESCE(sd.segment_names, '')
+                COALESCE(sd.segment_names, '') || ' ' || 
+                COALESCE(c.descricao, '')
             )
         )
         FROM segment_data sd
@@ -58,7 +59,8 @@ class UpdateSearchVectors extends Command
             unaccent(
                 COALESCE(c.nome_fantasia, '') || ' ' || 
                 COALESCE(c.nome_alternativo, '') || ' ' || 
-                COALESCE(c.seo_keywords::text, '')
+                COALESCE(c.seo_keywords::text, '') || ' ' || 
+                COALESCE(c.descricao, '')
             )
         )
         WHERE search_vector IS NULL;
