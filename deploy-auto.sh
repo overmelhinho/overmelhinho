@@ -27,6 +27,7 @@ composer install --no-interaction --prefer-dist --optimize-autoloader --quiet
 php artisan config:cache --quiet
 php artisan route:cache --quiet
 php artisan view:cache --quiet
+php artisan cache:clear --quiet
 php artisan migrate --force --quiet
 echo "${LOG_PREFIX} ✓ Backend atualizado."
 
