@@ -132,7 +132,7 @@ class ClienteController extends Controller implements HasMiddleware
             $query->where(function ($sub) use ($q, $effectiveQ) {
                 // Formata termo para tsquery (ex: "Limpeza de Pele" -> "Limpeza:* & Pele:*")
                 $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($effectiveQ)));
-                $tsQueryStr = implode(' | ', array_map(fn($w) => $w . ':*', $words));
+                $tsQueryStr = implode(' & ', array_map(fn($w) => $w . ':*', $words));
 
                 if ($tsQueryStr) {
                     $sub->whereRaw("search_vector @@ to_tsquery('portuguese', ?)", [$tsQueryStr])
@@ -175,6 +175,18 @@ class ClienteController extends Controller implements HasMiddleware
         $query->withCount(['reviews']);
         
         // ✅ ORDENAÇÃO INTELIGENTE (NEGÓCIO + RELEVÂNCIA TSVECTOR)
+        
+        // 0. Match Exato no Nome (Garante que se buscar pelo nome da empresa, ela aparece primeiro)
+        if ($q !== '') {
+            $query->orderByRaw("
+                CASE 
+                    WHEN unaccent(nome_fantasia) ilike unaccent(?) THEN 0
+                    WHEN unaccent(nome_fantasia) ilike unaccent(?) THEN 1
+                    ELSE 2
+                END ASC
+            ", [$q, "%{$q}%"]);
+        }
+
         $orderCityId = $cityId ?: 0;
         
         // 1. Prioridade Comercial: Pagante Local > Pagante Geral > Gratuito
@@ -199,7 +211,7 @@ class ClienteController extends Controller implements HasMiddleware
                 ->value('correction') ?: trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
             
             $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($effectiveQ)));
-            $tsQueryStr = implode(' | ', array_map(fn($w) => $w . ':*', $words));
+            $tsQueryStr = implode(' & ', array_map(fn($w) => $w . ':*', $words));
             
             if ($tsQueryStr) {
                 $query->orderByRaw("ts_rank(search_vector, to_tsquery('portuguese', ?)) DESC", [$tsQueryStr]);
