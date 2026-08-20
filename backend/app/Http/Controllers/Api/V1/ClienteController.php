@@ -21,8 +21,17 @@ use App\Services\ClientAiService;
 use App\Services\GooglePlacesService;
 
 
-class ClienteController extends Controller
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+
+class ClienteController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('role:Admin|Administrador|Diretor', only: ['destroy']),
+        ];
+    }
     public function sitemap()
     {
         return \Illuminate\Support\Facades\Cache::remember('sitemap_data_clientes', 3600, function () {
