@@ -178,13 +178,44 @@ class ClienteController extends Controller implements HasMiddleware
         
         // 0. Match Exato no Nome (Garante que se buscar pelo nome da empresa, ela aparece primeiro)
         if ($q !== '') {
+            $exactMatches = [$q];
+            $qLower = mb_strtolower(trim($q), 'UTF-8');
+            
+            if (str_ends_with($qLower, 'ns')) {
+                $exactMatches[] = substr($qLower, 0, -2) . 'm';
+            } elseif (str_ends_with($qLower, 'm')) {
+                $exactMatches[] = substr($qLower, 0, -1) . 'ns';
+            } elseif (str_ends_with($qLower, 'ões')) {
+                $exactMatches[] = substr($qLower, 0, -3) . 'ão';
+            } elseif (str_ends_with($qLower, 'ão')) {
+                $exactMatches[] = substr($qLower, 0, -2) . 'ões';
+                $exactMatches[] = substr($qLower, 0, -2) . 'ãos';
+            } elseif (str_ends_with($qLower, 's') && !str_ends_with($qLower, 'ss')) {
+                $exactMatches[] = substr($qLower, 0, -1);
+            } else {
+                $exactMatches[] = $qLower . 's';
+            }
+
+            $exactMatchCases = [];
+            $exactMatchBindings = [];
+            
+            foreach ($exactMatches as $match) {
+                $exactMatchCases[] = "WHEN unaccent(nome_fantasia) ilike unaccent(?) THEN 0";
+                $exactMatchBindings[] = $match;
+            }
+            foreach ($exactMatches as $match) {
+                $exactMatchCases[] = "WHEN unaccent(nome_fantasia) ilike unaccent(?) THEN 1";
+                $exactMatchBindings[] = "%{$match}%";
+            }
+            
+            $caseString = implode("\n                    ", $exactMatchCases);
+            
             $query->orderByRaw("
                 CASE 
-                    WHEN unaccent(nome_fantasia) ilike unaccent(?) THEN 0
-                    WHEN unaccent(nome_fantasia) ilike unaccent(?) THEN 1
+                    {$caseString}
                     ELSE 2
                 END ASC
-            ", [$q, "%{$q}%"]);
+            ", $exactMatchBindings);
         }
 
         $orderCityId = $cityId ?: 0;
