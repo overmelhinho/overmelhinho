@@ -135,8 +135,18 @@ class ClienteController extends Controller implements HasMiddleware
                 $tsQueryStr = implode(' & ', array_map(fn($w) => $w . ':*', $words));
 
                 if ($tsQueryStr) {
+                    \Illuminate\Support\Facades\DB::statement("SET pg_trgm.strict_word_similarity_threshold = 0.6;");
                     $sub->whereRaw("search_vector @@ to_tsquery('portuguese', ?)", [$tsQueryStr])
-                        ->orWhereRaw("search_vector @@ plainto_tsquery('portuguese', ?)", [\Illuminate\Support\Str::ascii($effectiveQ)]);
+                        ->orWhereRaw("search_vector @@ plainto_tsquery('portuguese', ?)", [\Illuminate\Support\Str::ascii($effectiveQ)])
+                        ->orWhereRaw("f_unaccent(?) <<% f_unaccent(nome_fantasia)", [$effectiveQ])
+                        ->orWhereRaw("f_unaccent(?) <<% f_unaccent(nome_alternativo)", [$effectiveQ])
+                        ->orWhereExists(function ($qSeg) use ($effectiveQ) {
+                            $qSeg->select(\Illuminate\Support\Facades\DB::raw(1))
+                                 ->from('segmentos')
+                                 ->join('cliente_segmento', 'segmentos.id', '=', 'cliente_segmento.segmento_id')
+                                 ->whereColumn('cliente_segmento.cliente_id', 'clientes.id')
+                                 ->whereRaw("f_unaccent(?) <<% f_unaccent(segmentos.nome)", [$effectiveQ]);
+                        });
                 }
 
                 // Mantém a busca por endereço (bairro/rua)
