@@ -236,7 +236,10 @@ class ClienteController extends Controller implements HasMiddleware
             END ASC
         ", [$orderCityId, $orderCityId]);
 
-        // 2. Relevância Textual (TS_RANK do Postgres)
+        // 2. Ordem Alfabética (A-Z)
+        $query->orderBy('nome_fantasia');
+
+        // 3. Relevância Textual (TS_RANK do Postgres) - agora atuando apenas como desempate final
         if ($q !== '') {
             $effectiveQ = \App\Models\SearchCorrection::where('typo', mb_strtolower(trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q)), 'UTF-8'))
                 ->value('correction') ?: trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
@@ -248,8 +251,6 @@ class ClienteController extends Controller implements HasMiddleware
                 $query->orderByRaw("ts_rank(search_vector, to_tsquery('portuguese', ?)) DESC", [$tsQueryStr]);
             }
         }
-        
-        $query->orderBy('nome_fantasia');
 
         $clientes = $query->paginate($perPage);
 
