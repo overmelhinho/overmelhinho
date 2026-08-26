@@ -150,7 +150,7 @@ class ClienteController extends Controller implements HasMiddleware
                 \Illuminate\Support\Facades\Log::info("TSQUERY: " . $tsQueryStr);
 
                 if ($tsQueryStr) {
-                    \Illuminate\Support\Facades\DB::statement("SET pg_trgm.strict_word_similarity_threshold = 0.6;");
+                    \Illuminate\Support\Facades\DB::statement("SET pg_trgm.strict_word_similarity_threshold = 0.8;");
                     $sub->whereRaw("search_vector @@ to_tsquery('portuguese', ?)", [$tsQueryStr])
                         ->orWhereRaw("search_vector @@ plainto_tsquery('portuguese', ?)", [\Illuminate\Support\Str::ascii($effectiveQ)])
                         ->orWhereRaw("f_unaccent(?) <<% f_unaccent(nome_fantasia)", [$effectiveQ])
