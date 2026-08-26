@@ -132,7 +132,22 @@ class ClienteController extends Controller implements HasMiddleware
             $query->where(function ($sub) use ($q, $effectiveQ) {
                 // Formata termo para tsquery (ex: "Limpeza de Pele" -> "Limpeza:* & Pele:*")
                 $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($effectiveQ)));
-                $tsQueryStr = implode(' & ', array_map(fn($w) => $w . ':*', $words));
+                $mappedWords = [];
+                foreach ($words as $w) {
+                    if (str_ends_with($w, 'ao')) {
+                        $oes = substr($w, 0, -2) . 'oes';
+                        $aos = substr($w, 0, -2) . 'aos';
+                        $aes = substr($w, 0, -2) . 'aes';
+                        $mappedWords[] = "($w:* | $oes:* | $aos:* | $aes:*)";
+                    } else if (str_ends_with($w, 'oes') || str_ends_with($w, 'aos') || str_ends_with($w, 'aes')) {
+                        $singular = substr($w, 0, -3) . 'ao';
+                        $mappedWords[] = "($w:* | $singular:*)";
+                    } else {
+                        $mappedWords[] = $w . ':*';
+                    }
+                }
+                $tsQueryStr = implode(' & ', $mappedWords);
+                \Illuminate\Support\Facades\Log::info("TSQUERY: " . $tsQueryStr);
 
                 if ($tsQueryStr) {
                     \Illuminate\Support\Facades\DB::statement("SET pg_trgm.strict_word_similarity_threshold = 0.6;");
@@ -184,9 +199,26 @@ class ClienteController extends Controller implements HasMiddleware
         $query->with(['enderecos', 'segmentos', 'cidadesAtendidas', 'contatos']);
         $query->withCount(['reviews']);
         
-        // ✅ ORDENAÇÃO INTELIGENTE (NEGÓCIO + RELEVÂNCIA TSVECTOR)
+        $orderCityId = $cityId ?: 0;
         
-        // 0. Match Exato no Nome (Garante que se buscar pelo nome da empresa, ela aparece primeiro)
+        // 1. Prioridade Comercial OBRIGATÓRIA: Pagante Local > Pagante Geral > Gratuito
+        // Essa regra DEVE vir antes do Match Exato para garantir que quem paga fique sempre no topo.
+        $query->orderByRaw("
+            CASE 
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
+                    SELECT 1 FROM enderecos 
+                    WHERE enderecos.cliente_id = clientes.id 
+                    AND (
+                        enderecos.cidade ilike (SELECT nome FROM cidades WHERE id = ? LIMIT 1)
+                        OR EXISTS (SELECT 1 FROM cliente_cidade cc WHERE cc.cliente_id = clientes.id AND cc.cidade_id = ?)
+                    )
+                ) THEN 0
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
+                ELSE 2
+            END ASC
+        ", [$orderCityId, $orderCityId]);
+
+        // 2. Match Exato no Nome (Garante que se buscar pelo nome da empresa, ela aparece primeiro dentro do seu grupo de pagamento)
         if ($q !== '') {
             $exactMatches = [$q];
             $qLower = mb_strtolower(trim($q), 'UTF-8');
@@ -228,28 +260,10 @@ class ClienteController extends Controller implements HasMiddleware
             ", $exactMatchBindings);
         }
 
-        $orderCityId = $cityId ?: 0;
-        
-        // 1. Prioridade Comercial: Pagante Local > Pagante Geral > Gratuito
-        $query->orderByRaw("
-            CASE 
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
-                    SELECT 1 FROM enderecos 
-                    WHERE enderecos.cliente_id = clientes.id 
-                    AND (
-                        enderecos.cidade ilike (SELECT nome FROM cidades WHERE id = ? LIMIT 1)
-                        OR EXISTS (SELECT 1 FROM cliente_cidade cc WHERE cc.cliente_id = clientes.id AND cc.cidade_id = ?)
-                    )
-                ) THEN 0
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
-                ELSE 2
-            END ASC
-        ", [$orderCityId, $orderCityId]);
-
-        // 2. Ordem Alfabética (A-Z)
+        // 3. Ordem Alfabética (A-Z)
         $query->orderBy('nome_fantasia');
 
-        // 3. Relevância Textual (TS_RANK do Postgres) - agora atuando apenas como desempate final
+        // 4. Relevância Textual (TS_RANK do Postgres) - agora atuando apenas como desempate final
         if ($q !== '') {
             $effectiveQ = \App\Models\SearchCorrection::where('typo', mb_strtolower(trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q)), 'UTF-8'))
                 ->value('correction') ?: trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
@@ -915,12 +929,25 @@ class ClienteController extends Controller implements HasMiddleware
                 $results = $results->concat($others);
             }
 
-            return $results->map(function($c) {
+            $formatStorageUrl = function(?string $path) {
+                if (!$path) return null;
+                if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://'])) return $path;
+                $cleanPath = ltrim($path, '/');
+                if (file_exists(public_path('storage/' . $cleanPath))) {
+                    return asset('storage/' . $cleanPath);
+                }
+                $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');
+                $bucket = env('SUPABASE_BUCKET', 'clientes-media');
+                if (\Illuminate\Support\Str::startsWith($cleanPath, 'v1/object/public/')) return "{$supabaseUrl}/storage/{$cleanPath}";
+                return "{$supabaseUrl}/storage/v1/object/public/{$bucket}/{$cleanPath}";
+            };
+
+            return $results->map(function($c) use ($formatStorageUrl) {
                 return [
                     'id' => $c->id,
                     'slug' => $c->slug,
                     'nome_fantasia' => $c->nome_fantasia,
-                    'logo' => $c->logo ? ltrim($c->logo, '/') : null,
+                    'logotipo_url' => $formatStorageUrl($c->logo_url),
                     'city' => $c->enderecos->first()?->cidade,
                     'segment' => $c->segmentos->first()?->nome,
                     'rating' => $c->reviews_avg_rating ?? 5.0,

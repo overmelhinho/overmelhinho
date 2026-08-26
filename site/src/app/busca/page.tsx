@@ -723,7 +723,7 @@ function SearchContent() {
                                 <h3 className="text-base md:text-xl font-black text-gray-900 tracking-tight font-serif flex flex-wrap items-center gap-1.5 md:gap-2 leading-relaxed">
                                     <span>Encontramos</span>
                                     <span className="text-brand-red bg-red-50/80 px-2.5 py-1 rounded-xl border border-red-100 text-xs md:text-sm font-black shadow-sm tracking-wide">
-                                        {allResults.length} {allResults.length === 1 ? 'resultado' : 'resultados'}
+                                        {data?.pages[0]?.meta?.total || allResults.length} {(data?.pages[0]?.meta?.total || allResults.length) === 1 ? 'resultado' : 'resultados'}
                                     </span>
                                     <span>em</span>
                                     <button
