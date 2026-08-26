@@ -192,16 +192,16 @@ class ClienteController extends Controller implements HasMiddleware
             $qLower = mb_strtolower(trim($q), 'UTF-8');
             
             if (str_ends_with($qLower, 'ns')) {
-                $exactMatches[] = substr($qLower, 0, -2) . 'm';
+                $exactMatches[] = mb_substr($qLower, 0, -2, 'UTF-8') . 'm';
             } elseif (str_ends_with($qLower, 'm')) {
-                $exactMatches[] = substr($qLower, 0, -1) . 'ns';
+                $exactMatches[] = mb_substr($qLower, 0, -1, 'UTF-8') . 'ns';
             } elseif (str_ends_with($qLower, 'ões')) {
-                $exactMatches[] = substr($qLower, 0, -3) . 'ão';
+                $exactMatches[] = mb_substr($qLower, 0, -3, 'UTF-8') . 'ão';
             } elseif (str_ends_with($qLower, 'ão')) {
-                $exactMatches[] = substr($qLower, 0, -2) . 'ões';
-                $exactMatches[] = substr($qLower, 0, -2) . 'ãos';
+                $exactMatches[] = mb_substr($qLower, 0, -2, 'UTF-8') . 'ões';
+                $exactMatches[] = mb_substr($qLower, 0, -2, 'UTF-8') . 'ãos';
             } elseif (str_ends_with($qLower, 's') && !str_ends_with($qLower, 'ss')) {
-                $exactMatches[] = substr($qLower, 0, -1);
+                $exactMatches[] = mb_substr($qLower, 0, -1, 'UTF-8');
             } else {
                 $exactMatches[] = $qLower . 's';
             }

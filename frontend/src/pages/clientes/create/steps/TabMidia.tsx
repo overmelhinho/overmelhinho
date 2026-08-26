@@ -61,8 +61,13 @@ export default function TabMidia() {
 
     (async () => {
       try {
+        // Use the standardized watch URL for oembed to avoid 404s with embed links
+        const oembedUrl = id 
+          ? `https://www.youtube.com/watch?v=${id}`
+          : link;
+          
         const resp = await fetch(
-          `https://www.youtube.com/oembed?url=${encodeURIComponent(link)}&format=json`
+          `https://www.youtube.com/oembed?url=${encodeURIComponent(oembedUrl)}&format=json`
         );
         if (!resp.ok) throw new Error("oEmbed failed");
         const data = (await resp.json()) as OEmbedResp;

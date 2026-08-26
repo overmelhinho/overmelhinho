@@ -458,7 +458,7 @@ export default function ClienteEdit() {
               remover_banner: values.remover_banner,
 
               video: values.video_link || null,
-              remover_video: false, // Pode adicionar no form depois se precisar
+              remover_video: values.remover_video,
 
               portfolio_url: typeof values.arquivo_midia === "string" ? values.arquivo_midia : null,
               remover_arquivo_midia: values.remover_arquivo_midia,

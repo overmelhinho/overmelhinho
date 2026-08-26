@@ -82,7 +82,7 @@ export default function GlobalPopup() {
                     </button>
 
                     <div 
-                        className="relative overflow-hidden cursor-pointer rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] bg-slate-100 flex items-center justify-center min-h-[300px] md:min-h-[400px] w-full"
+                        className="relative overflow-hidden cursor-pointer rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] bg-slate-100 flex items-center justify-center w-full"
                         onClick={() => {
                             if (ad.url) {
                                 trackAdInteraction(ad.id, 'click', 'POPUP_GLOBAL', ad.cliente.id);
@@ -94,10 +94,11 @@ export default function GlobalPopup() {
                         <Image 
                             src={imageUrl} 
                             alt={ad.nome} 
-                            fill
+                            width={800}
+                            height={800}
                             priority
                             sizes="(max-width: 768px) 90vw, 450px"
-                            className="object-contain"
+                            className="w-full h-auto object-cover"
                         />
                     </div>
                 </motion.div>
