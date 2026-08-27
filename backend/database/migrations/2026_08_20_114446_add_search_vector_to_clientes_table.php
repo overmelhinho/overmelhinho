@@ -12,11 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Adiciona a coluna TSVECTOR
-        DB::statement('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS search_vector tsvector');
-        
-        // Adiciona o índice GIN para buscas ultrarrápidas
-        DB::statement('CREATE INDEX IF NOT EXISTS clientes_search_vector_gin ON clientes USING GIN (search_vector)');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE clientes ADD COLUMN IF NOT EXISTS search_vector tsvector');
+
+            // 2. Atualiza o vetor de busca para os registros existentes
+            DB::statement('CREATE INDEX IF NOT EXISTS clientes_search_vector_gin ON clientes USING GIN (search_vector)');
+        }
     }
 
     /**

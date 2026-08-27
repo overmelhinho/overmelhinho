@@ -27,6 +27,11 @@ class UpdateSearchVectors extends Command
     {
         $this->info('Iniciando sincronização dos vetores de busca via SQL puro...');
         
+        if (\Illuminate\Support\Facades\DB::connection()->getDriverName() !== 'pgsql') {
+            $this->info('Pulo: banco não é PostgreSQL.');
+            return;
+        }
+
         $sql = "
         WITH segment_data AS (
             SELECT 

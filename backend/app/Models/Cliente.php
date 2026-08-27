@@ -57,10 +57,12 @@ class Cliente extends Model
 
         $text = \Illuminate\Support\Str::ascii($text);
         
-        \Illuminate\Support\Facades\DB::statement(
-            'UPDATE clientes SET search_vector = to_tsvector(\'portuguese\', ?) WHERE id = ?',
-            [$text, $this->id]
-        );
+        if (\Illuminate\Support\Facades\DB::connection()->getDriverName() === 'pgsql') {
+            \Illuminate\Support\Facades\DB::statement(
+                'UPDATE clientes SET search_vector = to_tsvector(\'portuguese\', ?) WHERE id = ?',
+                [$text, $this->id]
+            );
+        }
     }
 
     protected string $auditEntityType = 'cliente';

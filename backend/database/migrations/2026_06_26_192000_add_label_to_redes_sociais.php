@@ -1,7 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -13,11 +14,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('ALTER TABLE redes_sociais ADD COLUMN IF NOT EXISTS label VARCHAR(100) NULL');
+        if (!Schema::hasColumn('redes_sociais', 'label')) {
+            Schema::table('redes_sociais', function (Blueprint $table) {
+                $table->string('label', 100)->nullable();
+            });
+        }
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE redes_sociais DROP COLUMN IF EXISTS label');
+        if (Schema::hasColumn('redes_sociais', 'label')) {
+            Schema::table('redes_sociais', function (Blueprint $table) {
+                $table->dropColumn('label');
+            });
+        }
     }
 };

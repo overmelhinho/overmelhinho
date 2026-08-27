@@ -12,19 +12,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm;');
-        
-        DB::statement("
-            CREATE OR REPLACE FUNCTION f_unaccent(text)
-            RETURNS text AS
-            $$
-            SELECT public.unaccent('public.unaccent', $1)
-            $$  LANGUAGE sql IMMUTABLE;
-        ");
 
-        DB::statement('CREATE INDEX IF NOT EXISTS clientes_nome_fantasia_trgm_idx ON clientes USING gin (f_unaccent(nome_fantasia) gin_trgm_ops);');
-        DB::statement('CREATE INDEX IF NOT EXISTS clientes_nome_alternativo_trgm_idx ON clientes USING gin (f_unaccent(nome_alternativo) gin_trgm_ops);');
-        DB::statement('CREATE INDEX IF NOT EXISTS segmentos_nome_trgm_idx ON segmentos USING gin (f_unaccent(nome) gin_trgm_ops);');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm;');
+            
+            DB::statement("
+                CREATE OR REPLACE FUNCTION f_unaccent(text)
+                RETURNS text AS
+                $$
+                SELECT public.unaccent('public.unaccent', $1)
+                $$  LANGUAGE sql IMMUTABLE;
+            ");
+
+            DB::statement('CREATE INDEX IF NOT EXISTS clientes_nome_fantasia_trgm_idx ON clientes USING gin (f_unaccent(nome_fantasia) gin_trgm_ops);');
+            DB::statement('CREATE INDEX IF NOT EXISTS clientes_nome_alternativo_trgm_idx ON clientes USING gin (f_unaccent(nome_alternativo) gin_trgm_ops);');
+            DB::statement('CREATE INDEX IF NOT EXISTS segmentos_nome_trgm_idx ON segmentos USING gin (f_unaccent(nome) gin_trgm_ops);');
+        }
     }
 
     /**
