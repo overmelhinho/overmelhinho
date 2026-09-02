@@ -2232,7 +2232,10 @@ class ClienteController extends Controller implements HasMiddleware
 
         $filename = basename($tempPath);
         $ext = pathinfo($filename, PATHINFO_EXTENSION) ?: 'webp';
-        $destPath = "clientes/{$clienteId}/logo/logo.{$ext}";
+        
+        // Usar o filename UUID (gerado no upload temporário) para garantir URL única 
+        // e invalidar o cache de imagem (next/image) no frontend automaticamente.
+        $destPath = "clientes/{$clienteId}/logo/{$filename}";
 
         try {
             // COPY
@@ -2291,6 +2294,23 @@ class ClienteController extends Controller implements HasMiddleware
 
             $finalUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucket}/{$destPath}";
             $oldLogoUrl = $cliente->logo_url ?? null;
+
+            // Remover arquivo do logo antigo do Supabase para não acumular lixo
+            if ($oldLogoUrl) {
+                $parsedOldPath = parse_url($oldLogoUrl, PHP_URL_PATH) ?: '';
+                $marker = "/storage/v1/object/public/{$bucket}/";
+                if (str_contains($parsedOldPath, $marker)) {
+                    $oldPath = explode($marker, $parsedOldPath, 2)[1] ?? '';
+                    if ($oldPath && $oldPath !== $destPath) {
+                        Http::withHeaders([
+                            'apikey' => $supabaseKey,
+                            'Authorization' => "Bearer {$supabaseKey}",
+                            'Content-Type' => 'application/json',
+                        ])->delete($delUrl, ['prefixes' => [$oldPath]]);
+                    }
+                }
+            }
+
             $cliente->update(['logo_url' => $finalUrl]);
 
 
@@ -2395,6 +2415,23 @@ $this->audit(
 
             $finalUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucket}/{$destPath}";
             $oldBannerUrl = $cliente->banner_url ?? null;
+
+            // Remover arquivo da capa antiga do Supabase para não acumular lixo
+            if ($oldBannerUrl) {
+                $parsedOldPath = parse_url($oldBannerUrl, PHP_URL_PATH) ?: '';
+                $marker = "/storage/v1/object/public/{$bucket}/";
+                if (str_contains($parsedOldPath, $marker)) {
+                    $oldPath = explode($marker, $parsedOldPath, 2)[1] ?? '';
+                    if ($oldPath && $oldPath !== $destPath) {
+                        Http::withHeaders([
+                            'apikey' => $supabaseKey,
+                            'Authorization' => "Bearer {$supabaseKey}",
+                            'Content-Type' => 'application/json',
+                        ])->delete($deleteUrl, ['prefixes' => [$oldPath]]);
+                    }
+                }
+            }
+
             $cliente->update(['banner_url' => $finalUrl]);
 
             $this->audit(

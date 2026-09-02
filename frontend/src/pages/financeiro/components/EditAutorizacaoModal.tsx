@@ -265,10 +265,30 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
 
                 for (let i = 0; i < num; i++) {
                     if (newParcelas[i] === null) {
+                        let venc = format(dateCursor, "yyyy-MM-dd");
+                        let label = format(dateCursor, "dd/MM/yyyy");
+                        
+                        // Preservar datas customizadas do banco de dados se a data inicial não foi alterada
+                        const orig = originalParcelas[i];
+                        let isDataInicialIntacta = false;
+                        if (autorizacao?.data_primeira_parcela) {
+                            const origDate = autorizacao.data_primeira_parcela.split(' ')[0].split('T')[0];
+                            isDataInicialIntacta = (form.data_primeira_parcela === origDate);
+                        }
+
+                        if (orig && orig.vencimento && isDataInicialIntacta) {
+                            try {
+                                const dateStr = orig.vencimento.split('T')[0];
+                                venc = dateStr;
+                                const date = new Date(dateStr + 'T12:00:00');
+                                label = format(date, "dd/MM/yyyy");
+                            } catch (e) {}
+                        }
+
                         newParcelas[i] = {
                             numero: i + 1,
-                            vencimento: format(dateCursor, "yyyy-MM-dd"),
-                            label: format(dateCursor, "dd/MM/yyyy"),
+                            vencimento: venc,
+                            label: label,
                             valor: (diff !== 0 ? (baseVal + diff) : baseVal).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                             isPaid: false
                         };

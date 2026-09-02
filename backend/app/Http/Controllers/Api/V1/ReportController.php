@@ -479,8 +479,8 @@ class ReportController extends Controller
 
         $query = Autorizacao::with(['cliente.enderecos', 'cliente.contatos', 'vendedor']);
 
-        // Data filter (by created_at, which represents emissao/data_cadastro)
-        $query->whereBetween(DB::raw('DATE(created_at)'), [$startDate, $endDate]);
+        // Data filter by data_inicio
+        $query->whereBetween('data_inicio', [$startDate, $endDate]);
 
         // Vendedor filter
         if ($request->filled('vendedor_id')) {
@@ -508,9 +508,6 @@ class ReportController extends Controller
 
         // Ordem
         $orderBy = $request->ordem ?? 'numero';
-        if ($orderBy === 'data_inicio') {
-            $orderBy = 'created_at';
-        }
         $direction = $request->direcao ?? 'asc';
         if ($orderBy === 'nome_fantasia') {
             $query->join('clientes', 'autorizacoes.cliente_id', '=', 'clientes.id')
@@ -530,6 +527,7 @@ class ReportController extends Controller
                 'id' => $auth->id,
                 'status' => $auth->status,
                 'emissao' => $auth->created_at ? $auth->created_at->format('d/m/Y') : null,
+                'data_inicio' => $auth->data_inicio ? $auth->data_inicio->format('d/m/Y') : null,
                 'cliente_nome' => $auth->cliente->nome_fantasia ?? $auth->cliente->razao_social ?? 'N/A',
                 'numero' => $auth->numero,
                 'tipo_publicidade' => mb_strtoupper($auth->tipo_publicidade),

@@ -50,7 +50,7 @@ export default function CommissionReportsTab() {
         }
     });
 
-    const { data: reportData, isLoading } = useQuery({
+    const { data: reportData, isLoading, refetch, isRefetching } = useQuery({
         queryKey: ["commission-report", startDate, endDate, cidade, vendedorId, tipoPublicidade, telefone, ordem, direcao],
         queryFn: async () => {
             const params = new URLSearchParams({ 
@@ -66,7 +66,8 @@ export default function CommissionReportsTab() {
 
             const resp = await axios.get(`/v1/admin/reports/commissions?${params.toString()}`);
             return resp.data;
-        }
+        },
+        staleTime: 0
     });
 
     const formatCurrency = (val: number) =>
@@ -76,8 +77,12 @@ export default function CommissionReportsTab() {
     const summary = reportData?.summary || { total_titulos: 0, total_valor: 0, total_comissao: 0 };
 
     const handleSearch = () => {
-        setCidade(searchCidade);
-        setTelefone(searchTelefone);
+        if (cidade === searchCidade && telefone === searchTelefone) {
+            refetch();
+        } else {
+            setCidade(searchCidade);
+            setTelefone(searchTelefone);
+        }
     };
 
     const formatNumero = (num: string | number) => {
@@ -90,9 +95,9 @@ export default function CommissionReportsTab() {
     const handleExport = () => {
         if (!items || items.length === 0) return;
 
-        const headers = ["Emissão", "Nome Fantasia", "Autorização", "Tipo", "Valor Total", "Data Final", "Vendedor"];
+        const headers = ["Data inicial", "Nome Fantasia", "Autorização", "Tipo", "Valor Total", "Data Final", "Vendedor"];
         const rows = items.map((item: any) => [
-            item.emissao || '-',
+            item.data_inicio || '-',
             `"${(item.cliente_nome || '').replace(/"/g, '""')}"`,
             formatNumero(item.numero),
             item.tipo_publicidade,
@@ -205,8 +210,8 @@ export default function CommissionReportsTab() {
                             <SelectContent>
                                 <SelectItem value="numero|desc">Número Autorização (Maior para menor)</SelectItem>
                                 <SelectItem value="numero|asc">Número Autorização (Menor para maior)</SelectItem>
-                                <SelectItem value="data_inicio|desc">Data Emissão (Mais recentes)</SelectItem>
-                                <SelectItem value="data_inicio|asc">Data Emissão (Mais antigas)</SelectItem>
+                                <SelectItem value="data_inicio|desc">Data de Início (Mais recentes)</SelectItem>
+                                <SelectItem value="data_inicio|asc">Data de Início (Mais antigas)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -242,7 +247,7 @@ export default function CommissionReportsTab() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100">
-                                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Emissão</th>
+                                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Data inicial</th>
                                 <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Nome Fantasia</th>
                                 <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Autorização</th>
                                 <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Tipo</th>
@@ -252,7 +257,7 @@ export default function CommissionReportsTab() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {isLoading ? (
+                            {isLoading || isRefetching ? (
                                 <tr>
                                     <td colSpan={7} className="py-20 text-center">
                                         <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -268,7 +273,7 @@ export default function CommissionReportsTab() {
                                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-                                            {item.emissao || '-'}
+                                            {item.data_inicio || '-'}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 max-w-[200px]">
