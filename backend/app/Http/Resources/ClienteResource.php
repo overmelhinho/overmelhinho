@@ -37,15 +37,10 @@ class ClienteResource extends JsonResource
                 return asset('storage/' . $cleanPath);
             }
 
-            // Regra para imagens antigas (antes da migração para o Supabase).
-            // Se o caminho começa com as pastas antigas e não achou local,
-            // redirecionamos para o servidor legado (útil especialmente para o ambiente local)
-            if (Str::startsWith($cleanPath, ['logos/', 'capas/', 'portfolio/'])) {
-                $legacyBase = env('LEGACY_STORAGE_URL', 'https://api.overmelhinho.com.br/storage/');
-                return rtrim($legacyBase, '/') . '/' . $cleanPath;
-            }
-
-            // Se não for legado, tratamos como arquivo novo do Supabase (clientes/, temp/)
+            // Se não for encontrado localmente, assumimos que é um arquivo do Supabase.
+            // NOTA: Arquivos antigos (legado) já são capturados pelo file_exists acima no servidor de produção.
+            // Não devemos forçar o redirecionamento de pastas como 'logos/' para o servidor legado aqui,
+            // pois imagens recentes upadas no Supabase também usam esse prefixo e seriam quebradas (Erro 403).
             $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');
             $bucket = env('SUPABASE_BUCKET', 'clientes-media');
             
