@@ -32,22 +32,6 @@ class ClienteResource extends JsonResource
             
             $cleanPath = ltrim($path, '/');
 
-            // Verifica se o arquivo existe fisicamente no servidor (produção)
-            if (file_exists(public_path('storage/' . $cleanPath))) {
-                $assetUrl = asset('storage/' . $cleanPath);
-                
-                // Força o uso do domínio 'dash' em vez do 'api' antigo para evitar erro 403 de permissões no Nginx
-                if (Str::contains($assetUrl, 'api.overmelhinho.com.br')) {
-                    $assetUrl = str_replace('api.overmelhinho.com.br', 'dash.overmelhinho.com.br', $assetUrl);
-                }
-                
-                return $assetUrl;
-            }
-
-            // Se não for encontrado localmente, assumimos que é um arquivo do Supabase.
-            // NOTA: Arquivos antigos (legado) já são capturados pelo file_exists acima no servidor de produção.
-            // Não devemos forçar o redirecionamento de pastas como 'logos/' para o servidor legado aqui,
-            // pois imagens recentes upadas no Supabase também usam esse prefixo e seriam quebradas (Erro 403).
             $supabaseUrl = rtrim(env('SUPABASE_URL', 'https://spefwgjsltjryxcizype.supabase.co'), '/');
             $bucket = env('SUPABASE_BUCKET', 'clientes-media');
             
