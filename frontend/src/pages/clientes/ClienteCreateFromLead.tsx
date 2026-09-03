@@ -202,11 +202,11 @@ export default function ClienteCreateFromLead() {
       { id: 2, label: "Contato" },
       { id: 3, label: "Segmentos" }, // ✅ Ativado para todos
       { id: 4, label: "Horário" }, // ✅ Ativado para todos
+      { id: 5, label: "Cidades" }, // ✅ Liberado para todos
     ];
 
     if (tipoCliente === "pagante") {
       base.push(
-        { id: 5, label: "Cidades" },
         { id: 6, label: "Redes Sociais" },
         { id: 7, label: "Benefícios" },
         { id: 8, label: "Logotipo" },

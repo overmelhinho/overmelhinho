@@ -82,7 +82,7 @@
 
     <!-- 2. TITLE -->
     <div class="doc-title">
-        Autorização de Publicidade - Nº {{ str_pad($autorizacao->numero, 5, '0', STR_PAD_LEFT) }}
+        Contrato de Publicidade - Nº {{ str_pad($autorizacao->numero, 5, '0', STR_PAD_LEFT) }}
     </div>
 
     <!-- 3. CLIENT INFO -->
