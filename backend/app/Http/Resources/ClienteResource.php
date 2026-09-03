@@ -34,7 +34,14 @@ class ClienteResource extends JsonResource
 
             // Verifica se o arquivo existe fisicamente no servidor (produção)
             if (file_exists(public_path('storage/' . $cleanPath))) {
-                return asset('storage/' . $cleanPath);
+                $assetUrl = asset('storage/' . $cleanPath);
+                
+                // Força o uso do domínio 'dash' em vez do 'api' antigo para evitar erro 403 de permissões no Nginx
+                if (Str::contains($assetUrl, 'api.overmelhinho.com.br')) {
+                    $assetUrl = str_replace('api.overmelhinho.com.br', 'dash.overmelhinho.com.br', $assetUrl);
+                }
+                
+                return $assetUrl;
             }
 
             // Se não for encontrado localmente, assumimos que é um arquivo do Supabase.

@@ -335,6 +335,18 @@ Route::post('/v1/tracking/search', [\App\Http\Controllers\Api\V1\TrackingControl
 Route::get('/v1/public/reports/{token}', [ClientReportController::class, 'showPublic']);
 Route::get('/v1/public/sitemap-data', [\App\Http\Controllers\Api\V1\ClienteController::class, 'sitemap']);
 Route::get('/v1/public/active-sitemap-combinations', [\App\Http\Controllers\Api\V1\ClienteController::class, 'activeSitemapCombinations']);
+
+Route::get('/v1/public/clear-cache-temp', function () {
+    \Illuminate\Support\Facades\Cache::flush();
+    
+    // Dispara a revalidação total do Next.js (limpa o cache do frontend para todas as páginas)
+    $nextJsUrl = env('NEXT_PUBLIC_SITE_URL', 'https://www.overmelhinho.com.br');
+    $secret = env('REVALIDATE_SECRET', 'overmelhinho_revalidate_2026');
+    \Illuminate\Support\Facades\Http::get("{$nextJsUrl}/webhook/revalidate?secret={$secret}&path=/");
+    
+    return response()->json(['message' => 'Cache da API e do Site limpos com sucesso!']);
+});
+
 Route::get('/v1/public/debug-log', function () {
     $logPath = storage_path('logs/laravel.log');
     if (file_exists($logPath)) {
