@@ -164,6 +164,13 @@ class ClienteController extends Controller implements HasMiddleware
                         });
                 }
 
+                // Busca Space-Blind Absoluta (Ignora totalmente os espaços na query e no banco)
+                $qNoSpaces = str_replace(' ', '', $effectiveQ);
+                if (!empty($qNoSpaces)) {
+                    $sub->orWhereRaw("replace(f_unaccent(nome_fantasia), ' ', '') ilike f_unaccent(?)", ["%{$qNoSpaces}%"])
+                        ->orWhereRaw("replace(f_unaccent(nome_alternativo), ' ', '') ilike f_unaccent(?)", ["%{$qNoSpaces}%"]);
+                }
+
                 // Mantém a busca por endereço (bairro/rua)
                 $sub->orWhereHas('enderecos', function ($eq) use ($q, $effectiveQ) {
                     $eq->whereRaw('unaccent(bairro) ilike unaccent(?)', ["%{$q}%"])
@@ -368,9 +375,10 @@ class ClienteController extends Controller implements HasMiddleware
                     }
                 }
                 
-                // Busca Space-Blind
-                if (!str_contains(trim($q), ' ')) {
-                    $sub->orWhereRaw("replace(unaccent(nome_fantasia), ' ', '') ilike unaccent(?)", ["%{$q}%"]);
+                // Busca Space-Blind Absoluta
+                $qNoSpaces = str_replace(' ', '', $effectiveQ);
+                if (!empty($qNoSpaces)) {
+                    $sub->orWhereRaw("replace(unaccent(nome_fantasia), ' ', '') ilike unaccent(?)", ["%{$qNoSpaces}%"]);
                 }
                 
                 // Similarity (pg_trgm) - Threshold baixo 0.1
@@ -652,14 +660,15 @@ class ClienteController extends Controller implements HasMiddleware
                         }
                     }
 
-                    // Busca Space-Blind
-                    if (!str_contains(trim($q), ' ')) {
+                    // Busca Space-Blind Absoluta
+                    $qNoSpaces = str_replace(' ', '', $q);
+                    if (!empty($qNoSpaces)) {
                         if ($unaccentExists) {
-                            $sub->orWhereRaw("replace(unaccent(nome_fantasia), ' ', '') ilike unaccent(?)", ["%{$q}%"])
-                                ->orWhereRaw("replace(unaccent(razao_social), ' ', '') ilike unaccent(?)", ["%{$q}%"]);
+                            $sub->orWhereRaw("replace(unaccent(nome_fantasia), ' ', '') ilike unaccent(?)", ["%{$qNoSpaces}%"])
+                                ->orWhereRaw("replace(unaccent(razao_social), ' ', '') ilike unaccent(?)", ["%{$qNoSpaces}%"]);
                         } else {
-                            $sub->orWhereRaw("replace(nome_fantasia, ' ', '') ilike ?", ["%{$q}%"])
-                                ->orWhereRaw("replace(razao_social, ' ', '') ilike ?", ["%{$q}%"]);
+                            $sub->orWhereRaw("replace(nome_fantasia, ' ', '') ilike ?", ["%{$qNoSpaces}%"])
+                                ->orWhereRaw("replace(razao_social, ' ', '') ilike ?", ["%{$qNoSpaces}%"]);
                         }
                     }
 

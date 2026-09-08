@@ -155,7 +155,7 @@ function SearchContent() {
     const searchParams = useSearchParams();
     const [query, setQuery] = useState('');
     const observerTarget = useRef(null);
-    const { cityId, cityName, setCity, setIsCityModalOpen } = useLocation();
+    const { cityId, cityName, setCity, setIsCityModalOpen, isLoading: isLocationLoading } = useLocation();
     const syncedUrlCityId = useRef<string | null>(null);
 
     // Sincroniza a cidade da URL com o Context apenas quando a URL muda, para não travar a escolha manual
@@ -171,6 +171,24 @@ function SearchContent() {
             }
         }
     }, [searchParams, cityId, availableCities, setCity]);
+
+    // Sincroniza o Context para a URL, garantindo que "Qualquer Cidade" remova city_id da URL
+    useEffect(() => {
+        if (isLocationLoading || !availableCities) return; // Aguarda a inicialização completa (incluindo cidades da API)
+
+        const urlCityId = searchParams.get('city_id');
+        const currentCityIdStr = cityId ? cityId.toString() : null;
+
+        if (currentCityIdStr !== urlCityId) {
+            const params = new URLSearchParams(searchParams.toString());
+            if (cityId) {
+                params.set('city_id', cityId.toString());
+            } else {
+                params.delete('city_id');
+            }
+            router.replace(`/busca?${params.toString()}`, { scroll: false });
+        }
+    }, [cityId, isLocationLoading, availableCities, searchParams, router]);
 
     // Foco automático no input ao carregar a página (Abre o teclado no Mobile)
     useEffect(() => {
@@ -318,7 +336,7 @@ function SearchContent() {
                     q: query,
                     page: pageParam,
                     per_page: 20,
-                    city_id: cityId || searchParams.get('city_id')
+                    city_id: cityId
                 }
             });
             return res.data;
@@ -328,7 +346,7 @@ function SearchContent() {
             const { current_page, last_page } = lastPage.meta || {};
             return current_page < last_page ? current_page + 1 : undefined;
         },
-        enabled: !!query
+        enabled: !!query && !isLocationLoading
     });
 
     const allResults = useMemo(() => {
