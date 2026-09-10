@@ -20,6 +20,15 @@ import Image from 'next/image';
 import api from '@/services/api';
 import LiteYouTube from '@/components/LiteYouTube';
 
+const formatTelLink = (phone: string | undefined | null) => {
+    if (!phone) return '#';
+    let cleaned = phone.replace(/\D/g, '');
+    if ((cleaned.length === 10 || cleaned.length === 11) && !cleaned.startsWith('0')) {
+        cleaned = '0' + cleaned;
+    }
+    return `tel:${cleaned}`;
+};
+
 // Helper para normalizar strings para slugs (URL friendly)
 const slugify = (text: string) => {
     return text
@@ -304,7 +313,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
         const found = priority.find(p => contact[p.key] && contact[p.flag] && !p.hidden);
         const phone = found ? contact[found.key] : (!isPrincipalHidden ? contact.telefone_principal : contact.celular);
 
-        if (phone) window.location.href = `tel:${phone.replace(/\D/g, '')}`;
+        if (phone) window.location.href = formatTelLink(phone);
     };
 
     const handleNextImage = (e?: React.MouseEvent) => {
@@ -1135,7 +1144,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                                 p.number && (
                                                                     <a 
                                                                         key={idx}
-                                                                        href={`tel:${p.number.replace(/\D/g, '')}`}
+                                                                        href={formatTelLink(p.number)}
                                                                         className={`col-span-full bg-green-50 hover:bg-green-100 py-2.5 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex flex-col items-center justify-center`}
                                                                     >
                                                                         <div className="flex items-center justify-center gap-2">
@@ -1321,7 +1330,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                             </span>
                                                         ) : (
                                                             <a 
-                                                                href={`tel:${p.number.replace(/\D/g, '')}`} 
+                                                                href={formatTelLink(p.number)} 
                                                                 className="text-lg font-black text-gray-900 hover:text-brand-red transition-colors font-serif italic leading-none"
                                                             >
                                                                 {p.number}
@@ -1334,7 +1343,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                     <div className="flex gap-2">
                                                         {p.number !== 'Informação não disponível' && (
                                                             <a 
-                                                                href={`tel:${p.number.replace(/\D/g, '')}`}
+                                                                href={formatTelLink(p.number)}
                                                                 className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-brand-red hover:bg-red-50 transition-all border border-gray-100"
                                                                 title="Ligar"
                                                             >
@@ -1560,7 +1569,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                         p.number && (
                                                             <a 
                                                                 key={idx}
-                                                                href={`tel:${p.number.replace(/\D/g, '')}`}
+                                                                href={formatTelLink(p.number)}
                                                                 className={`col-span-full bg-green-50 hover:bg-green-100 py-2.5 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.15em] text-green-600 text-center transition-all border border-green-100 flex flex-col items-center justify-center`}
                                                             >
                                                                 <div className="flex items-center justify-center gap-2">

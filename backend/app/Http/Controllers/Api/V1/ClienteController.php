@@ -131,7 +131,10 @@ class ClienteController extends Controller implements HasMiddleware
 
             $query->where(function ($sub) use ($q, $effectiveQ) {
                 // Formata termo para tsquery (ex: "Limpeza de Pele" -> "Limpeza:* & Pele:*")
-                $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($effectiveQ)));
+                $cleanStr = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $effectiveQ);
+                $cleanStr = preg_replace('/\b(e|de|do|da|dos|das|o|a|os|as|em|no|na|com|por)\b/i', ' ', $cleanStr);
+                \Illuminate\Support\Facades\Log::info("FTS DEBUG - Original: " . $effectiveQ . " | Clean: " . $cleanStr);
+                $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($cleanStr)));
                 $mappedWords = [];
                 foreach ($words as $w) {
                     if (str_ends_with($w, 'ao')) {
@@ -275,7 +278,9 @@ class ClienteController extends Controller implements HasMiddleware
             $effectiveQ = \App\Models\SearchCorrection::where('typo', mb_strtolower(trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q)), 'UTF-8'))
                 ->value('correction') ?: trim(preg_replace('/^(o|a|os|as|de|do|da)\s+/i', '', $q));
             
-            $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($effectiveQ)));
+            $cleanStr = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $effectiveQ);
+            $cleanStr = preg_replace('/\b(e|de|do|da|dos|das|o|a|os|as|em|no|na|com|por)\b/i', ' ', $cleanStr);
+            $words = array_filter(explode(' ', \Illuminate\Support\Str::ascii($cleanStr)));
             $tsQueryStr = implode(' & ', array_map(fn($w) => $w . ':*', $words));
             
             if ($tsQueryStr) {
