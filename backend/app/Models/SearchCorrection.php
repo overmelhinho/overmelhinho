@@ -12,4 +12,8 @@ class SearchCorrection extends Model
         'hit_count',
         'is_verified'
     ];
+
+    protected $casts = [
+        'is_verified' => 'boolean',
+    ];
 }
