@@ -33,7 +33,7 @@ class SearchCorrectionController extends Controller
 
         $validated['typo'] = mb_strtolower(trim($validated['typo']), 'UTF-8');
         $validated['correction'] = mb_strtolower(trim($validated['correction']), 'UTF-8');
-        $validated['is_verified'] = true;
+        $validated['is_verified'] = DB::raw('true');
         $validated['hit_count'] = 0;
 
         $correction = SearchCorrection::create($validated);
