@@ -14,7 +14,16 @@ class SearchCorrectionController extends Controller
      */
     public function index(Request $request)
     {
-        $corrections = SearchCorrection::orderBy('hit_count', 'desc')
+        $query = SearchCorrection::query();
+
+        if ($search = $request->input('search')) {
+            $query->where(function($q) use ($search) {
+                $q->where('typo', 'ilike', "%{$search}%")
+                  ->orWhere('correction', 'ilike', "%{$search}%");
+            });
+        }
+
+        $corrections = $query->orderBy('hit_count', 'desc')
             ->orderBy('id', 'desc')
             ->paginate($request->input('per_page', 15));
             

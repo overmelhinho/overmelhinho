@@ -31,15 +31,25 @@ const SearchDictionaryPage: React.FC = () => {
     // State for new manual correction
     const [newTypo, setNewTypo] = useState('');
     const [newCorrection, setNewCorrection] = useState('');
+    
+    // Pagination & Search state
+    const [page, setPage] = useState(1);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [tempSearch, setTempSearch] = useState(''); // For debouncing or manual search trigger
 
     // Fetch Corrections
-    const { data: correctionsData, isLoading: loadingCorrections } = useQuery({
-        queryKey: ['search-corrections'],
+    const { data: correctionsResponse, isLoading: loadingCorrections } = useQuery({
+        queryKey: ['search-corrections', page, searchQuery],
         queryFn: async () => {
-            const response = await api.get('/v1/admin/search-corrections');
-            return response.data.data;
+            const response = await api.get('/v1/admin/search-corrections', {
+                params: { page, search: searchQuery, per_page: 10 }
+            });
+            return response.data;
         }
     });
+    
+    const correctionsData = correctionsResponse?.data || [];
+    const meta = correctionsResponse;
 
     // Fetch Suggestions (Searches with 0 results)
     const { data: suggestionsData, isLoading: loadingSuggestions } = useQuery({
@@ -166,39 +176,113 @@ const SearchDictionaryPage: React.FC = () => {
                             transition={{ delay: 0.1 }}
                             className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100"
                         >
-                            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                                <BookA className="text-blue-500" /> Dicionário Ativo
-                            </h2>
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 shrink-0">
+                                    <BookA className="text-blue-500" /> Dicionário Ativo
+                                </h2>
+                                <div className="relative flex-1 max-w-sm">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Buscar termos..." 
+                                        value={tempSearch}
+                                        onChange={(e) => setTempSearch(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                setSearchQuery(tempSearch);
+                                                setPage(1);
+                                            }
+                                        }}
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm font-medium"
+                                    />
+                                </div>
+                            </div>
+                            
                             {loadingCorrections ? (
-                                <div className="py-10 text-center text-slate-400">Carregando...</div>
+                                <div className="py-10 text-center text-slate-400 font-medium">Carregando dados...</div>
                             ) : correctionsData?.length === 0 ? (
-                                <div className="py-10 text-center text-slate-400 italic">Nenhuma correção cadastrada.</div>
+                                <div className="py-10 text-center text-slate-400 italic font-medium bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                    Nenhuma correção encontrada.
+                                </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <AnimatePresence>
-                                        {correctionsData?.map((item: any) => (
-                                            <motion.div
-                                                key={item.id}
-                                                layout
-                                                initial={{ opacity: 0, scale: 0.9 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.5 }}
-                                                className="bg-slate-50 p-4 rounded-2xl flex items-center justify-between group"
-                                            >
-                                                <div className="flex items-center gap-3 min-w-0 pr-3">
-                                                    <span className="text-slate-500 font-bold line-through flex-1" style={{ wordBreak: 'break-word' }}>{item.typo}</span>
-                                                    <TrendingUp className="text-slate-300 shrink-0" size={16} />
-                                                    <span className="text-emerald-600 font-black flex-1 text-right" style={{ wordBreak: 'break-word' }}>{item.correction}</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => deleteMutation.mutate(item.id)}
-                                                    className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </motion.div>
-                                        ))}
-                                    </AnimatePresence>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                                <th className="pb-4 font-bold">Termo Digitado</th>
+                                                <th className="pb-4 font-bold hidden sm:table-cell">Correção</th>
+                                                <th className="pb-4 font-bold text-center">Uso</th>
+                                                <th className="pb-4 font-bold text-right">Ação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <AnimatePresence>
+                                                {correctionsData?.map((item: any) => (
+                                                    <motion.tr 
+                                                        key={item.id}
+                                                        layout
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.95 }}
+                                                        className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors group"
+                                                    >
+                                                        <td className="py-4 pr-4">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                                                                <span className="font-bold text-slate-600 line-through decoration-slate-300" style={{ wordBreak: 'break-word' }}>{item.typo}</span>
+                                                                <TrendingUp className="text-slate-300 sm:hidden" size={14} />
+                                                                <span className="font-black text-emerald-600 sm:hidden" style={{ wordBreak: 'break-word' }}>{item.correction}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 pr-4 hidden sm:table-cell">
+                                                            <div className="flex items-center gap-2">
+                                                                <TrendingUp className="text-slate-300" size={16} />
+                                                                <span className="font-black text-emerald-600" style={{ wordBreak: 'break-word' }}>{item.correction}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 text-center">
+                                                            <span className="inline-flex items-center justify-center px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold">
+                                                                {item.hit_count}x
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4 text-right">
+                                                            <button
+                                                                onClick={() => deleteMutation.mutate(item.id)}
+                                                                className="inline-flex items-center justify-center w-8 h-8 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                                title="Remover"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </td>
+                                                    </motion.tr>
+                                                ))}
+                                            </AnimatePresence>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            {/* PAGINATION */}
+                            {meta?.last_page > 1 && (
+                                <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-medium text-slate-500">
+                                    <div>
+                                        Página <span className="text-slate-800 font-bold">{meta.current_page}</span> de <span className="text-slate-800 font-bold">{meta.last_page}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            disabled={page === 1}
+                                            onClick={() => setPage(p => p - 1)}
+                                            className="px-4 py-2 bg-slate-50 rounded-xl hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-slate-50 transition-colors"
+                                        >
+                                            Anterior
+                                        </button>
+                                        <button 
+                                            disabled={page === meta.last_page}
+                                            onClick={() => setPage(p => p + 1)}
+                                            className="px-4 py-2 bg-slate-50 rounded-xl hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-slate-50 transition-colors"
+                                        >
+                                            Próxima
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </motion.div>

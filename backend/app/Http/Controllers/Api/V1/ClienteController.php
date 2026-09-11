@@ -127,7 +127,14 @@ class ClienteController extends Controller implements HasMiddleware
             $learned = \App\Models\SearchCorrection::where('typo', mb_strtolower($normalizedQ, 'UTF-8'))
                 ->orderByDesc('hit_count')
                 ->first();
-            $effectiveQ = $learned ? $learned->correction : $normalizedQ;
+                
+            if ($learned) {
+                // Atualiza o contador de uso desta correção
+                $learned->increment('hit_count');
+                $effectiveQ = $learned->correction;
+            } else {
+                $effectiveQ = $normalizedQ;
+            }
 
             $query->where(function ($sub) use ($q, $effectiveQ) {
                 // Formata termo para tsquery (ex: "Limpeza de Pele" -> "Limpeza:* & Pele:*")
