@@ -324,6 +324,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/radar/oportunidades/alvos/detalhes', [\App\Http\Controllers\Api\V1\RadarController::class, 'getTargetDetails']);
     Route::post('/radar/oportunidades/alvos/prospectar', [\App\Http\Controllers\Api\V1\RadarController::class, 'markTargetAsProspected']);
     Route::get('/radar/roi', [\App\Http\Controllers\Api\V1\RadarController::class, 'getROI']);
+
+    // ✅ Dicionário de Busca (Typos & Correções)
+    Route::get('/admin/search-corrections/suggestions', [\App\Http\Controllers\Api\V1\SearchCorrectionController::class, 'suggestions']);
+    Route::apiResource('admin/search-corrections', \App\Http\Controllers\Api\V1\SearchCorrectionController::class)->except(['create', 'edit', 'show']);
 });
 
 

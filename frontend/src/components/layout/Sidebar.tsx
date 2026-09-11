@@ -18,6 +18,7 @@ import {
   Megaphone,
   Sparkles,
   Zap,
+  BookA,
 } from "lucide-react";
 
 type Item = {
@@ -105,6 +106,12 @@ export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: Sidebar
       to: "/radar-prospeccao",
       label: "Radar Google",
       icon: <Sparkles size={18} />,
+      perms: ["view_dashboard"],
+    },
+    {
+      to: "/dicionario-busca",
+      label: "Dicionário de Busca",
+      icon: <BookA size={18} />,
       perms: ["view_dashboard"],
     },
     {

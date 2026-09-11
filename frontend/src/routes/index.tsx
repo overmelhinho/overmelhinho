@@ -85,6 +85,7 @@ import AutorizarPage from "@/pages/public/AutorizarPage";
 import AuditMatchPage from "@/pages/AuditMatchPage";
 import AuditDashboardPage from "@/pages/AuditDashboardPage";
 import ProspectRadarPage from "@/pages/ProspectRadarPage";
+import SearchDictionaryPage from "@/pages/SearchDictionaryPage";
 
 
 const router = createBrowserRouter([
@@ -194,6 +195,16 @@ const router = createBrowserRouter([
       <ProtectedRoute perms={["view_dashboard"]}>
         <DashboardLayout>
           <ProspectRadarPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/dicionario-busca",
+    element: (
+      <ProtectedRoute perms={["view_dashboard"]}>
+        <DashboardLayout>
+          <SearchDictionaryPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),
