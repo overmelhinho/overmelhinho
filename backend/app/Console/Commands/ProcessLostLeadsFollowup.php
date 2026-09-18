@@ -18,7 +18,7 @@ class ProcessLostLeadsFollowup extends Command
      *
      * @var string
      */
-    protected $description = 'Processa a esteira de leads perdidos. Envia WhatsApp a cada 3 meses para tentar reativá-los.';
+    protected $description = 'Processa a esteira de leads perdidos. Envia e-mail para angelica@overmelhinho.com.br a cada 3 meses avisando sobre o lead.';
 
     /**
      * Execute the console command.
@@ -38,40 +38,74 @@ class ProcessLostLeadsFollowup extends Command
             $lostAt = \Carbon\Carbon::parse($lead->lost_at);
             $now = \Carbon\Carbon::now();
 
-            // Verifica a diferença de meses e se o dia é hoje
-            // Para não enviar várias vezes no mesmo mês, checamos se faz exatamente X meses e o mesmo dia
-            $diffInMonths = $lostAt->diffInMonths($now);
+            $shouldFollowUp = false;
 
-            if ($diffInMonths > 0 && $diffInMonths % 3 === 0 && $lostAt->day === $now->day) {
-                // É hora do follow up!
-                $lead->notify(new \App\Notifications\LostLeadFollowupNotification($lead));
-                
-                // Criação de Ticket de Tarefa para o Responsável
-                $assigneeId = null;
-                if ($lead->responsavel) {
-                    $assignee = \App\Models\User::where('name', 'like', "%{$lead->responsavel}%")->first();
-                    $assigneeId = $assignee?->id;
+            if ($lead->data_follow_up) {
+                // Se foi definida uma data específica no painel, enviamos nela
+                $followUpDate = \Carbon\Carbon::parse($lead->data_follow_up);
+                if ($followUpDate->isSameDay($now)) {
+                    $shouldFollowUp = true;
                 }
-
-                // Se não achou responsável, coloca no setor comercial/vendas (ID 1 ou primeiro disponível)
-                if (!$assigneeId) {
-                    $assigneeId = \App\Models\User::first()?->id;
+            } else {
+                // Regra padrão: a cada 3 meses (90 dias)
+                $diffInMonths = $lostAt->diffInMonths($now);
+                if ($diffInMonths > 0 && $diffInMonths % 3 === 0 && $lostAt->day === $now->day) {
+                    $shouldFollowUp = true;
                 }
+            }
 
-                \App\Models\Ticket::create([
-                    'lead_id' => $lead->id,
-                    'titulo' => "Recuperação de Lead: {$lead->nome}",
-                    'descricao' => "O sistema enviou um follow-up automático de 3 meses para este lead. Por favor, verifique se houve resposta ou tente um contato direto. Motivo original da perda: {$lead->motivo_perda}",
-                    'assignee_id' => $assigneeId,
-                    'setor' => 'comercial',
-                    'status' => 'aberto',
-                    'prioridade' => 'media',
-                    'tipo' => 'tarefa',
-                    'due_at' => now()->addDays(2), // 2 dias para conferir
-                ]);
+            if ($shouldFollowUp) {
+                // É hora do aviso! Apenas envia e-mail para a Angélica
+                try {
+                    $htmlContent = "
+                    <html>
+                    <body style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                        <div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>
+                            <div style='background-color: #C00000; padding: 20px; text-align: center; color: #ffffff;'>
+                                <h1 style='margin: 0; font-size: 24px;'>Recuperação de Lead Perdido</h1>
+                            </div>
+                            <div style='padding: 30px;'>
+                                <p style='font-size: 16px; color: #333333; line-height: 1.6;'>
+                                    Olá Angélica, já faz {$diffInMonths} meses que perdemos o lead <strong>{$lead->nome}</strong>. É um bom momento para tentar contato novamente!
+                                </p>
+                                <table style='width: 100%; border-collapse: collapse; margin-top: 20px;'>
+                                    <tr>
+                                        <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Nome:</td>
+                                        <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$lead->nome}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Telefone:</td>
+                                        <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$lead->telefone}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Responsável Anterior:</td>
+                                        <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$lead->responsavel}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Motivo da Perda:</td>
+                                        <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$lead->motivo_perda}</td>
+                                    </tr>
+                                </table>
+                                <div style='margin-top: 30px; text-align: center;'>
+                                    <a href='https://dash.overmelhinho.com.br/leads-kanban' style='background-color: #C00000; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;'>Acessar Painel de Leads</a>
+                                </div>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ";
 
-                $count++;
-                $this->info("Follow-up enviado e Ticket criado para o lead: {$lead->nome}");
+                    \Illuminate\Support\Facades\Mail::html($htmlContent, function ($message) use ($lead) {
+                        $message->to('angelica@overmelhinho.com.br')
+                            ->from(config('mail.from.address', 'relatorios@overmelhinho.com.br'), 'App - O Vermelhinho')
+                            ->subject("⚠️ Recuperação de Lead: {$lead->nome}");
+                    });
+
+                    $count++;
+                    $this->info("E-mail enviado para Angélica sobre o lead: {$lead->nome}");
+                } catch (\Exception $e) {
+                    \Log::error('[LEAD_FOLLOWUP][EMAIL_ERROR] Erro ao notificar Angélica: ' . $e->getMessage());
+                }
             }
         }
 
