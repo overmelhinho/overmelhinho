@@ -201,11 +201,23 @@
         <div class="client-section">
             <div class="client-label">Sacado / Cliente</div>
             <div class="client-data">{{ $client->razao_social ?: $client->nome_fantasia }}</div>
+            @if($client->razao_social && $client->nome_fantasia && $client->razao_social !== $client->nome_fantasia)
+                <div style="font-size: 10pt; color: #555; font-weight: bold; margin-bottom: 2pt;">{{ $client->nome_fantasia }}</div>
+            @endif
             <div class="client-details">
                 {{ $client->endereco ?? 'Endereço não informado' }}, {{ $client->numero ?? 's/n' }} -
-                {{ $client->bairro ?? '' }}<br>
+                {{ $client->bairro ?? '' }}@if(!empty($client->cep)), CEP: {{ $client->cep }}@endif<br>
                 {{ $client->municipio ?? 'Farroupilha' }} - {{ $client->estado ?? 'RS' }} | CNPJ/CPF:
-                {{ $client->cpf_cnpj }}
+                @php
+                    $doc = preg_replace("/\D/", "", $client->cpf_cnpj);
+                    if (strlen($doc) === 11) {
+                        echo preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "\$1.\$2.\$3-\$4", $doc);
+                    } elseif (strlen($doc) === 14) {
+                        echo preg_replace("/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/", "\$1.\$2.\$3/\$4-\$5", $doc);
+                    } else {
+                        echo $client->cpf_cnpj;
+                    }
+                @endphp
             </div>
         </div>
 

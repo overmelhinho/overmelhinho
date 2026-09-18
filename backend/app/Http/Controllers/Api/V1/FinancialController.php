@@ -420,6 +420,9 @@ class FinancialController extends Controller
                 $client->endereco = $tipo . $address->rua;
                 $client->numero = $address->numero;
                 $client->bairro = $address->bairro;
+                $client->cep = $address->cep;
+                $client->municipio = $address->cidade;
+                $client->estado = $address->estado;
             }
         }
 
@@ -473,6 +476,9 @@ class FinancialController extends Controller
                 $client->endereco = $tipo . $address->rua;
                 $client->numero = $address->numero;
                 $client->bairro = $address->bairro;
+                $client->cep = $address->cep;
+                $client->municipio = $address->cidade;
+                $client->estado = $address->estado;
             }
         }
 
@@ -1225,6 +1231,9 @@ class FinancialController extends Controller
                     $client->endereco = $tipo . $address->rua;
                     $client->numero = $address->numero;
                     $client->bairro = $address->bairro;
+                    $client->cep = $address->cep;
+                    $client->municipio = $address->cidade;
+                    $client->estado = $address->estado;
                 }
             }
 
@@ -1329,6 +1338,9 @@ class FinancialController extends Controller
                     $client->endereco = $tipo . $address->rua;
                     $client->numero = $address->numero;
                     $client->bairro = $address->bairro;
+                    $client->cep = $address->cep;
+                    $client->municipio = $address->cidade;
+                    $client->estado = $address->estado;
                 }
             }
 
