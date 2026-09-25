@@ -9,6 +9,16 @@ import {
     Calendar, ExternalLink, ChevronRight, Search
 } from "lucide-react";
 
+const getLogoUrl = (logoPath?: string | null) => {
+    if (!logoPath) return "";
+    if (logoPath.startsWith("http://") || logoPath.startsWith("https://")) {
+        return logoPath;
+    }
+    const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || "https://api.overmelhinho.com.br/api";
+    const baseStorage = apiBase.replace(/\/api$/, "/storage").replace(/\/v1$/, "/storage").replace(/\/api\/v1$/, "/storage");
+    return `${baseStorage}/${logoPath.replace(/^\//, "")}`;
+};
+
 function formatTime(seconds: number): string {
     if (!seconds) return "0s";
     if (seconds < 60) return `${seconds}s`;
@@ -94,7 +104,8 @@ export default function ClientReportPublicPage() {
     return (
         <div className="min-h-screen bg-gray-50 font-sans print:bg-white pb-20 overflow-x-hidden print:pb-0">
             
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style>
+                {`
                 @media print {
                     body { 
                         -webkit-print-color-adjust: exact !important; 
@@ -113,7 +124,8 @@ export default function ClientReportPublicPage() {
                     .print-hidden { display: none !important; }
                     @page { margin: 1cm; size: A4; }
                 }
-            `}} />
+                `}
+            </style>
 
             {/* ── Hero Headline ────────────────────────────────────────── */}
             <div className="bg-white border-b border-gray-100 shadow-sm relative overflow-hidden print-bg-red">
@@ -133,7 +145,7 @@ export default function ClientReportPublicPage() {
                     </div>
                     {cliente.logo_url && (
                         <div className="print-no-break">
-                            <img src={cliente.logo_url} className="w-24 h-24 rounded-3xl object-cover border-4 border-white shadow-xl ring-1 ring-gray-100 print:shadow-none" />
+                            <img src={getLogoUrl(cliente.logo_url)} className="w-24 h-24 rounded-3xl object-cover border-4 border-white shadow-xl ring-1 ring-gray-100 print:shadow-none" />
                         </div>
                     )}
                 </div>
