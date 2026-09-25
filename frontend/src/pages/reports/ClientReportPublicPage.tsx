@@ -16,7 +16,7 @@ const getLogoUrl = (logoPath?: string | null) => {
     }
     const baseStorage = import.meta.env.VITE_SUPABASE_URL 
         ? `${import.meta.env.VITE_SUPABASE_URL}/storage`
-        : "https://gqtfyqfstlzjrwxczyqe.supabase.co/storage";
+        : "https://spefwgjsltjryxcizype.supabase.co/storage";
     return `${baseStorage}/${logoPath.replace(/^\//, "")}`;
 };
 
