@@ -14,8 +14,9 @@ const getLogoUrl = (logoPath?: string | null) => {
     if (logoPath.startsWith("http://") || logoPath.startsWith("https://")) {
         return logoPath;
     }
-    const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || "https://api.overmelhinho.com.br/api";
-    const baseStorage = apiBase.replace(/\/api$/, "/storage").replace(/\/v1$/, "/storage").replace(/\/api\/v1$/, "/storage");
+    const baseStorage = import.meta.env.VITE_SUPABASE_URL 
+        ? `${import.meta.env.VITE_SUPABASE_URL}/storage`
+        : "https://gqtfyqfstlzjrwxczyqe.supabase.co/storage";
     return `${baseStorage}/${logoPath.replace(/^\//, "")}`;
 };
 
