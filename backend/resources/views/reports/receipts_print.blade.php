@@ -120,9 +120,23 @@
                 <div class="client-section">
                     <div class="client-label">Sacado / Cliente</div>
                     <div class="client-data">{{ $item['client']->razao_social ?: $item['client']->nome_fantasia }}</div>
+                    @if($item['client']->razao_social && $item['client']->nome_fantasia && $item['client']->razao_social !== $item['client']->nome_fantasia)
+                        <div style="font-size: 10pt; color: #555; font-weight: bold; margin-bottom: 2pt;">{{ $item['client']->nome_fantasia }}</div>
+                    @endif
                     <div class="client-details">
-                        {{ $item['client']->endereco ?? 'Endereço não informado' }}, {{ $item['client']->numero ?? 's/n' }} - {{ $item['client']->bairro ?? '' }}<br>
-                        {{ $item['client']->municipio ?? 'Farroupilha' }} - {{ $item['client']->estado ?? 'RS' }} | CNPJ/CPF: {{ $item['client']->cpf_cnpj }}
+                        {{ $item['client']->endereco ?? 'Endereço não informado' }}, {{ $item['client']->numero ?? 's/n' }} -
+                        {{ $item['client']->bairro ?? '' }}@if(!empty($item['client']->cep)), CEP: {{ $item['client']->cep }}@endif<br>
+                        {{ $item['client']->municipio ?? 'Farroupilha' }} - {{ $item['client']->estado ?? 'RS' }} | CNPJ/CPF:
+                        @php
+                            $doc = preg_replace("/\D/", "", $item['client']->cpf_cnpj);
+                            if (strlen($doc) === 11) {
+                                echo preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "\$1.\$2.\$3-\$4", $doc);
+                            } elseif (strlen($doc) === 14) {
+                                echo preg_replace("/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/", "\$1.\$2.\$3/\$4-\$5", $doc);
+                            } else {
+                                echo $item['client']->cpf_cnpj;
+                            }
+                        @endphp
                     </div>
                 </div>
 
