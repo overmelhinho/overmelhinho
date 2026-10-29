@@ -256,10 +256,23 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                 }
             }
 
-            // 2. Distribuir o saldo restante nas parcelas pendentes
+            // 2. Distribuir o saldo restante nas parcelas pendentes (ou preservar valores customizados se o total não mudou)
             if (remainingPayable < 0) remainingPayable = 0;
             
             if (remainingCount > 0) {
+                // Verificar se os parâmetros financeiros e a soma das parcelas pendentes originais batem com o saldo restante
+                const pendingOriginalSum = originalParcelas.reduce((acc: number, orig: any, idx: number) => {
+                    if (idx < num && newParcelas[idx] === null && orig) {
+                        const valStr = String(orig.payable_amount ?? orig.valor ?? "0");
+                        return acc + (parseFloat(valStr) || 0);
+                    }
+                    return acc;
+                }, 0);
+
+                const preserveCustomValues =
+                    originalParcelas.length === num &&
+                    Math.abs(pendingOriginalSum - remainingPayable) < 0.05;
+
                 const baseVal = Math.floor((remainingPayable / remainingCount) * 100) / 100;
                 let diff = remainingPayable - (baseVal * remainingCount);
 
@@ -285,14 +298,19 @@ export default function EditAutorizacaoModal({ isOpen, onClose, onSuccess, autor
                             } catch (e) {}
                         }
 
+                        const origVal = orig ? (parseFloat(String(orig.payable_amount ?? orig.valor ?? "0")) || 0) : 0;
+                        const finalVal = preserveCustomValues ? origVal : (diff !== 0 ? (baseVal + diff) : baseVal);
+
                         newParcelas[i] = {
                             numero: i + 1,
                             vencimento: venc,
                             label: label,
-                            valor: (diff !== 0 ? (baseVal + diff) : baseVal).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                            valor: finalVal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                             isPaid: false
                         };
-                        diff = 0;
+                        if (!preserveCustomValues) {
+                            diff = 0;
+                        }
                     }
                     dateCursor = addMonths(dateCursor, 1);
                 }
