@@ -113,7 +113,12 @@ class MigrateMediaToSupabase extends Command
     private function shouldMigrate($path)
     {
         if (empty($path)) return false;
-        if (Str::startsWith($path, ['http://', 'https://'])) return false; // Já é URL completa (Supabase ou externa)
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            if (!str_contains($path, 'api.overmelhinho.com.br/storage/')) {
+                return false; // Já é URL completa do Supabase ou externa
+            }
+            $path = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $path);
+        }
         
         $cleanPath = ltrim($path, '/');
         // Se existe no disco físico da VPS, deve ser migrado!
@@ -122,6 +127,7 @@ class MigrateMediaToSupabase extends Command
 
     private function uploadToSupabase($localPath, $destFolder, $supabaseUrl, $supabaseKey, $bucket, $isDryRun)
     {
+        $localPath = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', (string) $localPath);
         $cleanPath = ltrim($localPath, '/');
         $fullLocalPath = public_path('storage/' . $cleanPath);
 

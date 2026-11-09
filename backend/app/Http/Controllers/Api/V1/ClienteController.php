@@ -1865,8 +1865,12 @@ class ClienteController extends Controller implements HasMiddleware
                     if ($request->boolean('remover_logotipo')) {
                         $clienteData['logo_url'] = null;
                     } elseif (!empty($logoInput)) {
-                        $cleanLogo = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $logoInput);
-                        $clienteData['logo_url'] = ltrim($cleanLogo, '/');
+                        if (str_contains($logoInput, 'supabase.co/storage/')) {
+                            $cleanLogo = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $logoInput);
+                            $clienteData['logo_url'] = ltrim($cleanLogo, '/');
+                        } else {
+                            $clienteData['logo_url'] = $logoInput;
+                        }
                     }
                 }
             }
@@ -1877,8 +1881,12 @@ class ClienteController extends Controller implements HasMiddleware
                     if ($request->boolean('remover_banner')) {
                         $clienteData['banner_url'] = null;
                     } elseif (!empty($bannerInput)) {
-                        $cleanBanner = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $bannerInput);
-                        $clienteData['banner_url'] = ltrim($cleanBanner, '/');
+                        if (str_contains($bannerInput, 'supabase.co/storage/')) {
+                            $cleanBanner = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $bannerInput);
+                            $clienteData['banner_url'] = ltrim($cleanBanner, '/');
+                        } else {
+                            $clienteData['banner_url'] = $bannerInput;
+                        }
                     }
                 }
             }
@@ -1900,8 +1908,12 @@ class ClienteController extends Controller implements HasMiddleware
                     if ($request->boolean('remover_arquivo_midia')) {
                         $clienteData['portfolio_url'] = null;
                     } elseif (!empty($portfolioInput)) {
-                        $cleanPortfolio = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $portfolioInput);
-                        $clienteData['portfolio_url'] = ltrim($cleanPortfolio, '/');
+                        if (str_contains($portfolioInput, 'supabase.co/storage/')) {
+                            $cleanPortfolio = preg_replace('/^https?:\/\/[^\/]+\/storage\//', '', $portfolioInput);
+                            $clienteData['portfolio_url'] = ltrim($cleanPortfolio, '/');
+                        } else {
+                            $clienteData['portfolio_url'] = $portfolioInput;
+                        }
                     }
                 }
             }
