@@ -820,6 +820,10 @@ class ClienteController extends Controller implements HasMiddleware
     public function showPublic($id)
     {
         $cacheKey = "public_cliente_" . (is_numeric($id) ? "id_" : "slug_") . $id;
+        $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        if (isset($cached['error'])) {
+            \Illuminate\Support\Facades\Cache::forget($cacheKey);
+        }
 
         $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(24), function () use ($id) {
             $query = Cliente::with([
@@ -838,6 +842,28 @@ class ClienteController extends Controller implements HasMiddleware
                 $cliente = $query->find($id);
             } else {
                 $cliente = $query->where('slug', $id)->first();
+
+                // Se não encontrou pelo slug atual, verifica no histórico de auditoria (audit_logs) se era um slug antigo
+                if (!$cliente) {
+                    $oldSlugLog = \App\Models\AuditLog::where('entity_type', 'cliente')
+                        ->whereRaw("field_changes->'slug'->>'from' = ?", [$id])
+                        ->orderByDesc('id')
+                        ->first(['entity_id']);
+
+                    if ($oldSlugLog && $oldSlugLog->entity_id) {
+                        $cliente = Cliente::with([
+                            'enderecos', 'contatos', 'redesSociais', 'segmentos', 'cidadesAtendidas', 'galeriaImagens', 'reviews',
+                            'jobOpportunities' => function($q) {
+                                $q->where('is_active', 'true')
+                                  ->where('status', 'Published')
+                                  ->where(function($sub) {
+                                      $sub->whereNull('expires_at')
+                                          ->orWhere('expires_at', '>=', now());
+                                  });
+                            }
+                        ])->find($oldSlugLog->entity_id);
+                    }
+                }
             }
 
             if (!$cliente) {

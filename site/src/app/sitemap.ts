@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 import { slugify } from '@/utils/slugify'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://overmelhinho.com.br';
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.overmelhinho.com.br/api/v1';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
 
   const sitemapData: MetadataRoute.Sitemap = [
     {
@@ -23,17 +23,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       combos.forEach((combo: { city_name: string, segment_name: string }) => {
         const citySlug = slugify(combo.city_name);
         const segSlug = slugify(combo.segment_name);
-        sitemapData.push({
-          url: `${baseUrl}/${citySlug}/${segSlug}`,
-          lastModified: new Date(),
-          changeFrequency: 'daily',
-          priority: 0.9,
-        });
+        if (citySlug && segSlug) {
+          sitemapData.push({
+            url: `${baseUrl}/${citySlug}/${segSlug}`,
+            lastModified: new Date(),
+            changeFrequency: 'daily',
+            priority: 0.9,
+          });
+        }
       });
     }
 
     // 2. Busca clientes ativos para suas páginas de perfil
-    const clientsRes = await fetch(`${apiUrl}/public/sitemap-data`, { cache: 'no-store' });
+    const clientsRes = await fetch(`${apiUrl}/public/sitemap-data`, { next: { revalidate: 3600 } });
     if (clientsRes.ok) {
       const clients = await clientsRes.json();
       clients.forEach((client: any) => {
@@ -54,14 +56,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }
         
         const citySlug = targetCity ? slugify(targetCity) : 'cidade';
-        const segmentName = client.segmentos?.[0]?.nome || 'segmento';
+        const primarySegment = client.segmentos?.find((s: any) => s.pivot?.is_primary) || client.segmentos?.[0];
+        const segmentName = primarySegment?.nome || 'segmento';
         const segmentSlug = slugify(segmentName);
 
         sitemapData.push({
           url: `${baseUrl}/${citySlug}/${segmentSlug}/${slug}`,
-          lastModified: new Date(client.updated_at),
+          lastModified: client.updated_at ? new Date(client.updated_at) : new Date(),
           changeFrequency: 'weekly',
-          priority: 0.7,
+          priority: 0.8,
         });
       });
     }

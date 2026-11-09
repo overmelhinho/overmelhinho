@@ -20,7 +20,7 @@ class Cliente extends Model
                 }
             }
 
-            if (empty($cliente->slug) && !empty($cliente->nome_fantasia)) {
+            if (!empty($cliente->nome_fantasia) && (empty($cliente->slug) || ($cliente->isDirty('nome_fantasia') && !$cliente->isDirty('slug')))) {
                 // Gera o slug altamente sanitizado
                 $originalSlug = \App\Services\SlugService::create($cliente->nome_fantasia);
                 $slug = $originalSlug;
@@ -32,6 +32,13 @@ class Cliente extends Model
                     $counter++;
                 }
                 
+                // Limpa cache do slug antigo antes de substituir
+                $oldSlug = $cliente->getOriginal('slug');
+                if (!empty($oldSlug) && $oldSlug !== $slug) {
+                    \Illuminate\Support\Facades\Cache::forget("public_cliente_slug_" . $oldSlug);
+                    \Illuminate\Support\Facades\Cache::forget("recommendations_" . $oldSlug);
+                }
+
                 $cliente->slug = $slug;
             }
         });

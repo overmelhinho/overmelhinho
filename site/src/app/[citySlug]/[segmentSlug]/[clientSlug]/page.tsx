@@ -2,28 +2,77 @@ import api from '@/services/api';
 import { Metadata } from 'next';
 import ClientProfileClient from '@/app/cliente/[id]/ClientProfileClient';
 import { notFound, permanentRedirect } from 'next/navigation';
+import { slugify } from '@/utils/slugify';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
-
-// Função auxiliar para criar slug a partir de string
-function slugify(text: string) {
-    return text
-        .toString()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^\w\s-]/g, "")
-        .replace(/\s+/g, '-')
-        .replace(/--+/g, '-')
-        .trim();
-}
 
 // Função auxiliar para formatar slugs em nomes legíveis (fallback)
 function formatSlug(slug: string) {
     return slug
+        .replace(/^-+|-+$/g, '')
         .split('-')
+        .filter(Boolean)
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
+}
+
+function buildSeoTitleAndDescription(client: any, targetCityName: string, uf: string, primarySegmentName: string) {
+    const cleanCompanyName = (client.nome_fantasia || '').trim();
+    const cleanCity = (targetCityName || '').trim();
+    const cleanSegment = (primarySegmentName || '').trim();
+
+    // Evita duplicar a cidade se ela já estiver no nome fantasia (ex: "Vida Card Cartão de Saúde - Farroupilha")
+    const companyHasCity = cleanCity && cleanCompanyName.toLowerCase().includes(cleanCity.toLowerCase());
+    const nameWithLocation = companyHasCity
+        ? `${cleanCompanyName} (${uf})`
+        : (cleanCity ? `${cleanCompanyName} em ${cleanCity} - ${uf}` : cleanCompanyName);
+
+    const secondarySegments = (client.segmentos || [])
+        .slice(1, 3)
+        .map((s: any) => (s.nome || '').trim())
+        .filter(Boolean);
+
+    const segmentContext = [cleanSegment, ...secondarySegments].filter(Boolean).join(', ');
+
+    const defaultTitle = cleanSegment
+        ? `${nameWithLocation} | ${cleanSegment} | O Vermelhinho`
+        : `${nameWithLocation} | O Vermelhinho`;
+
+    // Só utiliza seo_title salvo no banco se não for um texto genérico e contiver pelo menos a primeira palavra relevante do nome fantasia
+    const firstWord = cleanCompanyName.split(/[\s-]+/).find((w: string) => w.length > 2)?.toLowerCase() || '';
+    const hasValidCustomTitle = client.seo_title &&
+        !client.seo_title.toLowerCase().includes('descubra o vermelhinho') &&
+        (firstWord ? client.seo_title.toLowerCase().includes(firstWord) : true);
+
+    const title = hasValidCustomTitle ? client.seo_title : defaultTitle;
+
+    // Monta uma meta description rica usando endereço, telefone e descrição real
+    const addr = client.enderecos?.[0];
+    const streetPart = addr && !addr.exibir_apenas_cidade && addr.rua
+        ? `${addr.rua}${addr.numero ? `, ${addr.numero}` : ''}${addr.bairro ? ` - ${addr.bairro}` : ''}, ${cleanCity}/${uf}. `
+        : (cleanCity ? `Atendimento em ${cleanCity} - ${uf}. ` : '');
+
+    const rawDesc = (client.descricao || '')
+        .replace(/[\r\n*#]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    let defaultDescription = '';
+    if (rawDesc.length > 20) {
+        const snippet = rawDesc.length > 115 ? `${rawDesc.substring(0, 112).trim()}...` : rawDesc;
+        defaultDescription = `${cleanCompanyName}: ${ streetPart }${snippet}`;
+    } else {
+        defaultDescription = `${cleanCompanyName} em ${cleanCity} - ${uf}. Especialista em ${segmentContext || cleanSegment}. ${streetPart}Confira telefone, WhatsApp, endereço e avaliações no O Vermelhinho.`;
+    }
+
+    const hasValidCustomDesc = client.seo_description &&
+        !client.seo_description.toLowerCase().includes('oportunidades imperdíveis esperam por você') &&
+        (firstWord ? client.seo_description.toLowerCase().includes(firstWord) : true);
+
+    const description = hasValidCustomDesc ? client.seo_description : defaultDescription.substring(0, 165);
+    const h1Title = `${nameWithLocation}${cleanSegment ? ` - ${cleanSegment}` : ''}`;
+
+    return { title, description, h1Title };
 }
 
 async function getClient(slug: string) {
@@ -53,48 +102,50 @@ async function getClient(slug: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ citySlug: string, segmentSlug: string, clientSlug: string }> }): Promise<Metadata> {
     const { citySlug, segmentSlug, clientSlug } = await params;
+    const cleanCitySlugParam = slugify(citySlug);
+    const cleanSegmentSlugParam = slugify(segmentSlug);
     const client = await getClient(clientSlug);
     
     if (!client || client.is_inactive_redirect) return { title: 'O Vermelhinho | Guia de Empresas' };
 
     const address = client.enderecos?.[0] || {};
-    const mainCityName = address.cidade || '';
-    const uf = address.estado || 'RS';
-    const segmentName = client.segmentos?.[0]?.nome || formatSlug(segmentSlug);
+    const mainCityName = (address.cidade || '').trim();
+    const uf = (address.estado || 'RS').trim();
+    const primarySegment = client.segmentos?.find((s: any) => s.pivot?.is_primary) || client.segmentos?.[0];
+    const segmentName = (primarySegment?.nome || formatSlug(cleanSegmentSlugParam)).trim();
     
-    // SEO Strategy: Multi-City Doorway Pages
-    // Verifica se a cidade acessada na URL é válida para este cliente (está na matriz ou cidades atendidas)
+    // SEO Strategy: Multi-City support
     let targetCityName = mainCityName;
     let targetCitySlug = mainCityName ? slugify(mainCityName) : 'cidade';
 
-    if (citySlug) {
-        const isMainCity = mainCityName && slugify(mainCityName) === citySlug;
-        const attendedCity = client.cidades_atendidas?.find((c: any) => slugify(c.nome) === citySlug);
+    if (cleanCitySlugParam) {
+        const isMainCity = mainCityName && slugify(mainCityName) === cleanCitySlugParam;
+        const attendedCity = client.cidades_atendidas?.find((c: any) => slugify(c.nome) === cleanCitySlugParam);
         
         if (isMainCity || attendedCity) {
-            targetCityName = isMainCity ? mainCityName : attendedCity.nome;
-            targetCitySlug = citySlug;
+            targetCityName = isMainCity ? mainCityName : attendedCity.nome.trim();
+            targetCitySlug = cleanCitySlugParam;
         }
     }
 
-    const canonicalSegmentSlug = client.segmentos?.[0] ? slugify(client.segmentos[0].nome) : segmentSlug;
-    
-    // Padrão Exigido: [Categoria] em [Cidade] - [UF]: [Nome da Empresa] | O Vermelhinho (Ou Overrides de IA)
-    const title = client.seo_title || `${segmentName} em ${targetCityName} - ${uf}: ${client.nome_fantasia} | O Vermelhinho`;
-    const description = client.seo_description || `Precisando de ${segmentName} em ${targetCityName}? Conheça a ${client.nome_fantasia}. Confira endereços, telefones e horários no portal O Vermelhinho.`;
+    const canonicalSegmentSlug = primarySegment ? slugify(primarySegment.slug || primarySegment.nome) : cleanSegmentSlugParam;
+    const { title, description } = buildSeoTitleAndDescription(client, targetCityName, uf, segmentName);
+    const canonicalUrl = `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`;
 
     return {
         title,
         description,
         keywords: [client.nome_fantasia, targetCityName, segmentName, uf, ...(client.seo_keywords || [])].filter(Boolean).join(', '),
         alternates: {
-            // ✅ CANONICAL: Aponta para a página da cidade correta, gerando SEO para cada cidade atendida
-            canonical: `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`,
+            canonical: canonicalUrl,
         },
         openGraph: {
             title,
             description,
-            images: [client.logotipo_url, client.galeria?.[0]?.url].filter(Boolean).map(url => url as string),
+            url: canonicalUrl,
+            siteName: 'O Vermelhinho',
+            locale: 'pt_BR',
+            images: [client.logotipo_url, client.banner_url, client.galeria?.[0]?.url].filter(Boolean).map(url => url as string),
             type: 'website',
         }
     };
@@ -110,26 +161,39 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
 
     if (client.is_inactive_redirect) {
         const { city_slug, segment_slug } = client.redirect_suggestion;
-        permanentRedirect(`/${city_slug}/${segment_slug}`);
+        permanentRedirect(`/${slugify(city_slug)}/${slugify(segment_slug)}`);
     }
 
     const address = client.enderecos?.[0] || {};
-    const mainCityName = address.cidade || '';
-    const uf = address.estado || 'RS';
-    const segmentName = client.segmentos?.[0]?.nome || formatSlug(segmentSlug);
+    const mainCityName = (address.cidade || '').trim();
+    const uf = (address.estado || 'RS').trim();
+    const primarySegment = client.segmentos?.find((s: any) => s.pivot?.is_primary) || client.segmentos?.[0];
+    const cleanCitySlugParam = slugify(citySlug);
+    const cleanSegmentSlugParam = slugify(segmentSlug);
+    const segmentName = (primarySegment?.nome || formatSlug(cleanSegmentSlugParam)).trim();
+    const canonicalSegmentSlug = primarySegment ? slugify(primarySegment.slug || primarySegment.nome) : cleanSegmentSlugParam;
     
     let targetCityName = mainCityName;
+    let targetCitySlug = mainCityName ? slugify(mainCityName) : cleanCitySlugParam;
     
-    if (citySlug) {
-        const isMainCity = mainCityName && slugify(mainCityName) === citySlug;
-        const attendedCity = client.cidades_atendidas?.find((c: any) => slugify(c.nome) === citySlug);
+    if (cleanCitySlugParam) {
+        const isMainCity = mainCityName && slugify(mainCityName) === cleanCitySlugParam;
+        const attendedCity = client.cidades_atendidas?.find((c: any) => slugify(c.nome) === cleanCitySlugParam);
         
         if (isMainCity || attendedCity) {
-            targetCityName = isMainCity ? mainCityName : attendedCity.nome;
+            targetCityName = isMainCity ? mainCityName : attendedCity.nome.trim();
+            targetCitySlug = cleanCitySlugParam;
         }
     }
 
-    const h1Title = `${segmentName} em ${targetCityName} - ${uf}: ${client.nome_fantasia}`;
+    // Se a URL acessada tinha hífen extra (ex: /agendamento-de-consultas-/) ou um slug antigo da empresa (ex: jaqueline-perottoni-master-coach-elevass), redireciona 301 para a URL atualizada
+    const canonicalClientSlug = String(client.slug || client.id);
+    if (citySlug !== cleanCitySlugParam || segmentSlug !== cleanSegmentSlugParam || clientSlug !== canonicalClientSlug) {
+        permanentRedirect(`/${targetCitySlug}/${cleanSegmentSlugParam}/${canonicalClientSlug}`);
+    }
+
+    const { h1Title, description } = buildSeoTitleAndDescription(client, targetCityName, uf, segmentName);
+    const canonicalUrl = `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`;
 
     // Esquemas JSON-LD para SEO
     const breadcrumbJsonLd = {
@@ -145,30 +209,86 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
             {
                 "@type": "ListItem",
                 "position": 2,
-                "name": segmentName || "Empresas",
-                "item": `${SITE_URL}/busca?segmento=${client.segmentos?.[0]?.id || ''}`
+                "name": `${segmentName} em ${targetCityName}`,
+                "item": `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}`
             },
             {
                 "@type": "ListItem",
                 "position": 3,
                 "name": client.nome_fantasia,
-                "item": `${SITE_URL}/${citySlug}/${segmentSlug}/${client.slug || client.id}`
+                "item": canonicalUrl
             }
         ]
     };
+
+    const sameAsLinks = (client.redes_sociais || client.redesSociais || [])
+        .map((r: any) => r.url)
+        .filter((u: any) => typeof u === 'string' && u.startsWith('http'));
+
+    const allSegmentNames = (client.segmentos || []).map((s: any) => (s.nome || '').trim()).filter(Boolean);
+    const primaryPhoneNumber = client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular || '';
+    const fullStreetAddress = address && !address.exibir_apenas_cidade && address.rua
+        ? `${address.tipo_logradouro ? `${address.tipo_logradouro} ` : ''}${address.rua}${address.numero ? `, ${address.numero}` : ''}${address.complemento ? ` (${address.complemento})` : ''}${address.bairro ? ` - Bairro ${address.bairro}` : ''}, ${targetCityName} - ${uf}${address.cep ? `, CEP ${address.cep}` : ''}`
+        : `${targetCityName} - ${uf}`;
+
+    // FAQ Dinâmico (Schema FAQPage) gerado 100% automaticamente a partir dos dados do cliente
+    const faqQuestions: Array<{ question: string; answer: string }> = [];
+
+    if (allSegmentNames.length > 0) {
+        const cleanDescSnippet = (client.descricao || '')
+            .replace(/[\r\n*#]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        faqQuestions.push({
+            question: `Quais serviços e especialidades ${client.nome_fantasia} oferece em ${targetCityName}?`,
+            answer: `${client.nome_fantasia} atua em ${targetCityName} (${uf}) nas áreas de: ${allSegmentNames.join(', ')}.${cleanDescSnippet ? ` ${cleanDescSnippet.substring(0, 280)}` : ''}`
+        });
+    }
+
+    if (targetCityName) {
+        faqQuestions.push({
+            question: `Qual o endereço e onde encontrar ${client.nome_fantasia} em ${targetCityName}?`,
+            answer: !address.exibir_apenas_cidade && address.rua
+                ? `${client.nome_fantasia} está localizada em ${fullStreetAddress}.`
+                : `${client.nome_fantasia} realiza atendimento na cidade de ${targetCityName} - ${uf}.`
+        });
+    }
+
+    if (primaryPhoneNumber || (client.cidades_atendidas && client.cidades_atendidas.length > 0)) {
+        const citiesList = (client.cidades_atendidas || []).map((c: any) => c.nome).filter(Boolean).join(', ');
+        faqQuestions.push({
+            question: `Qual o telefone e como entrar em contato com ${client.nome_fantasia}?`,
+            answer: `${primaryPhoneNumber ? `Você pode entrar em contato com ${client.nome_fantasia} pelo telefone/WhatsApp ${primaryPhoneNumber} ` : `Você pode solicitar atendimento com ${client.nome_fantasia} `}diretamente pelo Guia O Vermelhinho.${citiesList ? ` Cidades atendidas: ${citiesList}.` : ''}`
+        });
+    }
+
+    const faqJsonLd = faqQuestions.length > 0 ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": faqQuestions.map(q => ({
+            "@type": "Question",
+            "name": q.question,
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": q.answer
+            }
+        }))
+    } : null;
 
     const localBusinessJsonLd = client.enderecos?.length > 0 
         ? client.enderecos.map((end: any, index: number) => ({
             "@context": "https://schema.org",
             "@type": "LocalBusiness",
+            "@id": `${canonicalUrl}#localbusiness-${index + 1}`,
             "name": client.enderecos.length > 1 ? `${client.nome_fantasia} - ${end.nome_unidade || `Unidade ${index + 1}`}` : client.nome_fantasia,
-            "image": client.logotipo_url || client.galeria?.[0]?.url,
-            "description": client.descricao,
+            "alternateName": client.razao_social || undefined,
+            "image": [client.logotipo_url, client.banner_url, ...(client.galeria?.map((g: any) => g.url) || [])].filter(Boolean),
+            "description": client.descricao || description,
             "address": {
                 "@type": "PostalAddress",
-                "streetAddress": end.exibir_apenas_cidade ? undefined : `${end.rua || ''}, ${end.numero || ''}${end.complemento ? `, ${end.complemento}` : ''}`,
-                "addressLocality": end.cidade || '',
-                "addressRegion": end.estado || '',
+                "streetAddress": end.exibir_apenas_cidade ? undefined : `${end.rua || ''}${end.numero ? `, ${end.numero}` : ''}${end.complemento ? ` - ${end.complemento}` : ''}`,
+                "addressLocality": (end.cidade || targetCityName).trim(),
+                "addressRegion": (end.estado || uf).trim(),
                 "postalCode": end.exibir_apenas_cidade ? undefined : (end.cep || ''),
                 "addressCountry": "BR"
             },
@@ -177,8 +297,10 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
                 "latitude": end.latitude,
                 "longitude": end.longitude
             } : undefined,
-            "url": `${SITE_URL}/${citySlug}/${segmentSlug}/${client.slug || client.id}`,
-            "telephone": (index === 0 ? (client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular) : end.telefone),
+            "url": canonicalUrl,
+            "telephone": (index === 0 ? primaryPhoneNumber : end.telefone),
+            "sameAs": sameAsLinks.length > 0 ? sameAsLinks : undefined,
+            "knowsAbout": allSegmentNames.length > 0 ? allSegmentNames : undefined,
             "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
                 "@type": "City",
                 "name": c.nome,
@@ -188,8 +310,6 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
         }))
         : null;
 
-    // Passamos o contexto da cidade via URL se necessário no futuro
-    // Por enquanto, o ClientProfileClient já gerencia o estado via id/slug
     return (
         <>
             <script
@@ -202,9 +322,12 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
                     {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') } }}
                 />
             )}
-            
-            {/* H1 Oculto visualmente focado em SEO Local Dinâmico */}
-            <h1 className="sr-only">{h1Title}</h1>
+            {faqJsonLd && (
+                <script
+                    type="application/ld+json"
+                    {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(faqJsonLd).replace(/</g, '\\u003c') } }}
+                />
+            )}
             <ClientProfileClient initialClient={client} />
         </>
     );

@@ -32,6 +32,7 @@ class ProcessIndexingQueue extends Command
 
         $items = DB::table('seo_indexing_queue')
             ->where('status', 'pending')
+            ->orderBy('id', 'asc')
             ->limit($limit)
             ->get();
 

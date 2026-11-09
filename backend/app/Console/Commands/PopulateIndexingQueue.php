@@ -29,17 +29,20 @@ class PopulateIndexingQueue extends Command
     public function handle()
     {
         $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
-        if (str_contains($siteUrl, 'localhost')) {
-            $siteUrl = 'https://www.overmelhinho.com.br'; // Força a URL de produção para a fila
+        if (str_contains($siteUrl, 'localhost') || str_contains($siteUrl, 'dash.')) {
+            $siteUrl = 'https://www.overmelhinho.com.br'; // Força a URL pública de produção para a fila
         }
         
-        $this->info("🔍 Buscando e processando clientes ativos em blocos...");
+        $this->info("🔍 Buscando e processando clientes ativos em blocos (priorizando pagantes e URL canônica)...");
         
-        $urls = [];
+        $clientCanonicalUrls = [];
+        $categoryUrls = [];
         
         Cliente::where('exibir_no_site', 'true')
-            ->with(['enderecos', 'segmentos'])
-            ->chunk(150, function ($clientes) use (&$urls, $siteUrl) {
+            ->orderByRaw("CASE WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1 ELSE 0 END DESC")
+            ->orderBy('id', 'asc')
+            ->with(['enderecos', 'segmentos', 'cidadesAtendidas'])
+            ->chunk(150, function ($clientes) use (&$clientCanonicalUrls, &$categoryUrls, $siteUrl) {
                 foreach ($clientes as $cliente) {
                     $address = $cliente->enderecos->first();
                     if (!$address || empty($address->cidade)) {
@@ -52,27 +55,34 @@ class PopulateIndexingQueue extends Command
                     }
                     
                     $clientSlug = $cliente->slug ?: $cliente->id;
+                    $primarySegment = $cliente->segmentos->firstWhere('pivot.is_primary', true) ?: $cliente->segmentos->first();
+                    
+                    if ($primarySegment) {
+                        $primarySegmentSlug = $primarySegment->slug ? SlugService::create($primarySegment->slug) : SlugService::create($primarySegment->nome);
+                        if ($primarySegmentSlug) {
+                            // URL Canônica Principal do Cliente (apenas 1 por cidade para não canibalizar SEO)
+                            $canonicalClientUrl = "{$siteUrl}/{$citySlug}/{$primarySegmentSlug}/{$clientSlug}";
+                            $clientCanonicalUrls[$canonicalClientUrl] = true;
+                        }
+                    }
                     
                     foreach ($cliente->segmentos as $segmento) {
-                        $segmentSlug = $segmento->slug ?: SlugService::create($segmento->nome);
+                        $segmentSlug = $segmento->slug ? SlugService::create($segmento->slug) : SlugService::create($segmento->nome);
                         if (!$segmentSlug) {
                             continue;
                         }
                         
-                        // 1. URL da Categoria na Cidade
+                        // URL da Categoria na Cidade
                         $categoryUrl = "{$siteUrl}/{$citySlug}/{$segmentSlug}";
-                        $urls[$categoryUrl] = true;
-                        
-                        // 2. URL de Perfil do Cliente
-                        $clientUrl = "{$siteUrl}/{$citySlug}/{$segmentSlug}/{$clientSlug}";
-                        $urls[$clientUrl] = true;
+                        $categoryUrls[$categoryUrl] = true;
                     }
                 }
             });
         
-        $urlsList = array_keys($urls);
+        // Clientes (especialmente pagantes) entram primeiro, seguidos pelas páginas de categorias
+        $urlsList = array_values(array_unique(array_merge(array_keys($clientCanonicalUrls), array_keys($categoryUrls))));
         $totalUrls = count($urlsList);
-        $this->info("📈 Geradas {$totalUrls} URLs únicas para indexação.");
+        $this->info("📈 Geradas {$totalUrls} URLs canônicas únicas para indexação.");
         
         $inserted = 0;
         foreach (array_chunk($urlsList, 100) as $chunk) {

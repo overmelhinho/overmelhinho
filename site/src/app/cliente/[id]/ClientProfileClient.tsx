@@ -31,14 +31,17 @@ const formatTelLink = (phone: string | undefined | null) => {
 
 // Helper para normalizar strings para slugs (URL friendly)
 const slugify = (text: string) => {
+    if (!text) return '';
     return text
+        .toString()
+        .trim()
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^\w\s-]/g, "")
         .replace(/\s+/g, '-')
         .replace(/--+/g, '-')
-        .trim();
+        .replace(/^-+|-+$/g, '');
 };
 
 const isImage = (url: string) => {
@@ -935,17 +938,22 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                             )}
                                             {client.segmentos?.length > 0 && (
                                                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 col-span-2">
-                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Segmentos de Atuação</p>
+                                                    <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Segmentos e Especialidades em {client.enderecos?.[0]?.cidade || 'sua região'}</h3>
                                                     <div className="flex flex-wrap gap-1.5">
-                                                        {[...client.segmentos].sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR')).map((seg: any) => (
-                                                            <Link 
-                                                                key={seg.id} 
-                                                                href={`/busca?q=${encodeURIComponent(seg.nome)}`}
-                                                                className="text-xs text-gray-800 hover:text-brand-red bg-white hover:bg-red-50 px-2.5 py-1 rounded-xl border border-gray-100 hover:border-brand-red/30 shadow-sm font-medium cursor-pointer transition-all active:scale-95"
-                                                            >
-                                                                {seg.nome}
-                                                            </Link>
-                                                        ))}
+                                                        {[...client.segmentos].sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR')).map((seg: any) => {
+                                                            const targetCitySlug = citySlug || (client.enderecos?.[0]?.cidade ? slugify(client.enderecos[0].cidade) : '');
+                                                            const targetSegSlug = seg.slug ? slugify(seg.slug) : slugify(seg.nome);
+                                                            const segHref = targetCitySlug && targetSegSlug ? `/${targetCitySlug}/${targetSegSlug}` : `/busca?q=${encodeURIComponent(seg.nome.trim())}`;
+                                                            return (
+                                                                <Link 
+                                                                    key={seg.id} 
+                                                                    href={segHref}
+                                                                    className="text-xs text-gray-800 hover:text-brand-red bg-white hover:bg-red-50 px-2.5 py-1 rounded-xl border border-gray-100 hover:border-brand-red/30 shadow-sm font-medium cursor-pointer transition-all active:scale-95"
+                                                                >
+                                                                    {seg.nome.trim()}
+                                                                </Link>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                             )}
@@ -1164,7 +1172,7 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                         </div>
                                                     )}
 
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                                                         {!end.exibir_apenas_cidade && (
                                                             <a 
                                                                 href={getGoogleMapsLink(end)}
@@ -1196,6 +1204,48 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                             )}
                                         </div>
                                     </section>)}
+
+                                    {/* Seção de Perguntas Frequentes (FAQ SEO Local Automático) */}
+                                    <section className="space-y-4 pt-4 border-t border-gray-100">
+                                        <h2 className="text-lg md:text-2xl font-black text-gray-900 tracking-tighter font-serif">
+                                            Perguntas Frequentes sobre {client.nome_fantasia}
+                                        </h2>
+                                        <div className="space-y-3">
+                                            {client.segmentos?.length > 0 && (
+                                                <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 space-y-1.5">
+                                                    <h3 className="text-xs md:text-sm font-black text-gray-900">
+                                                        Quais serviços e especialidades {client.nome_fantasia} oferece em {client.enderecos?.[0]?.cidade || 'sua região'}?
+                                                    </h3>
+                                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
+                                                        {client.nome_fantasia} atua em {client.enderecos?.[0]?.cidade || 'sua região'} ({client.enderecos?.[0]?.estado || 'RS'}) oferecendo atendimento nas especialidades de {client.segmentos.map((s: any) => s.nome.trim()).join(', ')}.
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {client.enderecos?.[0]?.cidade && (
+                                                <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 space-y-1.5">
+                                                    <h3 className="text-xs md:text-sm font-black text-gray-900">
+                                                        Onde encontrar e qual o endereço de {client.nome_fantasia}?
+                                                    </h3>
+                                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
+                                                        {!client.enderecos[0].exibir_apenas_cidade && client.enderecos[0].rua
+                                                            ? `A unidade de ${client.nome_fantasia} fica localizada em ${(client.enderecos[0].tipo_logradouro ? client.enderecos[0].tipo_logradouro + ' ' : '') + client.enderecos[0].rua}${client.enderecos[0].numero ? `, ${client.enderecos[0].numero}` : ''}${client.enderecos[0].complemento ? ` (${client.enderecos[0].complemento})` : ''}${client.enderecos[0].bairro ? ` - Bairro ${client.enderecos[0].bairro}` : ''}, em ${client.enderecos[0].cidade} - ${client.enderecos[0].estado || 'RS'}${client.enderecos[0].cep ? ` (CEP ${client.enderecos[0].cep})` : ''}.`
+                                                            : `${client.nome_fantasia} atende em ${client.enderecos[0].cidade} - ${client.enderecos[0].estado || 'RS'}.`}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {(primaryPhone || (client.cidades_atendidas && client.cidades_atendidas.length > 0)) && (
+                                                <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 space-y-1.5">
+                                                    <h3 className="text-xs md:text-sm font-black text-gray-900">
+                                                        Como entrar em contato ou agendar atendimento em {client.nome_fantasia}?
+                                                    </h3>
+                                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
+                                                        {hasPhone ? `Você pode falar diretamente com a equipe pelo telefone/WhatsApp ${primaryPhone}` : `Você pode solicitar contato diretamente pelos canais disponíveis nesta página`}
+                                                        {client.cidades_atendidas?.length > 0 ? `. Além de ${client.enderecos?.[0]?.cidade || 'sua sede'}, também atende clientes de ${client.cidades_atendidas.map((c: any) => c.nome).join(', ')}.` : '.'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </section>
                                 </motion.div>
                             )}
 

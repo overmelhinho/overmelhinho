@@ -38,16 +38,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     if (!client || client.is_inactive_redirect) return { title: 'O Vermelhinho | Guia de Empresas' };
 
     const { city, uf } = getPrimaryCity(client);
-    const segment = client.segmentos?.[0]?.nome || 'Empresa';
     
-    // Canonical URL generation based on SEO pattern
+    // Calcula a nova URL canonical para o redirecionamento 301
+    const primarySegment = client.segmentos?.find((s: any) => s.pivot?.is_primary) || client.segmentos?.[0];
+    const segment = (primarySegment?.nome || 'Empresa').trim();
     const canonicalCitySlug = city ? slugify(city) : 'cidade';
-    const canonicalSegmentSlug = segment ? slugify(segment) : 'segmento';
+    const canonicalSegmentSlug = primarySegment?.slug ? slugify(primarySegment.slug) : slugify(segment);
     const canonicalUrl = `${SITE_URL}/${canonicalCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`;
 
-    // Padrão Exigido: [Categoria do Serviço] em [Cidade] - [UF]: [Nome da Empresa] | O Vermelhinho
-    const title = `${segment} em ${city} - ${uf}: ${client.nome_fantasia} | O Vermelhinho`;
-    const description = client.descricao?.substring(0, 160) || `Precisa de ${segment} em ${city}? Conheça a ${client.nome_fantasia}. Confira endereços, contatos e horários no guia O Vermelhinho.`;
+    const cleanCompanyName = (client.nome_fantasia || '').trim();
+    const companyHasCity = city && cleanCompanyName.toLowerCase().includes(city.toLowerCase());
+    const nameWithLocation = companyHasCity ? `${cleanCompanyName} (${uf})` : `${cleanCompanyName} em ${city} - ${uf}`;
+    const title = client.seo_title || `${nameWithLocation} | ${segment} | O Vermelhinho`;
+    const description = client.seo_description || client.descricao?.replace(/[\r\n*#]+/g, ' ').trim().substring(0, 160) || `Conheça a ${cleanCompanyName} (${segment} em ${city} - ${uf}). Confira endereços, contatos e horários no guia O Vermelhinho.`;
 
     return {
         title,
@@ -79,11 +82,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     }
 
     const { city, uf } = getPrimaryCity(client);
-    const segment = client.segmentos?.[0]?.nome || 'Empresa';
+    const primarySegment = client.segmentos?.find((s: any) => s.pivot?.is_primary) || client.segmentos?.[0];
+    const segment = (primarySegment?.nome || 'Empresa').trim();
     
     // Calcula a nova URL canonical para o redirecionamento 301
     const canonicalCitySlug = city ? slugify(city) : 'cidade';
-    const canonicalSegmentSlug = segment ? slugify(segment) : 'segmento';
+    const canonicalSegmentSlug = primarySegment?.slug ? slugify(primarySegment.slug) : slugify(segment);
     const canonicalPath = `/${canonicalCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`;
 
     // Força o Redirecionamento 301 Movido Permanentemente

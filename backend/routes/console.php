@@ -15,6 +15,10 @@ Schedule::command('leads:process-lost-followup')->dailyAt('10:00');
 // Checagem diária do SEO (Google Search Console) - fracionada em 7 partes
 Schedule::command('seo:check-rankings')->dailyAt('02:30');
 
+// Indexação diária automática na Google Indexing API (respeita cota de 200 URLs/dia)
+Schedule::command('seo:populate-indexing-queue')->dailyAt('03:00');
+Schedule::command('seo:process-indexing-queue --limit=195')->dailyAt('03:15');
+
 // Renovação de Clientes: Gera renovações e tickets no dia 1 de cada mês
 Schedule::command('renewals:generate')->monthlyOn(1, '01:00');
 

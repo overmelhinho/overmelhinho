@@ -1,3 +1,5 @@
+import { slugify } from './slugify';
+
 export const getPrimaryCityName = (client: any): string => {
     if (!client) return '';
     const enderecos = client.enderecos || [];
@@ -35,9 +37,9 @@ export const getClientSeoUrl = (client: any, currentCityName?: string | null): s
         const enderecos = client.enderecos || [];
 
         const servesCity = cidadesAtendidas.some((c: any) => 
-            c.nome.toLowerCase() === targetCity?.toLowerCase()
+            c.nome.toLowerCase().trim() === targetCity?.toLowerCase().trim()
         ) || enderecos.some((e: any) => 
-            e.cidade?.toLowerCase() === targetCity?.toLowerCase()
+            e.cidade?.toLowerCase().trim() === targetCity?.toLowerCase().trim()
         );
 
         if (!servesCity) {
@@ -55,8 +57,8 @@ export const getClientSeoUrl = (client: any, currentCityName?: string | null): s
         return `/cliente/${client.slug || client.id}`;
     }
 
-    const citySlug = targetCity.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-    const segmentSlug = client.segmentos[0].nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+    const citySlug = slugify(targetCity);
+    const segmentSlug = client.segmentos[0].slug ? slugify(client.segmentos[0].slug) : slugify(client.segmentos[0].nome);
     const clientSlug = client.slug || client.id;
 
     return `/${citySlug}/${segmentSlug}/${clientSlug}`;

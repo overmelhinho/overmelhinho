@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -6,6 +6,9 @@ import { MapPin, Phone, MessageCircle, Star, ExternalLink, ChevronRight } from '
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import DynamicSeoText from '@/components/DynamicSeoText';
+import { slugify } from '@/utils/slugify';
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
 
 const getApiUrl = () => {
     let API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
@@ -13,10 +16,6 @@ const getApiUrl = () => {
         API_URL += '/v1';
     }
     return API_URL;
-};
-
-const slugify = (text: string) => {
-    return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
 };
 
 async function fetchCity(citySlug: string) {
@@ -69,8 +68,8 @@ async function fetchAds(cityId: number, segmentName: string) {
 
 export async function generateMetadata(props: { params: Promise<{ citySlug: string; segmentSlug: string }> }): Promise<Metadata> {
     const params = await props.params;
-    const cleanCitySlug = params.citySlug.replace(/-+$/, '');
-    const cleanSegmentSlug = params.segmentSlug.replace(/-+$/, '');
+    const cleanCitySlug = slugify(params.citySlug);
+    const cleanSegmentSlug = slugify(params.segmentSlug);
     const city = await fetchCity(cleanCitySlug);
     const segment = await fetchSegment(cleanSegmentSlug);
 
@@ -80,13 +79,20 @@ export async function generateMetadata(props: { params: Promise<{ citySlug: stri
         };
     }
 
+    const segmentName = (segment.nome || '').trim();
+    const cityName = (city.nome || '').trim();
+    const canonicalUrl = `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}`;
+
     return {
-        title: `${segment.nome} em ${city.nome} - Telefones e Endereços | O Vermelhinho`,
-        description: `Encontre as melhores opções de ${segment.nome} em ${city.nome}. Veja avaliações, horários de funcionamento, endereços e chame direto no WhatsApp pelo Guia O Vermelhinho.`,
+        title: `${segmentName} em ${cityName} - Telefones e Endereços | O Vermelhinho`,
+        description: `Encontre as melhores opções de ${segmentName} em ${cityName}. Veja avaliações, horários de funcionamento, endereços e chame direto no WhatsApp pelo Guia O Vermelhinho.`,
+        alternates: {
+            canonical: canonicalUrl,
+        },
         openGraph: {
-            title: `${segment.nome} em ${city.nome} | O Vermelhinho`,
-            description: `Encontre as melhores opções de ${segment.nome} em ${city.nome}. Veja avaliações, horários de funcionamento, endereços e chame direto no WhatsApp pelo Guia O Vermelhinho.`,
-            url: `https://overmelhinho.com.br/${params.citySlug}/${params.segmentSlug}`,
+            title: `${segmentName} em ${cityName} | O Vermelhinho`,
+            description: `Encontre as melhores opções de ${segmentName} em ${cityName}. Veja avaliações, horários de funcionamento, endereços e chame direto no WhatsApp pelo Guia O Vermelhinho.`,
+            url: canonicalUrl,
             siteName: 'O Vermelhinho',
             locale: 'pt_BR',
             type: 'website',
@@ -96,13 +102,17 @@ export async function generateMetadata(props: { params: Promise<{ citySlug: stri
 
 export default async function SegmentCityPage(props: { params: Promise<{ citySlug: string; segmentSlug: string }> }) {
     const params = await props.params;
-    const cleanCitySlug = params.citySlug.replace(/-+$/, '');
-    const cleanSegmentSlug = params.segmentSlug.replace(/-+$/, '');
+    const cleanCitySlug = slugify(params.citySlug);
+    const cleanSegmentSlug = slugify(params.segmentSlug);
     const city = await fetchCity(cleanCitySlug);
     const segment = await fetchSegment(cleanSegmentSlug);
 
     if (!city || !segment) {
         notFound();
+    }
+
+    if (params.citySlug !== cleanCitySlug || params.segmentSlug !== cleanSegmentSlug) {
+        permanentRedirect(`/${cleanCitySlug}/${cleanSegmentSlug}`);
     }
 
     const clients = await fetchClients(city.id, segment.nome);
@@ -145,19 +155,19 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
     const schemaData = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": `${segment.nome} em ${city.nome}`,
-        "description": `As melhores opções de ${segment.nome} em ${city.nome}`,
-        "url": `https://overmelhinho.com.br/${params.citySlug}/${params.segmentSlug}`,
+        "name": `${segment.nome.trim()} em ${city.nome.trim()}`,
+        "description": `As melhores opções de ${segment.nome.trim()} em ${city.nome.trim()}`,
+        "url": `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}`,
         "itemListElement": clients.slice(0, 10).map((client: any, index: number) => ({
             "@type": "ListItem",
             "position": index + 1,
             "item": {
                 "@type": "LocalBusiness",
                 "name": client.nome_fantasia,
-                "url": `https://overmelhinho.com.br/${params.citySlug}/${params.segmentSlug}/${client.slug || client.id}`,
+                "url": `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}/${client.slug || client.id}`,
                 "address": {
                     "@type": "PostalAddress",
-                    "addressLocality": city.nome,
+                    "addressLocality": city.nome.trim(),
                     "addressRegion": city.estado || "RS",
                     "streetAddress": client.enderecos?.[0]?.rua || ""
                 }

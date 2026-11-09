@@ -15,10 +15,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   };
 
-  // 1. Redirecionamento de Empresas Legadas: /{estado}/{cidade}/{slug}/{id}
-  // Exemplo: /rs/farroupilha/borsoi-dariff-bernardi-adv/101215
+  // 1. Redirecionamento de Empresas Legadas (outros estados exceto /rs que possui Route Handler direto 301): /{estado}/{cidade}/{slug}/{id}
   const clientMatch = pathname.match(/^\/([a-z]{2})\/([^\/]+)\/([^\/]+)\/(\d+)$/i);
-  if (clientMatch) {
+  if (clientMatch && clientMatch[1].toLowerCase() !== 'rs') {
     const id = clientMatch[4];
     return getRedirect(`/cliente/${id}`);
   }
