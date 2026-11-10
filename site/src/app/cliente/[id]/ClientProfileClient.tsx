@@ -1233,22 +1233,17 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                     </p>
                                                 </div>
                                             )}
-                                            {(hasPhone || (client.cidades_atendidas && client.cidades_atendidas.length > 0)) && (() => {
-                                                const baseCity = (client.enderecos?.[0]?.cidade || '').trim();
-                                                const otherCities = (client.cidades_atendidas || [])
-                                                    .map((c: any) => (c.nome || '').trim())
-                                                    .filter((nome: string) => nome && nome.toLowerCase() !== baseCity.toLowerCase());
-
+                                            {hasPhone && (() => {
                                                 const whatsappNumbers = rawPhones.filter(p => p.isWhatsApp).map(p => p.number);
                                                 const regularPhones = rawPhones.filter(p => !p.isWhatsApp).map(p => p.number);
 
-                                                let contactText = 'Você pode solicitar contato diretamente pelos canais disponíveis nesta página';
+                                                let contactText = 'Você pode solicitar contato diretamente pelos canais disponíveis nesta página.';
                                                 if (regularPhones.length > 0 && whatsappNumbers.length > 0) {
-                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone ${regularPhones.join(' / ')} ou pelo WhatsApp ${whatsappNumbers.join(' e ')}`;
+                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone ${regularPhones.join(' / ')} ou pelo WhatsApp ${whatsappNumbers.join(' e ')}.`;
                                                 } else if (whatsappNumbers.length > 0) {
-                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone/WhatsApp ${whatsappNumbers.join(' e ')}`;
+                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone/WhatsApp ${whatsappNumbers.join(' e ')}.`;
                                                 } else if (regularPhones.length > 0) {
-                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone ${regularPhones.join(' / ')}`;
+                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone ${regularPhones.join(' / ')}.`;
                                                 }
 
                                                 return (
@@ -1258,9 +1253,6 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                         </h3>
                                                         <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
                                                             {contactText}
-                                                            {otherCities.length > 0
-                                                                ? (baseCity ? `. Além de ${baseCity}, também atende clientes de ${otherCities.join(', ')}.` : `. Atende clientes de ${otherCities.join(', ')}.`)
-                                                                : (baseCity ? `. Atende clientes em ${baseCity}.` : '.')}
                                                         </p>
                                                     </div>
                                                 );

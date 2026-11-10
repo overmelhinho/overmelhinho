@@ -266,14 +266,7 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
     const whatsappPhoneList = rawContactPhones.filter(p => p.isWhats).map(p => p.number);
     const regularPhoneList = rawContactPhones.filter(p => !p.isWhats).map(p => p.number);
 
-    if (rawContactPhones.length > 0 || (client.cidades_atendidas && client.cidades_atendidas.length > 0)) {
-        const otherCities = (client.cidades_atendidas || [])
-            .map((c: any) => (c.nome || '').trim())
-            .filter((nome: string) => nome && nome.toLowerCase() !== targetCityName.toLowerCase());
-        const citiesSentence = otherCities.length > 0
-            ? (targetCityName ? ` Além de ${targetCityName}, também atende clientes de ${otherCities.join(', ')}.` : ` Atende clientes de ${otherCities.join(', ')}.`)
-            : (targetCityName ? ` Atende clientes em ${targetCityName}.` : '');
-
+    if (rawContactPhones.length > 0) {
         let contactSentence = `Você pode solicitar atendimento com ${client.nome_fantasia} diretamente pelo Guia O Vermelhinho.`;
         if (regularPhoneList.length > 0 && whatsappPhoneList.length > 0) {
             contactSentence = `Você pode falar diretamente com a equipe pelo telefone ${regularPhoneList.join(' / ')} ou pelo WhatsApp ${whatsappPhoneList.join(' e ')}.`;
@@ -285,7 +278,7 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
 
         faqQuestions.push({
             question: `Como entrar em contato ou agendar atendimento em ${client.nome_fantasia}?`,
-            answer: `${contactSentence}${citiesSentence}`
+            answer: contactSentence
         });
     }
 
