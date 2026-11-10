@@ -1233,17 +1233,38 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                                     </p>
                                                 </div>
                                             )}
-                                            {(primaryPhone || (client.cidades_atendidas && client.cidades_atendidas.length > 0)) && (
-                                                <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 space-y-1.5">
-                                                    <h3 className="text-xs md:text-sm font-black text-gray-900">
-                                                        Como entrar em contato ou agendar atendimento em {client.nome_fantasia}?
-                                                    </h3>
-                                                    <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
-                                                        {hasPhone ? `Você pode falar diretamente com a equipe pelo telefone/WhatsApp ${primaryPhone}` : `Você pode solicitar contato diretamente pelos canais disponíveis nesta página`}
-                                                        {client.cidades_atendidas?.length > 0 ? `. Além de ${client.enderecos?.[0]?.cidade || 'sua sede'}, também atende clientes de ${client.cidades_atendidas.map((c: any) => c.nome).join(', ')}.` : '.'}
-                                                    </p>
-                                                </div>
-                                            )}
+                                            {(hasPhone || (client.cidades_atendidas && client.cidades_atendidas.length > 0)) && (() => {
+                                                const baseCity = (client.enderecos?.[0]?.cidade || '').trim();
+                                                const otherCities = (client.cidades_atendidas || [])
+                                                    .map((c: any) => (c.nome || '').trim())
+                                                    .filter((nome: string) => nome && nome.toLowerCase() !== baseCity.toLowerCase());
+
+                                                const whatsappNumbers = rawPhones.filter(p => p.isWhatsApp).map(p => p.number);
+                                                const regularPhones = rawPhones.filter(p => !p.isWhatsApp).map(p => p.number);
+
+                                                let contactText = 'Você pode solicitar contato diretamente pelos canais disponíveis nesta página';
+                                                if (regularPhones.length > 0 && whatsappNumbers.length > 0) {
+                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone ${regularPhones.join(' / ')} ou pelo WhatsApp ${whatsappNumbers.join(' e ')}`;
+                                                } else if (whatsappNumbers.length > 0) {
+                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone/WhatsApp ${whatsappNumbers.join(' e ')}`;
+                                                } else if (regularPhones.length > 0) {
+                                                    contactText = `Você pode falar diretamente com a equipe pelo telefone ${regularPhones.join(' / ')}`;
+                                                }
+
+                                                return (
+                                                    <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 space-y-1.5">
+                                                        <h3 className="text-xs md:text-sm font-black text-gray-900">
+                                                            Como entrar em contato ou agendar atendimento em {client.nome_fantasia}?
+                                                        </h3>
+                                                        <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
+                                                            {contactText}
+                                                            {otherCities.length > 0
+                                                                ? (baseCity ? `. Além de ${baseCity}, também atende clientes de ${otherCities.join(', ')}.` : `. Atende clientes de ${otherCities.join(', ')}.`)
+                                                                : (baseCity ? `. Atende clientes em ${baseCity}.` : '.')}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </section>
                                 </motion.div>

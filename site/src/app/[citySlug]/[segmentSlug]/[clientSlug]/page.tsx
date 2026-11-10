@@ -254,11 +254,38 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
         });
     }
 
-    if (primaryPhoneNumber || (client.cidades_atendidas && client.cidades_atendidas.length > 0)) {
-        const citiesList = (client.cidades_atendidas || []).map((c: any) => c.nome).filter(Boolean).join(', ');
+    const cInfo = client.contatos?.[0];
+    const isPayingClient = client.tipo_cliente === 'pagante';
+    const rawContactPhones = cInfo ? [
+        { number: cInfo.telefone_principal, show: cInfo.exibir_tel_principal !== false, isWhats: !!cInfo.has_whatsapp_principal && isPayingClient },
+        { number: cInfo.telefone_secundario, show: cInfo.exibir_tel_secundario !== false, isWhats: !!cInfo.has_whatsapp_secundario && isPayingClient },
+        { number: cInfo.celular, show: cInfo.exibir_celular !== false, isWhats: !!cInfo.has_whatsapp_celular && isPayingClient },
+        { number: cInfo.telefone_outro, show: cInfo.exibir_tel_outro !== false, isWhats: !!cInfo.has_whatsapp_outro && isPayingClient },
+    ].filter(p => p.number && p.show) : [];
+
+    const whatsappPhoneList = rawContactPhones.filter(p => p.isWhats).map(p => p.number);
+    const regularPhoneList = rawContactPhones.filter(p => !p.isWhats).map(p => p.number);
+
+    if (rawContactPhones.length > 0 || (client.cidades_atendidas && client.cidades_atendidas.length > 0)) {
+        const otherCities = (client.cidades_atendidas || [])
+            .map((c: any) => (c.nome || '').trim())
+            .filter((nome: string) => nome && nome.toLowerCase() !== targetCityName.toLowerCase());
+        const citiesSentence = otherCities.length > 0
+            ? (targetCityName ? ` Além de ${targetCityName}, também atende clientes de ${otherCities.join(', ')}.` : ` Atende clientes de ${otherCities.join(', ')}.`)
+            : (targetCityName ? ` Atende clientes em ${targetCityName}.` : '');
+
+        let contactSentence = `Você pode solicitar atendimento com ${client.nome_fantasia} diretamente pelo Guia O Vermelhinho.`;
+        if (regularPhoneList.length > 0 && whatsappPhoneList.length > 0) {
+            contactSentence = `Você pode falar diretamente com a equipe pelo telefone ${regularPhoneList.join(' / ')} ou pelo WhatsApp ${whatsappPhoneList.join(' e ')}.`;
+        } else if (whatsappPhoneList.length > 0) {
+            contactSentence = `Você pode falar diretamente com a equipe pelo telefone/WhatsApp ${whatsappPhoneList.join(' e ')}.`;
+        } else if (regularPhoneList.length > 0) {
+            contactSentence = `Você pode falar diretamente com a equipe pelo telefone ${regularPhoneList.join(' / ')}.`;
+        }
+
         faqQuestions.push({
-            question: `Qual o telefone e como entrar em contato com ${client.nome_fantasia}?`,
-            answer: `${primaryPhoneNumber ? `Você pode entrar em contato com ${client.nome_fantasia} pelo telefone/WhatsApp ${primaryPhoneNumber} ` : `Você pode solicitar atendimento com ${client.nome_fantasia} `}diretamente pelo Guia O Vermelhinho.${citiesList ? ` Cidades atendidas: ${citiesList}.` : ''}`
+            question: `Como entrar em contato ou agendar atendimento em ${client.nome_fantasia}?`,
+            answer: `${contactSentence}${citiesSentence}`
         });
     }
 
