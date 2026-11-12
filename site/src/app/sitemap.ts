@@ -16,7 +16,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     // 1. Busca rotas regionais (Segmento + Cidade)
-    const combinationsRes = await fetch(`${apiUrl}/public/active-sitemap-combinations`, { next: { revalidate: 3600 } });
+    const combinationsRes = await fetch(`${apiUrl}/public/active-sitemap-combinations`, { 
+      next: { 
+        tags: ['sitemap-combinations'],
+        revalidate: 3600 
+      } 
+    });
     if (combinationsRes.ok) {
       const combinations = await combinationsRes.json();
       const combos = combinations.data || [];

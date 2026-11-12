@@ -24,7 +24,12 @@ const slugify = (text: string) => {
 export async function GET() {
     try {
         // Fetching only active combinations
-        const res = await fetch(`${getApiUrl()}/public/active-sitemap-combinations`, { next: { revalidate: 86400 } });
+        const res = await fetch(`${getApiUrl()}/public/active-sitemap-combinations`, { 
+            next: { 
+                tags: ['sitemap-combinations'],
+                revalidate: 86400 
+            } 
+        });
 
         if (!res.ok) {
             return new NextResponse('Erro ao buscar dados da API', { status: 500 });

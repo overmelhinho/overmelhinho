@@ -18,45 +18,87 @@ const getApiUrl = () => {
     return API_URL;
 };
 
-async function fetchCity(citySlug: string) {
+type FetchResult<T> =
+    | { success: true; data: T }
+    | { success: false; error: string; status?: number };
+
+async function fetchCity(citySlug: string): Promise<FetchResult<any | null>> {
     try {
         const res = await fetch(`${getApiUrl()}/cidades`, { next: { revalidate: 3600 } });
-        if (!res.ok) return null;
+        if (!res.ok) {
+            console.error(`[API Error] fetchCity returned HTTP ${res.status}`);
+            return { success: false, error: `HTTP ${res.status}`, status: res.status };
+        }
         const data = await res.json();
-        return data.data?.find((c: any) => slugify(c.nome) === citySlug) || null;
-    } catch {
-        return null;
+        const city = data.data?.find((c: any) => slugify(c.nome) === citySlug) || null;
+        return { success: true, data: city };
+    } catch (err: any) {
+        console.error(`[Network/Timeout Error] fetchCity failed:`, err?.message || err);
+        return { success: false, error: err?.message || 'Network error' };
     }
 }
 
-async function fetchSegment(segmentSlug: string) {
+async function fetchSegment(segmentSlug: string): Promise<FetchResult<any | null>> {
     try {
         const res = await fetch(`${getApiUrl()}/segmentos`, { next: { revalidate: 3600 } });
-        if (!res.ok) return null;
+        if (!res.ok) {
+            console.error(`[API Error] fetchSegment returned HTTP ${res.status}`);
+            return { success: false, error: `HTTP ${res.status}`, status: res.status };
+        }
         const data = await res.json();
         const matches = (data.data || []).filter(
             (s: any) => (s.slug ? slugify(s.slug) : slugify(s.nome)) === segmentSlug || slugify(s.nome) === segmentSlug
         );
-        if (matches.length === 0) return null;
+        if (matches.length === 0) {
+            return { success: true, data: null };
+        }
         return {
-            ...matches[0],
-            ids: matches.map((s: any) => s.id),
+            success: true,
+            data: {
+                ...matches[0],
+                ids: matches.map((s: any) => s.id),
+            }
         };
-    } catch {
-        return null;
+    } catch (err: any) {
+        console.error(`[Network/Timeout Error] fetchSegment failed:`, err?.message || err);
+        return { success: false, error: err?.message || 'Network error' };
     }
 }
 
-async function fetchClients(cityId: number, segmentId: number | string) {
+type FetchClientsResult =
+    | { success: true; clients: any[]; total: number }
+    | { success: false; error: string; status?: number };
+
+async function fetchClients(cityId: number, segmentId: number | string): Promise<FetchClientsResult> {
     try {
         const res = await fetch(`${getApiUrl()}/public/search?city_id=${cityId}&segment_id=${encodeURIComponent(String(segmentId))}&per_page=500`, {
-            next: { revalidate: 3600 }
+            next: { 
+                tags: [
+                    `search-${cityId}-${segmentId}`,
+                    `city-${cityId}`,
+                    `segment-${segmentId}`,
+                    'category-search'
+                ],
+                revalidate: 3600 
+            }
         });
-        if (!res.ok) return [];
+        if (!res.ok) {
+            console.error(`[API Error] fetchClients returned HTTP ${res.status} for cityId=${cityId}, segmentId=${segmentId}`);
+            return { success: false, error: `HTTP ${res.status}`, status: res.status };
+        }
         const data = await res.json();
-        return data.data || [];
-    } catch {
-        return [];
+        if (!data || !Array.isArray(data.data)) {
+            console.error(`[API Error] fetchClients invalid response payload for cityId=${cityId}, segmentId=${segmentId}`);
+            return { success: false, error: 'Invalid response payload' };
+        }
+        return {
+            success: true,
+            clients: data.data,
+            total: typeof data.total === 'number' ? data.total : (data.meta?.total ?? data.data.length),
+        };
+    } catch (err: any) {
+        console.error(`[Network/Timeout Error] fetchClients failed for cityId=${cityId}, segmentId=${segmentId}:`, err?.message || err);
+        return { success: false, error: err?.message || 'Network error' };
     }
 }
 
@@ -77,12 +119,33 @@ export async function generateMetadata(props: { params: Promise<{ citySlug: stri
     const params = await props.params;
     const cleanCitySlug = slugify(params.citySlug);
     const cleanSegmentSlug = slugify(params.segmentSlug);
-    const city = await fetchCity(cleanCitySlug);
-    const segment = await fetchSegment(cleanSegmentSlug);
+    const cityRes = await fetchCity(cleanCitySlug);
+    const segmentRes = await fetchSegment(cleanSegmentSlug);
 
-    if (!city || !segment) {
+    // Se a API falhou, não definimos noindex prematuramente para evitar danos temporários de SEO
+    if (!cityRes.success || !segmentRes.success) {
+        return {
+            title: 'O Vermelhinho | Guia de Empresas e Serviços',
+        };
+    }
+
+    if (!cityRes.data || !segmentRes.data) {
         return {
             title: 'Não Encontrado | O Vermelhinho',
+            robots: { index: false, follow: false },
+        };
+    }
+
+    const city = cityRes.data;
+    const segment = segmentRes.data;
+    const segmentIdParam = segment.ids?.length ? segment.ids.join(',') : segment.id;
+    const clientsRes = await fetchClients(city.id, segmentIdParam);
+
+    // Categoria comprovadamente vazia: remove da indexação
+    if (clientsRes.success && clientsRes.clients.length === 0) {
+        return {
+            title: 'Página Não Encontrada | O Vermelhinho',
+            robots: { index: false, follow: false },
         };
     }
 
@@ -111,12 +174,28 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
     const params = await props.params;
     const cleanCitySlug = slugify(params.citySlug);
     const cleanSegmentSlug = slugify(params.segmentSlug);
-    const city = await fetchCity(cleanCitySlug);
-    const segment = await fetchSegment(cleanSegmentSlug);
+    const cityRes = await fetchCity(cleanCitySlug);
+    const segmentRes = await fetchSegment(cleanSegmentSlug);
 
-    if (!city || !segment) {
+    // REGRA C: Falha de comunicação com a API
+    // Diferenciar resultado vazio válido de timeout, erro HTTP, resposta inválida ou falha de banco.
+    // NUNCA executar notFound() apenas porque a API falhou.
+    if (!cityRes.success) {
+        console.error(`[SSR Falha Temporária] Erro ao carregar cidade ${cleanCitySlug}: ${cityRes.error}`);
+        throw new Error(`Falha temporária ao carregar dados da cidade: ${cityRes.error}`);
+    }
+    if (!segmentRes.success) {
+        console.error(`[SSR Falha Temporária] Erro ao carregar segmento ${cleanSegmentSlug}: ${segmentRes.error}`);
+        throw new Error(`Falha temporária ao carregar dados do segmento: ${segmentRes.error}`);
+    }
+
+    // Se cidade ou categoria não existem no banco de dados, retorna 404 real
+    if (!cityRes.data || !segmentRes.data) {
         notFound();
     }
+
+    const city = cityRes.data;
+    const segment = segmentRes.data;
 
     if (params.citySlug !== cleanCitySlug || params.segmentSlug !== cleanSegmentSlug) {
         permanentRedirect(`/${cleanCitySlug}/${cleanSegmentSlug}`);
@@ -126,7 +205,24 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
     const segmentName = (segment.nome || '').trim();
     const cityName = (city.nome || '').trim();
 
-    const clients = await fetchClients(city.id, segmentIdParam);
+    const clientsRes = await fetchClients(city.id, segmentIdParam);
+
+    // REGRA C: Falha na busca por clientes (timeout, erro 500, etc.)
+    if (!clientsRes.success) {
+        console.error(`[SSR Falha Temporária] Erro ao buscar empresas para ${cleanCitySlug}/${cleanSegmentSlug}: ${clientsRes.error}`);
+        throw new Error(`Falha temporária na API ao buscar empresas: ${clientsRes.error}`);
+    }
+
+    const clients = clientsRes.clients;
+
+    // REGRA B: Categoria comprovadamente vazia
+    // Se a API respondeu 200 OK com array vazio, trata-se de combinação sem empresas ativas.
+    // Retorna HTTP 404 real via notFound(), eliminando o Soft 404 sem indexação.
+    if (clients.length === 0) {
+        console.info(`[Soft 404 Fix] Categoria comprovadamente vazia: /${cleanCitySlug}/${cleanSegmentSlug} (cidade=${city.id}, segmento=${segmentIdParam}). Disparando notFound().`);
+        notFound();
+    }
+
     const searchAds = await fetchAds(city.id, segmentName);
 
     const pagantes = clients
@@ -232,18 +328,7 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
 
                 {/* Clients Grid & List */}
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-                    {clients.length === 0 ? (
-                        <div className="text-center py-20">
-                            <h3 className="text-2xl font-bold text-gray-900">Nenhuma empresa encontrada</h3>
-                            <p className="mt-2 text-gray-500">Ainda não temos empresas cadastradas nesta categoria para {city.nome}.</p>
-                            <div className="mt-6">
-                                <Link href="/anuncie" className="inline-flex px-6 py-3 bg-brand-red text-white font-bold rounded-full hover:bg-red-700 transition">
-                                    Seja o primeiro a aparecer!
-                                </Link>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-16">
+                    <div className="space-y-16">
                             
                             {/* BLOCO 1: PAGANTES (CARDS) */}
                             {pagantes.length > 0 && (
@@ -375,7 +460,6 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                             )}
 
                         </div>
-                    )}
                 </div>
 
                 <DynamicSeoText cityName={cityName} segmentName={segmentName} clientCount={clients.length} />

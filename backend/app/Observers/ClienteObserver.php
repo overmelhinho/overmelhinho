@@ -27,6 +27,7 @@ class ClienteObserver
     public function saved(Cliente $cliente): void
     {
         // 🚀 Dispara a Revalidação de Cache no Next.js (On-Demand ISR)
+        \Illuminate\Support\Facades\Cache::forget('sitemap_combinations');
         $this->triggerNextJsRevalidation($cliente);
         $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
         
@@ -52,6 +53,7 @@ class ClienteObserver
     public function deleted(Cliente $cliente): void
     {
         // 🚀 Dispara a Revalidação de Cache no Next.js (On-Demand ISR)
+        \Illuminate\Support\Facades\Cache::forget('sitemap_combinations');
         $this->triggerNextJsRevalidation($cliente);
         $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
         
@@ -93,6 +95,39 @@ class ClienteObserver
                 Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
                     'tag' => "client-{$cliente->slug}"
                 ]);
+            }
+
+            // Revalida listagens de busca geral e combinações de categoria (purga combinações antigas e novas)
+            Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
+                'tag' => "category-search"
+            ]);
+
+            // Revalida cache público dos sitemaps XML de categorias
+            Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
+                'tag' => "sitemap-combinations"
+            ]);
+
+            // Revalida cidades e segmentos específicos do cliente para atualizar listagens cidade/categoria
+            $cityIds = $cliente->cidadesAtendidas()->pluck('cidades.id')->toArray();
+            if ($cliente->enderecos()->exists()) {
+                $cityNames = $cliente->enderecos()->pluck('cidade')->filter()->toArray();
+                if (!empty($cityNames)) {
+                    $addrCityIds = \App\Models\Cidade::whereIn('nome', $cityNames)->pluck('id')->toArray();
+                    $cityIds = array_unique(array_merge($cityIds, $addrCityIds));
+                }
+            }
+
+            $segmentIds = $cliente->segmentos()->pluck('segmentos.id')->toArray();
+
+            foreach ($cityIds as $cid) {
+                Http::timeout(2)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
+                    'tag' => "city-{$cid}"
+                ]);
+                foreach ($segmentIds as $sid) {
+                    Http::timeout(2)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
+                        'tag' => "search-{$cid}-{$sid}"
+                    ]);
+                }
             }
         } catch (\Exception $e) {
             Log::error("Falha ao revalidar cache Next.js para o cliente {$cliente->id}: " . $e->getMessage());
