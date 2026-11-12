@@ -27,11 +27,6 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
-        source: '/:slug;cat:id(\\d+).php',
-        destination: '/busca?q=:slug',
-        permanent: true,
-      },
-      {
         source: '/:slug;blog:id(\\d+).php',
         destination: '/',
         permanent: true,

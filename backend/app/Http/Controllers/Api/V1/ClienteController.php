@@ -35,26 +35,72 @@ class ClienteController extends Controller implements HasMiddleware
     public function sitemap()
     {
         return \Illuminate\Support\Facades\Cache::remember('sitemap_data_clientes', 3600, function () {
-            return Cliente::query()
-                ->select(['id', 'slug', 'updated_at'])
+            $clients = DB::table('clientes as c')
+                ->where('c.exibir_no_site', 'true')
                 ->where(function ($sub) {
-                    $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
-                        ->orWhere('tipo_cliente', 'gratuito');
+                    $sub->whereIn('c.status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
+                        ->orWhere('c.tipo_cliente', 'gratuito');
                 })
-                ->where('exibir_no_site', 'true')
-                ->with([
-                    'enderecos' => function ($q) { $q->select(['id', 'cliente_id', 'cidade', 'estado']); },
-                    'cidadesAtendidas' => function ($q) { $q->select(['cidades.id', 'nome', 'uf']); },
-                    'segmentos' => function ($q) { $q->select(['segmentos.id', 'nome']); }
-                ])
-                ->get();
+                ->select('c.id', 'c.slug', DB::raw("to_char(c.updated_at, 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') as updated_at"))
+                ->get()
+                ->keyBy('id');
+
+            $clientIds = $clients->keys()->all();
+
+            $addresses = DB::table('enderecos')
+                ->whereIn('cliente_id', $clientIds)
+                ->select('cliente_id', 'cidade', 'estado')
+                ->get()
+                ->groupBy('cliente_id');
+
+            $segments = DB::table('cliente_segmento as cs')
+                ->join('segmentos as s', 's.id', '=', 'cs.segmento_id')
+                ->whereIn('cs.cliente_id', $clientIds)
+                ->select('cs.cliente_id', 's.nome', 's.slug', 'cs.is_primary')
+                ->orderByDesc('cs.is_primary')
+                ->get()
+                ->groupBy('cliente_id');
+
+            $servedCities = DB::table('cliente_cidade as cc')
+                ->join('cidades as cid', 'cid.id', '=', 'cc.cidade_id')
+                ->whereIn('cc.cliente_id', $clientIds)
+                ->select('cc.cliente_id', 'cid.nome')
+                ->get()
+                ->groupBy('cliente_id');
+
+            $data = [];
+            foreach ($clients as $id => $c) {
+                $cAddrs = isset($addresses[$id]) ? $addresses[$id]->map(function ($a) {
+                    return ['cidade' => $a->cidade, 'estado' => $a->estado];
+                })->all() : [];
+
+                $cSegs = isset($segments[$id]) ? $segments[$id]->map(function ($s) {
+                    return ['nome' => $s->nome, 'slug' => $s->slug, 'is_primary' => (bool)$s->is_primary];
+                })->all() : [];
+
+                $cServed = isset($servedCities[$id]) ? $servedCities[$id]->map(function ($sc) {
+                    return ['nome' => $sc->nome];
+                })->all() : [];
+
+                $data[] = [
+                    'id' => $c->id,
+                    'slug' => $c->slug,
+                    'updated_at' => $c->updated_at,
+                    'enderecos' => $cAddrs,
+                    'segmentos' => $cSegs,
+                    'cidades_atendidas' => $cServed,
+                ];
+            }
+
+            return $data;
         });
     }
 
     public function activeSitemapCombinations()
     {
         return \Illuminate\Support\Facades\Cache::remember('sitemap_combinations', 3600, function () {
-            $combinations = DB::table('clientes as c')
+            // 1. Combinações via cidades atendidas (cliente_cidade)
+            $servedQuery = DB::table('clientes as c')
                 ->join('cliente_cidade as cc', 'c.id', '=', 'cc.cliente_id')
                 ->join('cidades as cid', 'cc.cidade_id', '=', 'cid.id')
                 ->join('cliente_segmento as cs', 'c.id', '=', 'cs.cliente_id')
@@ -64,9 +110,26 @@ class ClienteController extends Controller implements HasMiddleware
                     $query->whereIn('c.status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
                           ->orWhere('c.tipo_cliente', 'gratuito');
                 })
-                ->select('cid.nome as city_name', 'seg.nome as segment_name')
-                ->distinct()
-                ->get();
+                ->select('cid.nome as city_name', 'seg.nome as segment_name');
+
+            // 2. Combinações via endereço físico (sediadas) - recupera as 63 combinações de sedes
+            $addressedQuery = DB::table('clientes as c')
+                ->join('enderecos as e', 'c.id', '=', 'e.cliente_id')
+                ->join('cidades as cid', function ($join) {
+                    $join->on(DB::raw('LOWER(TRIM(cid.nome))'), '=', DB::raw('LOWER(TRIM(e.cidade))'));
+                })
+                ->join('cliente_segmento as cs', 'c.id', '=', 'cs.cliente_id')
+                ->join('segmentos as seg', 'cs.segmento_id', '=', 'seg.id')
+                ->where('c.exibir_no_site', 'true')
+                ->where(function ($query) {
+                    $query->whereIn('c.status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
+                          ->orWhere('c.tipo_cliente', 'gratuito');
+                })
+                ->whereNotNull('e.cidade')
+                ->where('e.cidade', '!=', '')
+                ->select('cid.nome as city_name', 'seg.nome as segment_name');
+
+            $combinations = $servedQuery->union($addressedQuery)->get();
 
             return response()->json(['data' => $combinations]);
         });
@@ -905,18 +968,53 @@ class ClienteController extends Controller implements HasMiddleware
             if (!in_array($cliente->exibir_no_site, ['true', true, 1, '1'], true)) {
                 $citySlug = null;
                 $segmentSlug = null;
+                $hasActiveCategory = false;
                 
                 if ($cliente->enderecos->isNotEmpty() && !empty($cliente->enderecos[0]->cidade)) {
-                    $citySlug = \Illuminate\Support\Str::slug($cliente->enderecos[0]->cidade);
-                }
-                if ($cliente->segmentos->isNotEmpty()) {
-                    $segmentSlug = \Illuminate\Support\Str::slug($cliente->segmentos[0]->nome);
+                    $cityName = $cliente->enderecos[0]->cidade;
+                    $citySlug = \Illuminate\Support\Str::slug($cityName);
+                    
+                    if ($cliente->segmentos->isNotEmpty()) {
+                        $segment = $cliente->segmentos[0];
+                        $segmentSlug = \Illuminate\Support\Str::slug($segment->nome);
+                        $segmentId = $segment->id;
+
+                        // Verifica se a categoria sugerida possui empresas ativas para evitar redirect para 404
+                        $hasActiveCategory = DB::table('clientes as c')
+                            ->where('c.id', '!=', $cliente->id)
+                            ->where('c.exibir_no_site', 'true')
+                            ->where(function ($query) {
+                                $query->whereIn('c.status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
+                                      ->orWhere('c.tipo_cliente', 'gratuito');
+                            })
+                            ->where(function ($q) use ($cityName) {
+                                $q->whereExists(function ($sub) use ($cityName) {
+                                    $sub->select(DB::raw(1))
+                                        ->from('cliente_cidade')
+                                        ->join('cidades', 'cliente_cidade.cidade_id', '=', 'cidades.id')
+                                        ->whereColumn('cliente_cidade.cliente_id', 'c.id')
+                                        ->whereRaw('LOWER(TRIM(cidades.nome)) = ?', [mb_strtolower(trim($cityName))]);
+                                })->orWhereExists(function ($sub) use ($cityName) {
+                                    $sub->select(DB::raw(1))
+                                        ->from('enderecos')
+                                        ->whereColumn('enderecos.cliente_id', 'c.id')
+                                        ->whereRaw('LOWER(TRIM(enderecos.cidade)) = ?', [mb_strtolower(trim($cityName))]);
+                                });
+                            })
+                            ->whereExists(function ($sub) use ($segmentId) {
+                                $sub->select(DB::raw(1))
+                                    ->from('cliente_segmento')
+                                    ->whereColumn('cliente_segmento.cliente_id', 'c.id')
+                                    ->where('cliente_segmento.segmento_id', $segmentId);
+                            })
+                            ->exists();
+                    }
                 }
 
                 return [
                     'error' => 'inactive',
                     'message' => 'Cliente inativo',
-                    'redirect_suggestion' => ($citySlug && $segmentSlug) ? [
+                    'redirect_suggestion' => ($citySlug && $segmentSlug && $hasActiveCategory) ? [
                         'city_slug' => $citySlug,
                         'segment_slug' => $segmentSlug
                     ] : null,

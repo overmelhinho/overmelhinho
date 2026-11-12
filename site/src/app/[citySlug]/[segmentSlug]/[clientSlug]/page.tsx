@@ -160,8 +160,12 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
     }
 
     if (client.is_inactive_redirect) {
-        const { city_slug, segment_slug } = client.redirect_suggestion;
-        permanentRedirect(`/${slugify(city_slug)}/${slugify(segment_slug)}`);
+        if (client.redirect_suggestion?.city_slug && client.redirect_suggestion?.segment_slug) {
+            const { city_slug, segment_slug } = client.redirect_suggestion;
+            permanentRedirect(`/${slugify(city_slug)}/${slugify(segment_slug)}`);
+        } else {
+            notFound();
+        }
     }
 
     const address = client.enderecos?.[0] || {};

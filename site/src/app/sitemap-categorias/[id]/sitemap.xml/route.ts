@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 export const revalidate = 86400; // Cache de 24 horas
 
 const getApiUrl = () => {
-    let API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dash.overmelhinho.com.br/api/v1';
+    let API_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+    API_URL = API_URL.replace('localhost', '127.0.0.1');
     if (!API_URL.endsWith('/v1')) {
         API_URL += '/v1';
     }

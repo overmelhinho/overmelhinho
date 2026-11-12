@@ -28,6 +28,7 @@ class ClienteObserver
     {
         // 🚀 Dispara a Revalidação de Cache no Next.js (On-Demand ISR)
         \Illuminate\Support\Facades\Cache::forget('sitemap_combinations');
+        \Illuminate\Support\Facades\Cache::forget('sitemap_data_clientes');
         $this->triggerNextJsRevalidation($cliente);
         $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
         
@@ -54,6 +55,7 @@ class ClienteObserver
     {
         // 🚀 Dispara a Revalidação de Cache no Next.js (On-Demand ISR)
         \Illuminate\Support\Facades\Cache::forget('sitemap_combinations');
+        \Illuminate\Support\Facades\Cache::forget('sitemap_data_clientes');
         $this->triggerNextJsRevalidation($cliente);
         $siteUrl = config('app.frontend_url', 'https://www.overmelhinho.com.br');
         
@@ -102,9 +104,12 @@ class ClienteObserver
                 'tag' => "category-search"
             ]);
 
-            // Revalida cache público dos sitemaps XML de categorias
+            // Revalida cache público dos sitemaps XML de categorias e empresas
             Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
                 'tag' => "sitemap-combinations"
+            ]);
+            Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
+                'tag' => "sitemap-companies"
             ]);
 
             // Revalida cidades e segmentos específicos do cliente para atualizar listagens cidade/categoria

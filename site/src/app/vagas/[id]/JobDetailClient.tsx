@@ -35,6 +35,7 @@ interface Job {
     logo?: string;
     timestamp: number;
     clientSlug?: string;
+    clientSeoUrl?: string;
     whatsapp?: string | null;
 }
 
@@ -48,10 +49,20 @@ function maskPhone(value: string): string {
     return value;
 }
 
-// ── LIMPAR HTML ───────────────────────────────────────────────────
+// ── RENDERIZAÇÃO SEGURA DE TEXTO / HTML ────────────────────────────
+function renderSafeHtml(content: string) {
+    if (!content) return null;
+    const clean = content.replace(/<!--[\s\S]*?-->/g, '').replace(/<script[\s\S]*?<\/script>/gi, '');
+    const paragraphs = clean.split(/<\/?(?:p|div|br\s*\/?)>/i).map(s => s.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+    if (paragraphs.length === 0) return <span>{clean.replace(/<[^>]+>/g, '').trim()}</span>;
+    return paragraphs.map((p, idx) => (
+        <p key={idx} className="mb-2 last:mb-0">{p}</p>
+    ));
+}
+
 function cleanHtml(html: string): string {
     if (!html) return '';
-    return html.replace(/<!--[\s\S]*?-->/g, '').trim();
+    return html.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '').trim();
 }
 
 // ── LOGO DA EMPRESA ───────────────────────────────────────────────
@@ -174,20 +185,18 @@ export default function JobDetailClient({ job }: { job: Job }) {
                             {/* Descrição */}
                             <div className="space-y-3">
                                 <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs">Sobre a Vaga</h3>
-                                <div 
-                                    className="text-gray-500 font-medium leading-relaxed rich-text text-sm md:text-base"
-                                    dangerouslySetInnerHTML={{ __html: cleanHtml(job.desc) }}
-                                />
+                                <div className="text-gray-500 font-medium leading-relaxed rich-text text-sm md:text-base">
+                                    {renderSafeHtml(job.desc)}
+                                </div>
                             </div>
 
                             {/* Requisitos */}
                             {job.requirements && job.requirements.length > 0 && cleanHtml(job.requirements[0]) && (
                                 <div className="space-y-3 pt-6 border-t border-gray-50">
                                     <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs">Requisitos</h3>
-                                    <div 
-                                        className="text-gray-500 font-medium leading-relaxed rich-text text-sm md:text-base"
-                                        dangerouslySetInnerHTML={{ __html: cleanHtml(job.requirements[0]) }}
-                                    />
+                                    <div className="text-gray-500 font-medium leading-relaxed rich-text text-sm md:text-base">
+                                        {renderSafeHtml(job.requirements[0])}
+                                    </div>
                                 </div>
                             )}
 
@@ -359,7 +368,7 @@ export default function JobDetailClient({ job }: { job: Job }) {
                             {job.clientSlug && (
                                 <div className="pt-6 border-t border-gray-800 text-center">
                                     <a
-                                        href={`/cliente/${job.clientSlug}`}
+                                        href={job.clientSeoUrl || `/cliente/${job.clientSlug}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-2 text-gray-400 hover:text-white font-bold text-xs transition-colors"
