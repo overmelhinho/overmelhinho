@@ -34,15 +34,22 @@ async function fetchSegment(segmentSlug: string) {
         const res = await fetch(`${getApiUrl()}/segmentos`, { next: { revalidate: 3600 } });
         if (!res.ok) return null;
         const data = await res.json();
-        return data.data?.find((s: any) => slugify(s.nome) === segmentSlug) || null;
+        const matches = (data.data || []).filter(
+            (s: any) => (s.slug ? slugify(s.slug) : slugify(s.nome)) === segmentSlug || slugify(s.nome) === segmentSlug
+        );
+        if (matches.length === 0) return null;
+        return {
+            ...matches[0],
+            ids: matches.map((s: any) => s.id),
+        };
     } catch {
         return null;
     }
 }
 
-async function fetchClients(cityId: number, segmentName: string) {
+async function fetchClients(cityId: number, segmentId: number | string) {
     try {
-        const res = await fetch(`${getApiUrl()}/public/search?q=${encodeURIComponent(segmentName)}&city_id=${cityId}&per_page=100`, {
+        const res = await fetch(`${getApiUrl()}/public/search?city_id=${cityId}&segment_id=${encodeURIComponent(String(segmentId))}&per_page=500`, {
             next: { revalidate: 3600 }
         });
         if (!res.ok) return [];
@@ -115,8 +122,12 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
         permanentRedirect(`/${cleanCitySlug}/${cleanSegmentSlug}`);
     }
 
-    const clients = await fetchClients(city.id, segment.nome);
-    const searchAds = await fetchAds(city.id, segment.nome);
+    const segmentIdParam = segment.ids?.length ? segment.ids.join(',') : segment.id;
+    const segmentName = (segment.nome || '').trim();
+    const cityName = (city.nome || '').trim();
+
+    const clients = await fetchClients(city.id, segmentIdParam);
+    const searchAds = await fetchAds(city.id, segmentName);
 
     const pagantes = clients
         .filter((c: any) => c.tipo_cliente === 'pagante' && ['ativa', 'ativo', 'inadimplente'].includes(c.status_assinatura))
@@ -155,9 +166,10 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
     const schemaData = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": `${segment.nome.trim()} em ${city.nome.trim()}`,
-        "description": `As melhores opções de ${segment.nome.trim()} em ${city.nome.trim()}`,
+        "name": `${segmentName} em ${cityName}`,
+        "description": `Encontre as melhores opções de ${segmentName} em ${cityName}. Veja avaliações, horários de funcionamento, endereços e chame direto no WhatsApp pelo Guia O Vermelhinho.`,
         "url": `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}`,
+        "numberOfItems": clients.length,
         "itemListElement": clients.slice(0, 10).map((client: any, index: number) => ({
             "@type": "ListItem",
             "position": index + 1,
@@ -167,8 +179,8 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                 "url": `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}/${client.slug || client.id}`,
                 "address": {
                     "@type": "PostalAddress",
-                    "addressLocality": city.nome.trim(),
-                    "addressRegion": city.estado || "RS",
+                    "addressLocality": client.enderecos?.[0]?.cidade?.trim() || cityName,
+                    "addressRegion": client.enderecos?.[0]?.estado || city.uf || city.estado || "RS",
                     "streetAddress": client.enderecos?.[0]?.rua || ""
                 }
             }
@@ -187,10 +199,10 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
                         <div className="max-w-3xl">
                             <h1 className="text-4xl md:text-5xl font-black text-gray-900 font-serif tracking-tight leading-tight">
-                                Melhores <span className="text-brand-red italic">{segment.nome}</span> em {city.nome}
+                                Melhores <span className="text-brand-red italic">{segmentName}</span> em {cityName}
                             </h1>
                             <p className="mt-4 text-lg text-gray-500">
-                                Encontramos {clients.length} {clients.length === 1 ? 'resultado' : 'resultados'} para você na região de {city.nome}.
+                                Encontramos {clients.length} {clients.length === 1 ? 'resultado' : 'resultados'} para você na região de {cityName}.
                             </p>
                         </div>
                     </div>
@@ -237,7 +249,7 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                             {pagantes.length > 0 && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {pagantes.map((client: any) => {
-                                        const seoUrl = `/${params.citySlug}/${params.segmentSlug}/${client.slug || client.id}`;
+                                        const seoUrl = `/${cleanCitySlug}/${cleanSegmentSlug}/${client.slug || client.id}`;
 
                                         return (
                                             <div key={client.id} className="bg-white rounded-[2rem] md:rounded-[2rem] shadow-xl border border-white group overflow-hidden flex flex-col hover:shadow-2xl transition-all duration-300">
@@ -331,7 +343,7 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                                 <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mt-8">
                                     <div className="divide-y divide-gray-50">
                                         {gratuitos.map((client: any) => {
-                                            const seoUrl = `/${params.citySlug}/${params.segmentSlug}/${client.slug || client.id}`;
+                                            const seoUrl = `/${cleanCitySlug}/${cleanSegmentSlug}/${client.slug || client.id}`;
                                             
                                             return (
                                                 <Link 
@@ -346,7 +358,7 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                                                         <div className="flex items-center mt-1 text-xs text-gray-400 truncate">
                                                             <MapPin size={12} className="mr-1 flex-shrink-0" />
                                                             <span className="truncate">
-                                                                {client.enderecos?.[0]?.bairro ? client.enderecos[0].bairro + ', ' : ''}{client.enderecos?.[0]?.cidade || city.nome}
+                                                                {client.enderecos?.[0]?.bairro ? client.enderecos[0].bairro + ', ' : ''}{client.enderecos?.[0]?.cidade || cityName}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -366,7 +378,7 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                     )}
                 </div>
 
-                <DynamicSeoText cityName={city.nome} segmentName={segment.nome} clientCount={clients.length} />
+                <DynamicSeoText cityName={cityName} segmentName={segmentName} clientCount={clients.length} />
             </main>
         </div>
     );

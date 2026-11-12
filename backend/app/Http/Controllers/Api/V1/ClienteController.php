@@ -80,26 +80,29 @@ class ClienteController extends Controller implements HasMiddleware
         $perPage = (int) ($request->input('per_page') ?? 15);
         $cityId = $request->input('city_id');
         $cityName = $request->input('city_name');
+        $segmentId = $request->input('segment_id');
         $preferredSegments = $request->input('preferred_segments');
         $page = (int) ($request->input('page') ?? 1);
 
-        $cacheKey = "public_search_" . md5(json_encode([$q, $perPage, $cityId, $cityName, $preferredSegments, $page]));
+        $cacheKey = "public_search_v2_" . md5(json_encode([$q, $perPage, $cityId, $cityName, $segmentId, $preferredSegments, $page]));
         
         // Cache search results for 15 minutes to dramatically improve latency
-        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(15), function () use ($q, $perPage, $cityId, $cityName, $preferredSegments) {
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(15), function () use ($q, $perPage, $cityId, $cityName, $segmentId, $preferredSegments) {
             
-        // ✅ Detecta se o termo de busca contém o nome de alguma cidade
-        if ($q !== '') {
-            // Evita extrair o nome da cidade se o usuário estiver buscando EXATAMENTE por uma empresa com esse nome (ex: Chaveiro do Progresso)
-            $isExactBusiness = false;
+        $hasExplicitCity = !empty($cityId) || !empty($cityName);
+
+        // ✅ Detecta se o termo de busca contém o nome de alguma cidade (apenas em buscas livres sem cidade ou segmento explícito)
+        if ($q !== '' && !$hasExplicitCity && empty($segmentId)) {
+            // Evita extrair o nome da cidade se o usuário estiver buscando EXATAMENTE por uma empresa ou categoria com esse nome (ex: Chaveiro do Progresso, Produtos Caseiros)
+            $isExactBusinessOrSegment = false;
             if (strlen($q) > 2) {
-                $isExactBusiness = \App\Models\Cliente::where(function($sq) use ($q) {
+                $isExactBusinessOrSegment = \App\Models\Cliente::where(function($sq) use ($q) {
                     $sq->where('nome_fantasia', 'ilike', "%{$q}%")
                        ->orWhere('nome_alternativo', 'ilike', "%{$q}%");
-                })->exists();
+                })->exists() || \App\Models\Segmento::whereRaw('f_unaccent(TRIM(nome)) ilike f_unaccent(TRIM(?))', [$q])->exists();
             }
 
-            if (!$isExactBusiness) {
+            if (!$isExactBusinessOrSegment) {
                 $cityInQuery = $this->detectCityInQuery($q);
                 if ($cityInQuery) {
                     $cityId = $cityInQuery->id;
@@ -118,6 +121,35 @@ class ClienteController extends Controller implements HasMiddleware
                 $sub->whereIn('status_assinatura', ['ativa', 'ativo', 'pendente', 'vencida', 'vencido', 'inadimplente'])
                     ->orWhere('tipo_cliente', 'gratuito');
             });
+
+        // ✅ Filtro Explícito por Categoria (segment_id), incluindo tratamento para categorias com slugs/nomes duplicados no banco
+        if (!empty($segmentId)) {
+            $rawSegmentIds = is_array($segmentId)
+                ? $segmentId
+                : explode(',', (string) $segmentId);
+            $parsedSegmentIds = array_values(array_filter(array_map('intval', $rawSegmentIds), fn($id) => $id > 0));
+
+            if (!empty($parsedSegmentIds)) {
+                $siblingIds = DB::table('segmentos as s1')
+                    ->join('segmentos as s2', function ($join) {
+                        $join->on(DB::raw('LOWER(TRIM(s1.nome))'), '=', DB::raw('LOWER(TRIM(s2.nome))'))
+                             ->orOn(function ($qJoin) {
+                                 $qJoin->whereNotNull('s1.slug')
+                                       ->where('s1.slug', '!=', '')
+                                       ->whereColumn('s1.slug', 's2.slug');
+                             });
+                    })
+                    ->whereIn('s1.id', $parsedSegmentIds)
+                    ->pluck('s2.id')
+                    ->toArray();
+
+                $effectiveSegmentIds = array_values(array_unique(array_merge($parsedSegmentIds, $siblingIds)));
+
+                $query->whereHas('segmentos', function ($sq) use ($effectiveSegmentIds) {
+                    $sq->whereIn('segmentos.id', $effectiveSegmentIds);
+                });
+            }
+        }
 
         // ✅ Busca Ultra Rápida com TSVECTOR
         if ($q !== '') {
@@ -189,7 +221,7 @@ class ClienteController extends Controller implements HasMiddleware
             });
         }
 
-        // ✅ Filtro por Cidade (Geolocalização Contextual)
+        // ✅ Filtro por Cidade (Geolocalização Contextual: Endereço Físico Exato ou Cidade Atendida)
         if ($cityId) {
             $cityObj = \App\Models\Cidade::find($cityId);
             $query->where(function($sub) use ($cityId, $cityObj) {
@@ -199,16 +231,16 @@ class ClienteController extends Controller implements HasMiddleware
                 
                 if ($cityObj) {
                     $sub->orWhereHas('enderecos', function($e) use ($cityObj) {
-                        $e->where('cidade', 'ilike', "%{$cityObj->nome}%");
+                        $e->whereRaw('f_unaccent(TRIM(cidade)) ilike f_unaccent(TRIM(?))', [$cityObj->nome]);
                     });
                 }
             });
         } elseif ($cityName) {
             $query->where(function($sub) use ($cityName) {
                 $sub->whereHas('cidadesAtendidas', function($c) use ($cityName) {
-                    $c->whereRaw('unaccent(cidades.nome) ilike unaccent(?)', ["%{$cityName}%"]);
+                    $c->whereRaw('f_unaccent(TRIM(cidades.nome)) ilike f_unaccent(TRIM(?))', [$cityName]);
                 })->orWhereHas('enderecos', function($e) use ($cityName) {
-                    $e->whereRaw('unaccent(cidade) ilike unaccent(?)', ["%{$cityName}%"]);
+                    $e->whereRaw('f_unaccent(TRIM(cidade)) ilike f_unaccent(TRIM(?))', [$cityName]);
                 });
             });
         }
@@ -222,13 +254,13 @@ class ClienteController extends Controller implements HasMiddleware
         // Essa regra DEVE vir antes do Match Exato para garantir que quem paga fique sempre no topo.
         $query->orderByRaw("
             CASE 
-                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND EXISTS (
-                    SELECT 1 FROM enderecos 
-                    WHERE enderecos.cliente_id = clientes.id 
-                    AND (
-                        enderecos.cidade ilike (SELECT nome FROM cidades WHERE id = ? LIMIT 1)
-                        OR EXISTS (SELECT 1 FROM cliente_cidade cc WHERE cc.cliente_id = clientes.id AND cc.cidade_id = ?)
+                WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') AND (
+                    EXISTS (
+                        SELECT 1 FROM enderecos 
+                        WHERE enderecos.cliente_id = clientes.id 
+                        AND f_unaccent(TRIM(enderecos.cidade)) ilike f_unaccent(TRIM((SELECT nome FROM cidades WHERE id = ? LIMIT 1)))
                     )
+                    OR EXISTS (SELECT 1 FROM cliente_cidade cc WHERE cc.cliente_id = clientes.id AND cc.cidade_id = ?)
                 ) THEN 0
                 WHEN tipo_cliente = 'pagante' AND status_assinatura IN ('ativa', 'ativo', 'inadimplente') THEN 1
                 ELSE 2

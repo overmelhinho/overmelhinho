@@ -10,7 +10,7 @@ class SegmentoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Segmento::select('id', 'nome')->orderBy('nome');
+        $query = Segmento::select('id', 'nome', 'slug')->orderBy('nome');
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
