@@ -77,8 +77,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     }
 
     if (client.is_inactive_redirect) {
-        const { city_slug, segment_slug } = client.redirect_suggestion;
-        permanentRedirect(`/${city_slug}/${segment_slug}`);
+        if (client.redirect_suggestion?.city_slug && client.redirect_suggestion?.segment_slug) {
+            const { city_slug, segment_slug } = client.redirect_suggestion;
+            permanentRedirect(`/${city_slug}/${segment_slug}`);
+        } else {
+            notFound();
+        }
     }
 
     const { city, uf } = getPrimaryCity(client);

@@ -9,7 +9,6 @@ import { useLocation } from '@/contexts/LocationContext';
 const navLinks = [
     { label: 'Como Funciona', href: '/como-funciona' },
     { label: 'Vagas', href: '/vagas' },
-    { label: 'Blog', href: '/blog' },
     { label: 'Sobre', href: '/sobre' },
 ];
 

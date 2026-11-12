@@ -3,6 +3,17 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+  const rawHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.hostname || '';
+  const hostname = rawHost.split(':')[0].toLowerCase();
+
+  // 0. Redirecionamento de Host Canônico (Padroniza https://www.overmelhinho.com.br sem loop)
+  if (hostname === 'overmelhinho.com.br') {
+    const canonicalUrl = new URL(request.url);
+    canonicalUrl.host = 'www.overmelhinho.com.br';
+    canonicalUrl.protocol = 'https:';
+    canonicalUrl.port = '';
+    return NextResponse.redirect(canonicalUrl, 301);
+  }
 
   const getRedirect = (newPath: string, newSearchParams?: URLSearchParams) => {
     const url = request.nextUrl.clone();
@@ -22,14 +33,15 @@ export function middleware(request: NextRequest) {
     return getRedirect(`/cliente/${id}`);
   }
 
-  // 2. Redirecionamento de Categorias Legadas: /-{slug}-;cat{id}.php
-  // Exemplo: /-advocacia-;cat846.php
-  const categoryMatch = pathname.match(/^\/-(.+)-;cat(\d+)\.php$/i);
+  // 2. Redirecionamento de Categorias Legadas: /-{slug}-;cat{id}.php ou /{slug};cat{id}.php
+  // Exemplo: /-advocacia-;cat846.php (redireciona diretamente para /busca?q={slug} em salto único 301)
+  const categoryMatch = pathname.match(/^\/?-?(.+?)-?;cat(\d+)\.php$/i);
   if (categoryMatch) {
-    const catId = categoryMatch[2];
+    const rawSlug = categoryMatch[1].replace(/^-+|-+$/g, '');
+    const cleanTerm = rawSlug.replace(/[-_]+/g, ' ').trim();
     const sp = new URLSearchParams();
-    sp.set('id_categoria', catId);
-    return getRedirect('/api/legacy-busca', sp);
+    sp.set('q', cleanTerm || rawSlug);
+    return getRedirect('/busca', sp);
   }
 
   // 2.5. Redirecionamento de busca que caiu direto no /busca com parâmetro segmento, id_subcategoria ou id_categoria (numérico, ignorando '0')
@@ -58,7 +70,7 @@ export function middleware(request: NextRequest) {
         sp.set('palavra', term);
       }
       
-      return getRedirect('/api/legacy-busca', sp);
+      return NextResponse.rewrite(new URL(`/api/legacy-busca?${sp.toString()}`, request.url));
     }
   }
 
@@ -71,7 +83,7 @@ export function middleware(request: NextRequest) {
     return getRedirect('/vagas', sp);
   }
 
-  // 4. Redirecionamento de busca legada: /busca.php?palavra=...
+  // 4. Redirecionamento de busca legada: /busca.php?palavra=... (reescreve internamente para /api/legacy-busca garantindo 1 salto)
   if (pathname === '/busca.php') {
     const term = searchParams.get('palavra') || '';
     const getValidSegment = () => {
@@ -84,14 +96,14 @@ export function middleware(request: NextRequest) {
       return null;
     };
     const idCategoria = getValidSegment();
-    const idCidade = searchParams.get('id_cidade');
+    const idCidade = searchParams.get('id_cidade') || searchParams.get('city_id');
 
     if (idCategoria) {
       const sp = new URLSearchParams();
       sp.set('id_categoria', idCategoria);
       if (idCidade && /^[1-9]\d*$/.test(idCidade)) sp.set('id_cidade', idCidade);
       if (term) sp.set('palavra', term);
-      return getRedirect('/api/legacy-busca', sp);
+      return NextResponse.rewrite(new URL(`/api/legacy-busca?${sp.toString()}`, request.url));
     }
 
     const sp = new URLSearchParams();
@@ -105,7 +117,6 @@ export function middleware(request: NextRequest) {
 // Configurar quais caminhos o middleware deve observar
 export const config = {
   matcher: [
-    // Captura os padrões de estado (rs, sc, pr, etc) + categorias + php
-    '/((?![_next|api|static|favicon.ico]).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

@@ -39,7 +39,6 @@ export default function Footer() {
         { label: 'Anuncie', href: '/anuncie' },
         { label: 'Como Funciona', href: '/como-funciona' },
         { label: 'Vagas', href: '/vagas' },
-        { label: 'Blog', href: '/blog' },
         { label: 'Sobre', href: '/sobre' },
     ];
 
@@ -100,9 +99,9 @@ export default function Footer() {
                         <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-300">Destaques</h4>
                         <ul className="space-y-4">
                             {[
-                                { label: 'Saúde em Farroupilha', href: '/farroupilha/saude' },
+                                { label: 'Odontologia em Farroupilha', href: '/farroupilha/odontologia' },
                                 { label: 'Serviços em Caxias do Sul', href: '/caxias-do-sul/servicos' },
-                                { label: 'Gastronomia em Bento', href: '/bento-goncalves/gastronomia' },
+                                { label: 'Restaurantes em Bento', href: '/bento-goncalves/restaurantes' },
                                 { label: 'Vagas na Serra Gaúcha', href: '/vagas' },
                             ].map((link, i) => (
                                 <li key={i}>

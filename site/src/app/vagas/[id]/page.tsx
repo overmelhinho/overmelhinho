@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { slugify } from '@/utils/slugify';
+import { getClientSeoUrl } from '@/utils/seo';
 import JobDetailClient from './JobDetailClient';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
@@ -31,6 +32,7 @@ interface Job {
     logo?: string;
     timestamp: number;
     clientSlug?: string;
+    clientSeoUrl?: string;
     whatsapp?: string | null;
 }
 
@@ -146,6 +148,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         contact: j.contact_whatsapp || j.contact_email || 'Não informado',
         logo: formatStorageUrl(j.client?.logo_url),
         clientSlug: j.client?.slug,
+        clientSeoUrl: j.client ? getClientSeoUrl(j.client) : undefined,
         whatsapp: (j.contact_whatsapp) || (j.client?.contatos?.[0]?.whatsapp_selected) || (j.client?.contatos?.[0]?.exibir_tel_principal && j.client?.contatos?.[0]?.has_whatsapp_principal ? j.client?.contatos?.[0]?.telefone_principal : null) || (j.client?.contatos?.[0]?.exibir_celular && j.client?.contatos?.[0]?.has_whatsapp_celular ? j.client?.contatos?.[0]?.celular : null) || null,
     };
 
@@ -173,6 +176,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         }
     } : {};
 
+    const companyUrl = (mappedJob.clientSeoUrl && !mappedJob.clientSeoUrl.startsWith('#'))
+        ? `${SITE_URL}${mappedJob.clientSeoUrl}`
+        : (mappedJob.clientSlug ? `${SITE_URL}/cliente/${mappedJob.clientSlug}` : undefined);
+
     const jobPostingJsonLd = {
         "@context": "https://schema.org",
         "@type": "JobPosting",
@@ -182,7 +189,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         "hiringOrganization": {
             "@type": "Organization",
             "name": mappedJob.company,
-            "sameAs": mappedJob.clientSlug ? `${SITE_URL}/cliente/${mappedJob.clientSlug}` : undefined,
+            "sameAs": companyUrl,
             "logo": mappedJob.logo,
         },
         "jobLocation": {
