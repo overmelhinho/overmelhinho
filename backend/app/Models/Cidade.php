@@ -21,4 +21,19 @@ class Cidade extends Model
     {
         return $this->belongsToMany(Cliente::class, 'cliente_cidade', 'cidade_id', 'cliente_id');
     }
+
+    protected static function booted()
+    {
+        static::saved(function ($cidade) {
+            \Illuminate\Support\Facades\DB::afterCommit(function () {
+                \App\Http\Controllers\Api\V1\ClienteController::bumpSitemapInvalidation();
+            });
+        });
+
+        static::deleted(function ($cidade) {
+            \Illuminate\Support\Facades\DB::afterCommit(function () {
+                \App\Http\Controllers\Api\V1\ClienteController::bumpSitemapInvalidation();
+            });
+        });
+    }
 }

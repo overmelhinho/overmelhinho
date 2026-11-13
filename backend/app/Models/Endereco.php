@@ -37,6 +37,8 @@ class Endereco extends Model
         'is_cobranca' => \App\Casts\PostgresBoolean::class,
     ];
 
+    protected $touches = ['cliente'];
+
     public function cliente()
     {
         return $this->belongsTo(Cliente::class, 'cliente_id');
@@ -45,6 +47,18 @@ class Endereco extends Model
     protected static function boot()
     {
         parent::boot();
+
+        static::saved(function ($endereco) {
+            \Illuminate\Support\Facades\DB::afterCommit(function () {
+                \App\Http\Controllers\Api\V1\ClienteController::bumpSitemapInvalidation();
+            });
+        });
+
+        static::deleted(function ($endereco) {
+            \Illuminate\Support\Facades\DB::afterCommit(function () {
+                \App\Http\Controllers\Api\V1\ClienteController::bumpSitemapInvalidation();
+            });
+        });
 
         static::saving(function ($endereco) {
             // Tenta extrair a latitude e longitude diretamente do link do Google Maps

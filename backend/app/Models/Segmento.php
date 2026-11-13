@@ -15,5 +15,17 @@ class Segmento extends Model
                 $segmento->slug = \App\Services\SlugService::create($segmento->nome);
             }
         });
+
+        static::saved(function ($segmento) {
+            \Illuminate\Support\Facades\DB::afterCommit(function () {
+                \App\Http\Controllers\Api\V1\ClienteController::bumpSitemapInvalidation();
+            });
+        });
+
+        static::deleted(function ($segmento) {
+            \Illuminate\Support\Facades\DB::afterCommit(function () {
+                \App\Http\Controllers\Api\V1\ClienteController::bumpSitemapInvalidation();
+            });
+        });
     }
 }

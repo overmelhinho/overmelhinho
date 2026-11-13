@@ -9,6 +9,12 @@ use Illuminate\Support\Facades\Log;
 
 class ClienteObserver
 {
+    /**
+     * Garante que os eventos do Observer só sejam disparados APÓS a transação de banco (DB::commit()) ser confirmada.
+     * Em caso de rollback da transação, nenhum webhook ou invalidação prematura de cache é disparada.
+     */
+    public bool $afterCommit = true;
+
     protected $indexingService;
 
     public function __construct(GoogleIndexingService $indexingService)
@@ -77,9 +83,15 @@ class ClienteObserver
      */
     protected function triggerNextJsRevalidation(Cliente $cliente): void
     {
-        $siteUrl = env('SITE_URL', 'https://www.overmelhinho.com.br');
-        $secret = env('REVALIDATE_SECRET', 'overmelhinho_revalidate_2026');
+        $siteUrl = config('services.revalidate.url') ?: env('SITE_URL', 'https://www.overmelhinho.com.br');
+        $secret = config('services.revalidate.secret') ?: env('REVALIDATE_SECRET');
         
+        // Pula se o segredo não estiver configurado (fail-secure: sem segredo padrão hardcoded)
+        if (empty($secret)) {
+            Log::warning("Revalidação Next.js abortada: REVALIDATE_SECRET não configurado.");
+            return;
+        }
+
         // Pula se for robô ou teste E2E
         if (str_contains(strtolower($cliente->nome_fantasia), 'e2e') || 
             str_contains(strtolower($cliente->nome_fantasia), 'robot')) {
@@ -87,30 +99,16 @@ class ClienteObserver
         }
 
         try {
-            // Revalida pela Tag do ID
-            Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
-                'tag' => "client-{$cliente->id}"
-            ]);
-            
-            // Revalida pela Tag do Slug
+            $tags = [
+                "client-{$cliente->id}",
+                "category-search",
+                "sitemap-combinations",
+                "sitemap-companies",
+            ];
+
             if ($cliente->slug) {
-                Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
-                    'tag' => "client-{$cliente->slug}"
-                ]);
+                $tags[] = "client-{$cliente->slug}";
             }
-
-            // Revalida listagens de busca geral e combinações de categoria (purga combinações antigas e novas)
-            Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
-                'tag' => "category-search"
-            ]);
-
-            // Revalida cache público dos sitemaps XML de categorias e empresas
-            Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
-                'tag' => "sitemap-combinations"
-            ]);
-            Http::timeout(3)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
-                'tag' => "sitemap-companies"
-            ]);
 
             // Revalida cidades e segmentos específicos do cliente para atualizar listagens cidade/categoria
             $cityIds = $cliente->cidadesAtendidas()->pluck('cidades.id')->toArray();
@@ -125,15 +123,27 @@ class ClienteObserver
             $segmentIds = $cliente->segmentos()->pluck('segmentos.id')->toArray();
 
             foreach ($cityIds as $cid) {
-                Http::timeout(2)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
-                    'tag' => "city-{$cid}"
-                ]);
+                $tags[] = "city-{$cid}";
                 foreach ($segmentIds as $sid) {
-                    Http::timeout(2)->post("{$siteUrl}/webhook/revalidate?secret={$secret}", [
-                        'tag' => "search-{$cid}-{$sid}"
-                    ]);
+                    $tags[] = "search-{$cid}-{$sid}";
                 }
             }
+
+            // Invalidação atômica e versionada do cache local (retrocompatível em caso de revert do Commit 2B)
+            if (method_exists(\App\Http\Controllers\Api\V1\ClienteController::class, 'bumpSitemapInvalidation')) {
+                \App\Http\Controllers\Api\V1\ClienteController::bumpSitemapInvalidation();
+            } else {
+                \Illuminate\Support\Facades\Cache::forget('sitemap_data_clientes');
+            }
+
+            // Transmissão segura via Cabeçalho HTTP (sem segredo na URL)
+            $webhookUrl = rtrim($siteUrl, '/') . '/webhook/revalidate';
+            Http::withHeaders([
+                'x-revalidate-token' => $secret,
+                'Accept' => 'application/json',
+            ])->timeout(5)->post($webhookUrl, [
+                'tags' => array_values(array_unique($tags))
+            ]);
         } catch (\Exception $e) {
             Log::error("Falha ao revalidar cache Next.js para o cliente {$cliente->id}: " . $e->getMessage());
         }

@@ -73,4 +73,10 @@ return [
         'token' => env('TINY_ERP_TOKEN', env('TINY_ERP')),
     ],
 
+    // 🚀 Next.js On-Demand ISR Revalidation
+    'revalidate' => [
+        'url' => env('SITE_URL', env('FRONTEND_URL', 'https://www.overmelhinho.com.br')),
+        'secret' => env('REVALIDATE_SECRET'),
+    ],
+
 ];

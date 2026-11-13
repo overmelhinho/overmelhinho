@@ -32,68 +32,1296 @@ class ClienteController extends Controller implements HasMiddleware
             new Middleware('role:Admin|Administrador|Diretor', only: ['destroy']),
         ];
     }
+    public static ?\Closure $testHookBeforePublish = null;
+    public static ?\Closure $testHookAfterRename = null;
+    public static ?\Closure $testHookBeforeDescriptorCommit = null;
+    public static ?\Closure $testHookDuringInvalidation = null;
+    public static ?\Closure $testHookDuringArtifactPruneLock = null;
+    public static bool $testSimulateCacheStoreFailure = false;
+    public static array $activeReaderLeases = [];
+
+    /**
+     * Caminhos canônicos de controle (diretório de artefatos imutáveis e ponteiro).
+     */
+    public static function getSitemapCachePaths(): array
+    {
+        $dir = storage_path('framework/cache');
+        return [
+            'dir' => $dir,
+            'pointer' => $dir . '/sitemap_companies.current.json',
+            'dirty' => $dir . '/sitemap_companies.dirty.json',
+        ];
+    }
+
+    /**
+     * Lista todos os marcadores individuais de invalidação pendente (.dirty.*.json ou legado .dirty.json).
+     */
+    public static function getPendingDirtyFiles(): array
+    {
+        $dir = self::getSitemapCachePaths()['dir'];
+        if (!is_dir($dir)) {
+            return [];
+        }
+
+        return @glob($dir . '/sitemap_companies.dirty*.json') ?: [];
+    }
+
+    /**
+     * Adquire um lease compartilhado (LOCK_SH) para proteger um artefato imutável durante toda a resposta HTTP.
+     */
+    public static function acquireArtifactReaderLease(string $artifactPath): ?array
+    {
+        if (!file_exists($artifactPath)) {
+            return null;
+        }
+
+        $fp = @fopen($artifactPath, 'rb');
+        if (!$fp) {
+            return null;
+        }
+
+        if (!@flock($fp, LOCK_SH | LOCK_NB)) {
+            @fclose($fp);
+            return null;
+        }
+
+        clearstatcache(true, $artifactPath);
+        if (!file_exists($artifactPath)) {
+            @flock($fp, LOCK_UN);
+            @fclose($fp);
+            return null;
+        }
+
+        @touch($artifactPath . '.access');
+
+        $leaseId = bin2hex(random_bytes(8));
+        $lease = [
+            'id' => $leaseId,
+            'path' => realpath($artifactPath) ?: $artifactPath,
+            'fp' => $fp,
+            'acquired_at' => microtime(true),
+        ];
+        self::$activeReaderLeases[$leaseId] = $lease;
+
+        return $lease;
+    }
+
+    /**
+     * Libera o lease compartilhado (LOCK_SH) após o término da resposta HTTP.
+     */
+    public static function releaseArtifactReaderLease(?array $lease): void
+    {
+        if (!$lease || empty($lease['id'])) {
+            return;
+        }
+
+        $leaseId = $lease['id'];
+        $entry = self::$activeReaderLeases[$leaseId] ?? $lease;
+        unset(self::$activeReaderLeases[$leaseId]);
+
+        if (isset($entry['fp']) && is_resource($entry['fp'])) {
+            @flock($entry['fp'], LOCK_UN);
+            @fclose($entry['fp']);
+        }
+    }
+
+    /**
+     * Libera de forma idempotente um lease compartilhado pelo identificador.
+     */
+    public static function releaseArtifactReaderLeaseById(string $leaseId): void
+    {
+        if ($leaseId !== '' && isset(self::$activeReaderLeases[$leaseId])) {
+            self::releaseArtifactReaderLease(self::$activeReaderLeases[$leaseId]);
+        }
+    }
+
+    /**
+     * Verifica se existe algum lease ativo no processo atual lendo o artefato informado.
+     */
+    protected static function hasActiveInProcessLease(string $artifactPath): bool
+    {
+        $target = realpath($artifactPath) ?: $artifactPath;
+        foreach (self::$activeReaderLeases as $lease) {
+            if (($lease['path'] ?? '') === $target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Registra resposta de arquivo com lease compartilhado ativo e liberação garantida (Octane/Swoole, terminating e RAII __destruct).
+     */
+    public static function respondWithLeasedArtifact(string $artifactPath, array $headers)
+    {
+        $lease = self::acquireArtifactReaderLease($artifactPath);
+        if ($lease === null) {
+            try {
+                $seq = static::getSitemapInvalidationSeq();
+                $fresh = ($seq !== -1) ? self::evaluateSitemapCacheState($seq) : ['isClean' => false];
+                if (!empty($fresh['isClean']) && !empty($fresh['artifactPath']) && $fresh['artifactPath'] !== $artifactPath) {
+                    $artifactPath = $fresh['artifactPath'];
+                    $lease = self::acquireArtifactReaderLease($artifactPath);
+                    if ($lease !== null) {
+                        $headers['X-Sitemap-Sequence'] = (string) ($fresh['publishedSeq'] ?? '');
+                        $headers['X-Sitemap-SHA256'] = (string) ($fresh['actualHash'] ?? '');
+                        $headers['X-Sitemap-Artifact'] = (string) ($fresh['artifactName'] ?? basename($artifactPath));
+                    }
+                }
+            } catch (\Throwable $ignored) {}
+        }
+
+        if ($lease === null) {
+            return response()->json([
+                'error' => 'Service Unavailable',
+                'message' => 'Artefato em rotação atômica. Tente novamente.',
+                'cache_state' => 'ARTIFACT_ROTATED_RETRY',
+            ], 503, ['Retry-After' => '5']);
+        }
+
+        $leaseId = (string) $lease['id'];
+        $leaseGuard = new class($leaseId) {
+            private string $leaseId;
+            private bool $released = false;
+
+            public function __construct(string $leaseId)
+            {
+                $this->leaseId = $leaseId;
+            }
+
+            public function release(): void
+            {
+                if ($this->released) {
+                    return;
+                }
+                $this->released = true;
+                \App\Http\Controllers\Api\V1\ClienteController::releaseArtifactReaderLeaseById($this->leaseId);
+            }
+
+            public function __destruct()
+            {
+                $this->release();
+            }
+        };
+
+        if (function_exists('app')) {
+            $app = app();
+            $app->terminating(function () use ($leaseGuard) {
+                $leaseGuard->release();
+            });
+            if ($app->bound('events')) {
+                $events = $app->make('events');
+                if (class_exists(\Laravel\Octane\Events\RequestTerminated::class)) {
+                    $events->listen(\Laravel\Octane\Events\RequestTerminated::class, function () use ($leaseGuard) {
+                        $leaseGuard->release();
+                    });
+                }
+                if (class_exists(\Laravel\Octane\Events\WorkerErrorOccurred::class)) {
+                    $events->listen(\Laravel\Octane\Events\WorkerErrorOccurred::class, function () use ($leaseGuard) {
+                        $leaseGuard->release();
+                    });
+                }
+            }
+        }
+
+        return new class($artifactPath, 200, $headers, $leaseGuard) extends \Symfony\Component\HttpFoundation\BinaryFileResponse {
+            private object $leaseGuard;
+
+            public function __construct(string $file, int $status, array $headers, object $leaseGuard)
+            {
+                parent::__construct($file, $status, $headers);
+                $this->leaseGuard = $leaseGuard;
+            }
+
+            public function sendContent(): static
+            {
+                try {
+                    return parent::sendContent();
+                } finally {
+                    $this->leaseGuard->release();
+                }
+            }
+
+            public function __destruct()
+            {
+                $this->leaseGuard->release();
+            }
+        };
+    }
+
+    /**
+     * Nome canônico de artefato imutável vinculado à versão e ao SHA-256 dos bytes.
+     */
+    public static function buildArtifactName(int $seq, string $sha256): string
+    {
+        return sprintf('sitemap_companies.v%d.%s.json', $seq, $sha256);
+    }
+
+    /**
+     * Caminho completo em disco do artefato imutável versionado.
+     */
+    public static function buildArtifactPath(int $seq, string $sha256): string
+    {
+        return self::getSitemapCachePaths()['dir'] . '/' . self::buildArtifactName($seq, $sha256);
+    }
+
+    /**
+     * Coleta segura de artefatos antigos baseada em buffer de versões recentes + ociosidade + LOCK_EX | LOCK_NB do SO mantido até o fim do unlink().
+     * Jamais remove um arquivo que possua qualquer leitor HTTP / stream com LOCK_SH ativo, independente do tempo decorrido.
+     */
+    public static function pruneOldSitemapArtifacts(?int $keepSeq = null, int $minIdleSeconds = 60, int $keepRecentCount = 2): array
+    {
+        $dir = self::getSitemapCachePaths()['dir'];
+        if (!is_dir($dir)) {
+            return ['removed' => 0, 'skipped_active' => 0, 'retained_recent' => 0];
+        }
+
+        $files = @glob($dir . '/sitemap_companies.v*.json') ?: [];
+        $candidates = [];
+
+        foreach ($files as $file) {
+            if (!preg_match('/sitemap_companies\.v(\d+)\.[a-f0-9]{64}\.json$/', basename($file), $matches)) {
+                continue;
+            }
+            $candidates[] = [
+                'path' => $file,
+                'seq' => (int) $matches[1],
+            ];
+        }
+
+        usort($candidates, fn (array $a, array $b) => $b['seq'] <=> $a['seq']);
+
+        $removed = 0;
+        $skippedActive = 0;
+        $retainedRecent = 0;
+        $nonCurrentRank = 0;
+        $now = time();
+
+        foreach ($candidates as $cand) {
+            $file = $cand['path'];
+            $fileSeq = $cand['seq'];
+
+            if ($keepSeq !== null && $fileSeq === $keepSeq) {
+                continue;
+            }
+
+            if ($nonCurrentRank < $keepRecentCount) {
+                $retainedRecent++;
+                $nonCurrentRank++;
+                continue;
+            }
+            $nonCurrentRank++;
+
+            $accessFile = $file . '.access';
+            clearstatcache(true, $file);
+            clearstatcache(true, $accessFile);
+            $lastAccess = file_exists($accessFile) ? (int) @filemtime($accessFile) : (int) @filemtime($file);
+            if ($minIdleSeconds > 0 && ($now - $lastAccess) < $minIdleSeconds) {
+                $retainedRecent++;
+                continue;
+            }
+
+            if (self::hasActiveInProcessLease($file)) {
+                $skippedActive++;
+                continue;
+            }
+
+            // Verifica fisicamente no kernel e mantém LOCK_EX durante todo o unlink()
+            $fp = @fopen($file, 'rb');
+            if (!$fp) {
+                $skippedActive++;
+                continue;
+            }
+
+            if (!@flock($fp, LOCK_EX | LOCK_NB)) {
+                @fclose($fp);
+                $skippedActive++;
+                continue;
+            }
+
+            try {
+                if (self::$testHookDuringArtifactPruneLock !== null) {
+                    (self::$testHookDuringArtifactPruneLock)($file);
+                }
+
+                if (self::hasActiveInProcessLease($file)) {
+                    $skippedActive++;
+                    continue;
+                }
+
+                if (@unlink($file)) {
+                    @unlink($accessFile);
+                    $removed++;
+                } else {
+                    $skippedActive++;
+                }
+            } finally {
+                @flock($fp, LOCK_UN);
+                @fclose($fp);
+            }
+        }
+
+        return [
+            'removed' => $removed,
+            'skipped_active' => $skippedActive,
+            'retained_recent' => $retainedRecent,
+        ];
+    }
+
+    /**
+     * Contexto da conexão/tabela de cache no PostgreSQL para operações sob pg_advisory_xact_lock.
+     */
+    protected static function getSitemapDbContext(): array
+    {
+        $store = \Illuminate\Support\Facades\Cache::getStore();
+        $prefix = method_exists($store, 'getPrefix')
+            ? (string) $store->getPrefix()
+            : (string) \Illuminate\Support\Facades\Cache::getPrefix();
+
+        $conn = ($store instanceof \Illuminate\Cache\DatabaseStore)
+            ? $store->getConnection()
+            : DB::connection(config('cache.stores.database.connection'));
+
+        $table = config('cache.stores.database.table', 'cache');
+
+        return [
+            'conn' => $conn,
+            'table' => $table,
+            'prefix' => $prefix,
+        ];
+    }
+
+    /**
+     * Decodifica uma linha da tabela `cache` do Laravel respeitando expiração e serialização PostgreSQL.
+     */
+    protected static function decodeCacheRowValue(?object $row, int $now): mixed
+    {
+        if (!$row || (int) $row->expiration <= $now) {
+            return null;
+        }
+
+        $value = $row->value;
+        if (is_string($value) && !Str::contains($value, [':', ';'])) {
+            $decoded = base64_decode($value, true);
+            if ($decoded !== false) {
+                $value = $decoded;
+            }
+        }
+
+        return @unserialize($value);
+    }
+
+    /**
+     * Avança atomicamente a sequência monotônica de invalidação sob pg_advisory_xact_lock no PostgreSQL.
+     * Nunca sobrescreve um valor maior atualizado por outro worker concorrente.
+     */
+    protected static function atomicAdvanceSitemapSeq(int $minFloor = 0): int
+    {
+        $ctx = self::getSitemapDbContext();
+        $conn = $ctx['conn'];
+        $table = $ctx['table'];
+        $prefix = $ctx['prefix'];
+
+        return (int) $conn->transaction(function () use ($conn, $table, $prefix, $minFloor) {
+            $conn->selectOne("SELECT pg_advisory_xact_lock(hashtext('sitemap_invalidation_seq'))");
+
+            $keySeq = $prefix . 'sitemap_invalidation_seq';
+            $keyLastInv = $prefix . 'sitemap_last_invalidation';
+            $keyDescriptor = $prefix . 'sitemap_published_descriptor';
+
+            $rows = $conn->table($table)
+                ->whereIn('key', [$keySeq, $keyDescriptor])
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('key');
+
+            $now = time();
+            $currentSeqRaw = self::decodeCacheRowValue($rows->get($keySeq), $now);
+            $currentDbSeq = is_numeric($currentSeqRaw) ? (int) $currentSeqRaw : 0;
+
+            $descRaw = self::decodeCacheRowValue($rows->get($keyDescriptor), $now);
+            $publishedSeq = (is_array($descRaw) && isset($descRaw['sequence'])) ? (int) $descRaw['sequence'] : 0;
+
+            $nowMs = (int) floor(microtime(true) * 1000);
+            $floor = max($currentDbSeq, $publishedSeq, $minFloor, $nowMs);
+            $nextSeq = max($currentDbSeq, $floor) + 1;
+
+            $conn->table($table)->upsert([
+                [
+                    'key' => $keySeq,
+                    'value' => serialize($nextSeq),
+                    'expiration' => $now + 86400 * 365,
+                ],
+                [
+                    'key' => $keyLastInv,
+                    'value' => serialize(microtime(true)),
+                    'expiration' => $now + 86400 * 365,
+                ],
+            ], ['key'], ['value', 'expiration']);
+
+            $conn->table($table)->where('key', $keyDescriptor)->delete();
+
+            return $nextSeq;
+        });
+    }
+
+    /**
+     * Garante inicialização a frio sem sobrescrita concorrente caso outro worker já tenha inicializado a chave.
+     */
+    protected static function atomicEnsureSitemapSeqInitialized(int $minFloor = 0): int
+    {
+        $ctx = self::getSitemapDbContext();
+        $conn = $ctx['conn'];
+        $table = $ctx['table'];
+        $prefix = $ctx['prefix'];
+
+        return (int) $conn->transaction(function () use ($conn, $table, $prefix, $minFloor) {
+            $conn->selectOne("SELECT pg_advisory_xact_lock(hashtext('sitemap_invalidation_seq'))");
+
+            $keySeq = $prefix . 'sitemap_invalidation_seq';
+            $keyDescriptor = $prefix . 'sitemap_published_descriptor';
+
+            $rows = $conn->table($table)
+                ->whereIn('key', [$keySeq, $keyDescriptor])
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('key');
+
+            $now = time();
+            $currentSeqRaw = self::decodeCacheRowValue($rows->get($keySeq), $now);
+            $currentDbSeq = is_numeric($currentSeqRaw) ? (int) $currentSeqRaw : 0;
+
+            if ($currentDbSeq > 0) {
+                return $currentDbSeq;
+            }
+
+            $descRaw = self::decodeCacheRowValue($rows->get($keyDescriptor), $now);
+            $publishedSeq = (is_array($descRaw) && isset($descRaw['sequence'])) ? (int) $descRaw['sequence'] : 0;
+
+            $seed = max($publishedSeq, $minFloor, (int) floor(microtime(true) * 1000)) + 1;
+
+            $conn->table($table)->upsert([
+                [
+                    'key' => $keySeq,
+                    'value' => serialize($seed),
+                    'expiration' => $now + 86400 * 365,
+                ],
+            ], ['key'], ['value', 'expiration']);
+
+            return $seed;
+        });
+    }
+
+    /**
+     * Invalida o ponteiro do sitemap com marcador individual isolado (.dirty.<token>.json) e LOCK_EX em arquivo.
+     * Nunca remove ou sobrescreve marcadores pendentes de outros workers; retorna -1 em falha de store.
+     */
+    public static function bumpSitemapInvalidation(string $reason = 'cadastral_mutation'): int
+    {
+        $paths = self::getSitemapCachePaths();
+        if (!is_dir($paths['dir'])) {
+            @mkdir($paths['dir'], 0775, true);
+        }
+
+        $token = sprintf('%d_%d_%s', (int) floor(microtime(true) * 1000000), getmypid(), bin2hex(random_bytes(4)));
+        $myDirtyFile = $paths['dir'] . "/sitemap_companies.dirty.{$token}.json";
+        $dirtyPayload = [
+            'token' => $token,
+            'pid' => getmypid(),
+            'invalidated_at' => microtime(true),
+            'reason' => $reason,
+            'status' => 'in_flight',
+            'pending_sync' => true,
+        ];
+
+        $dirtyFp = @fopen($myDirtyFile, 'c+');
+        if ($dirtyFp) {
+            @flock($dirtyFp, LOCK_EX);
+            @ftruncate($dirtyFp, 0);
+            @rewind($dirtyFp);
+            @fwrite($dirtyFp, json_encode($dirtyPayload, JSON_PRETTY_PRINT));
+            @fflush($dirtyFp);
+        } else {
+            @file_put_contents($myDirtyFile, json_encode($dirtyPayload, JSON_PRETTY_PRINT));
+        }
+
+        // Remove apenas o ponteiro lógico; jamais trunca ou remove artefatos imutáveis sitemap_companies.v*.json
+        if (file_exists($paths['pointer'])) {
+            @unlink($paths['pointer']);
+        }
+
+        if (self::$testHookDuringInvalidation) {
+            (self::$testHookDuringInvalidation)($token, $myDirtyFile);
+        }
+
+        try {
+            if (self::$testSimulateCacheStoreFailure) {
+                throw new \RuntimeException('Simulated cache store failure');
+            }
+
+            $nextSeq = self::atomicAdvanceSitemapSeq();
+            $verifiedSeq = (int) (\Illuminate\Support\Facades\Cache::get('sitemap_invalidation_seq', 0) ?? 0);
+            if ($verifiedSeq < $nextSeq || $verifiedSeq <= 0) {
+                throw new \RuntimeException('Falha na verificação pós-escrita de sitemap_invalidation_seq');
+            }
+
+            if ($dirtyFp) {
+                @flock($dirtyFp, LOCK_UN);
+                @fclose($dirtyFp);
+                $dirtyFp = null;
+            }
+            @unlink($myDirtyFile);
+
+            self::pruneOldSitemapArtifacts($verifiedSeq, 60, 2);
+
+            return (int) $verifiedSeq;
+        } catch (\Throwable $e) {
+            $dirtyPayload['status'] = 'failed_pending_recovery';
+            $dirtyPayload['error'] = $e->getMessage();
+
+            if ($dirtyFp) {
+                @ftruncate($dirtyFp, 0);
+                @rewind($dirtyFp);
+                @fwrite($dirtyFp, json_encode($dirtyPayload, JSON_PRETTY_PRINT));
+                @fflush($dirtyFp);
+                @flock($dirtyFp, LOCK_UN);
+                @fclose($dirtyFp);
+            } else {
+                @file_put_contents($myDirtyFile, json_encode($dirtyPayload, JSON_PRETTY_PRINT));
+            }
+
+            Log::critical('SITEMAP_INVALIDATION_STORE_FAILURE', [
+                'token' => $token,
+                'error' => $e->getMessage(),
+                'reason' => $reason,
+            ]);
+            return -1;
+        }
+    }
+
+    /**
+     * Reconcilia marcadores individuais (.dirty.*.json) sem interferir em workers que ainda detenham LOCK_EX em voo.
+     */
+    public static function recoverPendingInvalidation(): int
+    {
+        $dirtyFiles = self::getPendingDirtyFiles();
+        if (empty($dirtyFiles)) {
+            return 0;
+        }
+
+        $paths = self::getSitemapCachePaths();
+        $lastRecoveredSeq = 0;
+
+        try {
+            if (self::$testSimulateCacheStoreFailure) {
+                throw new \RuntimeException('Simulated cache store failure');
+            }
+
+            if (file_exists($paths['pointer'])) {
+                @unlink($paths['pointer']);
+            }
+
+            foreach ($dirtyFiles as $dFile) {
+                if (!file_exists($dFile)) {
+                    continue;
+                }
+
+                $fp = @fopen($dFile, 'r+');
+                if (!$fp) {
+                    continue;
+                }
+
+                // Se outro worker ainda estiver dentro de bumpSitemapInvalidation() com LOCK_EX, não apagar
+                if (!@flock($fp, LOCK_EX | LOCK_NB)) {
+                    @fclose($fp);
+                    continue;
+                }
+
+                $lastRecoveredSeq = self::atomicAdvanceSitemapSeq();
+
+                @flock($fp, LOCK_UN);
+                @fclose($fp);
+                @unlink($dFile);
+            }
+
+            if ($lastRecoveredSeq > 0) {
+                Log::info('SITEMAP_INVALIDATION_RECOVERED', [
+                    'new_seq' => $lastRecoveredSeq,
+                    'markers_checked' => count($dirtyFiles),
+                ]);
+                return (int) $lastRecoveredSeq;
+            }
+
+            // Se todos os marcadores ainda estavam locked por workers concorrentes em voo, lê a seq atual
+            $val = \Illuminate\Support\Facades\Cache::get('sitemap_invalidation_seq');
+            return ($val !== null && (int) $val > 0) ? (int) $val : self::atomicEnsureSitemapSeqInitialized();
+        } catch (\Throwable $e) {
+            Log::critical('SITEMAP_INVALIDATION_RECOVERY_FAILED', ['error' => $e->getMessage()]);
+            return -1;
+        }
+    }
+
+    /**
+     * Obtém a sequência monotônica atual garantindo recuperação de pendências e inicialização atômica sem sobrescrita.
+     */
+    public static function getSitemapInvalidationSeq(): int
+    {
+        try {
+            if (self::$testSimulateCacheStoreFailure) {
+                throw new \RuntimeException('Simulated cache store failure');
+            }
+
+            if (!empty(self::getPendingDirtyFiles())) {
+                $recoveredSeq = self::recoverPendingInvalidation();
+                if ($recoveredSeq === -1) {
+                    return -1;
+                }
+                return $recoveredSeq;
+            }
+
+            $val = \Illuminate\Support\Facades\Cache::get('sitemap_invalidation_seq');
+            if ($val === null || (int) $val <= 0) {
+                return self::atomicEnsureSitemapSeqInitialized();
+            }
+
+            return (int) $val;
+        } catch (\Throwable $e) {
+            Log::warning("Falha ao obter sequência de invalidação do sitemap: " . $e->getMessage());
+            return -1;
+        }
+    }
+
+    /**
+     * Valida o protocolo completo de publicação (descritor no PostgreSQL + ponteiro em disco + vínculo canônico + SHA-256).
+     */
+    protected static function evaluateSitemapCacheState(int $currentSeq): array
+    {
+        $paths = self::getSitemapCachePaths();
+        $pointerFile = $paths['pointer'];
+
+        if (!empty(self::getPendingDirtyFiles())) {
+            return [
+                'artifactPath' => null,
+                'artifactName' => null,
+                'fileExists' => false,
+                'fileSize' => 0,
+                'publishedSeq' => null,
+                'publishedAt' => null,
+                'actualHash' => null,
+                'isSynchronized' => false,
+                'isClean' => false,
+                'age' => 999999999,
+                'reason' => 'DIRTY_MARKER_PRESENT',
+            ];
+        }
+
+        $storeDesc = \Illuminate\Support\Facades\Cache::get('sitemap_published_descriptor', null);
+        clearstatcache(true, $pointerFile);
+        $diskDesc = file_exists($pointerFile) ? json_decode(@file_get_contents($pointerFile), true) : null;
+
+        $hasValidStoreDesc = is_array($storeDesc)
+            && isset($storeDesc['sequence'], $storeDesc['sha256'], $storeDesc['filesize'], $storeDesc['artifact_name'], $storeDesc['published_at'])
+            && (int) $storeDesc['sequence'] > 0
+            && is_string($storeDesc['sha256']) && preg_match('/^[a-f0-9]{64}$/', $storeDesc['sha256']) === 1
+            && (int) $storeDesc['filesize'] > 1000
+            && is_string($storeDesc['artifact_name'])
+            && (float) $storeDesc['published_at'] > 0;
+
+        $hasValidDiskDesc = is_array($diskDesc)
+            && isset($diskDesc['sequence'], $diskDesc['sha256'], $diskDesc['filesize'], $diskDesc['artifact_name'], $diskDesc['published_at'])
+            && (int) $diskDesc['sequence'] > 0
+            && is_string($diskDesc['sha256']) && preg_match('/^[a-f0-9]{64}$/', $diskDesc['sha256']) === 1
+            && (int) $diskDesc['filesize'] > 1000
+            && is_string($diskDesc['artifact_name'])
+            && (float) $diskDesc['published_at'] > 0;
+
+        if (!$hasValidStoreDesc || !$hasValidDiskDesc) {
+            return [
+                'artifactPath' => null,
+                'artifactName' => null,
+                'fileExists' => false,
+                'fileSize' => 0,
+                'publishedSeq' => $hasValidStoreDesc ? (int) $storeDesc['sequence'] : null,
+                'publishedAt' => $hasValidStoreDesc ? (float) $storeDesc['published_at'] : null,
+                'actualHash' => null,
+                'isSynchronized' => false,
+                'isClean' => false,
+                'age' => 999999999,
+                'reason' => 'METADATA_MISSING',
+            ];
+        }
+
+        $isDescriptorMatched = ((int) $storeDesc['sequence'] === (int) $diskDesc['sequence'])
+            && hash_equals($storeDesc['sha256'], $diskDesc['sha256'])
+            && ((int) $storeDesc['filesize'] === (int) $diskDesc['filesize'])
+            && ($storeDesc['artifact_name'] === $diskDesc['artifact_name']);
+
+        if (!$isDescriptorMatched) {
+            return [
+                'artifactPath' => null,
+                'artifactName' => null,
+                'fileExists' => false,
+                'fileSize' => 0,
+                'publishedSeq' => (int) $storeDesc['sequence'],
+                'publishedAt' => (float) $storeDesc['published_at'],
+                'actualHash' => null,
+                'isSynchronized' => false,
+                'isClean' => false,
+                'age' => 999999999,
+                'reason' => 'DESCRIPTOR_MISMATCH',
+            ];
+        }
+
+        $publishedSeq = (int) $storeDesc['sequence'];
+        $expectedHash = (string) $storeDesc['sha256'];
+        $expectedSize = (int) $storeDesc['filesize'];
+        $publishedAt = (float) $storeDesc['published_at'];
+        $expectedArtifactName = self::buildArtifactName($publishedSeq, $expectedHash);
+
+        if ($storeDesc['artifact_name'] !== $expectedArtifactName) {
+            return [
+                'artifactPath' => null,
+                'artifactName' => $storeDesc['artifact_name'],
+                'fileExists' => false,
+                'fileSize' => 0,
+                'publishedSeq' => $publishedSeq,
+                'publishedAt' => $publishedAt,
+                'actualHash' => null,
+                'isSynchronized' => false,
+                'isClean' => false,
+                'age' => 999999999,
+                'reason' => 'ARTIFACT_BINDING_MISMATCH',
+            ];
+        }
+
+        $artifactPath = $paths['dir'] . '/' . $expectedArtifactName;
+        clearstatcache(true, $artifactPath);
+        $fileExists = file_exists($artifactPath);
+        $fileSize = $fileExists ? (int) filesize($artifactPath) : 0;
+
+        if (!$fileExists || $fileSize <= 1000) {
+            return [
+                'artifactPath' => null,
+                'artifactName' => $expectedArtifactName,
+                'fileExists' => $fileExists,
+                'fileSize' => $fileSize,
+                'publishedSeq' => $publishedSeq,
+                'publishedAt' => $publishedAt,
+                'actualHash' => null,
+                'isSynchronized' => false,
+                'isClean' => false,
+                'age' => 999999999,
+                'reason' => 'FILE_MISSING_OR_EMPTY',
+            ];
+        }
+
+        if ($fileSize !== $expectedSize) {
+            return [
+                'artifactPath' => null,
+                'artifactName' => $expectedArtifactName,
+                'fileExists' => true,
+                'fileSize' => $fileSize,
+                'publishedSeq' => $publishedSeq,
+                'publishedAt' => $publishedAt,
+                'actualHash' => null,
+                'isSynchronized' => false,
+                'isClean' => false,
+                'age' => 999999999,
+                'reason' => 'SIZE_MISMATCH',
+            ];
+        }
+
+        $actualHash = @hash_file('sha256', $artifactPath);
+        if (!is_string($actualHash) || !hash_equals($expectedHash, $actualHash)) {
+            return [
+                'artifactPath' => null,
+                'artifactName' => $expectedArtifactName,
+                'fileExists' => true,
+                'fileSize' => $fileSize,
+                'publishedSeq' => $publishedSeq,
+                'publishedAt' => $publishedAt,
+                'actualHash' => is_string($actualHash) ? $actualHash : null,
+                'isSynchronized' => false,
+                'isClean' => false,
+                'age' => 999999999,
+                'reason' => 'SHA256_MISMATCH',
+            ];
+        }
+
+        $isClean = ($currentSeq === $publishedSeq);
+        $age = microtime(true) - $publishedAt;
+
+        return [
+            'artifactPath' => $artifactPath,
+            'artifactName' => $expectedArtifactName,
+            'fileExists' => true,
+            'fileSize' => $fileSize,
+            'publishedSeq' => $publishedSeq,
+            'publishedAt' => $publishedAt,
+            'actualHash' => $actualHash,
+            'isSynchronized' => true,
+            'isClean' => $isClean,
+            'age' => $age,
+            'reason' => $isClean ? 'OK' : 'MUTATION_SEQUENCE_STALE',
+        ];
+    }
+
+    /**
+     * Publica um artefato imutável e commita seu descritor atomicamente sob pg_advisory_xact_lock.
+     */
+    protected static function commitSitemapPublication(
+        int $generationSeq,
+        float $generationStartedAt,
+        string $tmpFile,
+        int $totalRecords
+    ): array {
+        $paths = self::getSitemapCachePaths();
+        $pointerFile = $paths['pointer'];
+        $dirtyFile = $paths['dirty'];
+
+        clearstatcache(true, $tmpFile);
+        $tmpSize = (int) filesize($tmpFile);
+        $fileHash = hash_file('sha256', $tmpFile);
+        if (!is_string($fileHash) || strlen($fileHash) !== 64 || $tmpSize <= 1000) {
+            @unlink($tmpFile);
+            throw new \RuntimeException('Artefato temporário inválido para publicação.');
+        }
+
+        $publishedAt = microtime(true);
+        $artifactName = self::buildArtifactName($generationSeq, $fileHash);
+        $artifactPath = self::buildArtifactPath($generationSeq, $fileHash);
+
+        $descriptor = [
+            'sequence' => $generationSeq,
+            'sha256' => $fileHash,
+            'filesize' => $tmpSize,
+            'artifact_name' => $artifactName,
+            'published_at' => $publishedAt,
+            'records_count' => $totalRecords,
+        ];
+
+        $tmpPointerFile = $tmpFile . '.pointer';
+        if (file_put_contents($tmpPointerFile, json_encode($descriptor, JSON_PRETTY_PRINT)) === false) {
+            @unlink($tmpFile);
+            @unlink($tmpPointerFile);
+            throw new \RuntimeException("Falha ao gravar ponteiro temporário em: {$tmpPointerFile}");
+        }
+
+        if (!@rename($tmpFile, $artifactPath)) {
+            @unlink($tmpFile);
+            @unlink($tmpPointerFile);
+            throw new \RuntimeException("Falha ao mover artefato imutável para: {$artifactPath}");
+        }
+
+        if (self::$testHookAfterRename) {
+            (self::$testHookAfterRename)();
+        }
+
+        $ctx = self::getSitemapDbContext();
+        $conn = $ctx['conn'];
+        $table = $ctx['table'];
+        $prefix = $ctx['prefix'];
+
+        $result = $conn->transaction(function () use (
+            $conn,
+            $table,
+            $prefix,
+            $generationSeq,
+            $generationStartedAt,
+            $descriptor,
+            $artifactPath,
+            $artifactName,
+            $fileHash,
+            $tmpPointerFile,
+            $pointerFile,
+            $dirtyFile
+        ) {
+            $conn->selectOne("SELECT pg_advisory_xact_lock(hashtext('sitemap_invalidation_seq'))");
+
+            $keySeq = $prefix . 'sitemap_invalidation_seq';
+            $keyLastInv = $prefix . 'sitemap_last_invalidation';
+            $keyDescriptor = $prefix . 'sitemap_published_descriptor';
+
+            $rows = $conn->table($table)
+                ->whereIn('key', [$keySeq, $keyLastInv])
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('key');
+
+            $now = time();
+            $dbSeqRaw = self::decodeCacheRowValue($rows->get($keySeq), $now);
+            $dbSeq = is_numeric($dbSeqRaw) ? (int) $dbSeqRaw : -1;
+
+            $lastInvRaw = self::decodeCacheRowValue($rows->get($keyLastInv), $now);
+            $lastInv = is_numeric($lastInvRaw) ? (float) $lastInvRaw : 0.0;
+
+            if ($dbSeq !== $generationSeq || $dbSeq <= 0 || !empty(self::getPendingDirtyFiles()) || $lastInv > $generationStartedAt) {
+                @unlink($tmpPointerFile);
+                if (file_exists($pointerFile)) {
+                    @unlink($pointerFile);
+                }
+                // Este artefato ainda não havia sido publicado; remoção imediata é segura
+                @unlink($artifactPath);
+                $conn->table($table)->where('key', $keyDescriptor)->delete();
+
+                return [
+                    'published' => false,
+                    'reason' => 'MUTATION_INVALIDATED_POST_PUBLISH',
+                ];
+            }
+
+            if (self::$testHookBeforeDescriptorCommit) {
+                (self::$testHookBeforeDescriptorCommit)();
+            }
+
+            $conn->table($table)->upsert([
+                [
+                    'key' => $keyDescriptor,
+                    'value' => serialize($descriptor),
+                    'expiration' => $now + 86400 * 30,
+                ],
+            ], ['key'], ['value', 'expiration']);
+
+            if (!@rename($tmpPointerFile, $pointerFile)) {
+                @unlink($tmpPointerFile);
+                throw new \RuntimeException("Falha ao atualizar ponteiro atômico em: {$pointerFile}");
+            }
+
+            return [
+                'published' => true,
+                'artifactPath' => $artifactPath,
+                'artifactName' => $artifactName,
+                'sha256' => $fileHash,
+                'sequence' => $generationSeq,
+            ];
+        });
+
+        return $result;
+    }
+
     public function sitemap()
     {
-        return \Illuminate\Support\Facades\Cache::remember('sitemap_data_clientes', 3600, function () {
-            $clients = DB::table('clientes as c')
+        $paths = self::getSitemapCachePaths();
+        $cacheDir = $paths['dir'];
+        $dirtyFile = $paths['dirty'];
+        $cacheLifetimeSeconds = 3600; // 1 hora de validade
+        $maxStaleAgeSeconds = 86400; // Máximo 24h para permitir uso de cache expirado apenas por tempo
+
+        // 1. Leitura segura de metadados com proteção contra falha de banco/cache store
+        try {
+            $currentSeq = static::getSitemapInvalidationSeq();
+            if ($currentSeq === -1) {
+                return response()->json([
+                    'error' => 'Service Unavailable',
+                    'message' => 'Conexão com base de dados indisponível durante validação de cache.',
+                    'cache_state' => 'DATABASE_UNAVAILABLE'
+                ], 503, ['Retry-After' => '10']);
+            }
+            $state = self::evaluateSitemapCacheState($currentSeq);
+        } catch (\Throwable $e) {
+            Log::error("Erro de conexão ao acessar cache store para sitemap: " . $e->getMessage());
+            return response()->json([
+                'error' => 'Service Unavailable',
+                'message' => 'Serviço de cache temporariamente indisponível. Tente em instantes.',
+                'cache_state' => 'CACHE_STORE_UNAVAILABLE'
+            ], 503, ['Retry-After' => '10']);
+        }
+
+        // Estado 1: Cache Válido (Artefato imutável + descritor + SHA-256 + sequência sincronizados)
+        $isCacheValid = $state['isClean'] && ($state['age'] < $cacheLifetimeSeconds) && !empty($state['artifactPath']);
+
+        // Estado 2: Cache Expirado Apenas por Tempo (artefato imutável íntegro e sem mutação)
+        $isTimeExpiredStale = $state['isClean'] && ($state['age'] >= $cacheLifetimeSeconds) && ($state['age'] <= $maxStaleAgeSeconds) && !empty($state['artifactPath']);
+
+        // Estado 3: Cache Invalidado por Alteração Cadastral ou Divergência de Integridade
+        $isMutationInvalidated = !$state['isClean'] && in_array($state['reason'], ['MUTATION_SEQUENCE_STALE', 'DIRTY_MARKER_PRESENT', 'SHA256_MISMATCH', 'DESCRIPTOR_MISMATCH', 'ARTIFACT_BINDING_MISMATCH'], true);
+
+        // Entrega imediata de Artefato Imutável Válido (imune a invalidações paralelas durante a resposta)
+        if ($isCacheValid) {
+            return self::respondWithLeasedArtifact($state['artifactPath'], [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'public, max-age=3600',
+                'X-Sitemap-Cache' => 'HIT',
+                'X-Sitemap-Sequence' => (string) $state['publishedSeq'],
+                'X-Sitemap-SHA256' => (string) $state['actualHash'],
+                'X-Sitemap-Artifact' => (string) $state['artifactName'],
+            ]);
+        }
+
+        // 2. Concorrência: Lock exclusivo com recuperação de lock abandonado (timeout 120s)
+        $lock = \Illuminate\Support\Facades\Cache::lock('sitemap_generation_lock', 120);
+
+        // Se outro processo já estiver gerando:
+        if (!$lock->get()) {
+            // Se o cache estiver expirado APENAS por tempo (SHA-256 válido e sem mutação), serve STALE sem travar
+            if ($isTimeExpiredStale) {
+                return self::respondWithLeasedArtifact($state['artifactPath'], [
+                    'Content-Type' => 'application/json',
+                    'Cache-Control' => 'public, max-age=60',
+                    'X-Sitemap-Cache' => 'STALE-TIME-EXPIRED',
+                    'X-Sitemap-Sequence' => (string) $state['publishedSeq'],
+                    'X-Sitemap-SHA256' => (string) $state['actualHash'],
+                    'X-Sitemap-Artifact' => (string) $state['artifactName'],
+                ]);
+            }
+
+            // Cache sujo, corrompido ou ausente: proibido servir; aguarda até 15s
+            try {
+                $acquired = $lock->block(15);
+            } catch (\Exception $e) {
+                $acquired = false;
+            }
+
+            if (!$acquired) {
+                $msg = $isMutationInvalidated
+                    ? 'Sitemap em regeneração após alteração cadastral ou falha de integridade. Tente novamente em instantes.'
+                    : 'Geração de sitemap em andamento por outro processo. Tente em instantes.';
+
+                return response()->json([
+                    'error' => 'Service Unavailable',
+                    'message' => $msg,
+                    'cache_state' => $isMutationInvalidated ? 'MUTATION_INVALIDATED' : 'CACHE_MISSING',
+                    'integrity_reason' => $state['reason'],
+                ], 503, ['Retry-After' => '5']);
+            }
+
+            // Conseguiu o lock após esperar: verificar se o outro processo concluiu com integridade SHA-256
+            $currentSeq = static::getSitemapInvalidationSeq();
+            if ($currentSeq === -1) {
+                $lock->release();
+                return response()->json([
+                    'error' => 'Service Unavailable',
+                    'message' => 'Conexão com base de dados indisponível.',
+                    'cache_state' => 'DATABASE_UNAVAILABLE'
+                ], 503, ['Retry-After' => '10']);
+            }
+
+            $stateAfterWait = self::evaluateSitemapCacheState($currentSeq);
+            if ($stateAfterWait['isClean'] && ($stateAfterWait['age'] < $cacheLifetimeSeconds) && !empty($stateAfterWait['artifactPath'])) {
+                $lock->release();
+                return self::respondWithLeasedArtifact($stateAfterWait['artifactPath'], [
+                    'Content-Type' => 'application/json',
+                    'Cache-Control' => 'public, max-age=3600',
+                    'X-Sitemap-Cache' => 'HIT-AFTER-WAIT',
+                    'X-Sitemap-Sequence' => (string) $stateAfterWait['publishedSeq'],
+                    'X-Sitemap-SHA256' => (string) $stateAfterWait['actualHash'],
+                    'X-Sitemap-Artifact' => (string) $stateAfterWait['artifactName'],
+                ]);
+            }
+        }
+
+        // 3. Início da Geração Protegida sob Lock
+        $generationSeq = static::getSitemapInvalidationSeq();
+        if ($generationSeq === -1) {
+            $lock->release();
+            return response()->json([
+                'error' => 'Service Unavailable',
+                'message' => 'Conexão com base de dados indisponível durante inicialização da geração.',
+                'cache_state' => 'DATABASE_UNAVAILABLE'
+            ], 503, ['Retry-After' => '10']);
+        }
+
+        $generationStartedAt = microtime(true);
+        $tmpFile = null;
+
+        try {
+            if (!is_dir($cacheDir)) {
+                if (!@mkdir($cacheDir, 0775, true) && !is_dir($cacheDir)) {
+                    throw new \RuntimeException("Não foi possível criar o diretório de cache: {$cacheDir}");
+                }
+            }
+
+            // Arquivo temporário no mesmo filesystem para rename() atômico no artefato imutável
+            $realCacheDir = realpath($cacheDir) ?: $cacheDir;
+            $uniquePrefix = 'sitemap_tmp_' . getmypid() . '_' . str_replace('.', '', uniqid('', true)) . '_';
+            $tmpFile = tempnam($realCacheDir, $uniquePrefix);
+
+            if (!$tmpFile) {
+                throw new \RuntimeException("Falha ao criar arquivo temporário no diretório: {$cacheDir}");
+            }
+
+            $handle = @fopen($tmpFile, 'w');
+            if (!$handle) {
+                throw new \RuntimeException("Falha ao abrir arquivo temporário para escrita: {$tmpFile}");
+            }
+
+            if (fwrite($handle, '[') === false) {
+                fclose($handle);
+                throw new \RuntimeException("Falha na escrita inicial do JSON: disco cheio ou permissão negada.");
+            }
+
+            $chunkSize = 2500;
+            $isFirst = true;
+            $lastId = 0;
+            $totalRecords = 0;
+
+            $clientQuery = DB::table('clientes as c')
                 ->where('c.exibir_no_site', 'true')
                 ->where(function ($sub) {
                     $sub->whereIn('c.status_assinatura', ['ativa', 'ativo', 'pendente', 'inadimplente'])
                         ->orWhere('c.tipo_cliente', 'gratuito');
                 })
                 ->select('c.id', 'c.slug', DB::raw("to_char(c.updated_at, 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') as updated_at"))
-                ->get()
-                ->keyBy('id');
+                ->orderBy('c.id');
 
-            $clientIds = $clients->keys()->all();
+            while (true) {
+                $clientsChunk = (clone $clientQuery)
+                    ->where('c.id', '>', $lastId)
+                    ->limit($chunkSize)
+                    ->get();
 
-            $addresses = DB::table('enderecos')
-                ->whereIn('cliente_id', $clientIds)
-                ->select('cliente_id', 'cidade', 'estado')
-                ->get()
-                ->groupBy('cliente_id');
+                if ($clientsChunk->isEmpty()) {
+                    break;
+                }
 
-            $segments = DB::table('cliente_segmento as cs')
-                ->join('segmentos as s', 's.id', '=', 'cs.segmento_id')
-                ->whereIn('cs.cliente_id', $clientIds)
-                ->select('cs.cliente_id', 's.nome', 's.slug', 'cs.is_primary')
-                ->orderByDesc('cs.is_primary')
-                ->get()
-                ->groupBy('cliente_id');
+                $totalRecords += count($clientsChunk);
 
-            $servedCities = DB::table('cliente_cidade as cc')
-                ->join('cidades as cid', 'cid.id', '=', 'cc.cidade_id')
-                ->whereIn('cc.cliente_id', $clientIds)
-                ->select('cc.cliente_id', 'cid.nome')
-                ->get()
-                ->groupBy('cliente_id');
+                $clientIds = $clientsChunk->pluck('id')->all();
+                $lastId = end($clientIds);
 
-            $data = [];
-            foreach ($clients as $id => $c) {
-                $cAddrs = isset($addresses[$id]) ? $addresses[$id]->map(function ($a) {
-                    return ['cidade' => $a->cidade, 'estado' => $a->estado];
-                })->all() : [];
+                // 1. Endereços planos
+                $rawAddrs = DB::table('enderecos')
+                    ->whereIn('cliente_id', $clientIds)
+                    ->select('cliente_id', 'cidade', 'estado')
+                    ->get();
+                $addresses = [];
+                foreach ($rawAddrs as $a) {
+                    $addresses[$a->cliente_id][] = ['cidade' => $a->cidade, 'estado' => $a->estado];
+                }
+                unset($rawAddrs);
 
-                $cSegs = isset($segments[$id]) ? $segments[$id]->map(function ($s) {
-                    return ['nome' => $s->nome, 'slug' => $s->slug, 'is_primary' => (bool)$s->is_primary];
-                })->all() : [];
+                // 2. Segmentos planos
+                $rawSegs = DB::table('cliente_segmento as cs')
+                    ->join('segmentos as s', 's.id', '=', 'cs.segmento_id')
+                    ->whereIn('cs.cliente_id', $clientIds)
+                    ->select('cs.cliente_id', 's.nome', 's.slug', 'cs.is_primary')
+                    ->orderByDesc('cs.is_primary')
+                    ->get();
+                $segments = [];
+                foreach ($rawSegs as $s) {
+                    $segments[$s->cliente_id][] = [
+                        'nome' => $s->nome,
+                        'slug' => $s->slug,
+                        'is_primary' => (bool)$s->is_primary
+                    ];
+                }
+                unset($rawSegs);
 
-                $cServed = isset($servedCities[$id]) ? $servedCities[$id]->map(function ($sc) {
-                    return ['nome' => $sc->nome];
-                })->all() : [];
+                // 3. Cidades atendidas planas
+                $rawCities = DB::table('cliente_cidade as cc')
+                    ->join('cidades as cid', 'cid.id', '=', 'cc.cidade_id')
+                    ->whereIn('cc.cliente_id', $clientIds)
+                    ->select('cc.cliente_id', 'cid.nome')
+                    ->get();
+                $servedCities = [];
+                foreach ($rawCities as $sc) {
+                    $servedCities[$sc->cliente_id][] = ['nome' => $sc->nome];
+                }
+                unset($rawCities);
 
-                $data[] = [
-                    'id' => $c->id,
-                    'slug' => $c->slug,
-                    'updated_at' => $c->updated_at,
-                    'enderecos' => $cAddrs,
-                    'segmentos' => $cSegs,
-                    'cidades_atendidas' => $cServed,
-                ];
+                foreach ($clientsChunk as $c) {
+                    $item = [
+                        'id' => $c->id,
+                        'slug' => $c->slug,
+                        'updated_at' => $c->updated_at,
+                        'enderecos' => $addresses[$c->id] ?? [],
+                        'segmentos' => $segments[$c->id] ?? [],
+                        'cidades_atendidas' => $servedCities[$c->id] ?? [],
+                    ];
+
+                    $jsonStr = json_encode($item, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                    $chunkPayload = ($isFirst ? '' : ',') . $jsonStr;
+                    if (fwrite($handle, $chunkPayload) === false) {
+                        fclose($handle);
+                        throw new \RuntimeException("Falha ao gravar item {$c->id} no arquivo temporário: disco cheio ou erro de I/O.");
+                    }
+                    $isFirst = false;
+                }
+
+                unset($clientsChunk, $clientIds, $addresses, $segments, $servedCities);
             }
 
-            return $data;
-        });
+            if (fwrite($handle, ']') === false) {
+                fclose($handle);
+                throw new \RuntimeException("Falha ao fechar colchetes do JSON no arquivo temporário.");
+            }
+            fflush($handle);
+            fclose($handle);
+
+            // Hook determinístico de teste antes da publicação
+            if (self::$testHookBeforePublish) {
+                (self::$testHookBeforePublish)();
+            }
+
+            // 4. Staleness Guard pré-publicação
+            $currentSeq = static::getSitemapInvalidationSeq();
+            $currentInvalidation = (float) (\Illuminate\Support\Facades\Cache::get('sitemap_last_invalidation', 0) ?? 0);
+            if ($currentSeq !== $generationSeq || $currentSeq === -1 || !empty(self::getPendingDirtyFiles()) || $currentInvalidation > $generationStartedAt) {
+                Log::warning("Geração de sitemap descartada: alteração cadastral concorrente detectada (seq: {$currentSeq} vs {$generationSeq}).");
+                @unlink($tmpFile);
+                $lock->release();
+                return response()->json([
+                    'error' => 'Service Unavailable',
+                    'message' => 'Alteração cadastral simultânea durante a geração. Tente novamente em instantes.',
+                    'cache_state' => 'MUTATION_INVALIDATED_DURING_GENERATION'
+                ], 503, ['Retry-After' => '5']);
+            }
+
+            // 5. Publicação Imutável + Commit Atômico de Descritor sob pg_advisory_xact_lock
+            $pubResult = self::commitSitemapPublication($generationSeq, $generationStartedAt, $tmpFile, $totalRecords);
+            if (empty($pubResult['published'])) {
+                Log::warning("Sitemap recém-gerado descartado devido à invalidação simultânea na publicação.");
+                $lock->release();
+                return response()->json([
+                    'error' => 'Service Unavailable',
+                    'message' => 'Alteração cadastral simultânea detectada. Tente em instantes.',
+                    'cache_state' => $pubResult['reason'] ?? 'MUTATION_INVALIDATED_POST_PUBLISH'
+                ], 503, ['Retry-After' => '5']);
+            }
+
+            self::pruneOldSitemapArtifacts($generationSeq, 60, 2);
+            $lock->release();
+
+            return self::respondWithLeasedArtifact($pubResult['artifactPath'], [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'public, max-age=3600',
+                'X-Sitemap-Cache' => 'MISS-GENERATED',
+                'X-Sitemap-Sequence' => (string) $pubResult['sequence'],
+                'X-Sitemap-SHA256' => (string) $pubResult['sha256'],
+                'X-Sitemap-Artifact' => (string) $pubResult['artifactName'],
+            ]);
+        } catch (\Throwable $e) {
+            if ($tmpFile && file_exists($tmpFile)) {
+                @unlink($tmpFile);
+            }
+            try { $lock->release(); } catch (\Exception $ignored) {}
+
+            Log::error("Erro na geração do sitemap de empresas: " . $e->getMessage());
+
+            // Fallback estrito: só serve artefato imutável se descritor, SHA-256 e sequência estiverem íntegros
+            try {
+                $currentSeq = static::getSitemapInvalidationSeq();
+                if ($currentSeq !== -1) {
+                    $fallbackState = self::evaluateSitemapCacheState($currentSeq);
+                    if ($fallbackState['isClean'] && ($fallbackState['age'] <= $maxStaleAgeSeconds) && !empty($fallbackState['artifactPath'])) {
+                        return self::respondWithLeasedArtifact($fallbackState['artifactPath'], [
+                            'Content-Type' => 'application/json',
+                            'Cache-Control' => 'public, max-age=60',
+                            'X-Sitemap-Cache' => 'STALE-FALLBACK-ON-ERROR',
+                            'X-Sitemap-Sequence' => (string) $fallbackState['publishedSeq'],
+                            'X-Sitemap-SHA256' => (string) $fallbackState['actualHash'],
+                            'X-Sitemap-Artifact' => (string) $fallbackState['artifactName'],
+                        ]);
+                    }
+                }
+            } catch (\Throwable $ignored) {}
+
+            return response()->json([
+                'error' => 'Service Unavailable',
+                'message' => 'Sitemap de empresas temporariamente indisponível durante regeneração. Tente em instantes.',
+                'cache_state' => 'CACHE_MISSING'
+            ], 503, ['Retry-After' => '10']);
+        }
     }
 
     public function activeSitemapCombinations()
@@ -2314,6 +3542,11 @@ class ClienteController extends Controller implements HasMiddleware
             }
 
             DB::commit();
+
+            // Invalidação de cache coordenada estritamente APÓS confirmação definitiva do commit no banco
+            if (array_key_exists('segmentos', $validated) || array_key_exists('cidades_atendidas', $validated) || $request->has('enderecos') || $request->has('endereco')) {
+                self::bumpSitemapInvalidation();
+            }
 
             // 📢 FASE 5: Sincronização em Tempo Real (WebSockets)
             try {
