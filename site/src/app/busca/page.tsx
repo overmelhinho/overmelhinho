@@ -30,7 +30,9 @@ import {
     Map as MapIcon,
     List as ListIcon,
     ExternalLink,
-    ChevronDown
+    ChevronDown,
+    WifiOff,
+    RotateCw
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -328,6 +330,9 @@ function SearchContent() {
         hasNextPage,
         isFetchingNextPage,
         isLoading: isSearchLoading,
+        isError: isSearchError,
+        error: searchError,
+        refetch: refetchSearch,
     } = useInfiniteQuery({
         queryKey: ['search', query, cityId],
         queryFn: async ({ pageParam = 1 }) => {
@@ -346,7 +351,8 @@ function SearchContent() {
             const { current_page, last_page } = lastPage.meta || {};
             return current_page < last_page ? current_page + 1 : undefined;
         },
-        enabled: !!query && !isLocationLoading
+        enabled: !!query && !isLocationLoading,
+        retry: 1,
     });
 
     const allResults = useMemo(() => {
@@ -375,12 +381,12 @@ function SearchContent() {
         setQuery(q || '');
     }, [searchParams]);
  
-    // Tracking de busca
+    // Tracking de busca (apenas quando concluir com sucesso para evitar falso zero em erros de rede)
     useEffect(() => {
-        if (!isFullLoading && (query || cityName)) {
+        if (!isFullLoading && !isSearchError && (query || cityName)) {
             trackSearch(query || cityName || 'Busca Geral', cityName || 'Geral', allResults.length);
         }
-    }, [isFullLoading, query, cityName, allResults.length]);
+    }, [isFullLoading, isSearchError, query, cityName, allResults.length]);
  
     useEffect(() => {
         if (topBanner) {
@@ -463,8 +469,8 @@ function SearchContent() {
     const selectedMapItem = useMemo(() => allResults.find((r: any) => r.id === selectedMapResult), [allResults, selectedMapResult]);
 
     useEffect(() => {
-        if (query && data) trackSearch(query, cityName || 'Geral', allResults.length);
-    }, [query, data, allResults.length, cityName]);
+        if (query && data && !isSearchError) trackSearch(query, cityName || 'Geral', allResults.length);
+    }, [query, data, isSearchError, allResults.length, cityName]);
 
     const handleNewSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -619,8 +625,32 @@ function SearchContent() {
                             </div>
                         )}
 
-                        {/* EMPTY */}
-                        {!isFullLoading && allResults.length === 0 && (
+                        {/* ERROR DE CONEXÃO / API FORA / TIMEOUT (SEM RESULTADOS CARREGADOS) */}
+                        {!isFullLoading && isSearchError && allResults.length === 0 && (
+                            <div className="text-center py-28 px-4 space-y-5 max-w-md mx-auto animate-fade-in">
+                                <div className="bg-red-50 w-20 h-20 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-inner border border-red-100 text-brand-red">
+                                    <WifiOff size={34} />
+                                </div>
+                                <div className="space-y-2">
+                                    <h4 className="text-2xl font-black text-gray-900 font-serif tracking-tight">
+                                        Instabilidade na Conexão
+                                    </h4>
+                                    <p className="text-sm text-gray-500 leading-relaxed">
+                                        Não foi possível carregar os resultados para {query ? <span className="font-bold text-gray-700">&ldquo;{query}&rdquo;</span> : 'esta busca'}. Verifique sua conexão ou tente novamente.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => refetchSearch()}
+                                    className="inline-flex items-center gap-2 px-6 py-3 bg-brand-red text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg shadow-red-500/20 hover:bg-red-700 active:scale-95 transition-all cursor-pointer"
+                                >
+                                    <RotateCw size={14} />
+                                    Tentar Novamente
+                                </button>
+                            </div>
+                        )}
+
+                        {/* EMPTY LEGÍTIMO (SUCESSO SEM RESULTADOS) */}
+                        {!isFullLoading && !isSearchError && allResults.length === 0 && (
                             <div className="text-center py-32 space-y-4">
                                 <div className="bg-gray-50 w-20 h-20 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 shadow-inner border border-gray-100">
                                     <SearchIcon className="text-gray-200" size={32} />
@@ -989,8 +1019,19 @@ function SearchContent() {
                         
                         {/* INFINITE SCROLL OBSERVER - DEVE FICAR FORA DO CONDICIONAL */}
                         {!isFullLoading && (
-                            <div ref={observerTarget} className="py-12 flex justify-center">
-                                {isFetchingNextPage ? (
+                            <div ref={observerTarget} className="py-12 flex flex-col items-center justify-center space-y-3">
+                                {isSearchError && allResults.length > 0 ? (
+                                    <div className="flex flex-col items-center space-y-2 bg-red-50/70 border border-red-100 px-6 py-4 rounded-2xl animate-fade-in">
+                                        <span className="text-[11px] font-bold text-red-600">Erro ao carregar mais empresas</span>
+                                        <button
+                                            onClick={() => fetchNextPage()}
+                                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-red text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-sm hover:bg-red-700 active:scale-95 transition-all cursor-pointer"
+                                        >
+                                            <RotateCw size={12} />
+                                            Tentar novamente
+                                        </button>
+                                    </div>
+                                ) : isFetchingNextPage ? (
                                     <div className="flex items-center space-x-3 bg-gray-50 px-6 py-3 rounded-full border border-gray-100">
                                         <div className="w-4 h-4 border-2 border-brand-red border-t-transparent rounded-full animate-spin"></div>
                                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Carregando mais...</span>
