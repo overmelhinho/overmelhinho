@@ -1,19 +1,19 @@
 # O VERMELHINHO — ANÁLISE GEO & SEO (FASE 5)
 ## Documento de Transição e Continuidade (Handover)
 
-**Data de Registro:** 17 de Novembro de 2026  
-**Status Atual:** Auditoria concluída e **Release 3A implementada e testada localmente**.  
-**Próxima Ação na Retomada:** Publicação da Release 3A (Git commit/push e deploy supervisionado) e avanço para as configurações de borda/Releases 3B-3D.
+**Data de Registro:** 18 de Novembro de 2026  
+**Status Atual:** Release 3A publicada, Desbloqueio de IA no Cloudflare Homologado (HTTP 200 OK) e **Release 3B implementada e testada localmente com 100% de sucesso**.  
+**Próxima Ação:** Validação final e deploy da **Release 3B** para o GitHub / VPS, seguido da **Release 3C** (City Hubs `/[citySlug]`).
 
 ---
 
 ## 1. Contexto e Onde Paramos
 
-Concluímos com sucesso a **Sprint 4** em produção (Frontend commit `4805ec4b`, Backend commit `0cff0310`), estabilizando a geração de sitemaps via streaming e eliminando gargalos de memória (INC-01).
+Concluímos com sucesso a **Sprint 4** e a **Release 3A** em produção (commit `e3696d0`), estabilizando sitemaps em streaming, eliminando o markup artificial de `FAQPage` e implementando a canonicalização estrita 301/308 para URLs de clientes.
 
-Em seguida, foi realizada a auditoria técnica profunda de **GEO (Generative Engine Optimization)** e **SEO Técnico**, analisando o comportamento do portal frente aos motores tradicionais (Google, Bing) e sistemas de IA (ChatGPT Search, Perplexity, Claude, Gemini, Copilot).
+Em 18 de Novembro de 2026, concluímos o **desbloqueio dos crawlers de IA na borda do Cloudflare** (OpenAI `GPTBot`, `OAI-SearchBot`, Perplexity `PerplexityBot`, Anthropic `ClaudeBot`), todos respondendo com **HTTP 200 OK**.
 
-A **Release 3A** foi completamente codificada e validada localmente, deixando o ambiente pronto para publicação assim que a demanda prioritária da cliente for finalizada.
+O portal agora está totalmente acessível para os motores de busca generativa (ChatGPT Search, Perplexity, Claude, Gemini, Copilot).
 
 ---
 
@@ -72,36 +72,30 @@ A **Release 3A** foi completamente codificada e validada localmente, deixando o 
 Quando formos retomar as atividades de GEO/SEO, seguir a ordem abaixo:
 
 ### Passo 1: Publicação da Release 3A
-1. Revisar `git status` para confirmar que apenas `site/src/app/[citySlug]/[segmentSlug]/[clientSlug]/page.tsx` será enviado.
-2. Com a autorização expressa do usuário ("suba para o github"), executar:
-   ```bash
-   git add site/src/app/[citySlug]/[segmentSlug]/[clientSlug]/page.tsx
-   git commit -m "fix(seo): release 3a - remocao de faqpage artificial e redirecionamento 301 canonico estrito"
-   git push origin main
-   ```
-3. Na VPS, executar o deploy manual supervisionado:
-   ```bash
-   sudo bash /var/www/deploy.sh
-   ```
-4. Validar na VPS:
-   ```bash
-   curl -I -s "https://www.overmelhinho.com.br/cidade/empresa/auto-eletrica-bentaqui"
-   # Deve retornar HTTP 301/308 para /farroupilha/auto-eletrica/auto-eletrica-bentaqui
-   curl -I -s "https://www.overmelhinho.com.br/farroupilha/auto-eletrica/auto-eletrica-bentaqui"
-   # Deve retornar HTTP 200 OK
-   ```
+✅ **CONCLUÍDO:** Código publicado no commit `e3696d0` e ativo em produção.
 
 ### Passo 2: Ajuste no Cloudflare (Borda)
-No painel do Cloudflare:
-- Ir em **Security > Bots** e desativar **"Block AI Scrapers and Crawlers"** (ou criar regra de Skip em WAF para `GPTBot`, `PerplexityBot` e `ClaudeBot`).
-- Validar via terminal:
-  ```bash
-  curl.exe -I -s -A "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)" "https://www.overmelhinho.com.br/caxias-do-sul/borracharias"
-  # Deve retornar HTTP 200 OK
-  ```
+✅ **CONCLUÍDO E HOMOLOGADO:**
+- Configurações de IA ajustadas no painel da Cloudflare.
+- Testes reais de requisição realizados com sucesso:
+  - `GPTBot/1.2`: **HTTP 200 OK**
+  - `PerplexityBot/1.0`: **HTTP 200 OK**
+  - `ClaudeBot/1.0`: **HTTP 200 OK**
+  - `OAI-SearchBot/1.0`: **HTTP 200 OK**
 
-### Passo 3: Início da Release 3B
-- Mapeamento de subtipos específicos de `LocalBusiness` (`AutoRepair`, `Dentist`, `MedicalClinic`, etc.).
-- Injeção de `openingHoursSpecification` para empresas com horários preenchidos.
-- Inclusão dos schemas `WebSite (SearchAction)` e `Organization` no `layout.tsx`.
+### Passo 3: Release 3B (CONCLUÍDA E TESTADA LOCALMENTE)
+✅ **CONCLUÍDO:**
+- Criado helper `site/src/utils/schemaOrg.ts` com tipagem e testes unitários aprovados.
+- Mapeamento granular de categorias para subtipos específicos do Schema.org (`AutoRepair`, `Dentist`, `MedicalClinic`, `Restaurant`, `LegalService`, etc.) mantendo compatibilidade `['LocalBusiness', Subtype]`.
+- Injeção de `openingHoursSpecification` estruturada com turnos (manhã/tarde) e dias da semana conforme dados reais do banco, omitindo dias fechados.
+- Inclusão dos schemas de raiz `@graph` contendo `WebSite` (com `SearchAction` apontando para `/busca?q={search_term_string}`) e `Organization` (com logo oficial e perfis em redes sociais) no `site/src/app/layout.tsx`.
+- Removido schema redundante isolado em `site/src/app/page.tsx`.
+- Typecheck TypeScript (`tsc --noEmit`): **0 erros**.
+- Build de Produção (`npm run build` no Next.js): **Sucesso (Exit code 0)**.
+- DevSecOps Security Scanner: **✅ Todos os arquivos com SCAN LIMPO**.
+
+### Passo 4: Próxima Etapa — Release 3C (Hubs Municipais)
+- Criação da rota `site/src/app/[citySlug]/page.tsx` para City Hubs (ex: `/caxias-do-sul`, `/farroupilha`).
+- Inclusão da cidade no `BreadcrumbList` (`Home` -> `Cidade` -> `Segmento` -> `Empresa`).
+- Adição de sitemap dinâmico de cidades em `site/src/app/sitemap.ts`.
 

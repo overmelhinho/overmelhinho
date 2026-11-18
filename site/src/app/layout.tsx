@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import GlobalPopup from "@/components/GlobalPopup";
 import GlobalCityModal from "@/components/GlobalCityModal";
+import { buildRootSchemas } from "@/utils/schemaOrg";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,8 +43,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const rootSchemas = buildRootSchemas(process.env.NEXT_PUBLIC_SITE_URL || "https://www.overmelhinho.com.br");
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(rootSchemas).replace(/</g, '\\u003c') } }}
+        />
+      </head>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} font-sans antialiased bg-gray-50 overflow-x-hidden`}

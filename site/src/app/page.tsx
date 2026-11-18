@@ -141,24 +141,8 @@ export default function Home() {
         }
     }, [scrollyAd, trackedHomeAd]);
 
-    const websiteJsonLd = {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "O Vermelhinho",
-        "url": "https://www.overmelhinho.com.br/",
-        "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://www.overmelhinho.com.br/busca?q={search_term_string}",
-            "query-input": "required name=search_term_string"
-        }
-    };
-
     return (
         <div className="min-h-screen bg-cloud-dancer pb-0 font-sans">
-            <script
-                type="application/ld+json"
-                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(websiteJsonLd).replace(/</g, '\\u003c') } }}
-            />
             <main className="px-4 pt-10 pb-0 max-w-6xl mx-auto space-y-20 md:px-6">
                 {/* 2. HERO & VUI (Busca Conversacional) */}
                 <section className="text-center space-y-10 py-10 md:py-16 relative">

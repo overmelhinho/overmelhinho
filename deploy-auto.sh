@@ -50,7 +50,7 @@ echo "${LOG_PREFIX} ✓ Permissões ajustadas."
 # ── 5. Reiniciar Octane ──────────────────────────────────────
 echo "${LOG_PREFIX} [5/5] Reiniciando servidor Octane..."
 cd "${BACKEND_DIR}"
-php artisan octane:reload 2>/dev/null || pm2 restart laravel-octane 2>/dev/null || true
+pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || pm2 restart laravel-octane 2>/dev/null || php artisan octane:reload 2>/dev/null || true
 echo "${LOG_PREFIX} ✓ Servidor reiniciado."
 
 echo "${LOG_PREFIX} === DEPLOY CONCLUÍDO COM SUCESSO ==="

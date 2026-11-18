@@ -53,7 +53,9 @@ class UploadTempController extends Controller
                 'files.*' => 'file|max:30720|mimes:jpg,jpeg,png,webp,pdf,gif|mimetypes:image/jpeg,image/png,image/webp,image/gif,application/pdf',
             ], [
                 'files.required' => 'Nenhum arquivo foi selecionado.',
+                'uploaded' => 'Falha no envio do arquivo. Verifique se o arquivo não excede o limite de tamanho permitido.',
                 'files.*.uploaded' => 'Falha no envio do arquivo. Verifique se o arquivo não excede o limite de tamanho do servidor.',
+                'files.uploaded' => 'Falha no envio do arquivo. Verifique se o arquivo não excede o limite de tamanho do servidor.',
                 'files.*.max' => 'O arquivo não pode ser maior que 30 MB.',
                 'files.*.mimes' => 'Formato não suportado. Formatos aceitos: PDF, JPG, PNG, WEBP, GIF.',
                 'files.*.mimetypes' => 'Formato não suportado. Formatos aceitos: PDF, JPG, PNG, WEBP, GIF.',

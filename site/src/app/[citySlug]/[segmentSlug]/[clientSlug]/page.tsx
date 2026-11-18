@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import ClientProfileClient from '@/app/cliente/[id]/ClientProfileClient';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { slugify } from '@/utils/slugify';
+import { getSchemaLocalBusinessType, formatOpeningHoursSpecification } from '@/utils/schemaOrg';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
 
@@ -244,11 +245,14 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
 
     const allSegmentNames = (client.segmentos || []).map((s: any) => (s.nome || '').trim()).filter(Boolean);
     const primaryPhoneNumber = client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular || '';
+    const specificType = getSchemaLocalBusinessType(segmentName, allSegmentNames);
+    const schemaTypes = specificType === 'LocalBusiness' ? 'LocalBusiness' : ['LocalBusiness', specificType];
+    const openingHoursSpec = formatOpeningHoursSpecification(client.horario_atendimento, client.is_horario_marcado);
 
     const localBusinessJsonLd = client.enderecos?.length > 0 
         ? client.enderecos.map((end: any, index: number) => ({
             "@context": "https://schema.org",
-            "@type": "LocalBusiness",
+            "@type": schemaTypes,
             "@id": `${canonicalUrl}#localbusiness-${index + 1}`,
             "name": client.enderecos.length > 1 ? `${client.nome_fantasia} - ${end.nome_unidade || `Unidade ${index + 1}`}` : client.nome_fantasia,
             "alternateName": client.razao_social || undefined,
@@ -268,9 +272,10 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
                 "longitude": end.longitude
             } : undefined,
             "url": canonicalUrl,
-            "telephone": (index === 0 ? primaryPhoneNumber : end.telefone),
+            "telephone": (index === 0 ? primaryPhoneNumber : end.telefone) || undefined,
             "sameAs": sameAsLinks.length > 0 ? sameAsLinks : undefined,
             "knowsAbout": allSegmentNames.length > 0 ? allSegmentNames : undefined,
+            "openingHoursSpecification": openingHoursSpec,
             "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
                 "@type": "City",
                 "name": c.nome,
@@ -278,7 +283,26 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
                 "addressCountry": "BR"
             })) : undefined,
         }))
-        : null;
+        : [{
+            "@context": "https://schema.org",
+            "@type": schemaTypes,
+            "@id": `${canonicalUrl}#localbusiness`,
+            "name": client.nome_fantasia,
+            "alternateName": client.razao_social || undefined,
+            "image": [client.logotipo_url, client.banner_url, ...(client.galeria?.map((g: any) => g.url) || [])].filter(Boolean),
+            "description": client.descricao || description,
+            "url": canonicalUrl,
+            "telephone": primaryPhoneNumber || undefined,
+            "sameAs": sameAsLinks.length > 0 ? sameAsLinks : undefined,
+            "knowsAbout": allSegmentNames.length > 0 ? allSegmentNames : undefined,
+            "openingHoursSpecification": openingHoursSpec,
+            "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
+                "@type": "City",
+                "name": c.nome,
+                "addressRegion": c.uf || "RS",
+                "addressCountry": "BR"
+            })) : undefined,
+        }];
 
     return (
         <>
