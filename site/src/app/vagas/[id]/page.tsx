@@ -2,16 +2,10 @@ import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { slugify } from '@/utils/slugify';
 import { getClientSeoUrl } from '@/utils/seo';
+import { formatStorageUrl } from '@/utils/storage';
 import JobDetailClient from './JobDetailClient';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.com.br';
-
-const formatStorageUrl = (url?: string) => {
-    if (!url) return undefined;
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('v1/object/public/')) return `https://spefwgjsltjryxcizype.supabase.co/storage/${url}`;
-    return `https://api.overmelhinho.com.br/storage/${url}`;
-};
 
 interface Job {
     id: number;
@@ -76,8 +70,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     // Título no padrão semântico otimizado para busca
     const title = `${jobTitle} em ${jobCity} - RS: ${companyName} | O Vermelhinho`;
     
-    // Descrição limpa de tags HTML
-    const cleanDesc = job.description ? job.description.replace(/<[^>]*>/g, '').substring(0, 160).trim() : '';
+    // Descrição limpa de tags HTML e entidades
+    const cleanDesc = job.description 
+        ? job.description
+            .replace(/<\/?(?:p|div|br|li|ul|ol|h[1-6])\b[^>]*>/gi, ' ')
+            .replace(/<[^>]*>/g, '')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/&amp;/gi, '&')
+            .replace(/\s+/g, ' ')
+            .substring(0, 160)
+            .trim() 
+        : '';
     const description = cleanDesc || `Confira a vaga de ${jobTitle} na empresa ${companyName} em ${jobCity}. Veja requisitos e envie seu currículo no Vermelhinho.`;
     
     const canonicalUrl = `${SITE_URL}/vagas/${job.id}-${slugify(jobTitle)}`;

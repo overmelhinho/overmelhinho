@@ -19,14 +19,9 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { slugify } from '@/utils/slugify';
+import { formatStorageUrl } from '@/utils/storage';
 
 // ── TIPOS ─────────────────────────────────────────────────────────
-const formatStorageUrl = (url?: string) => {
-    if (!url) return undefined;
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('v1/object/public/')) return `https://spefwgjsltjryxcizype.supabase.co/storage/${url}`;
-    return `https://api.overmelhinho.com.br/storage/${url}`;
-};
 
 interface Job {
     id: number;

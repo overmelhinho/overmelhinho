@@ -50,19 +50,52 @@ function maskPhone(value: string): string {
 }
 
 // ── RENDERIZAÇÃO SEGURA DE TEXTO / HTML ────────────────────────────
+function decodeHtmlEntities(str: string): string {
+    return str
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&bull;/gi, '•')
+        .replace(/&ndash;/gi, '–')
+        .replace(/&mdash;/gi, '—');
+}
+
 function renderSafeHtml(content: string) {
     if (!content) return null;
-    const clean = content.replace(/<!--[\s\S]*?-->/g, '').replace(/<script[\s\S]*?<\/script>/gi, '');
-    const paragraphs = clean.split(/<\/?(?:p|div|br\s*\/?)>/i).map(s => s.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
-    if (paragraphs.length === 0) return <span>{clean.replace(/<[^>]+>/g, '').trim()}</span>;
+    let clean = content
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<script[\s\S]*?<\/script>/gi, '');
+
+    // Transforma quebras e tags de bloco em quebras de linha reais (\n)
+    clean = clean.replace(/<\/?(?:p|div|br|li|ul|ol|h[1-6])\b[^>]*>/gi, '\n');
+
+    // Remove quaisquer outras tags HTML remanescentes (span, strong, em, etc.)
+    clean = clean.replace(/<[^>]+>/g, '');
+
+    // Decodifica entidades HTML (&nbsp;, &amp;, etc.)
+    clean = decodeHtmlEntities(clean);
+
+    // Divide por quebras de linha preservando tópicos e linhas separadas
+    const paragraphs = clean
+        .split(/\r?\n+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+    if (paragraphs.length === 0) return null;
+
     return paragraphs.map((p, idx) => (
-        <p key={idx} className="mb-2 last:mb-0">{p}</p>
+        <p key={idx} className="mb-2 last:mb-0 whitespace-pre-line">{p}</p>
     ));
 }
 
 function cleanHtml(html: string): string {
     if (!html) return '';
-    return html.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '').trim();
+    return decodeHtmlEntities(
+        html.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '')
+    ).trim();
 }
 
 // ── LOGO DA EMPRESA ───────────────────────────────────────────────
