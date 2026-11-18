@@ -122,10 +122,10 @@ export default function TabMidia() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const isPDF = file.type === "application/pdf";
-    const maxSize = 10 * 1024 * 1024; // 10MB para todos agora conforme solicitado
+    const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const maxSize = 30 * 1024 * 1024; // 30MB para materiais/portfólios
     if (file.size > maxSize) {
-      toast.error(`Limite de 10MB excedido.`);
+      toast.error(`O arquivo excede o limite máximo de 30MB. Por favor, otimize ou comprima o PDF antes de enviar.`);
       e.target.value = "";
       return;
     }
@@ -155,9 +155,9 @@ export default function TabMidia() {
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const maxSize = 10 * 1024 * 1024; // 10MB (mesmo limite do backend e logo)
+    const maxSize = 20 * 1024 * 1024; // 20MB
     if (file.size > maxSize) {
-      toast.error(`Limite de 10MB excedido.`);
+      toast.error(`O arquivo excede o limite de 20MB.`);
       e.target.value = "";
       return;
     }
@@ -376,7 +376,7 @@ export default function TabMidia() {
                   className="cursor-pointer flex items-center gap-2 border-2 border-dashed border-gray-300 px-8 py-4 rounded-xl text-sm bg-white hover:border-[#B70F0A] hover:bg-red-50 transition-all group w-full sm:w-auto text-center justify-center"
                 >
                   <Upload className="w-5 h-5 text-gray-400 group-hover:text-[#B70F0A]" />
-                  <span className="font-semibold text-gray-600 group-hover:text-[#B70F0A]">Escolher Arquivo</span>
+                  <span className="font-semibold text-gray-600 group-hover:text-[#B70F0A]">Escolher Arquivo (PDF ou Imagem até 30MB)</span>
                 </label>
 
                 {values.arquivo_midia && !uploading && (

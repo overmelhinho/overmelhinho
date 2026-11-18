@@ -11,10 +11,52 @@ class UploadTempController extends Controller
 {
     public function uploadTemp(Request $request)
     {
+        // 🔒 Verificação prévia de erros nativos do PHP antes da validação
+        $rawFiles = $request->file('files', []);
+        if (!is_array($rawFiles)) {
+            $rawFiles = $rawFiles ? [$rawFiles] : [];
+        }
+
+        foreach ($rawFiles as $file) {
+            if ($file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile && $file->getError() !== UPLOAD_ERR_OK) {
+                $err = $file->getError();
+                $originalName = $file->getClientOriginalName() ?: 'arquivo';
+                
+                if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) {
+                    $maxIni = ini_get('upload_max_filesize') ?: '30M';
+                    return response()->json([
+                        'success' => false,
+                        'message' => "O arquivo \"{$originalName}\" excede o limite de tamanho permitido pelo servidor ({$maxIni}). Por favor, otimize ou comprima o PDF antes de enviar.",
+                        'errors' => ['files' => ["Arquivo excede o limite de upload do servidor ({$maxIni})."]]
+                    ], 422);
+                }
+
+                if ($err === UPLOAD_ERR_PARTIAL) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "O envio do arquivo \"{$originalName}\" foi interrompido antes de ser concluído. Verifique sua conexão e tente novamente.",
+                        'errors' => ['files' => ['Upload parcial/interrompido.']]
+                    ], 422);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => "Falha no envio do arquivo \"{$originalName}\" (Código PHP: {$err}). Verifique o arquivo e tente novamente.",
+                    'errors' => ['files' => ["Erro de upload código {$err}."]]
+                ], 422);
+            }
+        }
+
         try {
             $request->validate([
                 'files' => 'required',
-                'files.*' => 'file|max:10240|mimes:jpg,jpeg,png,webp,pdf,gif|mimetypes:image/jpeg,image/png,image/webp,image/gif,application/pdf',
+                'files.*' => 'file|max:30720|mimes:jpg,jpeg,png,webp,pdf,gif|mimetypes:image/jpeg,image/png,image/webp,image/gif,application/pdf',
+            ], [
+                'files.required' => 'Nenhum arquivo foi selecionado.',
+                'files.*.uploaded' => 'Falha no envio do arquivo. Verifique se o arquivo não excede o limite de tamanho do servidor.',
+                'files.*.max' => 'O arquivo não pode ser maior que 30 MB.',
+                'files.*.mimes' => 'Formato não suportado. Formatos aceitos: PDF, JPG, PNG, WEBP, GIF.',
+                'files.*.mimetypes' => 'Formato não suportado. Formatos aceitos: PDF, JPG, PNG, WEBP, GIF.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Illuminate\Support\Facades\Log::error('UploadTemp Validation Failed: ' . json_encode($e->errors()));

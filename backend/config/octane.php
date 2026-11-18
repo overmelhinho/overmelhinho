@@ -138,6 +138,13 @@ return [
         //
     ],
 
+    'swoole' => [
+        'options' => [
+            'package_max_length' => 50 * 1024 * 1024,
+            'socket_buffer_size' => 50 * 1024 * 1024,
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Octane Swoole Tables
