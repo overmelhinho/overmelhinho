@@ -2,8 +2,8 @@
 ## Documento de Transição e Continuidade (Handover)
 
 **Data de Registro:** 18 de Novembro de 2026  
-**Status Atual:** Release 3A publicada, Desbloqueio de IA no Cloudflare Homologado (HTTP 200 OK) e **Release 3B implementada e testada localmente com 100% de sucesso**.  
-**Próxima Ação:** Validação final e deploy da **Release 3B** para o GitHub / VPS, seguido da **Release 3C** (City Hubs `/[citySlug]`).
+**Status Atual:** Releases 3A e 3B publicadas em produção (`3b8bbdb`) e **Release 3C (Hubs Municipais) implementada e testada localmente com 100% de sucesso**.  
+**Próxima Ação:** Validação e deploy da **Release 3C** para o GitHub / VPS, seguido da **Release 3D** (Enriquecimento textual e conteúdo dinâmico).
 
 ---
 
@@ -83,19 +83,31 @@ Quando formos retomar as atividades de GEO/SEO, seguir a ordem abaixo:
   - `ClaudeBot/1.0`: **HTTP 200 OK**
   - `OAI-SearchBot/1.0`: **HTTP 200 OK**
 
-### Passo 3: Release 3B (CONCLUÍDA E TESTADA LOCALMENTE)
+### Passo 3: Release 3B (CONCLUÍDA E PUBLICADA)
+✅ **CONCLUÍDO:** Código publicado no commit `3b8bbdb` e ativo em produção.
+
+### Passo 4: Release 3C (Hubs Municipais) — CONCLUÍDA E TESTADA LOCALMENTE
 ✅ **CONCLUÍDO:**
-- Criado helper `site/src/utils/schemaOrg.ts` com tipagem e testes unitários aprovados.
-- Mapeamento granular de categorias para subtipos específicos do Schema.org (`AutoRepair`, `Dentist`, `MedicalClinic`, `Restaurant`, `LegalService`, etc.) mantendo compatibilidade `['LocalBusiness', Subtype]`.
-- Injeção de `openingHoursSpecification` estruturada com turnos (manhã/tarde) e dias da semana conforme dados reais do banco, omitindo dias fechados.
-- Inclusão dos schemas de raiz `@graph` contendo `WebSite` (com `SearchAction` apontando para `/busca?q={search_term_string}`) e `Organization` (com logo oficial e perfis em redes sociais) no `site/src/app/layout.tsx`.
-- Removido schema redundante isolado em `site/src/app/page.tsx`.
+- Criada a página `site/src/app/[citySlug]/page.tsx` para City Hubs municipais (ex: `/caxias-do-sul`, `/farroupilha`, `/garibaldi`, etc.), eliminando os 404 anteriores.
+- Exibição dinâmica de:
+  - Total de categorias ativas na cidade.
+  - Barra de busca comercial pré-escopada para a cidade.
+  - Categorias populares em destaque com ícones visuais e links navegáveis.
+  - Empresas em destaque na cidade com fotos, logotipos, segmento e botão direto de WhatsApp.
+  - Índice completo em grade de todos os segmentos atendidos na cidade.
+  - Links para cidades vizinhas da Serra Gaúcha.
+- Schemas estruturados de SEO:
+  - `BreadcrumbList`: 2 níveis (`Home` -> `${Cidade} - ${UF}`).
+  - `CollectionPage` e `City`: entidade geográfica e lista de itens locais.
+- Ajustada hierarquia de Breadcrumbs em todo o portal:
+  - Página de Categoria (`/[citySlug]/[segmentSlug]`): 3 níveis (`Home` -> `${Cidade}` -> `${Segmento}`).
+  - Página de Cliente (`/[citySlug]/[segmentSlug]/[clientSlug]`): 4 níveis (`Home` -> `${Cidade}` -> `${Segmento}` -> `${Empresa}`).
+- Adicionado sitemap de cidades em `site/src/app/sitemap.ts` com prioridade 0.9 cobrindo as 28 cidades autorizadas.
 - Typecheck TypeScript (`tsc --noEmit`): **0 erros**.
 - Build de Produção (`npm run build` no Next.js): **Sucesso (Exit code 0)**.
 - DevSecOps Security Scanner: **✅ Todos os arquivos com SCAN LIMPO**.
 
-### Passo 4: Próxima Etapa — Release 3C (Hubs Municipais)
-- Criação da rota `site/src/app/[citySlug]/page.tsx` para City Hubs (ex: `/caxias-do-sul`, `/farroupilha`).
-- Inclusão da cidade no `BreadcrumbList` (`Home` -> `Cidade` -> `Segmento` -> `Empresa`).
-- Adição de sitemap dinâmico de cidades em `site/src/app/sitemap.ts`.
+### Passo 5: Próxima Etapa — Release 3D (Enriquecimento Textual e Otimização GEO)
+- Otimização do componente de texto SEO dinâmico (`DynamicSeoText.tsx`) para eliminar boilerplate e entregar resumos semânticos reais sobre o segmento na região.
+- Testes de recomendação em LLMs.
 

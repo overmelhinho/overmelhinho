@@ -259,6 +259,31 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
         };
     }
 
+    const breadcrumbJsonLd = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": SITE_URL
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": cityName,
+                "item": `${SITE_URL}/${cleanCitySlug}`
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
+                "name": `${segmentName} em ${cityName}`,
+                "item": `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}`
+            }
+        ]
+    };
+
     const schemaData = {
         "@context": "https://schema.org",
         "@type": "ItemList",
@@ -286,10 +311,31 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
     return (
         <div className="min-h-screen font-sans bg-gray-50">
             <script
-                    type="application/ld+json"
-                    {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(schemaData).replace(/</g, '\\u003c') } }}
-                />
+                type="application/ld+json"
+                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, '\\u003c') } }}
+            />
+            <script
+                type="application/ld+json"
+                {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(schemaData).replace(/</g, '\\u003c') } }}
+            />
             <main className="pt-24 pb-20">
+                {/* Breadcrumb Navigation Bar */}
+                <div className="bg-white border-b border-gray-100">
+                    <div className="max-w-7xl mx-auto px-6 lg:px-8 py-3.5">
+                        <nav aria-label="Breadcrumb" className="flex items-center space-x-2 text-xs text-gray-500">
+                            <Link href="/" className="hover:text-brand-red transition-colors">
+                                Home
+                            </Link>
+                            <ChevronRight size={12} className="text-gray-300" />
+                            <Link href={`/${cleanCitySlug}`} className="hover:text-brand-red transition-colors">
+                                {cityName}
+                            </Link>
+                            <ChevronRight size={12} className="text-gray-300" />
+                            <span className="font-semibold text-gray-800">{segmentName}</span>
+                        </nav>
+                    </div>
+                </div>
+
                 {/* Hero Section */}
                 <div className="bg-white border-b border-gray-100">
                     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">

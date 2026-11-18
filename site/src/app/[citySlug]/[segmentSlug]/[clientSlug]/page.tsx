@@ -213,7 +213,7 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
     const { h1Title, description } = buildSeoTitleAndDescription(client, targetCityName, uf, segmentName);
     const canonicalUrl = `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}/${canonicalClientSlug}`;
 
-    // Esquemas JSON-LD para SEO
+    // Esquemas JSON-LD para SEO (Hierarquia Completa de 4 Níveis: Home -> Cidade -> Segmento -> Empresa)
     const breadcrumbJsonLd = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -227,12 +227,18 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
             {
                 "@type": "ListItem",
                 "position": 2,
+                "name": targetCityName,
+                "item": `${SITE_URL}/${targetCitySlug}`
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
                 "name": `${segmentName} em ${targetCityName}`,
                 "item": `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}`
             },
             {
                 "@type": "ListItem",
-                "position": 3,
+                "position": 4,
                 "name": client.nome_fantasia,
                 "item": canonicalUrl
             }
