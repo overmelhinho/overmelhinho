@@ -508,7 +508,14 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
                         </div>
                 </div>
 
-                <DynamicSeoText cityName={cityName} segmentName={segmentName} clientCount={clients.length} />
+                <DynamicSeoText 
+                    cityName={cityName} 
+                    citySlug={cleanCitySlug}
+                    segmentName={segmentName} 
+                    segmentSlug={cleanSegmentSlug}
+                    clientCount={clients.length} 
+                    clients={clients}
+                />
             </main>
         </div>
     );

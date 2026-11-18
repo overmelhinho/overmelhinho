@@ -2,8 +2,8 @@
 ## Documento de Transição e Continuidade (Handover)
 
 **Data de Registro:** 18 de Novembro de 2026  
-**Status Atual:** Releases 3A e 3B publicadas em produção (`3b8bbdb`) e **Release 3C (Hubs Municipais) implementada e testada localmente com 100% de sucesso**.  
-**Próxima Ação:** Validação e deploy da **Release 3C** para o GitHub / VPS, seguido da **Release 3D** (Enriquecimento textual e conteúdo dinâmico).
+**Status Atual:** Releases 3A (`e3696d0`), 3B (`3b8bbdb`) e 3C (`97ff280`) publicadas em produção. **Release 3D (Enriquecimento Semântico GEO, Âncoras de Entidades e FAQPage Visível) implementada e validada localmente**.  
+**Próxima Ação:** Deploy da **Release 3D** para o GitHub / VPS, seguido de monitoramento contínuo de indexação e citações GEO.
 
 ---
 
@@ -86,28 +86,22 @@ Quando formos retomar as atividades de GEO/SEO, seguir a ordem abaixo:
 ### Passo 3: Release 3B (CONCLUÍDA E PUBLICADA)
 ✅ **CONCLUÍDO:** Código publicado no commit `3b8bbdb` e ativo em produção.
 
-### Passo 4: Release 3C (Hubs Municipais) — CONCLUÍDA E TESTADA LOCALMENTE
-✅ **CONCLUÍDO:**
-- Criada a página `site/src/app/[citySlug]/page.tsx` para City Hubs municipais (ex: `/caxias-do-sul`, `/farroupilha`, `/garibaldi`, etc.), eliminando os 404 anteriores.
-- Exibição dinâmica de:
-  - Total de categorias ativas na cidade.
-  - Barra de busca comercial pré-escopada para a cidade.
-  - Categorias populares em destaque com ícones visuais e links navegáveis.
-  - Empresas em destaque na cidade com fotos, logotipos, segmento e botão direto de WhatsApp.
-  - Índice completo em grade de todos os segmentos atendidos na cidade.
-  - Links para cidades vizinhas da Serra Gaúcha.
-- Schemas estruturados de SEO:
-  - `BreadcrumbList`: 2 níveis (`Home` -> `${Cidade} - ${UF}`).
-  - `CollectionPage` e `City`: entidade geográfica e lista de itens locais.
-- Ajustada hierarquia de Breadcrumbs em todo o portal:
-  - Página de Categoria (`/[citySlug]/[segmentSlug]`): 3 níveis (`Home` -> `${Cidade}` -> `${Segmento}`).
-  - Página de Cliente (`/[citySlug]/[segmentSlug]/[clientSlug]`): 4 níveis (`Home` -> `${Cidade}` -> `${Segmento}` -> `${Empresa}`).
-- Adicionado sitemap de cidades em `site/src/app/sitemap.ts` com prioridade 0.9 cobrindo as 28 cidades autorizadas.
-- Typecheck TypeScript (`tsc --noEmit`): **0 erros**.
-- Build de Produção (`npm run build` no Next.js): **Sucesso (Exit code 0)**.
-- DevSecOps Security Scanner: **✅ Todos os arquivos com SCAN LIMPO**.
+### Passo 4: Release 3C (Hubs Municipais) — CONCLUÍDA E PUBLICADA
+✅ **CONCLUÍDO:** Código publicado no commit `97ff280` e ativo em produção:
+- Hubs municipais `/cidade` ativos com índice e destaques de empresas.
+- Breadcrumbs canônicos de 3 níveis em categorias e 4 níveis em empresas.
+- Sitemap dinâmico das 28 cidades da Serra Gaúcha em `sitemap.ts`.
 
-### Passo 5: Próxima Etapa — Release 3D (Enriquecimento Textual e Otimização GEO)
-- Otimização do componente de texto SEO dinâmico (`DynamicSeoText.tsx`) para eliminar boilerplate e entregar resumos semânticos reais sobre o segmento na região.
-- Testes de recomendação em LLMs.
+### Passo 5: Release 3D (Enriquecimento Semântico GEO, Âncoras de Entidades e FAQPage Visível)
+✅ **CONCLUÍDO E VALIDADO LOCALMENTE:**
+- Reformulação integral do componente `site/src/components/DynamicSeoText.tsx`:
+  - Fim do boilerplate repetitivo: categorização temática por domínio de atividade (Gastronomia, Saúde, Automotivo, Jurídico/Financeiro, Moda/Confecções, Construção, Beleza, Educação, Pet/Agro e Serviços Gerais).
+  - Conteúdo prático com dicas de consumo e critérios de contratação específicos para cada segmento na cidade.
+  - Tabela resumida de empresas verificadas (*Entity Anchors*) com nome, bairro, endereço e link direto de WhatsApp para ancoragem semântica em LLMs (ChatGPT, Perplexity, Claude, Gemini).
+  - Bloco de Perguntas e Respostas (FAQ) 100% interativo e visível na interface do usuário através de acordeons expansíveis.
+  - Injeção legítima e segura do schema Schema.org `@type: "FAQPage"` correspondente aos mesmos dados visíveis na tela, em conformidade estrita com as diretrizes do Google Search Central.
+- Integração em `site/src/app/[citySlug]/[segmentSlug]/page.tsx` passando contexto da cidade, segmento e lista de empresas verificadas.
+- Validação DevSecOps: `security_scanner` aprovado com **SCAN LIMPO**.
+- Validação TypeScript: `tsc --noEmit` com **0 erros**.
+- Testes SSR em ambiente local (`http://localhost:3000`) confirmando renderização de HTML semântico e bloco JSON-LD estruturado.
 
