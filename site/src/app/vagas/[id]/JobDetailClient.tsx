@@ -14,6 +14,7 @@ import {
     CheckSquare,
     Search
 } from 'lucide-react';
+import { decodeHtmlEntities } from '@/utils/text';
 
 // ── TIPOS ─────────────────────────────────────────────────────────
 interface Job {
@@ -50,19 +51,6 @@ function maskPhone(value: string): string {
 }
 
 // ── RENDERIZAÇÃO SEGURA DE TEXTO / HTML ────────────────────────────
-function decodeHtmlEntities(str: string): string {
-    return str
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/&amp;/gi, '&')
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
-        .replace(/&quot;/gi, '"')
-        .replace(/&#39;|&apos;/gi, "'")
-        .replace(/&bull;/gi, '•')
-        .replace(/&ndash;/gi, '–')
-        .replace(/&mdash;/gi, '—');
-}
-
 function renderSafeHtml(content: string) {
     if (!content) return null;
     let clean = content

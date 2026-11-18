@@ -307,6 +307,7 @@ export default function ClienteEdit() {
         profile_photo_url: r.author_photo_url || r.profile_photo_url || ""
       })) : [],
       exibir_no_site: c?.exibir_no_site === "false" || c?.exibir_no_site === false ? false : true,
+      slug: c?.slug || "",
     };
   }, [data]);
 

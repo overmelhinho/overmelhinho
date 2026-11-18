@@ -1,6 +1,6 @@
 import { useFormikContext } from "formik";
 import { useMemo, useRef, useState } from "react";
-import { Building2, FileText, Hash, Briefcase, Tag, Eye, EyeOff, Sparkles, X, Calendar, MapPin, Search } from "lucide-react";
+import { Building2, FileText, Hash, Briefcase, Tag, Eye, EyeOff, Sparkles, X, Calendar, MapPin, Search, ExternalLink } from "lucide-react";
 import CpfCnpjInput from "@/components/ui/cpf-cnpj-input";
 import axios from "@/services/api";
 import toast from "react-hot-toast";
@@ -382,6 +382,23 @@ export default function TabIdentificacao() {
             onChange={handleChange}
             className="border rounded-md px-3 py-2 w-full focus:ring-2 focus:ring-[#B70F0A]"
           />
+
+          {values.slug && (
+            <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-500 bg-gray-50 px-2.5 py-1.5 rounded border border-gray-100">
+              <span className="truncate">
+                <span className="font-semibold text-gray-700">URL / Slug:</span> <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[10px] font-mono">{values.slug}</code>
+              </span>
+              <a
+                href={`${typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:3000" : typeof window !== "undefined" && window.location.hostname.includes("novo") ? "https://novo.overmelhinho.com.br" : "https://overmelhinho.com.br"}/cliente/${values.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 shrink-0"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Ver página
+              </a>
+            </div>
+          )}
         </div>
 
         <div>

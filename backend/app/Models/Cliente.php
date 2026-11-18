@@ -20,9 +20,20 @@ class Cliente extends Model
                 }
             }
 
-            if (!empty($cliente->nome_fantasia) && (empty($cliente->slug) || ($cliente->isDirty('nome_fantasia') && !$cliente->isDirty('slug')))) {
+            $expectedSlug = !empty($cliente->nome_fantasia) ? \App\Services\SlugService::create($cliente->nome_fantasia) : null;
+            $isDivergent = false;
+            if (!empty($cliente->slug) && !empty($expectedSlug)) {
+                $baseCurrent = preg_replace('/-\d+$/', '', $cliente->slug);
+                $baseExpected = preg_replace('/-\d+$/', '', $expectedSlug);
+                // Detecta se o slug cadastrado pertence a um nome antigo totalmente divergente
+                if ($baseCurrent !== $baseExpected && !str_starts_with($baseCurrent, $baseExpected) && !str_starts_with($baseExpected, $baseCurrent)) {
+                    $isDivergent = true;
+                }
+            }
+
+            if (!empty($cliente->nome_fantasia) && (empty($cliente->slug) || ($cliente->isDirty('nome_fantasia') && !$cliente->isDirty('slug')) || $isDivergent)) {
                 // Gera o slug altamente sanitizado
-                $originalSlug = \App\Services\SlugService::create($cliente->nome_fantasia);
+                $originalSlug = $expectedSlug ?? \App\Services\SlugService::create($cliente->nome_fantasia);
                 $slug = $originalSlug;
                 
                 // Garante que o slug seja único verificando a existência

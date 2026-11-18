@@ -19,6 +19,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import api from '@/services/api';
 import LiteYouTube from '@/components/LiteYouTube';
+import { decodeHtmlEntities } from '@/utils/text';
 
 const formatTelLink = (phone: string | undefined | null) => {
     if (!phone) return '#';
@@ -1356,13 +1357,13 @@ export default function ClientProfileClient({ initialClient }: { initialClient?:
                                     {client.reviews?.length > 0 ? client.reviews.map((rev: any, i: number) => (
                                         <div key={i} className="space-y-4">
                                             <div className="flex items-center space-x-3">
-                                                <h5 className="font-black text-sm text-gray-900">{rev.author_name}</h5>
+                                                <h5 className="font-black text-sm text-gray-900">{decodeHtmlEntities(rev.author_name)}</h5>
                                                 <div className="flex text-yellow-400 scale-75 origin-left">
                                                     {[...Array(rev.rating || 5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                                                 </div>
                                             </div>
                                             {rev.text && rev.text.trim() !== '' && (
-                                                <p className="text-sm text-gray-500 font-medium leading-relaxed italic">"{rev.text}"</p>
+                                                <p className="text-sm text-gray-500 font-medium leading-relaxed italic">"{decodeHtmlEntities(rev.text)}"</p>
                                             )}
                                         </div>
                                     )) : (
