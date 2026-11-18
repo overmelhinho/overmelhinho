@@ -37,6 +37,8 @@ class ProcessLostLeadsFollowup extends Command
         foreach ($leads as $lead) {
             $lostAt = \Carbon\Carbon::parse($lead->lost_at);
             $now = \Carbon\Carbon::now();
+            $diffInMonths = max(1, (int) round($lostAt->floatDiffInMonths($now)));
+            $tempoTexto = $diffInMonths === 1 ? "1 mês" : "{$diffInMonths} meses";
 
             $shouldFollowUp = false;
 
@@ -48,7 +50,6 @@ class ProcessLostLeadsFollowup extends Command
                 }
             } else {
                 // Regra padrão: a cada 3 meses (90 dias)
-                $diffInMonths = $lostAt->diffInMonths($now);
                 if ($diffInMonths > 0 && $diffInMonths % 3 === 0 && $lostAt->day === $now->day) {
                     $shouldFollowUp = true;
                 }
@@ -57,6 +58,7 @@ class ProcessLostLeadsFollowup extends Command
             if ($shouldFollowUp) {
                 // É hora do aviso! Apenas envia e-mail para a Angélica
                 try {
+                    $leadSearchUrl = "https://dash.overmelhinho.com.br/leads?search=" . urlencode($lead->nome);
                     $htmlContent = "
                     <html>
                     <body style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
@@ -66,7 +68,7 @@ class ProcessLostLeadsFollowup extends Command
                             </div>
                             <div style='padding: 30px;'>
                                 <p style='font-size: 16px; color: #333333; line-height: 1.6;'>
-                                    Olá Angélica, já faz {$diffInMonths} meses que perdemos o lead <strong>{$lead->nome}</strong>. É um bom momento para tentar contato novamente!
+                                    Olá Angélica, já faz {$tempoTexto} que perdemos o lead <strong>{$lead->nome}</strong>. É um bom momento para tentar contato novamente!
                                 </p>
                                 <table style='width: 100%; border-collapse: collapse; margin-top: 20px;'>
                                     <tr>
@@ -87,7 +89,10 @@ class ProcessLostLeadsFollowup extends Command
                                     </tr>
                                 </table>
                                 <div style='margin-top: 30px; text-align: center;'>
-                                    <a href='https://dash.overmelhinho.com.br/leads-kanban' style='background-color: #C00000; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;'>Acessar Painel de Leads</a>
+                                    <a href='{$leadSearchUrl}' style='background-color: #C00000; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;'>Visualizar Lead no Painel</a>
+                                    <div style='margin-top: 15px; font-size: 13px; color: #666;'>
+                                        <a href='https://dash.overmelhinho.com.br/leads?status=recuperaveis' style='color: #C00000; text-decoration: underline; font-weight: bold;'>Ver todos os Leads da Esteira de Recuperação</a> &bull; <a href='https://dash.overmelhinho.com.br/leads-kanban' style='color: #666; text-decoration: underline;'>Abrir Kanban</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>

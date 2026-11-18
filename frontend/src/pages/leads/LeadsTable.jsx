@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
-import { Pencil, Trash2, UserPlus, Loader2, Search, ArrowRight, User, MessageCircle, Send, ClipboardList } from "lucide-react";
+import { Pencil, Trash2, UserPlus, Loader2, Search, ArrowRight, User, MessageCircle, Send, ClipboardList, RotateCcw, X } from "lucide-react";
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useSendFollowup } from "@/hooks/useLeads";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
@@ -62,15 +63,54 @@ const statusOptions = [
 ];
 
 export default function LeadsTable({ user }) {
-  const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("search") || "");
   const [debouncedSearch] = useDebounce(search, 300);
-  const [status, setStatus] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    const statusParam = params.get("status");
-    return statusParam || "Todos";
-  });
+  const [status, setStatus] = useState(() => searchParams.get("status") || "Todos");
   const [page, setPage] = useState(1);
   const perPage = 10;
+
+  useEffect(() => {
+    const s = searchParams.get("search");
+    if (s !== null && s !== search) {
+      setSearch(s);
+      setPage(1);
+    }
+    const st = searchParams.get("status");
+    if (st !== null && st !== status) {
+      setStatus(st);
+      setPage(1);
+    }
+  }, [searchParams]);
+
+  const handleSearchChange = (val) => {
+    setSearch(val);
+    setPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set("search", val);
+      else next.delete("search");
+      return next;
+    }, { replace: true });
+  };
+
+  const handleStatusChange = (val) => {
+    setStatus(val);
+    setPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val && val !== "Todos") next.set("status", val);
+      else next.delete("status");
+      return next;
+    }, { replace: true });
+  };
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setStatus("Todos");
+    setPage(1);
+    setSearchParams({}, { replace: true });
+  };
 
   const queryClient = useQueryClient();
   const { data, isLoading } = useLeads({ search: debouncedSearch, status, page, perPage });
@@ -163,6 +203,31 @@ export default function LeadsTable({ user }) {
     }
   }
 
+  function handleReativar(lead) {
+    if (window.confirm(`Deseja reativar o lead "${lead.nome}"?\n\nEle sairá de 'Perdido' e voltará para 'Em Contato' no funil ativo de vendas.`)) {
+      updateLead.mutate(
+        {
+          id: lead.id,
+          nome: lead.nome,
+          status: "em_contato",
+          responsavel: lead.responsavel || user?.name || null,
+        },
+        {
+          onSuccess: () => {
+            toast.success(`Lead "${lead.nome}" reativado com sucesso!`);
+            queryClient.invalidateQueries(["leads"]);
+            queryClient.invalidateQueries(["leadsStats"]);
+            queryClient.invalidateQueries(["leads-stats-sidebar"]);
+          },
+          onError: (err) => {
+            console.error("Erro ao reativar lead:", err);
+            toast.error("Erro ao reativar lead.");
+          },
+        }
+      );
+    }
+  }
+
   const canCreate = user?.permissions?.includes("create leads");
   const canEdit = user?.permissions?.includes("edit leads");
   const canDelete = user?.permissions?.includes("delete leads");
@@ -170,27 +235,62 @@ export default function LeadsTable({ user }) {
   return (
     <>
       <div className="bg-white rounded-2xl shadow p-6 border border-gray-100">
+        {status === "recuperaveis" && (
+          <div className="mb-4 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-amber-600 shrink-0" />
+              <div>
+                <strong className="font-semibold text-amber-800">Modo Recuperação de Leads (Ciclo 3 Meses):</strong>{" "}
+                <span>Exibindo leads perdidos que atingiram o ciclo de 3 meses. Utilize as ações para renegociar via WhatsApp ou criar tarefas.</span>
+              </div>
+            </div>
+            <button
+              onClick={() => handleStatusChange("Todos")}
+              className="text-xs font-semibold text-amber-800 hover:text-amber-950 underline shrink-0 cursor-pointer"
+            >
+              Ver todos os leads
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <input
                 type="text"
                 placeholder="Buscar nome, e-mail ou origem..."
-                className="pl-9 pr-4 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-primary/30 transition text-sm"
+                className="pl-9 pr-8 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-primary/30 transition text-sm min-w-[260px]"
                 value={search}
-                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                onChange={e => handleSearchChange(e.target.value)}
               />
-              <Search className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
+              {search && (
+                <button
+                  onClick={() => handleSearchChange("")}
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                  title="Limpar busca"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
             <select
               className="py-2 px-3 rounded-lg border border-gray-200 bg-gray-50 text-sm shadow-sm"
               value={status}
-              onChange={e => { setStatus(e.target.value); setPage(1); }}
+              onChange={e => handleStatusChange(e.target.value)}
             >
               {statusOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
+            {(search || (status && status !== "Todos")) && (
+              <button
+                onClick={handleClearFilters}
+                className="text-xs text-gray-500 hover:text-[#B70F0A] underline px-2 py-1"
+              >
+                Limpar filtros
+              </button>
+            )}
           </div>
           {canCreate && (
             <button
@@ -246,32 +346,45 @@ export default function LeadsTable({ user }) {
                             <ArrowRight className="w-5 h-5 text-[#FDB913]" />
                           </button>
                         )}
-                      {lead.status?.toLowerCase() === "perdido" && lead.telefone && (
-                        <div className="flex gap-1">
-                          <a
-                            href={`https://api.whatsapp.com/send?phone=${lead.telefone.replace(/\D/g, '')}&text=${encodeURIComponent(`Olá ${lead.nome}, tudo bem? Aqui é do O Vermelhinho. Estivemos pensando em você e queríamos saber se mudou de ideia sobre a nossa proposta. Como podemos te ajudar hoje?`)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1 rounded flex items-center justify-center hover:bg-green-50"
-                            title="WhatsApp Web (Manual)"
-                          >
-                            <MessageCircle className="w-5 h-5 text-green-600" />
-                          </a>
+                      {lead.status?.toLowerCase() === "perdido" && (
+                        <div className="flex items-center gap-1">
+                          {lead.telefone && (
+                            <>
+                              <a
+                                href={`https://api.whatsapp.com/send?phone=${lead.telefone.replace(/\D/g, '')}&text=${encodeURIComponent(`Olá ${lead.nome}, tudo bem? Aqui é do O Vermelhinho. Estivemos pensando em você e queríamos saber se mudou de ideia sobre a nossa proposta. Como podemos te ajudar hoje?`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 rounded flex items-center justify-center hover:bg-green-50"
+                                title="WhatsApp Web (Manual)"
+                              >
+                                <MessageCircle className="w-5 h-5 text-green-600" />
+                              </a>
+                              <button
+                                onClick={() => handleSendFollowup(lead.id)}
+                                className="p-1 rounded flex items-center justify-center hover:bg-blue-50"
+                                disabled={sendFollowup.isLoading}
+                                title="Disparar API WhatsApp (Sistema)"
+                              >
+                                {sendFollowup.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Send className="w-5 h-5 text-blue-600" />}
+                              </button>
+                              <button
+                                onClick={() => createTask.mutate(lead.id)}
+                                className="p-1 rounded flex items-center justify-center hover:bg-purple-50"
+                                disabled={createTask.isLoading}
+                                title="Agendar Tarefa (Ticket)"
+                              >
+                                {createTask.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-purple-600" /> : <ClipboardList className="w-5 h-5 text-purple-600" />}
+                              </button>
+                            </>
+                          )}
                           <button
-                            onClick={() => handleSendFollowup(lead.id)}
-                            className="p-1 rounded flex items-center justify-center hover:bg-blue-50"
-                            disabled={sendFollowup.isLoading}
-                            title="Disparar API WhatsApp (Sistema)"
+                            onClick={() => handleReativar(lead)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                            title="Reativar Lead (move para 'Em Contato' e retorna ao funil)"
+                            disabled={updateLead.isLoading}
                           >
-                            {sendFollowup.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Send className="w-5 h-5 text-blue-600" />}
-                          </button>
-                          <button
-                            onClick={() => createTask.mutate(lead.id)}
-                            className="p-1 rounded flex items-center justify-center hover:bg-purple-50"
-                            disabled={createTask.isLoading}
-                            title="Agendar Tarefa (Ticket)"
-                          >
-                            {createTask.isLoading ? <Loader2 className="w-5 h-5 animate-spin text-purple-600" /> : <ClipboardList className="w-5 h-5 text-purple-600" />}
+                            <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Reativar</span>
                           </button>
                         </div>
                       )}

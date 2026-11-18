@@ -34,7 +34,11 @@ export function useUpdateLead() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (lead) => axios.put(`/v1/leads/${lead.id}`, lead),
-    onSuccess: () => queryClient.invalidateQueries(["leads"]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["leads"]);
+      queryClient.invalidateQueries(["leadsStats"]);
+      queryClient.invalidateQueries(["leads-stats-sidebar"]);
+    },
   });
 }
 

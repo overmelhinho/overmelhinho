@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { X, LogOut, User, Target, Sparkles, RefreshCw, Database } from "lucide-react";
+import { X, LogOut, User, Target, Sparkles, RefreshCw, Database, RotateCcw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -117,7 +117,8 @@ export default function MobileMenuDrawer({
           <div className="space-y-1">
             {renderItem({ to: "/dashboard", label: "Início", icon: <Target size={18} /> }, onClose)}
             {renderItem({ to: "/clientes", label: "Clientes", icon: <Sparkles size={18} /> }, onClose)}
-            {renderItem({ to: "/leads-kanban", label: "Leads", icon: <User size={18} /> }, onClose)}
+            {renderItem({ to: "/leads-kanban", label: "Leads (Kanban)", icon: <User size={18} /> }, onClose)}
+            {renderItem({ to: "/leads", label: "Recuperação de Leads", icon: <RotateCcw size={18} /> }, onClose)}
           </div>
 
           <div className="mt-8 mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">

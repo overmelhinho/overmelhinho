@@ -33,9 +33,19 @@ class LeadController extends Controller
         if ($status && $status !== 'Todos') {
             if ($status === 'recuperaveis') {
                 $query->where('status', 'perdido')
-                      ->whereNotNull('lost_at')
-                      ->whereRaw("TIMESTAMPDIFF(MONTH, lost_at, NOW()) % 3 = 0")
-                      ->whereRaw("TIMESTAMPDIFF(MONTH, lost_at, NOW()) > 0");
+                      ->whereNotNull('lost_at');
+
+                $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+                if ($driver === 'pgsql') {
+                    $query->whereRaw("(EXTRACT(YEAR FROM age(NOW(), lost_at)) * 12 + EXTRACT(MONTH FROM age(NOW(), lost_at)))::int % 3 = 0")
+                          ->whereRaw("(EXTRACT(YEAR FROM age(NOW(), lost_at)) * 12 + EXTRACT(MONTH FROM age(NOW(), lost_at)))::int > 0");
+                } elseif ($driver === 'sqlite') {
+                    $query->whereRaw("((strftime('%Y', 'now') - strftime('%Y', lost_at)) * 12 + (strftime('%m', 'now') - strftime('%m', lost_at))) % 3 = 0")
+                          ->whereRaw("((strftime('%Y', 'now') - strftime('%Y', lost_at)) * 12 + (strftime('%m', 'now') - strftime('%m', lost_at))) > 0");
+                } else {
+                    $query->whereRaw("TIMESTAMPDIFF(MONTH, lost_at, NOW()) % 3 = 0")
+                          ->whereRaw("TIMESTAMPDIFF(MONTH, lost_at, NOW()) > 0");
+                }
             } else {
                 $query->where('status', $status);
             }
@@ -140,6 +150,7 @@ class LeadController extends Controller
             }
             elseif ($data['status'] !== 'perdido' && $lead->status === 'perdido') {
                 $data['lost_at'] = null;
+                $data['motivo_perda'] = null;
             }
         }
 
@@ -199,7 +210,8 @@ class LeadController extends Controller
 
         foreach ($leadsPerdidos as $lead) {
             $lostAt = $lead->lost_at;
-            $diffInMonths = (int) $lostAt->diffInMonths($now);
+            if (!$lostAt) continue;
+            $diffInMonths = (int) round($lostAt->floatDiffInMonths($now));
             
             // Lógica de 3 meses: (3, 6, 9, 12...)
             if ($diffInMonths > 0 && $diffInMonths % 3 === 0) {

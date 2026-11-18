@@ -19,6 +19,7 @@ import {
   Sparkles,
   Zap,
   BookA,
+  RotateCcw,
 } from "lucide-react";
 
 type Item = {
@@ -87,7 +88,8 @@ export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: Sidebar
       icon: <Target size={18} />,
     },
 
-    { to: "/leads-kanban", label: "Leads", icon: <UserPlus size={18} />, perms: ["view_lead"] },
+    { to: "/leads-kanban", label: "Leads (Kanban)", icon: <UserPlus size={18} />, perms: ["view_lead"] },
+    { to: "/leads", label: "Recuperação de Leads", icon: <RotateCcw size={18} />, perms: ["view_lead"] },
 
     { to: "/clientes", label: "Clientes", icon: <Users size={18} />, perms: ["view_client"] },
     {
@@ -158,6 +160,8 @@ export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: Sidebar
 
     const hasAuditBadge = it.to === '/auditoria' && auditCount > 0;
     const hasLeadsBadge = it.to === '/leads-kanban' && novoLeadsCount > 0;
+    const recuperacaoCount = (leadsStats?.recuperaveis_hoje || 0) > 0 ? leadsStats?.recuperaveis_hoje : (leadsStats?.recuperaveis_mes || 0);
+    const hasRecuperacaoBadge = it.to === '/leads' && recuperacaoCount > 0;
 
     return (
       <NavLink key={it.to} to={it.to} className="block">
@@ -188,6 +192,11 @@ export default function Sidebar({ isMobileMenuOpen, onCloseMobileMenu }: Sidebar
             {hasLeadsBadge && (
               <span className="bg-white text-[#B70F0A] text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-[#B70F0A]/20 shadow-sm">
                 {novoLeadsCount}
+              </span>
+            )}
+            {hasRecuperacaoBadge && (
+              <span className="bg-[#FDB913] text-[#232323] text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm" title="Leads para recuperar">
+                {recuperacaoCount}
               </span>
             )}
           </div>
