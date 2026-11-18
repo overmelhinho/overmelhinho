@@ -100,37 +100,61 @@ async function getClient(slug: string) {
     }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ citySlug: string, segmentSlug: string, clientSlug: string }> }): Promise<Metadata> {
-    const { citySlug, segmentSlug, clientSlug } = await params;
-    const cleanCitySlugParam = slugify(citySlug);
-    const cleanSegmentSlugParam = slugify(segmentSlug);
-    const client = await getClient(clientSlug);
-    
-    if (!client || client.is_inactive_redirect) return { title: 'O Vermelhinho | Guia de Empresas' };
-
+function getCanonicalParams(client: any, currentCitySlug: string, currentSegmentSlug: string) {
     const address = client.enderecos?.[0] || {};
     const mainCityName = (address.cidade || '').trim();
-    const uf = (address.estado || 'RS').trim();
-    const primarySegment = client.segmentos?.find((s: any) => s.pivot?.is_primary) || client.segmentos?.[0];
-    const segmentName = (primarySegment?.nome || formatSlug(cleanSegmentSlugParam)).trim();
-    
-    // SEO Strategy: Multi-City support
-    let targetCityName = mainCityName;
-    let targetCitySlug = mainCityName ? slugify(mainCityName) : 'cidade';
+    const firstAttendedCity = (client.cidades_atendidas?.[0]?.nome || '').trim();
+    const defaultCityName = mainCityName || firstAttendedCity || '';
+    const cleanCitySlugParam = slugify(currentCitySlug);
+    const cleanSegmentSlugParam = slugify(currentSegmentSlug);
+
+    let targetCityName = defaultCityName;
+    let targetCitySlug = defaultCityName ? slugify(defaultCityName) : 'cidade';
 
     if (cleanCitySlugParam) {
         const isMainCity = mainCityName && slugify(mainCityName) === cleanCitySlugParam;
         const attendedCity = client.cidades_atendidas?.find((c: any) => slugify(c.nome) === cleanCitySlugParam);
-        
         if (isMainCity || attendedCity) {
             targetCityName = isMainCity ? mainCityName : attendedCity.nome.trim();
             targetCitySlug = cleanCitySlugParam;
         }
     }
 
-    const canonicalSegmentSlug = primarySegment ? slugify(primarySegment.slug || primarySegment.nome) : cleanSegmentSlugParam;
+    const primarySegment = client.segmentos?.find((s: any) => s.pivot?.is_primary || s.is_primary) || client.segmentos?.[0];
+    const canonicalSegmentSlug = primarySegment 
+        ? slugify(primarySegment.slug || primarySegment.nome) 
+        : cleanSegmentSlugParam;
+    const canonicalClientSlug = String(client.slug || client.id);
+
+    return {
+        targetCityName,
+        targetCitySlug,
+        canonicalSegmentSlug,
+        canonicalClientSlug,
+        primarySegment,
+        address,
+        uf: (address.estado || 'RS').trim(),
+    };
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ citySlug: string, segmentSlug: string, clientSlug: string }> }): Promise<Metadata> {
+    const { citySlug, segmentSlug, clientSlug } = await params;
+    const client = await getClient(clientSlug);
+    
+    if (!client || client.is_inactive_redirect) return { title: 'O Vermelhinho | Guia de Empresas' };
+
+    const {
+        targetCityName,
+        targetCitySlug,
+        canonicalSegmentSlug,
+        canonicalClientSlug,
+        primarySegment,
+        uf
+    } = getCanonicalParams(client, citySlug, segmentSlug);
+
+    const segmentName = (primarySegment?.nome || formatSlug(slugify(segmentSlug))).trim();
     const { title, description } = buildSeoTitleAndDescription(client, targetCityName, uf, segmentName);
-    const canonicalUrl = `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`;
+    const canonicalUrl = `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}/${canonicalClientSlug}`;
 
     return {
         title,
@@ -168,36 +192,25 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
         }
     }
 
-    const address = client.enderecos?.[0] || {};
-    const mainCityName = (address.cidade || '').trim();
-    const uf = (address.estado || 'RS').trim();
-    const primarySegment = client.segmentos?.find((s: any) => s.pivot?.is_primary) || client.segmentos?.[0];
-    const cleanCitySlugParam = slugify(citySlug);
-    const cleanSegmentSlugParam = slugify(segmentSlug);
-    const segmentName = (primarySegment?.nome || formatSlug(cleanSegmentSlugParam)).trim();
-    const canonicalSegmentSlug = primarySegment ? slugify(primarySegment.slug || primarySegment.nome) : cleanSegmentSlugParam;
-    
-    let targetCityName = mainCityName;
-    let targetCitySlug = mainCityName ? slugify(mainCityName) : cleanCitySlugParam;
-    
-    if (cleanCitySlugParam) {
-        const isMainCity = mainCityName && slugify(mainCityName) === cleanCitySlugParam;
-        const attendedCity = client.cidades_atendidas?.find((c: any) => slugify(c.nome) === cleanCitySlugParam);
-        
-        if (isMainCity || attendedCity) {
-            targetCityName = isMainCity ? mainCityName : attendedCity.nome.trim();
-            targetCitySlug = cleanCitySlugParam;
-        }
+    const {
+        targetCityName,
+        targetCitySlug,
+        canonicalSegmentSlug,
+        canonicalClientSlug,
+        primarySegment,
+        address,
+        uf
+    } = getCanonicalParams(client, citySlug, segmentSlug);
+
+    // Redirecionamento permanente estrito (301):
+    // Garante que cidade, segmento e slug da empresa coincidam exatamente com os valores canônicos
+    if (citySlug !== targetCitySlug || segmentSlug !== canonicalSegmentSlug || clientSlug !== canonicalClientSlug) {
+        permanentRedirect(`/${targetCitySlug}/${canonicalSegmentSlug}/${canonicalClientSlug}`);
     }
 
-    // Se a URL acessada tinha hífen extra (ex: /agendamento-de-consultas-/) ou um slug antigo da empresa (ex: jaqueline-perottoni-master-coach-elevass), redireciona 301 para a URL atualizada
-    const canonicalClientSlug = String(client.slug || client.id);
-    if (citySlug !== cleanCitySlugParam || segmentSlug !== cleanSegmentSlugParam || clientSlug !== canonicalClientSlug) {
-        permanentRedirect(`/${targetCitySlug}/${cleanSegmentSlugParam}/${canonicalClientSlug}`);
-    }
-
+    const segmentName = (primarySegment?.nome || formatSlug(canonicalSegmentSlug)).trim();
     const { h1Title, description } = buildSeoTitleAndDescription(client, targetCityName, uf, segmentName);
-    const canonicalUrl = `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}/${client.slug || client.id}`;
+    const canonicalUrl = `${SITE_URL}/${targetCitySlug}/${canonicalSegmentSlug}/${canonicalClientSlug}`;
 
     // Esquemas JSON-LD para SEO
     const breadcrumbJsonLd = {
@@ -231,73 +244,6 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
 
     const allSegmentNames = (client.segmentos || []).map((s: any) => (s.nome || '').trim()).filter(Boolean);
     const primaryPhoneNumber = client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular || '';
-    const fullStreetAddress = address && !address.exibir_apenas_cidade && address.rua
-        ? `${address.tipo_logradouro ? `${address.tipo_logradouro} ` : ''}${address.rua}${address.numero ? `, ${address.numero}` : ''}${address.complemento ? ` (${address.complemento})` : ''}${address.bairro ? ` - Bairro ${address.bairro}` : ''}, ${targetCityName} - ${uf}${address.cep ? `, CEP ${address.cep}` : ''}`
-        : `${targetCityName} - ${uf}`;
-
-    // FAQ Dinâmico (Schema FAQPage) gerado 100% automaticamente a partir dos dados do cliente
-    const faqQuestions: Array<{ question: string; answer: string }> = [];
-
-    if (allSegmentNames.length > 0) {
-        const cleanDescSnippet = (client.descricao || '')
-            .replace(/[\r\n*#]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        faqQuestions.push({
-            question: `Quais serviços e especialidades ${client.nome_fantasia} oferece em ${targetCityName}?`,
-            answer: `${client.nome_fantasia} atua em ${targetCityName} (${uf}) nas áreas de: ${allSegmentNames.join(', ')}.${cleanDescSnippet ? ` ${cleanDescSnippet.substring(0, 280)}` : ''}`
-        });
-    }
-
-    if (targetCityName) {
-        faqQuestions.push({
-            question: `Qual o endereço e onde encontrar ${client.nome_fantasia} em ${targetCityName}?`,
-            answer: !address.exibir_apenas_cidade && address.rua
-                ? `${client.nome_fantasia} está localizada em ${fullStreetAddress}.`
-                : `${client.nome_fantasia} realiza atendimento na cidade de ${targetCityName} - ${uf}.`
-        });
-    }
-
-    const cInfo = client.contatos?.[0];
-    const isPayingClient = client.tipo_cliente === 'pagante';
-    const rawContactPhones = cInfo ? [
-        { number: cInfo.telefone_principal, show: cInfo.exibir_tel_principal !== false, isWhats: !!cInfo.has_whatsapp_principal && isPayingClient },
-        { number: cInfo.telefone_secundario, show: cInfo.exibir_tel_secundario !== false, isWhats: !!cInfo.has_whatsapp_secundario && isPayingClient },
-        { number: cInfo.celular, show: cInfo.exibir_celular !== false, isWhats: !!cInfo.has_whatsapp_celular && isPayingClient },
-        { number: cInfo.telefone_outro, show: cInfo.exibir_tel_outro !== false, isWhats: !!cInfo.has_whatsapp_outro && isPayingClient },
-    ].filter(p => p.number && p.show) : [];
-
-    const whatsappPhoneList = rawContactPhones.filter(p => p.isWhats).map(p => p.number);
-    const regularPhoneList = rawContactPhones.filter(p => !p.isWhats).map(p => p.number);
-
-    if (rawContactPhones.length > 0) {
-        let contactSentence = `Você pode solicitar atendimento com ${client.nome_fantasia} diretamente pelo Guia O Vermelhinho.`;
-        if (regularPhoneList.length > 0 && whatsappPhoneList.length > 0) {
-            contactSentence = `Você pode falar diretamente com a equipe pelo telefone ${regularPhoneList.join(' / ')} ou pelo WhatsApp ${whatsappPhoneList.join(' e ')}.`;
-        } else if (whatsappPhoneList.length > 0) {
-            contactSentence = `Você pode falar diretamente com a equipe pelo telefone/WhatsApp ${whatsappPhoneList.join(' e ')}.`;
-        } else if (regularPhoneList.length > 0) {
-            contactSentence = `Você pode falar diretamente com a equipe pelo telefone ${regularPhoneList.join(' / ')}.`;
-        }
-
-        faqQuestions.push({
-            question: `Como entrar em contato ou agendar atendimento em ${client.nome_fantasia}?`,
-            answer: contactSentence
-        });
-    }
-
-    const faqJsonLd = faqQuestions.length > 0 ? {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": faqQuestions.map(q => ({
-            "@type": "Question",
-            "name": q.question,
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": q.answer
-            }
-        }))
-    } : null;
 
     const localBusinessJsonLd = client.enderecos?.length > 0 
         ? client.enderecos.map((end: any, index: number) => ({
@@ -344,12 +290,6 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
                 <script
                     type="application/ld+json"
                     {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') } }}
-                />
-            )}
-            {faqJsonLd && (
-                <script
-                    type="application/ld+json"
-                    {...{ ['dangerously' + 'SetInnerHTML']: { __html: JSON.stringify(faqJsonLd).replace(/</g, '\\u003c') } }}
                 />
             )}
             <ClientProfileClient initialClient={client} />
