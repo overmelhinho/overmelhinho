@@ -19,7 +19,8 @@ class IndexNowSubmitCommand extends Command
     public function handle(IndexNowService $indexNow): int
     {
         $urls = [];
-        $siteUrl = rtrim(config('services.revalidate.url', 'https://www.overmelhinho.com.br'), '/');
+        $host = config('services.indexnow.host', 'www.overmelhinho.com.br');
+        $siteUrl = "https://{$host}";
 
         if ($singleUrl = $this->argument('url')) {
             $urls[] = $singleUrl;
@@ -33,18 +34,47 @@ class IndexNowSubmitCommand extends Command
             $urls[] = "{$siteUrl}/sitemap-categorias.xml";
             $urls[] = "{$siteUrl}/sitemap-empresas.xml";
 
-            $cidades = Cidade::where('ativo', true)->pluck('slug')->toArray();
-            foreach ($cidades as $slug) {
-                if ($slug) {
-                    $urls[] = "{$siteUrl}/{$slug}";
-                }
+            // Os 28 municípios oficiais atendidos na Serra Gaúcha
+            $topCities = [
+                'caxias-do-sul',
+                'bento-goncalves',
+                'farroupilha',
+                'gramado',
+                'canela',
+                'garibaldi',
+                'carlos-barbosa',
+                'flores-da-cunha',
+                'nova-petropolis',
+                'sao-marcos',
+                'antonio-prado',
+                'veranopolis',
+                'nova-prata',
+                'guapore',
+                'marau',
+                'serafina-correa',
+                'casca',
+                'cotipora',
+                'fagundes-varela',
+                'montauri',
+                'nova-araca',
+                'nova-bassano',
+                'parai',
+                'protasio-alves',
+                'sao-jorge',
+                'sao-valentim-do-sul',
+                'uniao-da-serra',
+                'vila-flores',
+            ];
+
+            foreach ($topCities as $slug) {
+                $urls[] = "{$siteUrl}/{$slug}";
             }
         }
 
         if ($clientId = $this->option('client-id')) {
             $cliente = Cliente::with(['cidade', 'segmentoPrincipal', 'segmentos'])->find($clientId);
             if ($cliente) {
-                $citySlug = $cliente->cidade?->slug ?: 'caxias-do-sul';
+                $citySlug = $cliente->cidade?->slug ?: ($cliente->cidade?->nome ? \Illuminate\Support\Str::slug($cliente->cidade->nome) : 'caxias-do-sul');
                 $clientSlug = $cliente->slug ?: (string) $cliente->id;
                 $segSlug = $cliente->segmentoPrincipal?->slug ?: 'empresa';
                 $urls[] = "{$siteUrl}/{$citySlug}/{$segSlug}/{$clientSlug}";
