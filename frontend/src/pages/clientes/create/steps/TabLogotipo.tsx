@@ -102,6 +102,7 @@ export default function TabLogotipo() {
 
       const { data } = await axios.post("/v1/upload-temp", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 300000,
         onUploadProgress: (evt) => {
           const percent = Math.round((evt.loaded * 100) / (evt.total || 1));
           setProgress(percent);

@@ -106,6 +106,7 @@ export default function TabMidia() {
     formData.append("files[]", file);
     const { data } = await axios.post("/v1/upload-temp", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      timeout: 300000, // 5 minutos para suportar PDFs e arquivos de até 30MB
       onUploadProgress: (event) => {
         if (event.total) {
           const percent = Math.round((event.loaded * 100) / event.total);
@@ -140,8 +141,11 @@ export default function TabMidia() {
       toast.success("Upload concluído!");
     } catch (error: any) {
       console.error(error);
-      const msg = error.response?.data?.message || error.message || "Falha ao enviar arquivo.";
-      toast.error(msg);
+      const isTimeout = error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout');
+      const msg = isTimeout 
+        ? "Tempo limite de envio excedido. Verifique sua conexão de internet ou tente comprimir o arquivo PDF antes de reenviar."
+        : (error.response?.data?.message || error.message || "Falha ao enviar arquivo.");
+      toast.error(msg, { duration: 6000 });
       setFieldValue("arquivo_midia", null);
     } finally {
       setUploading(false);
@@ -168,14 +172,17 @@ export default function TabMidia() {
       formData.append("files[]", file);
       const { data } = await axios.post("/v1/upload-temp", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 300000,
       });
       const uploaded = data.files[0];
       setFieldValue("banner", uploaded.public_url);
       setFieldValue("banner_path", uploaded.path || null);
       setFieldValue("remover_banner", false);
       toast.success("Capa enviada!");
-    } catch (error) {
-      toast.error("Falha ao enviar capa.");
+    } catch (error: any) {
+      const isTimeout = error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout');
+      const msg = isTimeout ? "Tempo limite ao enviar capa excedido." : "Falha ao enviar capa.";
+      toast.error(msg);
     } finally {
       setUploading(false);
       setProgress(0);

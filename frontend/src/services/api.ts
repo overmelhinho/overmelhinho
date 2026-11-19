@@ -20,6 +20,12 @@ api.interceptors.request.use(async (config) => {
     }
   }
 
+  // 🚀 Se a requisição for um upload de arquivo (FormData), estende o timeout para 300 segundos (5 minutos)
+  // evitando que arquivos grandes (PDFs e imagens de até 30MB) sofram aborto por timeout de 60s
+  if (config.data instanceof FormData) {
+    config.timeout = Math.max(config.timeout || 0, 300000);
+  }
+
   // 🔒 FASE 4 — Intercepta Mutações Offline
   // Se não tem rede E é uma mutação E não é uma requisição da própria Outbox
   if (

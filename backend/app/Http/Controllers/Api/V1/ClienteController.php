@@ -3669,7 +3669,7 @@ class ClienteController extends Controller implements HasMiddleware
                 'destinationBucketId' => $bucket,
             ];
 
-            $copyResp = Http::withHeaders([
+            $copyResp = Http::timeout(120)->withHeaders([
                 'apikey' => $supabaseKey,
                 'Authorization' => "Bearer {$supabaseKey}",
                 'Content-Type' => 'application/json',
@@ -3679,13 +3679,13 @@ class ClienteController extends Controller implements HasMiddleware
                 $copyData = $copyResp->json();
                 if ($copyResp->status() === 409 || $copyResp->status() === 400) {
                     $delDestUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
-                    Http::withHeaders([
+                    Http::timeout(60)->withHeaders([
                         'apikey' => $supabaseKey,
                         'Authorization' => "Bearer {$supabaseKey}",
                         'Content-Type' => 'application/json',
                     ])->delete($delDestUrl, ['prefixes' => [$destPath]]);
 
-                    $copyResp = Http::withHeaders([
+                    $copyResp = Http::timeout(120)->withHeaders([
                         'apikey' => $supabaseKey,
                         'Authorization' => "Bearer {$supabaseKey}",
                         'Content-Type' => 'application/json',
@@ -3699,7 +3699,7 @@ class ClienteController extends Controller implements HasMiddleware
 
             // DELETE temp
             $delUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
-            $delResp = Http::withHeaders([
+            $delResp = Http::timeout(60)->withHeaders([
                 'apikey' => $supabaseKey,
                 'Authorization' => "Bearer {$supabaseKey}",
                 'Content-Type' => 'application/json',
@@ -3818,7 +3818,7 @@ $this->audit(
                 'destinationBucketId' => $bucket,
             ];
 
-            $copyResp = Http::withHeaders([
+            $copyResp = Http::timeout(120)->withHeaders([
                 'apikey' => $supabaseKey,
                 'Authorization' => "Bearer {$supabaseKey}",
                 'Content-Type' => 'application/json',
@@ -3829,7 +3829,7 @@ $this->audit(
             }
 
             $deleteUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
-            Http::withHeaders([
+            Http::timeout(60)->withHeaders([
                 'apikey' => $supabaseKey,
                 'Authorization' => "Bearer {$supabaseKey}",
                 'Content-Type' => 'application/json',
@@ -3945,7 +3945,7 @@ $this->audit(
                 'destinationBucketId' => $bucket,
             ];
 
-            $copyResp = Http::withHeaders([
+            $copyResp = Http::timeout(120)->withHeaders([
                 'apikey' => $supabaseKey,
                 'Authorization' => "Bearer {$supabaseKey}",
                 'Content-Type' => 'application/json',
@@ -3955,13 +3955,13 @@ $this->audit(
                 $copyData = $copyResp->json();
                 if ($copyResp->status() === 409 || $copyResp->status() === 400) {
                     $delDestUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
-                    Http::withHeaders([
+                    Http::timeout(60)->withHeaders([
                         'apikey' => $supabaseKey,
                         'Authorization' => "Bearer {$supabaseKey}",
                         'Content-Type' => 'application/json',
                     ])->delete($delDestUrl, ['prefixes' => [$destPath]]);
 
-                    $copyResp = Http::withHeaders([
+                    $copyResp = Http::timeout(120)->withHeaders([
                         'apikey' => $supabaseKey,
                         'Authorization' => "Bearer {$supabaseKey}",
                         'Content-Type' => 'application/json',
@@ -3975,7 +3975,7 @@ $this->audit(
 
             // DELETE temp
             $delUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}";
-            $delResp = Http::withHeaders([
+            $delResp = Http::timeout(60)->withHeaders([
                 'apikey' => $supabaseKey,
                 'Authorization' => "Bearer {$supabaseKey}",
                 'Content-Type' => 'application/json',

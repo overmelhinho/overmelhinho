@@ -11,6 +11,10 @@ class UploadTempController extends Controller
 {
     public function uploadTemp(Request $request)
     {
+        // ⏱️ Aumenta tempo limite e memória para permitir uploads de arquivos grandes (até 30MB) e envio ao Supabase
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
         // 🔒 Verificação prévia de erros nativos do PHP antes da validação
         $rawFiles = $request->file('files', []);
         if (!is_array($rawFiles)) {
@@ -94,12 +98,14 @@ class UploadTempController extends Controller
 
                 $url = "{$supabaseUrl}/storage/v1/object/{$bucket}/{$path}";
 
-                $response = Http::withHeaders([
-                    'apikey'        => $supabaseKey,
-                    'Authorization' => "Bearer {$supabaseKey}",
-                    'Content-Type'  => $mime,
-                    'x-upsert'      => 'true',
-                ])->withBody($bytes, $mime)->post($url);
+                $response = Http::timeout(180)
+                    ->connectTimeout(15)
+                    ->withHeaders([
+                        'apikey'        => $supabaseKey,
+                        'Authorization' => "Bearer {$supabaseKey}",
+                        'Content-Type'  => $mime,
+                        'x-upsert'      => 'true',
+                    ])->withBody($bytes, $mime)->post($url);
 
                 // Supabase retorna 200 ou 200 para uploads bem-sucedidos
                 if ($response->failed()) {

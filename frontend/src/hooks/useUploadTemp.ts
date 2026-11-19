@@ -26,6 +26,7 @@ export function useUploadTemp() {
 
       const { data } = await api.post("/v1/upload-temp", fd, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 300000,
       });
 
       return data as UploadTempResult;

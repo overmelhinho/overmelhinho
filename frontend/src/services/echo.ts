@@ -9,17 +9,19 @@ export const createEchoInstance = () => {
     const token = localStorage.getItem('token');
     if (!token) return null;
 
-    // Inteligência para deduzir o host do websockets baseado na API, se VITE_REVERB_HOST não existir
+    // Se o host de WebSocket não estiver explicitamente configurado no ambiente, não conectar para evitar spam de erros
+    const wsHost = import.meta.env.VITE_REVERB_HOST;
+    if (!wsHost) {
+        return null;
+    }
+
     const apiUrl = import.meta.env.VITE_API_URL || 'https://api.overmelhinho.com.br/api';
-    let apiHost = window.location.hostname;
     let isHttps = true;
     try {
         const urlObj = new URL(apiUrl);
-        apiHost = urlObj.hostname;
         isHttps = urlObj.protocol === 'https:';
     } catch (e) {}
 
-    const wsHost = import.meta.env.VITE_REVERB_HOST || apiHost;
     const isTls = (import.meta.env.VITE_REVERB_SCHEME ?? (isHttps ? 'https' : 'http')) === 'https';
     const defaultPort = isTls ? 443 : 8080;
 
