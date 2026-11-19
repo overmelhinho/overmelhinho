@@ -83,7 +83,8 @@ rollback() {
     php artisan config:cache || true
     php artisan route:cache || true
     php artisan view:cache || true
-    pm2 restart laravel-octane || true
+    pm2 delete laravel-octane 2>/dev/null || true
+    pm2 start "$APP_DIR/backend/ecosystem.config.cjs" || true
     pm2 save || true
   fi
 
@@ -135,9 +136,29 @@ if $backend_changed; then
   chown -R www-data:www-data "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
   chmod -R ug+rwx "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
 
-  # restart octane
-  log "reiniciando laravel-octane (pm2)..."
-  pm2 restart laravel-octane
+  # Garantir limites de upload no PHP (CLI e FPM) e Nginx na VPS
+  log "configurando limites de upload no PHP e Nginx..."
+  find /etc -name php.ini -exec sed -i 's/upload_max_filesize = .*/upload_max_filesize = 50M/' {} + -exec sed -i 's/post_max_size = .*/post_max_size = 50M/' {} + 2>/dev/null || true
+  for d in /etc/php/*/{cli,fpm}/conf.d; do
+    if [ -d "$d" ]; then
+      cat << 'EOF' > "$d/99-overmelhinho-uploads.ini"
+upload_max_filesize = 50M
+post_max_size = 50M
+memory_limit = 512M
+max_execution_time = 300
+EOF
+    fi
+  done
+
+  if [ -d "/etc/nginx/conf.d" ]; then
+    echo "client_max_body_size 50M;" > /etc/nginx/conf.d/upload_limits.conf
+    nginx -t >/dev/null 2>&1 && (systemctl reload nginx 2>/dev/null || service nginx reload 2>/dev/null || true)
+  fi
+
+  # restart octane aplicando ecosystem.config.cjs
+  log "reiniciando laravel-octane com ecosystem.config.cjs (pm2)..."
+  pm2 delete laravel-octane 2>/dev/null || true
+  pm2 start "$APP_DIR/backend/ecosystem.config.cjs"
   pm2 save
 else
   log "Backend sem mudanças — pulando."

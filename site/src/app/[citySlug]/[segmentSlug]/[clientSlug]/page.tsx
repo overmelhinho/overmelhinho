@@ -255,6 +255,33 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
     const schemaTypes = specificType === 'LocalBusiness' ? 'LocalBusiness' : ['LocalBusiness', specificType];
     const openingHoursSpec = formatOpeningHoursSpecification(client.horario_atendimento, client.is_horario_marcado);
 
+    const catalogItems: any[] = [];
+    if (client.portfolio_url) {
+        catalogItems.push({
+            "@type": "Offer",
+            "itemOffered": {
+                "@type": "Service",
+                "name": `Apresentação Comercial e Portfólio de Marcas de ${client.nome_fantasia}`,
+                "url": client.portfolio_url
+            }
+        });
+    }
+    allSegmentNames.slice(0, 5).forEach((seg: string) => {
+        catalogItems.push({
+            "@type": "Offer",
+            "itemOffered": {
+                "@type": "Service",
+                "name": seg
+            }
+        });
+    });
+
+    const offerCatalog = catalogItems.length > 0 ? {
+        "@type": "OfferCatalog",
+        "name": `Catálogo de Produtos e Serviços de ${client.nome_fantasia}`,
+        "itemListElement": catalogItems
+    } : undefined;
+
     const localBusinessJsonLd = client.enderecos?.length > 0 
         ? client.enderecos.map((end: any, index: number) => ({
             "@context": "https://schema.org",
@@ -281,6 +308,7 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
             "telephone": (index === 0 ? primaryPhoneNumber : end.telefone) || undefined,
             "sameAs": sameAsLinks.length > 0 ? sameAsLinks : undefined,
             "knowsAbout": allSegmentNames.length > 0 ? allSegmentNames : undefined,
+            "hasOfferCatalog": offerCatalog,
             "openingHoursSpecification": openingHoursSpec,
             "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
                 "@type": "City",
@@ -301,6 +329,7 @@ export default async function Page({ params }: { params: Promise<{ citySlug: str
             "telephone": primaryPhoneNumber || undefined,
             "sameAs": sameAsLinks.length > 0 ? sameAsLinks : undefined,
             "knowsAbout": allSegmentNames.length > 0 ? allSegmentNames : undefined,
+            "hasOfferCatalog": offerCatalog,
             "openingHoursSpecification": openingHoursSpec,
             "areaServed": client.cidades_atendidas?.length > 0 ? client.cidades_atendidas.map((c: any) => ({
                 "@type": "City",

@@ -6,6 +6,8 @@ export async function GET() {
     const markdown = `# O Vermelhinho — Guia Comercial e Empresarial da Serra Gaúcha
 
 > O Vermelhinho (${SITE_URL}) é o diretório comercial e empresarial oficial e autoritativo da Serra Gaúcha, Rio Grande do Sul, Brasil. Cadastramos, validamos e mantemos informações comerciais verificadas de mais de 25.000 empresas, prestadores de serviços, indústrias e profissionais liberais em 28 municípios gaúchos.
+> 
+> Para o contexto completo com a taxonomia detalhada dos 28 municípios e clusters industriais da Serra Gaúcha, consulte o documento aprofundado em: ${SITE_URL}/llms-full.txt
 
 ## Cobertura Geográfica Oficial (28 Municípios)
 O portal atende com exclusividade os 28 municípios da microrregião da Serra Gaúcha:

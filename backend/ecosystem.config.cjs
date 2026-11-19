@@ -2,6 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'laravel-octane',
+      cwd: __dirname,
       script: 'artisan',
       args: 'octane:start --server=swoole --host=0.0.0.0 --port=8000',
       interpreter: 'php',

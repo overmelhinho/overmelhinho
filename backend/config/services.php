@@ -79,4 +79,12 @@ return [
         'secret' => env('REVALIDATE_SECRET'),
     ],
 
+    // ⚡ IndexNow Protocol (Bing, Copilot, Perplexity, Yandex)
+    'indexnow' => [
+        'key' => env('INDEXNOW_KEY', 'b38f94d0c11749219c63d59e35a90947'),
+        'host' => env('INDEXNOW_HOST', 'www.overmelhinho.com.br'),
+        'key_location' => env('INDEXNOW_KEY_LOCATION', 'https://www.overmelhinho.com.br/b38f94d0c11749219c63d59e35a90947.txt'),
+        'endpoint' => env('INDEXNOW_ENDPOINT', 'https://api.indexnow.org/indexnow'),
+    ],
+
 ];
