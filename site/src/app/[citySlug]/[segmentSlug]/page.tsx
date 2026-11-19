@@ -291,21 +291,27 @@ export default async function SegmentCityPage(props: { params: Promise<{ citySlu
         "description": `Encontre as melhores opções de ${segmentName} em ${cityName}. Veja avaliações, horários de funcionamento, endereços e chame direto no WhatsApp pelo Guia O Vermelhinho.`,
         "url": `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}`,
         "numberOfItems": clients.length,
-        "itemListElement": clients.slice(0, 10).map((client: any, index: number) => ({
-            "@type": "ListItem",
-            "position": index + 1,
-            "item": {
-                "@type": "LocalBusiness",
-                "name": client.nome_fantasia,
-                "url": `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}/${client.slug || client.id}`,
-                "address": {
-                    "@type": "PostalAddress",
-                    "addressLocality": client.enderecos?.[0]?.cidade?.trim() || cityName,
-                    "addressRegion": client.enderecos?.[0]?.estado || city.uf || city.estado || "RS",
-                    "streetAddress": client.enderecos?.[0]?.rua || ""
+        "itemListElement": clients.slice(0, 10).map((client: any, index: number) => {
+            const phone = client.contatos?.[0]?.whatsapp || client.contatos?.[0]?.telefone_principal || client.contatos?.[0]?.celular || undefined;
+            const image = client.logotipo_url || client.banner_url || undefined;
+            return {
+                "@type": "ListItem",
+                "position": index + 1,
+                "item": {
+                    "@type": "LocalBusiness",
+                    "name": client.nome_fantasia,
+                    "url": `${SITE_URL}/${cleanCitySlug}/${cleanSegmentSlug}/${client.slug || client.id}`,
+                    "telephone": phone,
+                    "image": image,
+                    "address": {
+                        "@type": "PostalAddress",
+                        "addressLocality": client.enderecos?.[0]?.cidade?.trim() || cityName,
+                        "addressRegion": client.enderecos?.[0]?.estado || city.uf || city.estado || "RS",
+                        "streetAddress": client.enderecos?.[0]?.rua || ""
+                    }
                 }
-            }
-        }))
+            };
+        })
     };
 
     return (

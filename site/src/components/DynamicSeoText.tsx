@@ -41,6 +41,10 @@ interface DynamicSeoTextProps {
 }
 
 type DomainType = 
+    | 'TOURISM_WINE'
+    | 'FASHION_TEXTILE'
+    | 'INDUSTRY_METAL'
+    | 'REAL_ESTATE'
     | 'GASTRONOMY'
     | 'HEALTH'
     | 'AUTOMOTIVE'
@@ -63,33 +67,71 @@ function normalize(text: string): string {
 function detectDomain(segmentName: string): DomainType {
     const s = normalize(segmentName);
 
+    // 1. Enoturismo, Vinícolas, Hotelaria e Turismo (Polo Bento Gonçalves, Garibaldi, Gramado, Canela)
+    if (['vinho', 'vinicola', 'cantina', 'espumante', 'enoturismo', 'adega', 'hotel', 'pousada', 'hospedagem', 'turismo', 'chale', 'resort', 'passeio'].some(k => s.includes(k))) {
+        return 'TOURISM_WINE';
+    }
+
+    // 2. Confecções, Malharias e Indústria Têxtil (Polo Farroupilha / Caxias)
+    if (['confecc', 'malha', 'malharia', 'textil', 'tecido', 'trico', 'costura', 'alfaiat', 'vestuario', 'roupa', 'calcado', 'moda'].some(k => s.includes(k))) {
+        return 'FASHION_TEXTILE';
+    }
+
+    // 3. Indústria Metalmecânica, Usinagem e Ferramentaria (Polo Caxias do Sul)
+    if (['metalurgic', 'metalmecanic', 'usinagem', 'ferramentaria', 'caldeiraria', 'tornearia', 'pecas industriais', 'fundicao', 'corte e dobra', 'solda', 'estruturas metalicas', 'equipamentos industriais', 'maquinas'].some(k => s.includes(k))) {
+        return 'INDUSTRY_METAL';
+    }
+
+    // 4. Imobiliárias e Locação
+    if (['imobiliaria', 'imovel', 'imoveis', 'corretor', 'locacao', 'aluguel', 'loteamento', 'administradora de condominios'].some(k => s.includes(k))) {
+        return 'REAL_ESTATE';
+    }
+
+    // 5. Gastronomia e Alimentação
     if (['restaurante', 'pizzaria', 'lanche', 'hamburgueria', 'cafe', 'bar', 'doces', 'padaria', 'confeitaria', 'galeteria', 'churrascaria', 'sushi', 'gastronomia'].some(k => s.includes(k))) {
         return 'GASTRONOMY';
     }
+
+    // 6. Saúde e Cuidados
     if (['dentista', 'odontolog', 'medico', 'clinica', 'saude', 'fisiotera', 'psicolog', 'farmacia', 'nutricao', 'laboratorio', 'hospital'].some(k => s.includes(k))) {
         return 'HEALTH';
     }
+
+    // 7. Automotivo
     if (['mecanica', 'oficina', 'auto', 'carro', 'pneu', 'borracharia', 'chapea', 'funilaria', 'veiculo', 'troca de oleo', 'suspensao', 'eletrica automotiva'].some(k => s.includes(k))) {
         return 'AUTOMOTIVE';
     }
-    if (['advocacia', 'advogado', 'juridic', 'contabil', 'contador', 'contabilidade', 'imobiliaria', 'seguro', 'banco', 'financeira'].some(k => s.includes(k))) {
+
+    // 8. Jurídico e Financeiro
+    if (['advocacia', 'advogado', 'juridic', 'contabil', 'contador', 'contabilidade', 'seguro', 'banco', 'financeira'].some(k => s.includes(k))) {
         return 'LEGAL_FINANCIAL';
     }
+
+    // 9. Beleza e Bem-estar
     if (['salao de beleza', 'cabeleireir', 'barbearia', 'estetica', 'manicure', 'podologia', 'academia', 'fitness', 'pilates', 'massagem', 'spa'].some(k => s.includes(k))) {
         return 'BEAUTY_WELLNESS';
     }
+
+    // 10. Construção e Reformas
     if (['construcao', 'reforma', 'serralheria', 'vidracaria', 'pintura', 'eletricista', 'encanador', 'marcenaria', 'arquitetura', 'engenharia'].some(k => s.includes(k))) {
         return 'CONSTRUCTION';
     }
-    if (['vestuario', 'roupa', 'calcado', 'moveis', 'decoracao', 'otica', 'joalheria', 'loja', 'presentes', 'bazar', 'supermercado', 'mercado'].some(k => s.includes(k))) {
+
+    // 11. Comércio e Varejo Geral
+    if (['moveis', 'decoracao', 'otica', 'joalheria', 'loja', 'presentes', 'bazar', 'supermercado', 'mercado'].some(k => s.includes(k))) {
         return 'RETAIL';
     }
+
+    // 12. Pets e Agropecuária
     if (['pet', 'veterinari', 'agropecuaria', 'racao', 'banho e tosa'].some(k => s.includes(k))) {
         return 'PET';
     }
+
+    // 13. Educação
     if (['escola', 'colegio', 'educacao', 'creche', 'curso', 'idiomas'].some(k => s.includes(k))) {
         return 'EDUCATION';
     }
+
     return 'DEFAULT';
 }
 
@@ -103,6 +145,109 @@ interface DomainContent {
 
 function buildDomainContent(domain: DomainType, segmentName: string, cityName: string): DomainContent {
     switch (domain) {
+        case 'TOURISM_WINE':
+            return {
+                introTitle: `Enoturismo, Vinícolas e Hospedagem em ${cityName}`,
+                introParagraph: `A Serra Gaúcha é o principal polo vitivinícola e turístico do Brasil. Em ${cityName}, as opções de ${segmentName} unem a acolhedora hospitalidade da colonização italiana e alemã a experiências sensoriais inesquecíveis, com degustações harmonizadas, passeios por parreirais e estadias charmosas.`,
+                tipsTitle: `Dicas para vivenciar o melhor da Serra Gaúcha em ${cityName}`,
+                tips: [
+                    { title: 'Agendamento Prévio de Degustações e Visitas', desc: 'Muitas vinícolas, caves e cantinas requerem reserva prévia para passeios guiados e harmonizações especiais.' },
+                    { title: 'Hospedagem e Transporte Seguro', desc: 'Ao realizar roteiros de enoturismo, programe traslados ou hospedagens próximas aos atrativos turísticos da região.' },
+                    { title: 'Atendimento Direto via WhatsApp', desc: 'Consulte valores de pacotes turísticos, disponibilidade de quartos e datas de vindima diretamente com os anfitriões.' }
+                ],
+                faqs: [
+                    {
+                        question: `Como reservar visitas, degustações ou hospedagem em ${segmentName} em ${cityName}?`,
+                        answer: `Acesse o perfil do estabelecimento no Guia O Vermelhinho e clique no botão de WhatsApp ou Telefone para falar diretamente com a recepção do local.`
+                    },
+                    {
+                        question: `Quais os períodos mais indicados para visitar os atrativos da cidade?`,
+                        answer: `A Serra Gaúcha é encantadora o ano todo, destacando-se o período da Vindima (janeiro a março), o clima acolhedor de inverno e os festivais de fim de ano.`
+                    },
+                    {
+                        question: `Onde encontrar endereços e rotas dos pontos turísticos locais?`,
+                        answer: `No perfil de cada empresa você encontra o mapa de localização exato, rotas de acesso e referências nos bairros e vales de ${cityName}.`
+                    }
+                ]
+            };
+
+        case 'FASHION_TEXTILE':
+            return {
+                introTitle: `Moda, Confecções e Malharias em ${cityName}`,
+                introParagraph: `Reconhecida nacionalmente pela força de seu polo têxtil e confeccionista, ${cityName} e a Serra Gaúcha oferecem excelência em ${segmentName}. De malharias com fabricação própria a boutiques de moda feminina, masculina e infantil, a região é referência para quem compra no atacado ou busca roupas de alta qualidade no varejo.`,
+                tipsTitle: `Guia de compras no atacado e varejo em ${cityName}`,
+                tips: [
+                    { title: 'Compras Direto de Fábrica', desc: 'Aproveite os showrooms e lojas de fábrica com preços atrativos e coleções recém-saídas da tecelagem.' },
+                    { title: 'Condições Especiais para Lojistas e Revendedores', desc: 'Confecções da região oferecem grades completas e tabelas diferenciadas para pedidos no atacado.' },
+                    { title: 'Consulte o Catálogo pelo WhatsApp', desc: 'Solicite fotos dos lançamentos da coleção e tabelas de medidas conversando diretamente com a equipe de vendas.' }
+                ],
+                faqs: [
+                    {
+                        question: `Como comprar direto de fábrica ou no atacado em ${segmentName} em ${cityName}?`,
+                        answer: `Você pode entrar em contato diretamente com as confecções e malharias através do WhatsApp listado no Guia O Vermelhinho para receber catálogos e condições comerciais.`
+                    },
+                    {
+                        question: `As confecções e lojas realizam envios para outras cidades e estados?`,
+                        answer: `Sim, a maioria das malharias e confecções da região despacha mercadorias para todo o Brasil via transportadora ou Correios.`
+                    },
+                    {
+                        question: `Quais os horários de funcionamento das lojas de fábrica?`,
+                        answer: `Os horários detalhados de abertura, inclusive aos fins de semana em centros de compras, estão informados no perfil de cada loja no portal.`
+                    }
+                ]
+            };
+
+        case 'INDUSTRY_METAL':
+            return {
+                introTitle: `Polo Industrial e Metalmecânico: ${segmentName} em ${cityName}`,
+                introParagraph: `A Serra Gaúcha abriga o segundo maior polo metalmecânico do Brasil e um dos principais centros industriais da América Latina. As indústrias e prestadores de ${segmentName} em ${cityName} combinam maquinário de alta precisão, mão de obra especializada e certificações internacionais para atender os setores automotivo, agrícola, de utilidades e de bens de capital.`,
+                tipsTitle: `Recomendações para parcerias e cotações industriais em ${cityName}`,
+                tips: [
+                    { title: 'Projetos Técnicos e Tolerâncias Exatas', desc: 'Envie desenhos técnicos detalhados para orçamentos de usinagem, tornearia, corte a laser ou estamparia.' },
+                    { title: 'Capacidade Produtiva e Prazos de Entrega', desc: 'Alinhe lotes mínimos de produção, lead time de fabricação e normas de controle de qualidade.' },
+                    { title: 'Atendimento Corporativo B2B Ágil', desc: 'Utilize os canais de contato direto do portal para contatar os setores de engenharia e vendas técnicas das empresas.' }
+                ],
+                faqs: [
+                    {
+                        question: `Como solicitar orçamento corporativo para serviços de ${segmentName} em ${cityName}?`,
+                        answer: `Clique nos contatos corporativos e WhatsApp disponíveis no perfil da indústria no Guia O Vermelhinho para encaminhar seu memorial descritivo ou projeto.`
+                    },
+                    {
+                        question: `As empresas industriais fornecem peças sob medida ou seriadas?`,
+                        answer: `Sim, as fábricas e oficinas industriais cadastradas atendem desde desenvolvimento de protótipos e ferramentais até produção seriada em larga escala.`
+                    },
+                    {
+                        question: `Onde encontrar a localização e acesso às indústrias na região?`,
+                        answer: `Os endereços dos parques fabris e distritos industriais de ${cityName} estão detalhados nos perfis das empresas no portal.`
+                    }
+                ]
+            };
+
+        case 'REAL_ESTATE':
+            return {
+                introTitle: `Mercado Imobiliário e Locação: ${segmentName} em ${cityName}`,
+                introParagraph: `O mercado imobiliário da Serra Gaúcha alia valorização sólida à qualidade de vida excepcional. Para morar, investir ou instalar sua empresa em ${cityName}, as imobiliárias e corretores de ${segmentName} oferecem assessoria experiente, conhecimento aprofundado dos bairros e ampla carteira de imóveis para venda e aluguel.`,
+                tipsTitle: `Dicas para alugar ou comprar com segurança em ${cityName}`,
+                tips: [
+                    { title: 'Profissionais e Imobiliárias com Registro CRECI', desc: 'Negocie sempre com corretores credenciados para garantir total segurança jurídica e transparência contratual.' },
+                    { title: 'Vistoria Prévia e Documentação Regularizada', desc: 'Analise laudos de vistoria e certidões negativas do imóvel antes de fechar o contrato de locação ou compra.' },
+                    { title: 'Consultoria de Bairros e Valorização', desc: 'Tire dúvidas sobre infraestrutura urbana, escolas e comércio local nos bairros de ${cityName} diretamente com corretores.' }
+                ],
+                faqs: [
+                    {
+                        question: `Como encontrar imóveis para alugar ou comprar em ${cityName}?`,
+                        answer: `Acesse o perfil das imobiliárias no Guia O Vermelhinho e envie uma mensagem no WhatsApp com o perfil do imóvel desejado (número de quartos, bairro ou faixa de valor).`
+                    },
+                    {
+                        question: `As imobiliárias administram imóveis comerciais e industriais?`,
+                        answer: `Sim, além de residências, a maioria das imobiliárias da região conta com setores especializados em pavilhões industriais, salas aéreas e terrenos comerciais.`
+                    },
+                    {
+                        question: `Como agendar uma visita com um corretor local?`,
+                        answer: `Utilize os telefones ou botões de WhatsApp disponíveis nos perfis das imobiliárias cadastradas no portal para marcar visitas com horários flexíveis.`
+                    }
+                ]
+            };
         case 'GASTRONOMY':
             return {
                 introTitle: `Gastronomia e Sabores: Guia de ${segmentName} em ${cityName}`,

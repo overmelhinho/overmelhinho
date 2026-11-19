@@ -4,15 +4,33 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.overmelhinho.c
 
 export default function robots(): MetadataRoute.Robots {
     return {
-        rules: {
-            userAgent: '*',
-            allow: '/',
-            disallow: ['/login', '/admin'],
-        },
+        rules: [
+            {
+                userAgent: '*',
+                allow: '/',
+                disallow: ['/login', '/admin'],
+            },
+            {
+                userAgent: [
+                    'GPTBot',
+                    'OAI-SearchBot',
+                    'ChatGPT-User',
+                    'PerplexityBot',
+                    'ClaudeBot',
+                    'Claude-SearchBot',
+                    'Google-Extended',
+                    'Applebot-Extended',
+                    'cohere-ai',
+                ],
+                allow: '/',
+                disallow: ['/login', '/admin'],
+            },
+        ],
         sitemap: [
             `${SITE_URL}/sitemap.xml`,
             `${SITE_URL}/sitemap-categorias.xml`,
             `${SITE_URL}/sitemap-empresas.xml`,
         ],
+        host: SITE_URL,
     };
 }

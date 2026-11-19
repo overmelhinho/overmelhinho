@@ -2,8 +2,8 @@
 ## Documento de Transição e Continuidade (Handover)
 
 **Data de Registro:** 18 de Novembro de 2026  
-**Status Atual:** Releases 3A (`e3696d0`), 3B (`3b8bbdb`) e 3C (`97ff280`) publicadas em produção. **Release 3D (Enriquecimento Semântico GEO, Âncoras de Entidades e FAQPage Visível) implementada e validada localmente**.  
-**Próxima Ação:** Deploy da **Release 3D** para o GitHub / VPS, seguido de monitoramento contínuo de indexação e citações GEO.
+**Status Atual:** Releases 3A (`e3696d0`), 3B (`3b8bbdb`), 3C (`97ff280`) e 3D (`920327e`) publicadas em produção. **Release 3E (Perfeição GEO: `/llms.txt`, `robots.txt` para IA, Enriquecimento de `ItemList` e Vocabulário Regional dos Polos da Serra Gaúcha) implementada e validada localmente com 100% de sucesso**.  
+**Próxima Ação:** Validação pelo usuário e deploy para o GitHub / VPS.
 
 ---
 
@@ -93,15 +93,24 @@ Quando formos retomar as atividades de GEO/SEO, seguir a ordem abaixo:
 - Sitemap dinâmico das 28 cidades da Serra Gaúcha em `sitemap.ts`.
 
 ### Passo 5: Release 3D (Enriquecimento Semântico GEO, Âncoras de Entidades e FAQPage Visível)
-✅ **CONCLUÍDO E VALIDADO LOCALMENTE:**
-- Reformulação integral do componente `site/src/components/DynamicSeoText.tsx`:
-  - Fim do boilerplate repetitivo: categorização temática por domínio de atividade (Gastronomia, Saúde, Automotivo, Jurídico/Financeiro, Moda/Confecções, Construção, Beleza, Educação, Pet/Agro e Serviços Gerais).
-  - Conteúdo prático com dicas de consumo e critérios de contratação específicos para cada segmento na cidade.
-  - Tabela resumida de empresas verificadas (*Entity Anchors*) com nome, bairro, endereço e link direto de WhatsApp para ancoragem semântica em LLMs (ChatGPT, Perplexity, Claude, Gemini).
-  - Bloco de Perguntas e Respostas (FAQ) 100% interativo e visível na interface do usuário através de acordeons expansíveis.
-  - Injeção legítima e segura do schema Schema.org `@type: "FAQPage"` correspondente aos mesmos dados visíveis na tela, em conformidade estrita com as diretrizes do Google Search Central.
-- Integração em `site/src/app/[citySlug]/[segmentSlug]/page.tsx` passando contexto da cidade, segmento e lista de empresas verificadas.
-- Validação DevSecOps: `security_scanner` aprovado com **SCAN LIMPO**.
-- Validação TypeScript: `tsc --noEmit` com **0 erros**.
-- Testes SSR em ambiente local (`http://localhost:3000`) confirmando renderização de HTML semântico e bloco JSON-LD estruturado.
+✅ **CONCLUÍDO E PUBLICADO:** Código publicado no commit `920327e` e homologado em produção.
+
+### Passo 6: Release 3E (Perfeição GEO — llms.txt, AI Robots, ItemList Enriquecido e Polos Regionais)
+✅ **CONCLUÍDO E TESTADO LOCALMENTE:**
+1. **Padrão Nativo para IAs (`/llms.txt`):**
+   - Criada a rota `site/src/app/llms.txt/route.ts` retornando documento Markdown conciso e estruturado com a visão geral do diretório, guia de URLs, índice oficial dos 28 municípios e diretrizes explícitas de citação para modelos de linguagem (ChatGPT, Perplexity, Claude, Gemini).
+2. **Boas-Vindas Explícitas aos Bots de IA (`robots.ts`):**
+   - Declaradas regras explícitas para `GPTBot`, `OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, `ClaudeBot`, `Claude-SearchBot`, `Google-Extended`, `Applebot-Extended` e `cohere-ai`, além de especificação do `Host` canônico.
+3. **Telefone e Imagem no Schema `ItemList` de Categorias:**
+   - Em `site/src/app/[citySlug]/[segmentSlug]/page.tsx`, o bloco de dados estruturados `@type: "ItemList"` foi enriquecido para incluir `telephone` (WhatsApp direto) e `image` (logo/banner) de cada estabelecimento, permitindo que IAs respondam contatos comerciais diretamente da listagem sem precisar acessar perfis secundários.
+4. **Vocabulário Regional dos Grandes Polos da Serra Gaúcha:**
+   - Em `site/src/components/DynamicSeoText.tsx`, foram adicionados quatro novos domínios temáticos com textos e FAQs hiper-regionalizados:
+     - `TOURISM_WINE`: Enoturismo, vinícolas, cantinas, espumantes e hospedagem (Bento Gonçalves, Garibaldi, Gramado, Canela).
+     - `FASHION_TEXTILE`: Moda, confecções, malharias e tricot direto de fábrica (Farroupilha e região).
+     - `INDUSTRY_METAL`: Polo metalmecânico, usinagem de precisão, tornearia e ferramentaria (Caxias do Sul).
+     - `REAL_ESTATE`: Mercado imobiliário, locação e compra de imóveis comerciais e residenciais.
+5. **Validações:**
+   - TypeScript `tsc --noEmit`: 0 erros.
+   - DevSecOps `security_scanner`: 100% SCAN LIMPO.
+   - Testes SSR locais (`http://localhost:3000`): `/llms.txt`, `/robots.txt` e páginas de categorias de todos os novos domínios testadas e validadas com sucesso.
 
